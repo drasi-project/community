@@ -40,13 +40,13 @@ We welcome contributions and suggestions from everyone. Before diving in, please
 If you find bugs or have feature requests, feel free to open an issue in our Issues tab for each repo. We also have a set of GitHub issues that you can start with marked with good first issue or help wanted labels.
 
 ### Code of Conduct
-We are committed to creating a welcoming environment. This project has adopted the Contributor Covenant Code of Conduct. Please read and adhere to our [Code of Conduct](LINK_TO_CODE_OF_CONDUCT). 
+We are committed to creating a welcoming environment. This project has adopted the Contributor Covenant Code of Conduct. Please read and adhere to our [Code of Conduct](https://github.com/drasi-project/community/blob/main/CODE_OF_CONDUCT.md). 
 
 ### Maintainers and Core Contributors
 Maintainers are responsible for reviewing pull requests, managing releases, and setting the strategic direction of the project. Core contributors are individuals who have consistently contributed high-quality code or valuable insights. if you would like to join the Drasi organization create a Membership Request issue using this template, [Organization Membership Request]().
 
 ## License 
-This project is licensed under the Apache 2.0 license. See the [LICENSE]() file for details.
+This project is licensed under the Apache 2.0 license. See the [LICENSE](https://github.com/drasi-project/Community/blob/main/LICENSE) file for details.
 
 ## Contact
 If you have any questions, feel free to reach out through our communication channels,open an issue, or email the Drasi authors at ().
