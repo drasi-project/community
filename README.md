@@ -12,7 +12,7 @@ We believe that a thriving community is the backbone of any successful open-sour
 
 We stay connected through the following channels:
 - [Discord](https://discord.gg/syrTnH39): Real-time chat and collaboration.
-- [Email Project Maintainers](mailto:maintainers@drasiproject.onmicrosoft.com): Reach out to the project maintainers.
+- [Email Project Maintainers](mailto:maintainers@drasio): Reach out to the project maintainers.
 - [Drasi Community Group](): Join the Drasi Community group to stay up to date on releases, events, and other announcements.
 
 ### Events and Meetings
@@ -33,9 +33,9 @@ Join our discussions on [Discord]( https://discord.gg/YQpK976W), where we brains
 
 ## Contributing to Drasi
 We welcome contributions and suggestions from everyone. Before diving in, please make sure to review contribution guidelines for details on our process, coding standards, and how to get your pull request merged. 
-- [drasi-core](https://github.com/drasi-project/drasi-core/blob/main/CODE_OF_CONDUCT.md)
-- [drasi- platform](https://github.com/drasi-project/drasi-platform/blob/main/CODE_OF_CONDUCT.md)
-- [docs]()
+- [drasi-core](https://github.com/drasi-project/drasi-core/blob/main/CONTRIBUTING.md))
+- [drasi- platform](https://github.com/drasi-project/drasi-platform/blob/main/CONTRIBUTING.md))
+- [docs](https://github.com/drasi-project/drasi-core/blob/main/docs/contributing/how-to.md)
  
 If you find bugs or have feature requests, feel free to open an issue in our Issues tab for each repo. We also have a set of GitHub issues that you can start with marked with good first issue or help wanted labels.
 
@@ -49,4 +49,4 @@ Maintainers are responsible for reviewing pull requests, managing releases, and 
 This project is licensed under the Apache 2.0 license. See the [LICENSE](https://github.com/drasi-project/Community/blob/main/LICENSE) file for details.
 
 ## Contact
-If you have any questions, feel free to reach out through our communication channels,open an issue, or email the Drasi authors at ().
+If you have any questions, feel free to reach out through our communication channels,open an issue, or email the [Drasi authors](mailto:maintainers@drasi.io).
