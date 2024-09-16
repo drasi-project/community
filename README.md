@@ -33,8 +33,8 @@ Join our discussions on [Discord]( https://discord.gg/YQpK976W), where we brains
 
 ## Contributing to Drasi
 We welcome contributions and suggestions from everyone. Before diving in, please make sure to review contribution guidelines for details on our process, coding standards, and how to get your pull request merged. 
-- [drasi-core](https://github.com/drasi-project/drasi-core/blob/main/CONTRIBUTING.md))
-- [drasi- platform](https://github.com/drasi-project/drasi-platform/blob/main/CONTRIBUTING.md))
+- [drasi-core](https://github.com/drasi-project/drasi-core/blob/main/CONTRIBUTING.md)
+- [drasi- platform](https://github.com/drasi-project/drasi-platform/blob/main/CONTRIBUTING.md)
 - [docs](https://github.com/drasi-project/drasi-core/blob/main/docs/contributing/how-to.md)
  
 If you find bugs or have feature requests, feel free to open an issue in our Issues tab for each repo. We also have a set of GitHub issues that you can start with marked with good first issue or help wanted labels.
