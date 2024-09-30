@@ -29,7 +29,7 @@ The [Drasi Blog]() regularly posts updates on new releases, technical improvemen
 We maintain a public roadmap and milestones, which are discussed and updated regularly. Check out the [Roadmap](LINK_TO_ROADMAP)
 
 ### Discussions
-Join our discussions on [Discord]( https://discord.gg/YQpK976W), where we brainstorm features, solve problems, and plan future updates.
+Join our discussions on [Discord](https://discord.gg/ucX8BGbG), where we brainstorm features, solve problems, and plan future updates.
 
 ## Contributing to Drasi
 We welcome contributions and suggestions from everyone. Before diving in, please make sure to review contribution guidelines for details on our process, coding standards, and how to get your pull request merged. 
