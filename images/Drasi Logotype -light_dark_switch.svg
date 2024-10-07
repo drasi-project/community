@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1293.33 766.17">
+  <defs>
+    <style>
+      /* Default to light mode */
+      .dark-mode {
+        display: none;
+      }
+
+      /* Dark mode */
+      @media (prefers-color-scheme: dark) {
+        .dark-mode {
+          display: block;
+        }
+        .light-mode {
+          display: none;
+        }
+      }
+    </style>
+  </defs>
+
+  <!-- Dark mode path (hidden by default) -->
+  <path class="dark-mode" d="M1018.49,507.49h-59.03s0,0,0,0l14.29-150.7s0,0,0,0h59.03s0,0,0,0l-14.29,150.7s0,0,0,0Z" fill="#ffffff"/>
+
+  <!-- Light mode path -->
+  <path class="light-mode" d="M1018.49,507.49h-59.03s0,0,0,0l14.29-150.7s0,0,0,0h59.03s0,0,0,0l-14.29,150.7s0,0,0,0Z" fill="#1f2041"/>
+
+  <circle class="light-mode" cx="1010.01" cy="286.27" r="29.32" fill="#1f2041"/>
+  <circle class="dark-mode" cx="1010.01" cy="286.27" r="29.32" fill="#ffffff"/>
+
+  <!-- Light mode image -->
+  <g class="light-mode">
+    <rect width="100" height="100" fill="white" />
+    <text x="50" y="50" text-anchor="middle" fill="black">Light Mode</text>
+  </g>
+
+  <!-- Dark mode image -->
+  <g class="dark-mode">
+    <rect width="100" height="100" fill="black" />
+    <text x="50" y="50" text-anchor="middle" fill="white">Dark Mode</text>
+  </g>
+</svg>
