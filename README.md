@@ -23,7 +23,7 @@ We stay connected through the following channels:
 We look forward to meeting with you 1:1 via Office Hour sessions to help you get started with Drasi, answer questions, hear feedback, or discuss anything in connection to Drasi. Please select a convenient time to reserve 45 minutes with the Drasi engineering team from the options available at this [Office Bookings](https://outlook.office365.com/owa/calendar/DrasiCommunitySyncs@drasiproject.onmicrosoft.com/bookings/) link.
 
 ### Drasi Blog
-The [Drasi Blog]() regularly posts updates on new releases, technical improvements and upcoming events. If you would like to contribute a post, please reach out to us.
+The Drasi Blog will regularly posts updates on new releases, technical improvements and upcoming events. If you would like to contribute a post, please reach out to us.
 
 ### Roadmap and Milestones
 We maintain a public roadmap and milestones, which are discussed and updated regularly. Check out the [Roadmap](LINK_TO_ROADMAP)
