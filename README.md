@@ -25,9 +25,6 @@ We look forward to meeting with you 1:1 via Office Hour sessions to help you get
 ### Drasi Blog
 The Drasi Blog will regularly posts updates on new releases, technical improvements and upcoming events. If you would like to contribute a post, please reach out to us.
 
-### Roadmap and Milestones
-We maintain a public roadmap and milestones, which are discussed and updated regularly. Check out the [Roadmap](LINK_TO_ROADMAP)
-
 ### Discussions
 Join our discussions on [Discord](https://aka.ms/drasidiscord), where we brainstorm features, solve problems, and plan future updates.
 
@@ -43,7 +40,7 @@ If you find bugs or have feature requests, feel free to open an issue in our Iss
 We are committed to creating a welcoming environment. This project has adopted the Contributor Covenant Code of Conduct. Please read and adhere to our [Code of Conduct](https://github.com/drasi-project/community/blob/main/CODE_OF_CONDUCT.md). 
 
 ### Maintainers and Core Contributors
-Maintainers are responsible for reviewing pull requests, managing releases, and setting the strategic direction of the project. Core contributors are individuals who have consistently contributed high-quality code or valuable insights. if you would like to join the Drasi organization create a Membership Request issue using this template, [Organization Membership Request](https://github.com/drasi-project/community/issues/new?assignees=&labels=community-membership&projects=&template=organization-membership-request.md&title=REQUEST%3A+New+membership+for+%3Cyour-GH-handle%3E).
+Maintainers are responsible for reviewing pull requests, managing releases, and setting the strategic direction of the project. Core contributors are individuals who have consistently contributed high-quality code or valuable insights. If you would like to join the Drasi organization create a Membership Request issue using this template, [Organization Membership Request](https://github.com/drasi-project/community/issues/new?assignees=&labels=community-membership&projects=&template=organization-membership-request.md&title=REQUEST%3A+New+membership+for+%3Cyour-GH-handle%3E).
 
 ## License 
 This project is licensed under the Apache 2.0 license. See the [LICENSE](https://github.com/drasi-project/Community/blob/main/LICENSE) file for details.
