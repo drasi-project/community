@@ -13,7 +13,7 @@ We believe that a thriving community is the backbone of any successful open-sour
 We stay connected through the following channels:
 - [Discord](https://aka.ms/drasidiscord): Real-time chat and collaboration.
 - [Email Project Maintainers](mailto:maintainers@drasio): Reach out to the project maintainers.
-- Drasi Community Group at drasiproject@gmail.com: Join the Drasi Community group to stay up to date on releases, events, and other announcements.
+- Drasi Community Group at drasiproject@googlegroups.com: Join the Drasi Community group to stay up to date on releases, events, and other announcements.
 
 ### Events and Meetings
 #### Community Calls
