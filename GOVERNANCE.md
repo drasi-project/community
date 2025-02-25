@@ -1,11 +1,15 @@
 
 # Drasi Governance and Community Membership
 This document details the governance policies for the Drasi project and outlines the responsibilities of contributor roles in Drasi. The Drasi project includes the platform and core components, SDKs, CLI, samples, QuickStart tutorials, and docs. Responsibilities for roles are scoped to each repo.
+
+## Objectives
+Drasi is a comprehensive open-source solution designed to detect and react intelligently to changes insoftware systems. Drasi acts as a single software component to integrate easily with existing data repositories via Sources and transmit evaluated change data to downstream consumers through Reactions.
+
 ## Code of Conduct
 
 This project has adopted the [Contributor Covenant Code of Conduct](https://github.com/drasi-project/community/blob/main/CODE_OF_CONDUCT.md).
 
-## Project Roles
+## Project Roles and Responsibilities
 
 | **Project Role**   | **Responsibilities**                                  | **Requirements**                                             | **Defined by**                                               |
 | ---------- | ----------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
