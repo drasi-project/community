@@ -46,4 +46,4 @@ Maintainers are responsible for reviewing pull requests, managing releases, and 
 This project is licensed under the Apache 2.0 license. See the [LICENSE](https://github.com/drasi-project/Community/blob/main/LICENSE) file for details.
 
 ## Contact
-If you have any questions, feel free to reach out through our communication channels,open an issue, or email the [Drasi authors](mailto:maintainers@drasi.io).
+If you have any questions, feel free to reach out through our communication channels such as our [Discord server](https://discord.gg/AX7FneckBq),open an issue, or email the [Drasi authors](mailto:maintainers@drasi.io).
