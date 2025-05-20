@@ -1,7 +1,7 @@
 
 # Drasi Community
 
-Welcome to the **Drasi** open-source community. We're excited to have you join us in building and improving this project. This README will guide you through how you can contribute to the code and documentation, the project’s governance, and what you can expect from our community.
+Welcome to the **Drasi** open-source community. Drasi is a [CNCF Sandbox project](https://www.cncf.io/projects/drasi/). We're excited to have you join us in building and improving this project. This README will guide you through how you can contribute to the code and documentation, the project’s governance, and what you can expect from our community.
 Visit [drasi.io](https://aka.ms/drasi-docs) for more information about Drasi.
 
 ## Community Engagement
