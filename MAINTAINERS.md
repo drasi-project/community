@@ -4,3 +4,4 @@ The following is the list of maintainers for all Drasi repositories, in alphabet
 * Aman Singh (Microsoft) [@amansinghoriginal](https://github.com/amansinghoriginal)
 * Daniel Gerlag (Microsoft) [@danielgerlag](https://github.com/danielgerlag)
 * Ruokun Niu (Microsoft) [@ruokun-niu](https://github.com/ruokun-niu)
+* Mike Azure [@ama2369](https://github.com/ama2369)
