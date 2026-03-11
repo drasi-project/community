@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 938 108" width="938" height="108">
+  <defs>
+    <marker id="arr-c" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#42affa"/>
+    </marker>
+  </defs>
+
+  <!-- ══════════════════════════════════════════════════
+       PIPELINE ROW  (5 boxes)
+       Box width=162  arrow gap=22  left margin=20
+       Centers: 101, 285, 469, 653, 837
+       Mid-height: y=54  (boxes y=18, h=72)
+  ══════════════════════════════════════════════════ -->
+
+  <!-- Box 1: Database -->
+  <circle cx="33" cy="30" r="9" fill="#42affa"/>
+  <text x="33" y="34" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="10" font-weight="700" fill="#000">1</text>
+  <rect x="20" y="18" width="162" height="72" rx="9"
+        fill="rgba(66,175,250,0.10)" stroke="#42affa" stroke-width="1.5"/>
+  <text x="101" y="52" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="12.5" font-weight="600" fill="white">Database</text>
+  <text x="101" y="68" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="10" fill="rgba(255,255,255,0.45)">Postgres · MySQL</text>
+
+  <!-- Arrow 1→2 -->
+  <line x1="182" y1="54" x2="203" y2="54"
+        stroke="#42affa" stroke-width="2" marker-end="url(#arr-c)"/>
+
+  <!-- Box 2: Debezium -->
+  <circle cx="217" cy="30" r="9" fill="#42affa"/>
+  <text x="217" y="34" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="10" font-weight="700" fill="#000">2</text>
+  <rect x="204" y="18" width="162" height="72" rx="9"
+        fill="rgba(66,175,250,0.10)" stroke="#42affa" stroke-width="1.5"/>
+  <text x="285" y="52" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="12.5" font-weight="600" fill="white">Debezium</text>
+  <text x="285" y="68" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="10" fill="rgba(255,255,255,0.45)">CDC Connector</text>
+
+  <!-- Arrow 2→3 -->
+  <line x1="366" y1="54" x2="387" y2="54"
+        stroke="#42affa" stroke-width="2" marker-end="url(#arr-c)"/>
+
+  <!-- Box 3: Kafka Topic -->
+  <circle cx="401" cy="30" r="9" fill="#42affa"/>
+  <text x="401" y="34" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="10" font-weight="700" fill="#000">3</text>
+  <rect x="388" y="18" width="162" height="72" rx="9"
+        fill="rgba(66,175,250,0.10)" stroke="#42affa" stroke-width="1.5"/>
+  <text x="469" y="52" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="12.5" font-weight="600" fill="white">Kafka Topic</text>
+  <text x="469" y="68" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="10" fill="rgba(255,255,255,0.45)">raw row-level events</text>
+
+  <!-- Arrow 3→4 -->
+  <line x1="550" y1="54" x2="571" y2="54"
+        stroke="#42affa" stroke-width="2" marker-end="url(#arr-c)"/>
+
+  <!-- Box 4: Stream Processor -->
+  <circle cx="585" cy="30" r="9" fill="#42affa"/>
+  <text x="585" y="34" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="10" font-weight="700" fill="#000">4</text>
+  <rect x="572" y="18" width="162" height="72" rx="9"
+        fill="rgba(66,175,250,0.10)" stroke="#42affa" stroke-width="1.5"/>
+  <text x="653" y="52" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="12.5" font-weight="600" fill="white">Stream Processor</text>
+  <text x="653" y="68" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="10" fill="rgba(255,255,255,0.45)">Flink · Spark · ksqlDB</text>
+
+  <!-- Arrow 4→5 -->
+  <line x1="734" y1="54" x2="755" y2="54"
+        stroke="#42affa" stroke-width="2" marker-end="url(#arr-c)"/>
+
+  <!-- Box 5: Consumer App -->
+  <circle cx="769" cy="30" r="9" fill="#42affa"/>
+  <text x="769" y="34" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="10" font-weight="700" fill="#000">5</text>
+  <rect x="756" y="18" width="162" height="72" rx="9"
+        fill="rgba(66,175,250,0.10)" stroke="#42affa" stroke-width="1.5"/>
+  <text x="837" y="52" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="12.5" font-weight="600" fill="white">Consumer App</text>
+  <text x="837" y="68" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="10" fill="rgba(255,255,255,0.45)">filter · join · act</text>
+</svg>

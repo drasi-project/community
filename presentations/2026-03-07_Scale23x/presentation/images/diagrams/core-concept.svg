@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 160" width="860" height="160">
+  <defs>
+    <marker id="arr-s" markerWidth="12" markerHeight="8" refX="12" refY="4" orient="auto">
+      <polygon points="0 0, 12 4, 0 8" fill="#42affa"/>
+    </marker>
+  </defs>
+
+  <!-- ── Box 1: Source ── -->
+  <rect x="30" y="30" width="210" height="100" rx="12"
+        fill="rgba(66,175,250,0.10)" stroke="#42affa" stroke-width="2"/>
+  <text x="135" y="88" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="22" font-weight="700" fill="white">Source</text>
+  <text x="135" y="110" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="12" fill="rgba(255,255,255,0.40)">your existing data</text>
+
+  <!-- ── Arrow 1 ── -->
+  <line x1="242" y1="80" x2="298" y2="80"
+        stroke="#42affa" stroke-width="2.5" marker-end="url(#arr-s)"/>
+
+  <!-- ── Box 2: Continuous Query (highlighted as the key piece) ── -->
+  <rect x="300" y="18" width="260" height="124" rx="12"
+        fill="rgba(66,175,250,0.18)" stroke="#42affa" stroke-width="3"/>
+  <text x="430" y="76" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="22" font-weight="700" fill="white">Continuous</text>
+  <text x="430" y="100" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="22" font-weight="700" fill="white">Query</text>
+  <text x="430" y="122" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="12" fill="rgba(255,255,255,0.40)">always watching</text>
+
+  <!-- ── Arrow 2 ── -->
+  <line x1="562" y1="80" x2="618" y2="80"
+        stroke="#42affa" stroke-width="2.5" marker-end="url(#arr-s)"/>
+
+  <!-- ── Box 3: Reaction ── -->
+  <rect x="620" y="30" width="210" height="100" rx="12"
+        fill="rgba(66,175,250,0.10)" stroke="#42affa" stroke-width="2"/>
+  <text x="725" y="88" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="22" font-weight="700" fill="white">Reaction</text>
+  <text x="725" y="110" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="12" fill="rgba(255,255,255,0.40)">act on what changed</text>
+</svg>

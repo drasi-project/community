@@ -1,0 +1,119 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 300" width="920" height="300">
+  <defs>
+    <marker id="arr-rce" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#42affa"/>
+    </marker>
+  </defs>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- LEFT: CONTINUOUS QUERY BOX                      -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <rect x="12" y="82" width="148" height="140" rx="12"
+        fill="rgba(66,175,250,0.18)" stroke="#42affa" stroke-width="3"/>
+  <text x="86" y="148" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="18" font-weight="700" fill="white">Continuous</text>
+  <text x="86" y="170" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="18" font-weight="700" fill="white">Query</text>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- Arrow: Continuous Query → Result Change Notif.  -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <line x1="162" y1="152" x2="200" y2="152"
+        stroke="#42affa" stroke-width="2.5" marker-end="url(#arr-rce)"/>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- RESULT CHANGE NOTIFICATION (centered, compact)  -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <text x="305" y="74" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="13" font-weight="600" fill="#a78bfa">Result Change Notification</text>
+  <rect x="203" y="82" width="195" height="140" rx="10"
+        fill="rgba(167,139,250,0.03)" stroke="rgba(167,139,250,0.20)"
+        stroke-width="1" stroke-dasharray="6,3"/>
+
+  <!-- Added Card -->
+  <rect x="213" y="94" width="175" height="32" rx="8"
+        fill="rgba(167,139,250,0.12)" stroke="rgba(167,139,250,0.50)" stroke-width="1.5"/>
+  <circle cx="227" cy="110" r="5" fill="#4ade80"/>
+  <text x="241" y="115" font-family="system-ui,-apple-system,sans-serif"
+        font-size="13" font-weight="700" fill="white">Added</text>
+
+  <!-- Updated Card -->
+  <rect x="213" y="136" width="175" height="32" rx="8"
+        fill="rgba(167,139,250,0.12)" stroke="rgba(167,139,250,0.50)" stroke-width="1.5"/>
+  <circle cx="227" cy="152" r="5" fill="#a78bfa"/>
+  <text x="241" y="157" font-family="system-ui,-apple-system,sans-serif"
+        font-size="13" font-weight="700" fill="white">Updated</text>
+
+  <!-- Deleted Card -->
+  <rect x="213" y="178" width="175" height="32" rx="8"
+        fill="rgba(167,139,250,0.12)" stroke="rgba(167,139,250,0.50)" stroke-width="1.5"/>
+  <circle cx="227" cy="194" r="5" fill="#f87171"/>
+  <text x="241" y="199" font-family="system-ui,-apple-system,sans-serif"
+        font-size="13" font-weight="700" fill="white">Deleted</text>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- Arrow: Result Change Notification → Reaction    -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <line x1="400" y1="152" x2="443" y2="152"
+        stroke="#42affa" stroke-width="2.5" marker-end="url(#arr-rce)"/>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- REACTION BOX                                    -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <rect x="446" y="97" width="120" height="110" rx="12"
+        fill="rgba(66,175,250,0.10)" stroke="#42affa" stroke-width="2"/>
+  <text x="506" y="158" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="18" font-weight="700" fill="white">Reaction</text>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- FAN-OUT ROUTING                                 -->
+  <!-- ═══════════════════════════════════════════════ -->
+
+  <!-- Trunk: Reaction → fan-out point -->
+  <line x1="568" y1="152" x2="660" y2="152"
+        stroke="#42affa" stroke-width="2.5"/>
+
+  <!-- Branch to top (Real-Time UI) -->
+  <polyline points="660,152 660,54 758,54"
+        fill="none" stroke="#42affa" stroke-width="2" stroke-linejoin="round"
+        marker-end="url(#arr-rce)"/>
+
+  <!-- Branch to middle (System Integration) -->
+  <line x1="660" y1="152" x2="758" y2="152"
+        stroke="#42affa" stroke-width="2"
+        marker-end="url(#arr-rce)"/>
+
+  <!-- Branch to bottom (Data Write-Back) -->
+  <polyline points="660,152 660,250 758,250"
+        fill="none" stroke="#42affa" stroke-width="2" stroke-linejoin="round"
+        marker-end="url(#arr-rce)"/>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- RIGHT: Destination Cards                        -->
+  <!-- ═══════════════════════════════════════════════ -->
+
+  <!-- Real-Time UI -->
+  <rect x="768" y="28" width="140" height="52" rx="10"
+        fill="rgba(66,175,250,0.08)" stroke="rgba(66,175,250,0.35)" stroke-width="1.5"/>
+  <text x="838" y="60" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="15" font-weight="700" fill="white">Real-Time UI</text>
+
+  <!-- System Integration -->
+  <rect x="768" y="126" width="140" height="52" rx="10"
+        fill="rgba(66,175,250,0.08)" stroke="rgba(66,175,250,0.35)" stroke-width="1.5"/>
+  <text x="838" y="156" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="13" font-weight="700" fill="white">System Integration</text>
+
+  <!-- Data Write-Back -->
+  <rect x="768" y="224" width="140" height="52" rx="10"
+        fill="rgba(66,175,250,0.08)" stroke="rgba(66,175,250,0.35)" stroke-width="1.5"/>
+  <text x="838" y="256" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="15" font-weight="700" fill="white">Data Write-Back</text>
+</svg>

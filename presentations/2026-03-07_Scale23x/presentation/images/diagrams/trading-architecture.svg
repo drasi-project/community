@@ -1,0 +1,247 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 540" width="1280" height="540">
+  <defs>
+    <marker id="arr-ta" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#42affa"/>
+    </marker>
+    <marker id="arr-ta-dim" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="rgba(66,175,250,0.45)"/>
+    </marker>
+    <marker id="arr-ta-dim-start" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+      <polygon points="10 0, 0 3.5, 10 7" fill="rgba(66,175,250,0.45)"/>
+    </marker>
+    <marker id="arr-ta-start" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+      <polygon points="10 0, 0 3.5, 10 7" fill="#42affa"/>
+    </marker>
+  </defs>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- DRASI SERVER BOUNDARY                                   -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <rect x="408" y="97" width="622" height="391" rx="16"
+        fill="rgba(66,175,250,0.03)" stroke="rgba(66,175,250,0.30)"
+        stroke-width="1.5" stroke-dasharray="8,4"/>
+  <text x="719" y="133" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="24" font-weight="800" fill="white">Drasi Server</text>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- EXTERNAL LEFT: Broker API                               -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <rect x="42" y="213" width="128" height="52" rx="9"
+        fill="rgba(66,175,250,0.08)" stroke="rgba(66,175,250,0.45)" stroke-width="1.5"/>
+  <text x="106" y="245" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="13" font-weight="700" fill="white">Broker API</text>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- DATABASES COLUMN (external)                             -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+
+  <!-- Order Database -->
+  <rect x="238" y="158" width="140" height="52" rx="9"
+        fill="rgba(66,175,250,0.08)" stroke="rgba(66,175,250,0.45)" stroke-width="1.5"/>
+  <text x="308" y="190" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="13" font-weight="700" fill="white">Order Database</text>
+
+  <!-- Stock Database -->
+  <rect x="238" y="268" width="140" height="52" rx="9"
+        fill="rgba(66,175,250,0.08)" stroke="rgba(66,175,250,0.45)" stroke-width="1.5"/>
+  <text x="308" y="300" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="13" font-weight="700" fill="white">Stock Database</text>
+
+  <!-- Price Feed -->
+  <rect x="238" y="378" width="140" height="52" rx="9"
+        fill="rgba(66,175,250,0.08)" stroke="rgba(66,175,250,0.45)" stroke-width="1.5"/>
+  <text x="308" y="410" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="13" font-weight="700" fill="white">Price Feed</text>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- SOURCES (inside Drasi Server)                           -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+
+  <!-- PostgreSQL Source (orders) -->
+  <rect x="460" y="153" width="150" height="60" rx="8"
+        fill="rgba(66,175,250,0.12)" stroke="#42affa" stroke-width="2"/>
+  <text x="535" y="178" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="12" font-weight="700" fill="white">PostgreSQL</text>
+  <text x="535" y="194" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="12" font-weight="700" fill="white">Source</text>
+
+  <!-- PostgreSQL Source (stocks) -->
+  <rect x="460" y="263" width="150" height="60" rx="8"
+        fill="rgba(66,175,250,0.12)" stroke="#42affa" stroke-width="2"/>
+  <text x="535" y="288" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="12" font-weight="700" fill="white">PostgreSQL</text>
+  <text x="535" y="304" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="12" font-weight="700" fill="white">Source</text>
+
+  <!-- Http Source -->
+  <rect x="460" y="373" width="150" height="60" rx="8"
+        fill="rgba(66,175,250,0.12)" stroke="#42affa" stroke-width="2"/>
+  <text x="535" y="408" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="12" font-weight="700" fill="white">Http Source</text>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- QUERY ENGINE (center, emphasized)                       -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <rect x="724" y="258" width="136" height="72" rx="10"
+        fill="rgba(66,175,250,0.15)" stroke="#42affa" stroke-width="3"/>
+  <text x="792" y="300" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="14" font-weight="700" fill="white">Query Engine</text>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- INDEX STORAGE (below Query Engine)                      -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <rect x="732" y="380" width="120" height="52" rx="8"
+        fill="rgba(66,175,250,0.08)" stroke="rgba(66,175,250,0.50)" stroke-width="1.5"/>
+  <text x="792" y="412" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="12" font-weight="700" fill="white">Index Storage</text>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- WEB API (top right inside Drasi)                        -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <rect x="960" y="160" width="110" height="46" rx="8"
+        fill="#151e24" stroke="rgba(66,175,250,0.40)" stroke-width="1.5"/>
+  <text x="1015" y="188" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="13" font-weight="700" fill="white">Web API</text>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- SSE REACTION (right of Query Engine)                    -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <rect x="960" y="262" width="110" height="64" rx="8"
+        fill="#201d28" stroke="#42affa" stroke-width="2"/>
+  <text x="1015" y="288" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="13" font-weight="700" fill="white">SSE</text>
+  <text x="1015" y="306" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="13" font-weight="700" fill="white">Reaction</text>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- POSTGRESQL REACTION (dashed, bottom right)              -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <rect x="954" y="382" width="122" height="48" rx="8"
+        fill="#1d1b24" stroke="#42affa" stroke-width="1.5"
+        stroke-dasharray="6,3"/>
+  <text x="1015" y="402" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="12" font-weight="700" fill="white">PostgreSQL</text>
+  <text x="1015" y="418" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="12" font-weight="700" fill="white">Reaction</text>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- EXTERNAL RIGHT: Trading Application                     -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <rect x="1138" y="268" width="118" height="56" rx="10"
+        fill="rgba(66,175,250,0.10)" stroke="#42affa" stroke-width="2"/>
+  <text x="1197" y="292" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="14" font-weight="700" fill="white">Trading</text>
+  <text x="1197" y="310" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="14" font-weight="700" fill="white">Application</text>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- ARROWS: Broker API fan-out → Databases                  -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+
+  <!-- Trunk from Broker API right edge -->
+  <line x1="170" y1="239" x2="200" y2="239"
+        stroke="#42affa" stroke-width="2"/>
+  <!-- Vertical spine -->
+  <line x1="200" y1="184" x2="200" y2="294"
+        stroke="#42affa" stroke-width="2"/>
+  <!-- To Order Database -->
+  <line x1="200" y1="184" x2="236" y2="184"
+        stroke="#42affa" stroke-width="2" marker-end="url(#arr-ta)"/>
+  <!-- To Stock Database -->
+  <line x1="200" y1="294" x2="236" y2="294"
+        stroke="#42affa" stroke-width="2" marker-end="url(#arr-ta)"/>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- ARROWS: Databases → Sources                             -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+
+  <!-- Order Database → PostgreSQL Source 1 -->
+  <line x1="378" y1="184" x2="458" y2="184"
+        stroke="#42affa" stroke-width="2" marker-end="url(#arr-ta)"/>
+
+  <!-- Stock Database → PostgreSQL Source 2 -->
+  <line x1="378" y1="294" x2="458" y2="294"
+        stroke="#42affa" stroke-width="2" marker-end="url(#arr-ta)"/>
+
+  <!-- Price Feed → Http Source -->
+  <line x1="378" y1="404" x2="458" y2="404"
+        stroke="#42affa" stroke-width="2" marker-end="url(#arr-ta)"/>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- ARROWS: Sources → Query Engine (converging)             -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+
+  <!-- PG Source 1 → QE (angled down) -->
+  <polyline points="610,183 660,183 660,276 722,276"
+        fill="none" stroke="#42affa" stroke-width="2" stroke-linejoin="round"
+        marker-end="url(#arr-ta)"/>
+
+  <!-- PG Source 2 → QE (straight) -->
+  <line x1="610" y1="294" x2="722" y2="294"
+        stroke="#42affa" stroke-width="2" marker-end="url(#arr-ta)"/>
+
+  <!-- Http Source → QE (angled up) -->
+  <polyline points="610,403 660,403 660,312 722,312"
+        fill="none" stroke="#42affa" stroke-width="2" stroke-linejoin="round"
+        marker-end="url(#arr-ta)"/>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- ARROWS: Query Engine ↔ Index Storage (bidirectional)    -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <line x1="792" y1="332" x2="792" y2="378"
+        stroke="#42affa" stroke-width="2"
+        marker-start="url(#arr-ta-start)" marker-end="url(#arr-ta)"/>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- ARROW: Query Engine → SSE Reaction                      -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <line x1="860" y1="294" x2="958" y2="294"
+        stroke="#42affa" stroke-width="2.5" marker-end="url(#arr-ta)"/>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- ARROW: Query Engine → PostgreSQL Reaction (dim)         -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <polyline points="860,318 900,318 900,406 952,406"
+        fill="none" stroke="#42affa" stroke-width="2" stroke-linejoin="round"
+        marker-end="url(#arr-ta)"/>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- ARROW: SSE Reaction → Trading Application               -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <line x1="1070" y1="294" x2="1136" y2="294"
+        stroke="#42affa" stroke-width="2" marker-end="url(#arr-ta)"/>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- ARROW: Trading App → Web API (enters from right)        -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <polyline points="1197,268 1197,183 1072,183"
+        fill="none" stroke="rgba(66,175,250,0.45)" stroke-width="1.5"
+        stroke-linejoin="round" marker-end="url(#arr-ta-dim)"/>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- ARROW: Trading App → Broker API (loop across top-left)  -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <polyline points="1197,324 1197,510 106,510 106,267"
+        fill="none" stroke="rgba(66,175,250,0.35)" stroke-width="1.5"
+        stroke-linejoin="round" marker-end="url(#arr-ta-dim)"/>
+
+</svg>

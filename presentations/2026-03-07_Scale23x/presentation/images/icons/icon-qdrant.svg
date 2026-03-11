@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Vector DB: stylized cube with dot nodes -->
+  <path d="M12 2L3 7v10l9 5 9-5V7l-9-5z"/>
+  <path d="M3 7l9 5 9-5"/>
+  <path d="M12 12v10"/>
+  <circle cx="12" cy="7" r="1.2" fill="#fff" stroke="none"/>
+  <circle cx="7" cy="15" r="1.2" fill="#fff" stroke="none"/>
+  <circle cx="17" cy="15" r="1.2" fill="#fff" stroke="none"/>
+</svg>
