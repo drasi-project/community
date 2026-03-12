@@ -1,0 +1,14 @@
+{
+  "name": "drasi-scale23x",
+  "version": "1.0.0",
+  "description": "Drasi: A New Take on Change-Driven Architectures — SCaLE 23x",
+  "scripts": {
+    "start": "npx serve ."
+  },
+  "dependencies": {
+    "reveal.js": "^5.1.0"
+  },
+  "devDependencies": {
+    "serve": "^14.2.0"
+  }
+}

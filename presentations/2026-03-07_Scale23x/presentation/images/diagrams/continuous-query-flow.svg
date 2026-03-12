@@ -1,0 +1,158 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 300" width="920" height="300">
+  <defs>
+    <marker id="arr-cq" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#42affa"/>
+    </marker>
+    <marker id="arr-cq-out" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#a78bfa"/>
+    </marker>
+  </defs>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- LEFT: Source Change Event (input)              -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <rect x="10" y="80" width="165" height="140" rx="10"
+        fill="rgba(66,175,250,0.08)" stroke="rgba(66,175,250,0.35)" stroke-width="1.5"/>
+  <text x="92" y="108" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="13" font-weight="700" fill="#42affa">Source Change</text>
+  <text x="92" y="124" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="13" font-weight="700" fill="#42affa">Event</text>
+
+  <!-- Mini cards for Insert/Update/Delete -->
+  <rect x="22" y="136" width="141" height="24" rx="5"
+        fill="rgba(66,175,250,0.12)" stroke="rgba(66,175,250,0.30)" stroke-width="1"/>
+  <circle cx="34" cy="148" r="4" fill="#4ade80"/>
+  <text x="44" y="152" font-family="system-ui,-apple-system,sans-serif"
+        font-size="10" fill="rgba(255,255,255,0.70)">Insert</text>
+
+  <rect x="22" y="165" width="141" height="24" rx="5"
+        fill="rgba(66,175,250,0.12)" stroke="rgba(66,175,250,0.30)" stroke-width="1"/>
+  <circle cx="34" cy="177" r="4" fill="#42affa"/>
+  <text x="44" y="181" font-family="system-ui,-apple-system,sans-serif"
+        font-size="10" fill="rgba(255,255,255,0.70)">Update</text>
+
+  <rect x="22" y="194" width="141" height="24" rx="5"
+        fill="rgba(66,175,250,0.12)" stroke="rgba(66,175,250,0.30)" stroke-width="1"/>
+  <circle cx="34" cy="206" r="4" fill="#f87171"/>
+  <text x="44" y="210" font-family="system-ui,-apple-system,sans-serif"
+        font-size="10" fill="rgba(255,255,255,0.70)">Delete</text>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- ARROW: Input → Continuous Query                -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <line x1="177" y1="150" x2="238" y2="150"
+        stroke="#42affa" stroke-width="2.5" marker-end="url(#arr-cq)"/>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- CENTER: Continuous Query Engine                -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <rect x="245" y="18" width="430" height="264" rx="14"
+        fill="rgba(66,175,250,0.12)" stroke="#42affa" stroke-width="3"/>
+
+  <!-- Title -->
+  <text x="460" y="52" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="20" font-weight="700" fill="white">Continuous Query</text>
+  <text x="460" y="70" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="11" fill="rgba(255,255,255,0.40)">openCypher / GQL · runs perpetually</text>
+
+  <!-- Divider line -->
+  <line x1="270" y1="82" x2="650" y2="82"
+        stroke="rgba(66,175,250,0.25)" stroke-width="1"/>
+
+  <!-- Index label -->
+  <text x="460" y="104" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="12" font-weight="600" fill="rgba(255,255,255,0.50)">INDEXES</text>
+
+  <!-- Index Card 1: Element Index -->
+  <rect x="268" y="114" width="132" height="76" rx="8"
+        fill="rgba(66,175,250,0.08)" stroke="rgba(66,175,250,0.40)" stroke-width="1.5"/>
+  <text x="334" y="140" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="14" font-weight="700" fill="white">Elements</text>
+  <text x="334" y="158" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="10" fill="rgba(255,255,255,0.45)">Nodes &amp;</text>
+  <text x="334" y="172" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="10" fill="rgba(255,255,255,0.45)">Relations</text>
+
+  <!-- Index Card 2: Aggregation Index -->
+  <rect x="414" y="114" width="132" height="76" rx="8"
+        fill="rgba(66,175,250,0.08)" stroke="rgba(66,175,250,0.40)" stroke-width="1.5"/>
+  <text x="480" y="140" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="14" font-weight="700" fill="white">Aggregations</text>
+  <text x="480" y="158" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="10" fill="rgba(255,255,255,0.45)">count, sum, avg</text>
+  <text x="480" y="172" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="10" fill="rgba(255,255,255,0.45)">min, max, collect</text>
+
+  <!-- Index Card 3: Result Index -->
+  <rect x="560" y="114" width="102" height="76" rx="8"
+        fill="rgba(66,175,250,0.08)" stroke="rgba(66,175,250,0.40)" stroke-width="1.5"/>
+  <text x="611" y="140" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="14" font-weight="700" fill="white">Results</text>
+  <text x="611" y="158" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="10" fill="rgba(255,255,255,0.45)">Current</text>
+  <text x="611" y="172" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="10" fill="rgba(255,255,255,0.45)">result set</text>
+
+  <!-- Process description -->
+  <text x="460" y="218" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="11" fill="rgba(255,255,255,0.50)">Evaluates change → updates indexes → diffs result set</text>
+
+  <!-- Query example -->
+  <rect x="300" y="232" width="320" height="38" rx="6"
+        fill="rgba(0,0,0,0.30)" stroke="rgba(66,175,250,0.20)" stroke-width="1"/>
+  <text x="460" y="256" text-anchor="middle"
+        font-family="monospace"
+        font-size="11" fill="rgba(255,255,255,0.60)">MATCH (o:Order) WHERE o.status = 'delayed'</text>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- ARROW: Continuous Query → Output               -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <line x1="677" y1="150" x2="738" y2="150"
+        stroke="#a78bfa" stroke-width="2.5" marker-end="url(#arr-cq-out)"/>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- RIGHT: Result Change Notification (output)     -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <rect x="745" y="80" width="165" height="140" rx="10"
+        fill="rgba(167,139,250,0.08)" stroke="rgba(167,139,250,0.45)" stroke-width="1.5"/>
+  <text x="827" y="108" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="13" font-weight="700" fill="#a78bfa">Result Change</text>
+  <text x="827" y="124" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="13" font-weight="700" fill="#a78bfa">Notification</text>
+
+  <!-- Mini cards for Added/Updated/Deleted -->
+  <rect x="757" y="136" width="141" height="24" rx="5"
+        fill="rgba(167,139,250,0.12)" stroke="rgba(167,139,250,0.30)" stroke-width="1"/>
+  <circle cx="769" cy="148" r="4" fill="#4ade80"/>
+  <text x="779" y="152" font-family="system-ui,-apple-system,sans-serif"
+        font-size="10" fill="rgba(255,255,255,0.70)">Added</text>
+
+  <rect x="757" y="165" width="141" height="24" rx="5"
+        fill="rgba(167,139,250,0.12)" stroke="rgba(167,139,250,0.30)" stroke-width="1"/>
+  <circle cx="769" cy="177" r="4" fill="#a78bfa"/>
+  <text x="779" y="181" font-family="system-ui,-apple-system,sans-serif"
+        font-size="10" fill="rgba(255,255,255,0.70)">Updated (before/after)</text>
+
+  <rect x="757" y="194" width="141" height="24" rx="5"
+        fill="rgba(167,139,250,0.12)" stroke="rgba(167,139,250,0.30)" stroke-width="1"/>
+  <circle cx="769" cy="206" r="4" fill="#f87171"/>
+  <text x="779" y="210" font-family="system-ui,-apple-system,sans-serif"
+        font-size="10" fill="rgba(255,255,255,0.70)">Deleted</text>
+</svg>

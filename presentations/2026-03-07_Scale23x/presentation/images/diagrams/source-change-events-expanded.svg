@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 300" width="920" height="300">
+  <defs>
+    <marker id="arr-sce" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#42affa"/>
+    </marker>
+  </defs>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- LEFT: Source System Cards                       -->
+  <!-- ═══════════════════════════════════════════════ -->
+
+  <!-- PostgreSQL -->
+  <rect x="10" y="28" width="140" height="52" rx="10"
+        fill="rgba(66,175,250,0.08)" stroke="rgba(66,175,250,0.35)" stroke-width="1.5"/>
+  <text x="80" y="60" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="15" font-weight="700" fill="white">PostgreSQL</text>
+
+  <!-- Cosmos DB -->
+  <rect x="10" y="126" width="140" height="52" rx="10"
+        fill="rgba(66,175,250,0.08)" stroke="rgba(66,175,250,0.35)" stroke-width="1.5"/>
+  <text x="80" y="158" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="15" font-weight="700" fill="white">Cosmos DB</text>
+
+  <!-- Kubernetes -->
+  <rect x="10" y="224" width="140" height="52" rx="10"
+        fill="rgba(66,175,250,0.08)" stroke="rgba(66,175,250,0.35)" stroke-width="1.5"/>
+  <text x="80" y="256" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="15" font-weight="700" fill="white">Kubernetes</text>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- FAN-IN ROUTING                                  -->
+  <!-- ═══════════════════════════════════════════════ -->
+
+  <!-- Branch from PostgreSQL (y=54) -->
+  <polyline points="152,54 210,54 210,152"
+        fill="none" stroke="#42affa" stroke-width="2" stroke-linejoin="round"/>
+
+  <!-- Branch from Cosmos DB (y=152) — straight -->
+  <line x1="152" y1="152" x2="210" y2="152"
+        stroke="#42affa" stroke-width="2"/>
+
+  <!-- Branch from Kubernetes (y=250) -->
+  <polyline points="152,250 210,250 210,152"
+        fill="none" stroke="#42affa" stroke-width="2" stroke-linejoin="round"/>
+
+  <!-- Trunk → Source -->
+  <line x1="210" y1="152" x2="285" y2="152"
+        stroke="#42affa" stroke-width="2.5" marker-end="url(#arr-sce)"/>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- SOURCE BOX                                      -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <rect x="288" y="97" width="120" height="110" rx="12"
+        fill="rgba(66,175,250,0.10)" stroke="#42affa" stroke-width="2"/>
+  <text x="348" y="158" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="18" font-weight="700" fill="white">Source</text>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- Arrow: Source → Source Change Events             -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <line x1="410" y1="152" x2="455" y2="152"
+        stroke="#42affa" stroke-width="2.5" marker-end="url(#arr-sce)"/>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- SOURCE CHANGE EVENTS (centered, narrower)       -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <text x="558" y="74" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="13" font-weight="600" fill="#42affa">Source Change Events</text>
+  <rect x="458" y="82" width="200" height="140" rx="10"
+        fill="rgba(66,175,250,0.03)" stroke="rgba(66,175,250,0.20)"
+        stroke-width="1" stroke-dasharray="6,3"/>
+
+  <!-- Insert Card -->
+  <rect x="468" y="94" width="180" height="32" rx="8"
+        fill="rgba(66,175,250,0.12)" stroke="rgba(66,175,250,0.50)" stroke-width="1.5"/>
+  <circle cx="482" cy="110" r="5" fill="#4ade80"/>
+  <text x="496" y="115" font-family="system-ui,-apple-system,sans-serif"
+        font-size="13" font-weight="700" fill="white">Insert</text>
+
+  <!-- Update Card -->
+  <rect x="468" y="136" width="180" height="32" rx="8"
+        fill="rgba(66,175,250,0.12)" stroke="rgba(66,175,250,0.50)" stroke-width="1.5"/>
+  <circle cx="482" cy="152" r="5" fill="#42affa"/>
+  <text x="496" y="157" font-family="system-ui,-apple-system,sans-serif"
+        font-size="13" font-weight="700" fill="white">Update</text>
+
+  <!-- Delete Card -->
+  <rect x="468" y="178" width="180" height="32" rx="8"
+        fill="rgba(66,175,250,0.12)" stroke="rgba(66,175,250,0.50)" stroke-width="1.5"/>
+  <circle cx="482" cy="194" r="5" fill="#f87171"/>
+  <text x="496" y="199" font-family="system-ui,-apple-system,sans-serif"
+        font-size="13" font-weight="700" fill="white">Delete</text>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- Arrow: Source Change Events → Continuous Query   -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <line x1="660" y1="152" x2="733" y2="152"
+        stroke="#42affa" stroke-width="2.5" marker-end="url(#arr-sce)"/>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- CONTINUOUS QUERY BOX                            -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <rect x="736" y="82" width="172" height="140" rx="12"
+        fill="rgba(66,175,250,0.18)" stroke="#42affa" stroke-width="3"/>
+  <text x="822" y="148" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="18" font-weight="700" fill="white">Continuous</text>
+  <text x="822" y="170" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="18" font-weight="700" fill="white">Query</text>
+</svg>

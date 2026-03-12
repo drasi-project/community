@@ -1,0 +1,133 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 200" width="960" height="200">
+  <defs>
+    <marker id="arr-a" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#42affa"/>
+    </marker>
+    <marker id="arr-a-warn" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#f0a030"/>
+    </marker>
+  </defs>
+
+  <!-- ══════════════════════════════════════════════════
+       LEFT COLUMN: 3 source systems
+  ══════════════════════════════════════════════════ -->
+
+  <!-- Column label -->
+  <text x="80" y="13" text-anchor="middle"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="10" fill="rgba(255,255,255,0.40)">Source Systems</text>
+
+  <!-- Source A: PostgreSQL -->
+  <rect x="10" y="20" width="140" height="48" rx="7"
+        fill="rgba(66,175,250,0.10)" stroke="#42affa" stroke-width="1.5"/>
+  <text x="80" y="41" text-anchor="middle"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="12" font-weight="600" fill="white">PostgreSQL</text>
+  <text x="80" y="57" text-anchor="middle"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="10" fill="rgba(255,255,255,0.45)">relational database</text>
+
+  <!-- Source B: REST API -->
+  <rect x="10" y="84" width="140" height="48" rx="7"
+        fill="rgba(66,175,250,0.10)" stroke="#42affa" stroke-width="1.5"/>
+  <text x="80" y="105" text-anchor="middle"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="12" font-weight="600" fill="white">REST API</text>
+  <text x="80" y="121" text-anchor="middle"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="10" fill="rgba(255,255,255,0.45)">external service</text>
+
+  <!-- Source C: SaaS App -->
+  <rect x="10" y="148" width="140" height="48" rx="7"
+        fill="rgba(66,175,250,0.10)" stroke="#42affa" stroke-width="1.5"/>
+  <text x="80" y="169" text-anchor="middle"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="12" font-weight="600" fill="white">SaaS App</text>
+  <text x="80" y="185" text-anchor="middle"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="10" fill="rgba(255,255,255,0.45)">CRM · ERP · etc.</text>
+
+  <!-- Connector lines from sources to ETL -->
+  <!-- from A (150, 44) → elbow → (230, 108) -->
+  <polyline points="150,44 195,44 195,108 230,108"
+            fill="none" stroke="rgba(66,175,250,0.6)" stroke-width="1.5"/>
+  <!-- from B (150, 108) → straight -->
+  <line x1="150" y1="108" x2="230" y2="108"
+        stroke="rgba(66,175,250,0.6)" stroke-width="1.5" marker-end="url(#arr-a)"/>
+  <!-- from C (150, 172) → elbow → (230, 108) -->
+  <polyline points="150,172 195,172 195,108 230,108"
+            fill="none" stroke="rgba(66,175,250,0.6)" stroke-width="1.5"/>
+
+  <!-- ══════════════════════════════════════════════════
+       BOX 1: ETL / Data Pipeline
+  ══════════════════════════════════════════════════ -->
+  <circle cx="243" cy="93" r="9" fill="#42affa"/>
+  <text x="243" y="97" text-anchor="middle"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="10" font-weight="700" fill="#000">1</text>
+
+  <rect x="230" y="76" width="160" height="64" rx="9"
+        fill="rgba(66,175,250,0.10)" stroke="#42affa" stroke-width="1.5"/>
+  <text x="310" y="103" text-anchor="middle"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="13" font-weight="600" fill="white">ETL Pipeline</text>
+  <text x="310" y="121" text-anchor="middle"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="10" fill="rgba(255,255,255,0.45)">extract · transform · load</text>
+
+  <!-- ══════════════════════════════════════════════════
+       Arrow 1→2: copy + lag annotation
+  ══════════════════════════════════════════════════ -->
+  <line x1="391" y1="108" x2="445" y2="108"
+        stroke="#f0a030" stroke-width="2" marker-end="url(#arr-a-warn)"/>
+  <text x="418" y="98" text-anchor="middle"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="9" font-style="italic" fill="#f0a030">copy</text>
+
+  <!-- ══════════════════════════════════════════════════
+       BOX 2: Analytics Platform (taller — it's the hub)
+  ══════════════════════════════════════════════════ -->
+  <circle cx="458" cy="60" r="9" fill="#42affa"/>
+  <text x="458" y="64" text-anchor="middle"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="10" font-weight="700" fill="#000">2</text>
+
+  <rect x="445" y="44" width="185" height="130" rx="9"
+        fill="rgba(66,175,250,0.13)" stroke="#42affa" stroke-width="2"/>
+  <text x="537" y="96" text-anchor="middle"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="13" font-weight="600" fill="white">Analytics Platform</text>
+  <text x="537" y="113" text-anchor="middle"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="10" fill="rgba(255,255,255,0.45)">Snowflake · BigQuery · Redshift</text>
+  <!-- "snapshot" badge -->
+  <rect x="490" y="126" width="95" height="20" rx="10"
+        fill="rgba(240,160,48,0.18)" stroke="rgba(240,160,48,0.55)" stroke-width="1"/>
+  <text x="537" y="139" text-anchor="middle"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="9.5" font-weight="600" fill="#f0a030">snapshot, not live</text>
+
+  <!-- ══════════════════════════════════════════════════
+       Arrow 2→3
+  ══════════════════════════════════════════════════ -->
+  <line x1="631" y1="108" x2="685" y2="108"
+        stroke="#42affa" stroke-width="2" marker-end="url(#arr-a)"/>
+
+  <!-- ══════════════════════════════════════════════════
+       BOX 3: Reports & Alerts
+  ══════════════════════════════════════════════════ -->
+  <circle cx="698" cy="93" r="9" fill="#42affa"/>
+  <text x="698" y="97" text-anchor="middle"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="10" font-weight="700" fill="#000">3</text>
+
+  <rect x="685" y="76" width="165" height="64" rx="9"
+        fill="rgba(66,175,250,0.10)" stroke="#42affa" stroke-width="1.5"/>
+  <text x="767" y="103" text-anchor="middle"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="13" font-weight="600" fill="white">Reports &amp; Alerts</text>
+  <text x="767" y="121" text-anchor="middle"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="10" fill="rgba(255,255,255,0.45)">dashboards · scheduled queries</text>
+
+</svg>

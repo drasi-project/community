@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 440" width="820" height="440">
+  <defs>
+    <marker id="arr-tdo" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#42affa"/>
+    </marker>
+  </defs>
+
+  <!-- LEFT COLUMN -->
+
+  <!-- Order Management -->
+  <rect x="24" y="24" width="220" height="72" rx="9"
+        fill="rgba(66,175,250,0.10)" stroke="#42affa" stroke-width="2"/>
+  <text x="134" y="67" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="18" font-weight="700" fill="white">Order Management</text>
+
+  <!-- Stocks, Portfolio, Watchlist -->
+  <rect x="24" y="176" width="220" height="88" rx="9"
+        fill="rgba(66,175,250,0.10)" stroke="#42affa" stroke-width="2"/>
+  <text x="134" y="210" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="18" font-weight="700" fill="white">Stocks, Portfolio,</text>
+  <text x="134" y="234" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="18" font-weight="700" fill="white">Watchlist</text>
+
+  <!-- Market Data -->
+  <rect x="24" y="344" width="220" height="72" rx="9"
+        fill="rgba(66,175,250,0.10)" stroke="#42affa" stroke-width="2"/>
+  <text x="134" y="387" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="18" font-weight="700" fill="white">Market Data</text>
+
+  <!-- RIGHT -->
+
+  <!-- Trading Application -->
+  <rect x="576" y="152" width="220" height="136" rx="9"
+        fill="rgba(66,175,250,0.10)" stroke="#42affa" stroke-width="2"/>
+  <text x="686" y="212" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="18" font-weight="700" fill="white">Trading</text>
+  <text x="686" y="236" text-anchor="middle"
+        font-family="system-ui,-apple-system,sans-serif"
+        font-size="18" font-weight="700" fill="white">Application</text>
+
+  <!-- ARROWS -->
+
+  <!-- Order Management → Trading App -->
+  <polyline points="246,60 440,60 440,188 574,188"
+        fill="none" stroke="#42affa" stroke-width="2" stroke-linejoin="round"
+        marker-end="url(#arr-tdo)"/>
+
+  <!-- Stocks/Portfolio/Watchlist → Trading App -->
+  <line x1="246" y1="220" x2="574" y2="220"
+        stroke="#42affa" stroke-width="2" marker-end="url(#arr-tdo)"/>
+
+  <!-- Market Data → Trading App -->
+  <polyline points="246,380 440,380 440,252 574,252"
+        fill="none" stroke="#42affa" stroke-width="2" stroke-linejoin="round"
+        marker-end="url(#arr-tdo)"/>
+</svg>

@@ -1,0 +1,540 @@
+/* Custom styles for Drasi SCaLE 23x presentation */
+/* Optimized for 1920×1080 (16:9) slide canvas */
+
+/* ── Base font scale for 1920×1080 ── */
+.reveal {
+  font-size: 52px;
+}
+
+.reveal .slides section {
+  padding: 40px 0;
+  box-sizing: border-box;
+}
+
+.reveal h2 {
+  font-size: 1.8em;
+  margin-bottom: 0.4em;
+}
+
+.reveal h3 {
+  font-size: 1.4em;
+  margin-bottom: 0.4em;
+}
+
+.reveal p {
+  line-height: 1.5;
+  margin-bottom: 0.5em;
+  max-width: 85%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ══════════════════════════════════════════════════
+   TYPOGRAPHY SYSTEM
+   ══════════════════════════════════════════════════
+   Heading hierarchy:
+   - h2: Section titles (Reveal default)
+   - h3: Slide titles (Reveal default)
+   - h4: Subsection titles (0.85em)
+   
+   Body text hierarchy:
+   - Standard paragraph: Reveal default
+   - Slide intro/description: 0.85em
+   - Subtext/footnotes: 0.65em, opacity 0.65
+   - Badge/label text: 0.7em
+   
+   Emphasis:
+   - <strong>: Key terms, important concepts (bold)
+   - <em>: Emphasis within sentences (italic)
+   - .callout: Call-to-action phrases (bold + italic + brand color)
+   
+   Brand color: #42affa
+   ══════════════════════════════════════════════════ */
+
+.reveal h1,
+.reveal h2,
+.reveal h3,
+.reveal h4 {
+  text-transform: none;
+}
+
+.reveal h4 {
+  font-size: 0.85em;
+}
+
+.reveal ul li,
+.reveal ol li {
+  font-size: 0.85em;
+  line-height: 1.6;
+  margin-bottom: 0.3em;
+}
+
+/* ── Callout: emphasized call-to-action ── */
+.reveal .callout {
+  font-size: 1.1em;
+  font-weight: bold;
+  font-style: italic;
+  color: #42affa;
+  margin-top: 0.6em;
+}
+
+/* ── Slide intro paragraph ── */
+.reveal .slide-intro {
+  font-size: 0.85em;
+  max-width: 90%;
+  margin: 0 auto 0.8em;
+}
+
+/* ── Subtext/footnote ── */
+.reveal .subtext {
+  font-size: 0.7em;
+  opacity: 0.65;
+  margin-top: 0.8em;
+}
+
+.reveal blockquote {
+  width: 80%;
+  font-style: italic;
+  background: rgba(255, 255, 255, 0.05);
+  border-left: 4px solid #42affa;
+  padding: 0.6em 1.2em;
+  font-size: 0.9em;
+}
+
+.reveal table {
+  margin: 0 auto;
+}
+
+.reveal table th,
+.reveal table td {
+  text-align: left;
+  padding: 0.5em 1em;
+  font-size: 0.75em;
+}
+
+.reveal pre {
+  width: 72%;
+  font-size: 0.52em;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.reveal .r-stack {
+  min-height: 640px;
+}
+
+.reveal .r-stack img {
+  width: 96%;
+  max-width: 1400px;
+}
+
+.reveal small {
+  vertical-align: baseline;
+}
+
+.deployment-options {
+  display: flex;
+  justify-content: center;
+  gap: 1.5em;
+  margin-top: 0.8em;
+}
+
+.deployment-option {
+  flex: 1;
+  max-width: 440px;
+  text-align: center;
+}
+
+.deployment-option h4 {
+  margin-top: 0.5em;
+  margin-bottom: 0.2em;
+}
+
+.deployment-option p {
+  font-size: 0.7em;
+}
+
+.deployment-icon {
+  height: 120px;
+  width: auto;
+}
+
+/* ── Stat slide: giant centered text ── */
+.reveal .stat-slide {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.reveal .stat-slide .stat-number {
+  font-size: 1.6em;
+  font-weight: 900;
+  color: #42affa;
+  line-height: 1.2;
+  margin-bottom: 0.3em;
+}
+
+.reveal .stat-slide .stat-caption {
+  font-size: 0.85em;
+  opacity: 0.7;
+}
+
+/* ── Split slide: two-column comparison ── */
+.reveal .split-slide {
+  display: flex;
+  gap: 2em;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.reveal .split-slide .split-col {
+  flex: 1;
+  max-width: 48%;
+}
+
+.reveal .split-slide .split-col h4 {
+  margin-bottom: 0.4em;
+}
+
+.reveal .split-slide .split-col pre {
+  width: 100%;
+  font-size: 0.45em;
+}
+
+.reveal .split-slide .split-col.highlight {
+  border-left: 3px solid #42affa;
+  padding-left: 0.5em;
+}
+
+/* ── Pipeline: flexbox boxes with arrows ── */
+.reveal .pipeline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin: 1.5em auto;
+}
+
+.reveal .pipeline .pipeline-step {
+  background: rgba(66, 175, 250, 0.12);
+  border: 2px solid #42affa;
+  border-radius: 12px;
+  padding: 0.8em 1.2em;
+  text-align: center;
+  min-width: 220px;
+}
+
+.reveal .pipeline .pipeline-step .pipeline-icon {
+  font-size: 1.8em;
+  display: block;
+  margin-bottom: 0.2em;
+}
+
+.reveal .pipeline .pipeline-step .pipeline-label {
+  font-size: 0.65em;
+  font-weight: bold;
+}
+
+.reveal .pipeline .pipeline-arrow {
+  font-size: 2em;
+  color: #42affa;
+  padding: 0 0.4em;
+}
+
+/* ── Source grid: badge/chip layout ── */
+.reveal .source-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8em;
+  justify-content: center;
+  margin-top: 1em;
+}
+
+.reveal .source-grid .source-badge {
+  background: rgba(66, 175, 250, 0.15);
+  border: 1px solid rgba(66, 175, 250, 0.4);
+  border-radius: 20px;
+  padding: 0.4em 1.2em;
+  font-size: 0.7em;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ── Quiz slide: centered dramatic question ── */
+.reveal .quiz-slide {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.reveal .quiz-slide .quiz-emoji {
+  font-size: 3em;
+  margin-bottom: 0.3em;
+}
+
+.reveal .quiz-slide .quiz-question {
+  font-size: 1em;
+  font-style: italic;
+  max-width: 75%;
+  line-height: 1.4;
+}
+
+/* ── Placeholder image styling ── */
+.reveal .placeholder-img {
+  border: 2px dashed rgba(66, 175, 250, 0.5);
+  padding: 2em;
+  text-align: center;
+  font-size: 0.65em;
+  opacity: 0.6;
+  border-radius: 8px;
+  margin: 1em auto;
+  max-width: 75%;
+}
+
+/* ── Pipeline: compact variant for 5+ steps ── */
+.reveal .pipeline.pipeline-compact .pipeline-step {
+  min-width: 140px;
+  padding: 0.55em 0.8em;
+  font-size: 0.8em;
+}
+
+.reveal .pipeline.pipeline-compact .pipeline-step .pipeline-icon {
+  font-size: 1.4em;
+}
+
+.reveal .pipeline.pipeline-compact .pipeline-label small {
+  display: block;
+  font-size: 0.75em;
+  opacity: 0.65;
+  margin-top: 0.15em;
+}
+
+/* ── Verdict box: bold outcome callout ── */
+.reveal .verdict-box {
+  border: 2px solid rgba(66, 175, 250, 0.5);
+  border-radius: 10px;
+  padding: 0.8em 1.5em;
+  text-align: center;
+  background: rgba(66, 175, 250, 0.06);
+}
+
+.reveal .verdict-box .verdict-emoji {
+  font-size: 2.2em;
+  display: block;
+  margin-bottom: 0.2em;
+}
+
+.reveal .verdict-box .verdict-text {
+  font-size: 0.85em;
+  font-weight: bold;
+  font-style: italic;
+  color: #42affa;
+  line-height: 1.3;
+}
+
+/* ── Icon card grid ── */
+.reveal .icon-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.6em;
+  margin-top: 0.6em;
+}
+
+.reveal .icon-card {
+  text-align: center;
+  padding: 0.4em;
+}
+
+.reveal .icon-card .icon-card-icon {
+  font-size: 1.5em;
+  height: 110px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reveal .icon-card .icon-card-icon img {
+  height: 100px;
+  width: 100px;
+}
+
+.reveal .icon-card .icon-card-title {
+  font-size: 0.65em;
+  font-weight: bold;
+  margin: 0.3em 0;
+}
+
+.reveal .icon-card .icon-card-desc {
+  font-size: 0.5em;
+  opacity: 0.65;
+  line-height: 1.4;
+}
+
+/* Crossfade transition for overlapping images */
+.reveal .fragment.semi-fade-out {
+  opacity: 1;
+  visibility: inherit;
+  transition: opacity 0.8s ease;
+}
+.reveal .fragment.semi-fade-out.visible {
+  opacity: 0;
+}
+
+/* ── Split iframe: side-by-side live views ── */
+.split-iframe-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.split-iframe-overlay iframe {
+  border: none;
+  position: absolute;
+  top: 0;
+}
+
+.split-iframe-overlay iframe.split-left {
+  left: 0;
+  width: 30vw;
+  height: 100%;
+}
+
+.split-iframe-overlay iframe.split-right {
+  left: 30vw;
+  width: 70vw;
+  height: 100%;
+}
+
+/* ── Accent rows: category groups with stream-in animation ── */
+.reveal .accent-rows {
+  width: 100%;
+  max-width: 65%;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8em;
+}
+
+.reveal .accent-row-group {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+}
+
+.reveal .accent-row-category {
+  writing-mode: vertical-lr;
+  transform: rotate(180deg);
+  font-size: 0.42em;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: #42affa;
+  opacity: 0.8;
+  white-space: nowrap;
+  min-width: 1.4em;
+  flex-shrink: 0;
+}
+
+.reveal .accent-row-items {
+  display: flex;
+  gap: 0.5em;
+  flex-wrap: nowrap;
+  flex: 1;
+  padding-left: 0.8em;
+  border-left: 2px solid rgba(66,175,250,0.3);
+}
+
+.reveal .accent-row-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  padding: 0.35em 0.7em;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  font-size: 0.5em;
+  font-weight: 600;
+  opacity: 0;
+  transform: translateX(-120px);
+}
+
+.reveal .accent-row-item img {
+  width: 1.4em;
+  height: 1.4em;
+  flex-shrink: 0;
+}
+
+/* When the parent fragment becomes visible, items stream in */
+.reveal .fragment.visible .accent-row-item {
+  animation: stream-in-left 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.reveal .fragment.visible .accent-row-item:nth-child(1) { animation-delay: 0s; }
+.reveal .fragment.visible .accent-row-item:nth-child(2) { animation-delay: 0.08s; }
+.reveal .fragment.visible .accent-row-item:nth-child(3) { animation-delay: 0.16s; }
+.reveal .fragment.visible .accent-row-item:nth-child(4) { animation-delay: 0.24s; }
+.reveal .fragment.visible .accent-row-item:nth-child(5) { animation-delay: 0.32s; }
+.reveal .fragment.visible .accent-row-item:nth-child(6) { animation-delay: 0.40s; }
+
+@keyframes stream-in-left {
+  0% {
+    opacity: 0;
+    transform: translateX(-120px);
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Category label fades in alongside items */
+.reveal .accent-row-group .accent-row-category,
+.reveal .accent-row-group .accent-row-items {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.reveal .fragment.visible .accent-row-category,
+.reveal .fragment.visible .accent-row-items {
+  opacity: 1;
+}
+
+/* ── Two-column layout: image + list side by side ── */
+.reveal .two-col {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5em;
+  margin-top: 0.8em;
+  width: 95%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.reveal .two-col img {
+  flex: 1 1 45%;
+  max-width: 800px;
+  height: auto;
+}
+
+.reveal .two-col ul,
+.reveal .two-col ol {
+  text-align: left;
+  font-size: 0.85em;
+  flex: 1 1 45%;
+}
+
+.reveal .two-col ul li,
+.reveal .two-col ol li {
+  font-size: 0.95em;
+  margin-bottom: 0.3em;
+}

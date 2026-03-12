@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 175" width="900" height="175">
+  <defs>
+    <marker id="arr" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#42affa"/>
+    </marker>
+    <marker id="arr-dim" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="rgba(66,175,250,0.55)"/>
+    </marker>
+  </defs>
+
+  <!-- ─── Box 1: Timer / Scheduler ─── -->
+  <rect x="65" y="20" width="155" height="80" rx="9"
+        fill="rgba(66,175,250,0.10)" stroke="#42affa" stroke-width="1.5"/>
+  <circle cx="78" cy="33" r="9" fill="#42affa"/>
+  <text x="78" y="37" text-anchor="middle"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="10" font-weight="700" fill="#000">1</text>
+  <text x="142" y="58" text-anchor="middle"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="13" font-weight="600" fill="white">Timer / Scheduler</text>
+  <text x="142" y="76" text-anchor="middle"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="10.5" fill="rgba(255,255,255,0.50)">runs every N seconds</text>
+
+  <!-- ─── Arrow 1 ─── -->
+  <line x1="221" y1="60" x2="270" y2="60"
+        stroke="#42affa" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- ─── Box 2: Query Database ─── -->
+  <rect x="270" y="20" width="155" height="80" rx="9"
+        fill="rgba(66,175,250,0.10)" stroke="#42affa" stroke-width="1.5"/>
+  <circle cx="283" cy="33" r="9" fill="#42affa"/>
+  <text x="283" y="37" text-anchor="middle"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="10" font-weight="700" fill="#000">2</text>
+  <text x="347" y="58" text-anchor="middle"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="13" font-weight="600" fill="white">Query Database</text>
+  <text x="347" y="76" text-anchor="middle"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="10.5" fill="rgba(255,255,255,0.50)">SELECT * FROM table</text>
+
+  <!-- ─── Arrow 2 ─── -->
+  <line x1="426" y1="60" x2="475" y2="60"
+        stroke="#42affa" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- ─── Box 3: Compare Results ─── -->
+  <rect x="475" y="20" width="155" height="80" rx="9"
+        fill="rgba(66,175,250,0.10)" stroke="#42affa" stroke-width="1.5"/>
+  <circle cx="488" cy="33" r="9" fill="#42affa"/>
+  <text x="488" y="37" text-anchor="middle"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="10" font-weight="700" fill="#000">3</text>
+  <text x="552" y="58" text-anchor="middle"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="13" font-weight="600" fill="white">Compare Results</text>
+  <text x="552" y="76" text-anchor="middle"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="10.5" fill="rgba(255,255,255,0.50)">diff vs. last snapshot</text>
+
+  <!-- ─── Arrow 3 (conditional) ─── -->
+  <line x1="631" y1="60" x2="680" y2="60"
+        stroke="#42affa" stroke-width="2" marker-end="url(#arr)"/>
+  <text x="655" y="50" text-anchor="middle"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="9.5" font-style="italic" fill="rgba(66,175,250,0.70)">if changed</text>
+
+  <!-- ─── Box 4: Act on Difference ─── -->
+  <rect x="680" y="20" width="155" height="80" rx="9"
+        fill="rgba(66,175,250,0.10)" stroke="#42affa" stroke-width="1.5"/>
+  <circle cx="693" cy="33" r="9" fill="#42affa"/>
+  <text x="693" y="37" text-anchor="middle"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="10" font-weight="700" fill="#000">4</text>
+  <text x="757" y="58" text-anchor="middle"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="13" font-weight="600" fill="white">Act on Difference</text>
+  <text x="757" y="76" text-anchor="middle"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="10.5" fill="rgba(255,255,255,0.50)">notify / trigger / update</text>
+
+  <!-- ─── Loop path: right of box 4, below all boxes, back to box 1 ─── -->
+  <path d="M 836,60 H 874 V 138 H 42 V 60 H 65"
+        fill="none"
+        stroke="rgba(66,175,250,0.55)" stroke-width="1.5" stroke-dasharray="6,3.5"
+        marker-end="url(#arr-dim)"/>
+
+  <!-- ─── Loop label ─── -->
+  <text x="450" y="158" text-anchor="middle"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="11" fill="rgba(255,255,255,0.38)">↺  repeat every N seconds</text>
+</svg>
