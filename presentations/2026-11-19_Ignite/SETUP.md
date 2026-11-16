@@ -52,9 +52,6 @@ git clone -b agentofreality-parallel-computation-graph-recovery https://github.c
 git clone -b agentofreality-parallel-computation-graph-recovery https://github.com/drasi-project/drasi-server.git
 ```
 
-This presentation folder is not yet committed to the `community` branch. Until
-it is, copy `community/presentations/2026-11-19_Ignite` from a machine that has it.
-
 All remaining commands run from the demo folder:
 
 ```sh
