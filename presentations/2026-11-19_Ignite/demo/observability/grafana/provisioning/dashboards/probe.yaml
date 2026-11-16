@@ -1,0 +1,7 @@
+apiVersion: 1
+providers:
+  - name: Ignite integration probe
+    folder: Ignite
+    type: file
+    options:
+      path: /var/lib/grafana/dashboards

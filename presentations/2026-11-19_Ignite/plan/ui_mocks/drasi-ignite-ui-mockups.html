@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>Drasi Ignite demo - UI mockups</title>
+<script>
+  (() => {
+    const param = new URLSearchParams(window.location.search).get("scoutTheme");
+    const theme =
+      param || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    document.documentElement.setAttribute("data-theme", theme);
+  })();
+</script>
+<style>
+:root {
+  color-scheme: light;
+  --cp-bg: #f7f4ef;
+  --cp-bg-elevated: #fcfbf8;
+  --cp-surface: #ffffff;
+  --cp-surface-soft: #f5f5f5;
+  --cp-border: #dedede;
+  --cp-border-strong: #919191;
+  --cp-text: #242424;
+  --cp-text-muted: #5c5c5c;
+  --cp-text-soft: #6f6f6f;
+  --cp-accent: #b11f4b;
+  --cp-accent-hover: #9a1a41;
+  --cp-accent-soft: rgba(177, 31, 75, 0.08);
+  --cp-accent-fg: #ffffff;
+  --cp-success: #16a34a;
+  --cp-danger: #dc2626;
+  --cp-warning: #f59e0b;
+  --cp-link: #0078d4;
+  --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.12);
+  --cp-overlay: rgba(255, 255, 255, 0.8);
+  --cp-panel: rgba(255, 255, 255, 0.86);
+  --cp-panel-strong: rgba(255, 255, 255, 0.96);
+  --cp-sheen: rgba(255, 255, 255, 0.55);
+  --cp-highlight: rgba(177, 31, 75, 0.12);
+}
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --cp-bg: #3d3b3a;
+  --cp-bg-elevated: #343231;
+  --cp-surface: #292929;
+  --cp-surface-soft: #2e2e2e;
+  --cp-border: #474747;
+  --cp-border-strong: #5f5f5f;
+  --cp-text: #dedede;
+  --cp-text-muted: #919191;
+  --cp-text-soft: #b0b0b0;
+  --cp-accent: #fd8ea1;
+  --cp-accent-hover: #fb7b91;
+  --cp-accent-soft: rgba(253, 142, 161, 0.14);
+  --cp-accent-fg: #1a1a1a;
+  --cp-success: #4ade80;
+  --cp-danger: #f87171;
+  --cp-warning: #fbbf24;
+  --cp-link: #4da6ff;
+  --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
+  --cp-overlay: rgba(41, 41, 41, 0.88);
+  --cp-panel: rgba(41, 41, 41, 0.72);
+  --cp-panel-strong: rgba(41, 41, 41, 0.96);
+  --cp-sheen: rgba(255, 255, 255, 0.04);
+  --cp-highlight: rgba(253, 142, 161, 0.12);
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--cp-bg); color: var(--cp-text); font: 16px/1.4 "Segoe UI", Aptos, Calibri, -apple-system, BlinkMacSystemFont, sans-serif; }
+button, select { font: inherit; }
+button { cursor: pointer; border: 1px solid var(--cp-border-strong); border-radius: 10px; padding: 8px 14px; color: var(--cp-text); background: var(--cp-surface-soft); white-space: nowrap; }
+button:hover { border-color: var(--cp-accent); }
+button:focus-visible { outline: 2px solid var(--cp-accent); outline-offset: 3px; }
+button.primary { background: var(--cp-accent); color: var(--cp-accent-fg); border-color: var(--cp-accent); font-weight: 650; }
+button.quiet { background: var(--cp-surface); border-color: var(--cp-border); }
+button.small { font-size: 13px; padding: 6px 10px; }
+.mono, code, pre { font-family: Consolas, "Courier New", Courier, monospace; }
+h1,h2,h3,p { margin: 0; }
+h1 { font-size: 25px; letter-spacing: -.5px; }
+h2 { font-size: 20px; letter-spacing: -.25px; }
+h3 { font-size: 16px; }
+.muted { color: var(--cp-text-muted); }
+.soft { color: var(--cp-text-soft); }
+.small { font-size: 13px; }
+.eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; color: var(--cp-text-muted); text-transform: uppercase; }
+.good { color: var(--cp-success); }
+.bad { color: var(--cp-danger); }
+.warn { color: var(--cp-warning); }
+.accent { color: var(--cp-accent); }
+.row { display: flex; align-items: center; gap: 12px; }
+.spread { justify-content: space-between; }
+.stack { display: flex; flex-direction: column; gap: 12px; }
+.tag { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--cp-border); border-radius: 6px; padding: 3px 8px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; background: currentColor; }
+.gallery { height: 44px; padding: 0 20px; background: var(--cp-bg-elevated); border-bottom: 1px solid var(--cp-border); display: flex; align-items: center; gap: 16px; }
+.gallery strong { font-size: 12px; letter-spacing: 1.1px; }
+.gallery .nav { display: flex; gap: 5px; margin-left: auto; }
+.gallery button { font-size: 12px; border: 0; border-radius: 6px; padding: 5px 10px; background: var(--cp-bg-elevated); }
+.gallery button[aria-current="page"] { color: var(--cp-accent); background: var(--cp-accent-soft); }
+.gallery .mock-tag { color: var(--cp-accent); font-size: 10px; letter-spacing: 1px; font-weight: 700; }
+.screen { display: none; height: calc(100vh - 44px); min-height: 820px; grid-template-rows: 64px 1fr 28px; }
+.screen.active { display: grid; }
+.tool-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 24px; background: var(--cp-surface); border-bottom: 1px solid var(--cp-border); }
+.brand { font-size: 23px; font-weight: 700; letter-spacing: -.8px; }
+.brand-mark { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; font-size: 20px; color: var(--cp-accent); background: var(--cp-accent-soft); }
+.breadcrumb { color: var(--cp-text-muted); font-size: 14px; margin-left: 20px; }
+.bottom-bar { border-top: 1px solid var(--cp-border); padding: 4px 20px; display: flex; justify-content: space-between; background: var(--cp-bg-elevated); color: var(--cp-text-muted); font-size: 11px; }
+.product-layout { min-height: 0; display: grid; grid-template-columns: 176px 1fr; }
+.sidebar { background: var(--cp-surface); border-right: 1px solid var(--cp-border); padding: 20px 12px; display: flex; flex-direction: column; gap: 7px; }
+.side-item { padding: 10px 12px; border-radius: 8px; font-size: 14px; }
+.side-item.selected { color: var(--cp-accent); background: var(--cp-accent-soft); font-weight: 650; }
+.sidebar .eyebrow { margin: 0 12px 8px; }
+.sidebar .bottom { margin-top: auto; padding: 12px; }
+.panel { background: var(--cp-surface); border: 1px solid var(--cp-border); border-radius: 12px; padding: 16px; min-width: 0; }
+.panel-head { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-bottom: 10px; }
+.metrics { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; }
+.metric { padding: 12px 16px; }
+.metric .label { font-size: 13px; color: var(--cp-text-soft); }
+.metric .value { font-size: 33px; font-weight: 650; letter-spacing: -1px; line-height: 1.25; }
+.metric .note { font-size: 12px; color: var(--cp-text-muted); }
+.dashboard { padding: 16px 20px; display: grid; grid-template-rows: 50px 100px 220px 1fr; gap: 12px; min-height: 0; }
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; min-height: 0; }
+.ops-bottom { display: grid; grid-template-columns: 1.05fr 1fr; gap: 12px; min-height: 0; }
+.plot { width: 100%; height: 155px; display: block; }
+.plot text { font-family: inherit; font-size: 12px; fill: var(--cp-text-muted); }
+.plot .grid { stroke: var(--cp-border); stroke-width: 1; }
+.plot .series { fill: none; stroke: var(--cp-accent); stroke-width: 2.5; stroke-linejoin: round; }
+.plot .area { fill: var(--cp-accent-soft); }
+.plot .marker { stroke: var(--cp-warning); stroke-width: 1; stroke-dasharray: 4 4; }
+.plot .target { stroke: var(--cp-text-muted); stroke-width: 1; stroke-dasharray: 3 4; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th { font-size: 11px; text-transform: uppercase; letter-spacing: .6px; text-align: left; color: var(--cp-text-muted); font-weight: 600; padding: 8px 9px; border-bottom: 1px solid var(--cp-border); }
+td { padding: 10px 9px; border-bottom: 1px solid var(--cp-border); }
+tr:last-child td { border-bottom: 0; }
+.alert-strip { background: var(--cp-accent-soft); border-left: 3px solid var(--cp-danger); padding: 10px 12px; border-radius: 4px; font-size: 13px; }
+.key-values { display: grid; grid-template-columns: 1fr auto; gap: 8px 18px; font-size: 14px; }
+.key-values .key { color: var(--cp-text-soft); }
+.footnote { font-size: 12px; color: var(--cp-text-muted); margin-top: 10px; }
+.decision-layout { min-height: 0; display: grid; grid-template-columns: 1fr 355px; }
+.decision-main { padding: 16px 20px; display: grid; grid-template-rows: 54px 90px 238px 1fr; gap: 12px; min-height: 0; }
+.decision-main .metrics { grid-template-columns: repeat(3,1fr); }
+.decision-main .metric .value { font-size: 26px; }
+.decision-side { border-left: 1px solid var(--cp-border); background: var(--cp-bg-elevated); padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+.subnav { display: flex; gap: 6px; margin-left: 24px; }
+.subnav button { font-size: 13px; padding: 6px 10px; background: var(--cp-surface); border-color: var(--cp-border); }
+.subnav .selected { color: var(--cp-accent); border-color: var(--cp-accent); }
+.allocator { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-top: 14px; }
+.allocation-cell { background: var(--cp-surface-soft); border-radius: 8px; padding: 12px; }
+.bar { display: flex; height: 18px; margin: 8px 0 4px; border-radius: 4px; overflow: hidden; background: var(--cp-border); }
+.bar .support { background: var(--cp-accent); }
+.bar .batch { background: var(--cp-text-muted); }
+.bar .empty { background: var(--cp-surface-soft); border: 1px dashed var(--cp-border-strong); width: 100%; }
+.legend { display: flex; gap: 16px; align-items: center; font-size: 12px; color: var(--cp-text-soft); }
+.swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; background: var(--cp-accent); }
+.swatch.batch { background: var(--cp-text-muted); }
+.receipt { padding-left: 18px; border-left: 2px solid var(--cp-border); display: flex; flex-direction: column; gap: 12px; font-size: 14px; }
+.receipt .future { color: var(--cp-text-muted); }
+.basis { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.action-card { margin-top: auto; }
+.action-card button { width: 100%; margin-top: 10px; }
+.inspector { padding: 18px 24px; display: grid; grid-template-rows: 52px 118px 58px 1fr; gap: 16px; min-height: 0; }
+.flow { display: grid; grid-template-columns: repeat(6,1fr); gap: 20px; align-items: stretch; }
+.flow-node { position: relative; border: 1px solid var(--cp-border); border-radius: 10px; background: var(--cp-surface); padding: 12px; display: flex; flex-direction: column; gap: 5px; }
+.flow-node:not(:last-child)::after { content: "\2192"; position: absolute; right: -17px; top: 39px; color: var(--cp-text-muted); }
+.flow-node.selected { background: var(--cp-accent-soft); border: 2px solid var(--cp-accent); padding: 11px; }
+.flow-node .kind { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--cp-text-muted); }
+.flow-node strong { font-size: 16px; }
+.flow-node .count { margin-top: auto; font-size: 12px; color: var(--cp-text-soft); }
+.event-band { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: var(--cp-surface); border: 1px solid var(--cp-border); border-radius: 10px; font-size: 14px; }
+.inspect-cols { display: grid; grid-template-columns: 1fr 1.06fr 1fr; gap: 16px; min-height: 0; }
+pre { margin: 12px 0; border: 1px solid var(--cp-border); border-radius: 8px; padding: 14px; background: var(--cp-surface-soft); color: var(--cp-text-soft); font-size: 14px; line-height: 1.65; white-space: pre-wrap; }
+.code-key { color: var(--cp-accent); }
+.code-value { color: var(--cp-success); }
+.facts { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.fact { padding: 12px; border: 1px solid var(--cp-border); border-radius: 8px; background: var(--cp-surface-soft); font-size: 14px; }
+.fact strong { display: block; margin-bottom: 5px; }
+.trace-main { padding: 16px 20px; display: grid; grid-template-rows: 56px 86px 1fr; gap: 14px; min-height: 0; }
+.trace-content { display: grid; grid-template-columns: 400px 1fr; gap: 14px; min-height: 0; }
+.trace-tree { padding: 10px 0; margin-top: 10px; display: flex; flex-direction: column; gap: 4px; }
+.span-row { padding: 9px 10px; display: grid; grid-template-columns: 1fr auto; gap: 8px; font-size: 13px; border-radius: 7px; }
+.span-row.child { margin-left: 15px; border-left: 1px solid var(--cp-border); }
+.span-row.selected { background: var(--cp-accent-soft); color: var(--cp-accent); }
+.duration { color: var(--cp-text-muted); font-family: Consolas, monospace; font-size: 12px; }
+.trace-details { display: flex; flex-direction: column; gap: 14px; }
+.quote { padding: 13px 15px; border-left: 3px solid var(--cp-border-strong); background: var(--cp-surface-soft); border-radius: 6px; font-size: 15px; }
+.assessment-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
+.assessment { border: 1px solid var(--cp-border); border-radius: 8px; padding: 12px; }
+.presenter { padding: 20px 24px; display: grid; grid-template-columns: 1.3fr 1fr; gap: 18px; min-height: 0; }
+.presenter-left { display: grid; grid-template-rows: 1fr 220px; gap: 16px; }
+.presenter-right { display: grid; grid-template-rows: 104px 1fr 212px; gap: 16px; }
+.projection { background: var(--cp-surface-soft); border: 1px solid var(--cp-border); border-radius: 10px; padding: 20px; margin-top: 16px; }
+.projection .metrics { gap: 10px; grid-template-columns: repeat(3,1fr); margin: 16px 0; }
+.projection .value { font-size: 27px; }
+.projection .plot { height: 125px; }
+.controls-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-top: 14px; }
+.controls-grid button { font-size: 13px; padding: 12px 8px; }
+.timer { font-size: 42px; letter-spacing: -1.5px; line-height: 1.1; }
+.notes-list { padding-left: 20px; margin: 16px 0; }
+.notes-list li { padding-bottom: 12px; font-size: 15px; }
+.steps { display: flex; flex-direction: column; gap: 9px; margin-top: 12px; font-size: 14px; }
+.step { display: flex; align-items: center; gap: 10px; }
+.step .number { width: 22px; height: 22px; border-radius: 50%; background: var(--cp-surface-soft); border: 1px solid var(--cp-border); display: grid; place-items: center; font-size: 12px; }
+.step.current { color: var(--cp-accent); font-weight: 650; }
+.toast { position: fixed; bottom: 42px; left: 50%; transform: translateX(-50%); max-width: 700px; padding: 16px 22px; border: 1px solid var(--cp-accent); border-radius: 12px; background: var(--cp-panel-strong); color: var(--cp-text); z-index: 20; box-shadow: var(--cp-shadow); }
+.toast[hidden] { display: none; }
+@media (max-width: 1200px) {
+  body { min-width: 1180px; }
+  .gallery button { padding: 5px 6px; }
+  .decision-layout { grid-template-columns: 1fr 310px; }
+  .trace-content { grid-template-columns: 320px 1fr; }
+}
+</style>
+</head>
+<body>
+<nav class="gallery" aria-label="Mockup gallery">
+  <strong>IGNITE DEMO / UI STUDY</strong><span class="mock-tag">SYNTHETIC MOCKUPS</span>
+  <div class="nav">
+    <button data-view="operations">01 Operations</button>
+    <button data-view="decisions">02 Decisions</button>
+    <button data-view="inspector">03 Follow a change</button>
+    <button data-view="trace">04 AI trace</button>
+    <button data-view="presenter">05 Presenter</button>
+  </div>
+</nav>
+
+<section class="screen" id="operations" aria-label="Grafana operations mockup">
+  <header class="tool-header">
+    <div class="row"><span class="brand-mark">G</span><span class="brand">Grafana</span><span class="breadcrumb">Dashboards / Enterprise AI / Service operations</span></div>
+    <div class="row"><span class="tag">Prometheus datasource</span><span class="tag">Last 15 minutes</span><span class="tag">5s refresh in final demo</span></div>
+  </header>
+  <div class="product-layout">
+    <aside class="sidebar">
+      <div class="eyebrow">Workspace</div><div class="side-item">Home</div><div class="side-item selected">Dashboards</div><div class="side-item">Explore</div><div class="side-item">Alerting <span class="bad">1</span></div><div class="side-item">Connections</div>
+      <div class="bottom"><div class="eyebrow">Data path</div><p class="small soft">Application OTel<br>Collector<br>Prometheus<br>Grafana</p></div>
+    </aside>
+    <main class="dashboard">
+      <div class="row spread"><div><h1>Customer assistant / service operations</h1><p class="small muted">Interactive support and background summarization share model endpoints.</p></div><span class="tag bad"><span class="dot"></span> Customer impact active</span></div>
+      <div class="metrics">
+        <div class="panel metric"><div class="label">Successful requests</div><div class="value bad">72.4%</div><div class="note">Target 99% &middot; last 5 minutes</div></div>
+        <div class="panel metric"><div class="label">Interactive latency &middot; p95</div><div class="value warn">8.4<span style="font-size:20px"> s</span></div><div class="note">Baseline 1.2s</div></div>
+        <div class="panel metric"><div class="label">Customer requests queued</div><div class="value">24</div><div class="note">Awaiting approved model capacity</div></div>
+        <div class="panel metric"><div class="label">Observed token throughput</div><div class="value">80k<span style="font-size:18px"> / min</span></div><div class="note">Background work is still running</div></div>
+      </div>
+      <div class="two-col">
+        <div class="panel"><div class="panel-head"><h3>Request success rate</h3><span class="small muted">PromQL &middot; %</span></div><svg class="plot" data-chart="success" aria-label="Illustrative request success rate dropping after failure"></svg></div>
+        <div class="panel"><div class="panel-head"><h3>Interactive response time</h3><span class="small muted">PromQL &middot; seconds</span></div><svg class="plot" data-chart="latency" aria-label="Illustrative latency increasing after failure"></svg></div>
+      </div>
+      <div class="ops-bottom">
+        <div class="panel">
+          <div class="panel-head"><h3>Endpoint health and current allocation</h3><span class="tag">demo-chat-v1</span></div>
+          <table><thead><tr><th>Endpoint</th><th>Observed health</th><th>Assigned / budget</th></tr></thead><tbody>
+            <tr><td>EU-A &middot; primary</td><td class="bad">Unavailable</td><td>60k / 100k TPM</td></tr>
+            <tr><td>EU-B &middot; secondary</td><td class="good">Healthy</td><td>80k / 100k TPM</td></tr>
+            <tr><td>US-C &middot; alternate</td><td class="good">Healthy</td><td>0 / 100k TPM</td></tr>
+          </tbody></table>
+          <div class="alert-strip" style="margin-top:12px"><strong>FIRING</strong> &nbsp; EU-A request failures &nbsp; <span class="muted">since 14:02</span><br>Grafana alert webhook forwarded to Drasi.</div>
+          <p class="footnote">Budgets are configured admission limits, not guaranteed provider capacity.</p>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h3>Drasi assessment</h3><span class="tag accent">Derived context</span></div>
+          <div class="key-values"><span class="key">Current support demand</span><strong>Not satisfied</strong><span class="key">Recovery plan P42</span><strong class="good">Feasible, not applied</strong><span class="key">Other-region fallback</span><strong class="bad">Restricted data denied</strong><span class="key">Additional EU-B failure</span><strong class="warn">Not recoverable</strong><span class="key">Evidence freshness</span><strong>1.2s &middot; current</strong></div>
+          <div class="row" style="margin-top:16px"><button class="primary" data-view="decisions">Open Drasi assessment</button><button class="quiet" data-view="trace">Inspect task trace</button></div>
+          <p class="footnote">Drasi indicators and annotations augment the existing dashboard.</p>
+        </div>
+      </div>
+    </main>
+  </div>
+  <footer class="bottom-bar"><span>Concept layout, not an actual Grafana screenshot &middot; synthetic incident INC-017</span><span>Audience view 1 / 4 &middot; primary operational screen</span></footer>
+</section>
+
+<section class="screen" id="decisions" aria-label="Drasi decisions mockup">
+  <header class="tool-header">
+    <div class="row"><span class="brand-mark">d</span><span class="brand">Drasi</span><span class="breadcrumb">AI service assessments</span><div class="subnav"><button class="selected" data-view="decisions">Decisions</button><button data-view="inspector">Follow a change</button></div></div>
+    <div class="row"><span class="tag">INC-017</span><button class="small quiet" data-view="operations">Return to Grafana</button></div>
+  </header>
+  <div class="decision-layout">
+    <main class="decision-main">
+      <div class="row spread"><div><h1>Recover support without breaking the data policy</h1><p class="small muted">Proposed allocation for new requests &middot; in-flight calls are not migrated.</p></div><span class="tag good"><span class="dot"></span> Model inputs current</span></div>
+      <div class="metrics">
+        <div class="panel metric"><div class="label">Critical demand</div><div class="value">60k TPM</div><div class="note">Customer support &middot; EU-only</div></div>
+        <div class="panel metric"><div class="label">Approved spare capacity now</div><div class="value warn">20k TPM</div><div class="note">40k shortfall under current allocation</div></div>
+        <div class="panel metric"><div class="label">Candidate after reallocation</div><div class="value good">Feasible</div><div class="note">Policy + budgets satisfied in model</div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>Permission is not the same as availability</h3><span class="tag">Rego assessment &middot; policy r7</span></div>
+        <table><thead><tr><th>Workload</th><th>EU-A</th><th>EU-B</th><th>US-C</th></tr></thead><tbody>
+          <tr><td><strong>Customer support</strong><br><span class="small muted">Restricted customer records</span></td><td><span class="good">Allowed</span><br><span class="small bad">Endpoint unavailable</span></td><td><span class="good">Allowed</span><br><span class="small warn">Only 20k TPM spare</span></td><td><span class="bad">Denied</span><br><span class="small muted">region-not-permitted</span></td></tr>
+          <tr><td><strong>Batch summaries</strong><br><span class="small muted">Public documents</span></td><td><span class="good">Allowed</span><br><span class="small bad">Endpoint unavailable</span></td><td><span class="good">Allowed</span><br><span class="small muted">Assigned 80k TPM</span></td><td><span class="good">Allowed</span><br><span class="small muted">100k TPM spare</span></td></tr>
+        </tbody></table>
+        <p class="footnote">A current explicit allow is required. Missing, stale, or failed evaluations are unknown, not permission.</p>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>Candidate P42 &middot; free approved capacity by redirecting batch work</h3><div class="legend"><span><i class="swatch"></i>Support</span><span><i class="swatch batch"></i>Batch</span></div></div>
+        <div class="allocator">
+          <div class="allocation-cell"><strong>EU-A</strong><p class="small bad">Unavailable &middot; exclude from new requests</p><div class="small muted" style="margin-top:8px">Before: support 60k</div><div class="bar"><span class="support" style="width:60%"></span></div><div class="small muted">Proposed: none</div><div class="bar"><span class="empty"></span></div></div>
+          <div class="allocation-cell"><strong>EU-B</strong><p class="small good">Approved for restricted data</p><div class="small muted" style="margin-top:8px">Before: batch 80k</div><div class="bar"><span class="batch" style="width:80%"></span></div><div class="small muted">Proposed: support 60k</div><div class="bar"><span class="support" style="width:60%"></span></div></div>
+          <div class="allocation-cell"><strong>US-C</strong><p class="small good">Approved for public-document work</p><div class="small muted" style="margin-top:8px">Before: none</div><div class="bar"><span class="empty"></span></div><div class="small muted">Proposed: batch 80k</div><div class="bar"><span class="batch" style="width:80%"></span></div></div>
+        </div>
+        <p class="footnote">Budgets: 100k TPM per healthy endpoint. The plan changes admission and routing for future requests.</p>
+      </div>
+    </main>
+    <aside class="decision-side">
+      <div><div class="eyebrow">Plan lifecycle</div><h2 style="margin-top:6px">A recommendation,<br>not a completed recovery</h2></div>
+      <div class="receipt"><div><strong class="good">1 &nbsp; Candidate feasible</strong><br><span class="small muted">All modeled constraints satisfied</span></div><div><strong class="accent">2 &nbsp; Awaiting approval</strong><br><span class="small muted">No gateway changes submitted</span></div><div class="future">3 &nbsp; Configuration applied</div><div class="future">4 &nbsp; Recovery confirmed</div></div>
+      <div class="panel"><div class="eyebrow">Assessment basis</div><div class="basis"><span class="tag mono">inputs r108</span><span class="tag mono">policy r7</span><span class="tag mono">plan P42</span></div><p class="small soft" style="margin-top:10px">Any relevant input change can invalidate this proposal.</p></div>
+      <div class="panel"><h3 class="warn">Resilience remains limited</h3><p class="small soft" style="margin-top:8px">If EU-B also fails, current policy leaves no healthy approved endpoint for support.</p></div>
+      <div class="action-card"><p class="small muted">The control service rechecks policy and revision. The gateway enforces each request.</p><button class="primary" data-info="Mock approval only. The final control service will revalidate the input revision and policy before applying an allocation. No systems were changed.">Review and approve P42</button><button class="quiet" data-view="inspector">Inspect decision evidence</button></div>
+    </aside>
+  </div>
+  <footer class="bottom-bar"><span>Custom UI concept &middot; illustrative endpoint-allocation model, not an existing GPU Lab screen</span><span>Audience view 2 / 4 &middot; decisions and approval</span></footer>
+</section>
+
+<section class="screen" id="inspector" aria-label="Drasi follow a change mockup">
+  <header class="tool-header">
+    <div class="row"><span class="brand-mark">d</span><span class="brand">Drasi</span><span class="breadcrumb">AI service assessments</span><div class="subnav"><button data-view="decisions">Decisions</button><button class="selected" data-view="inspector">Follow a change</button></div></div>
+    <div class="row"><span class="tag">Explanation view</span><button class="small quiet" data-view="operations">Return to Grafana</button></div>
+  </header>
+  <main class="inspector">
+    <div class="row spread"><div><h1>One observation. Maintained models. Changed decisions.</h1><p class="small muted">Inspect the evidence behind candidate P42 without leaving the running demo.</p></div><span class="tag">Snapshot: inputs r108</span></div>
+    <div class="flow">
+      <div class="flow-node"><span class="kind">Source</span><strong>Operational changes</strong><span class="small soft">Alerts + gateway facts + CDC</span><span class="count">EU-A becomes unavailable</span></div>
+      <div class="flow-node"><span class="kind">Continuous query</span><strong>Current context</strong><span class="small soft">Join workloads and policies</span><span class="count">2 workloads / 3 endpoints</span></div>
+      <div class="flow-node selected"><span class="kind">Transformer</span><strong>Policy model</strong><span class="small soft">Rego permissions + reasons</span><span class="count">6 permission decisions</span></div>
+      <div class="flow-node"><span class="kind">Transformers</span><strong>Allocation + resilience</strong><span class="small soft">Plan and independent what-ifs</span><span class="count">Feasible / not resilient</span></div>
+      <div class="flow-node"><span class="kind">Continuous queries</span><strong>Operational impact</strong><span class="small soft">Tasks, plans and evidence</span><span class="count">24 queued support requests</span></div>
+      <div class="flow-node"><span class="kind">Reactions</span><strong>Publish / propose</strong><span class="small soft">UI, scores and control request</span><span class="count">No execution before approval</span></div>
+    </div>
+    <div class="event-band"><div><span class="tag bad">INPUT CHANGE</span> &nbsp; <span class="mono">endpoint/EU-A</span> &nbsp; healthy &rarr; unavailable</div><div class="small muted">Evidence: Grafana alert + gateway state &middot; synthetic observation 108</div></div>
+    <div class="inspect-cols">
+      <section class="panel"><div class="panel-head"><h3>Current model input</h3><span class="tag">Versioned context</span></div><pre>{
+  <span class="code-key">"workload"</span>: "customer-support",
+  <span class="code-key">"classification"</span>: "restricted",
+  <span class="code-key">"purpose"</span>: "customer-support",
+  <span class="code-key">"demand_tpm"</span>: 60000,
+  <span class="code-key">"allowed_regions"</span>: [
+    "westeurope",
+    "northeurope"
+  ],
+  <span class="code-key">"candidate"</span>: "US-C",
+  <span class="code-key">"input_revision"</span>: 108
+}</pre><p class="small soft">The endpoint's spare capacity does not override the customer's processing policy.</p></section>
+      <section class="panel"><div class="panel-head"><h3>Policy computation</h3><span class="tag accent">Selected transformer</span></div><p class="small soft">A domain engine maintains permission decisions. Its changed outputs feed subsequent computations.</p><pre><span class="code-key">Illustrative decision logic</span>
+
+customer scope matches
+AND classification is permitted
+AND purpose is permitted
+AND destination region is permitted
+
+<span class="code-value">EU-B: allow</span>
+US-C: deny
+reason: region-not-permitted</pre><div class="alert-strip" style="border-color:var(--cp-warning)">Unknown or stale policy evidence never becomes an implicit allow.</div><p class="footnote">Policy parameter edits can change this result without a new infrastructure failure.</p></section>
+      <section class="panel"><div class="panel-head"><h3>Derived facts, not just messages</h3><span class="tag">Stable identities</span></div><div class="facts">
+        <div class="fact"><strong class="bad">Eligibility / support / US-C</strong><span class="mono small">decision: deny &middot; policy r7</span><p class="small muted">Preserved as a fact with its reason and basis.</p></div>
+        <div class="fact"><strong class="good">CandidatePlan / P42</strong><p>Support &rarr; EU-B<br>Public-document batch &rarr; US-C</p><p class="small muted">Global allocation is feasible under the model.</p></div>
+        <div class="fact"><strong class="warn">Resilience / lose-EU-B</strong><p>Support recovery infeasible.</p><p class="small muted">Read-only analysis; not an executable plan.</p></div>
+      </div><button class="quiet" style="width:100%;margin-top:16px" data-view="decisions">Return to decision and approval</button></section>
+    </div>
+  </main>
+  <footer class="bottom-bar"><span>Concept inspector &middot; synthetic records and illustrative logic, not a live runtime capture</span><span>Audience view 3 / 4 &middot; optional technical drill-down</span></footer>
+</section>
+
+<section class="screen" id="trace" aria-label="Langfuse AI trace mockup">
+  <header class="tool-header">
+    <div class="row"><span class="brand-mark">L</span><span class="brand">Langfuse</span><span class="breadcrumb">enterprise-support / Tracing / T-1042</span></div>
+    <div class="row"><span class="tag">customer-support</span><span class="tag mono">trace 8f2c...41a9</span><button class="small quiet" data-view="operations">Return to Grafana</button></div>
+  </header>
+  <div class="product-layout">
+    <aside class="sidebar"><div class="eyebrow">Project</div><div class="side-item">Overview</div><div class="side-item selected">Tracing</div><div class="side-item">Sessions</div><div class="side-item">Scores</div><div class="side-item">Prompts</div><div class="side-item">Datasets</div><div class="bottom"><p class="small soft">Inspect AI behavior.<br>Verify outcomes using independent evidence.</p></div></aside>
+    <main class="trace-main">
+      <div class="row spread"><div><h1>support.respond / T-1042</h1><p class="small muted">Tenant Aster &middot; restricted records &middot; linked incident INC-017</p></div><span class="tag warn"><span class="dot"></span> Waiting for approved capacity</span></div>
+      <div class="metrics">
+        <div class="panel metric"><div class="label">Elapsed in this snapshot</div><div class="value" style="font-size:28px">9.2s</div></div>
+        <div class="panel metric"><div class="label">Answer-model attempts</div><div class="value" style="font-size:28px">2</div></div>
+        <div class="panel metric"><div class="label">Billed tokens so far</div><div class="value" style="font-size:28px">420</div></div>
+        <div class="panel metric"><div class="label">Estimated cost so far</div><div class="value" style="font-size:28px">$0.003</div></div>
+      </div>
+      <div class="trace-content">
+        <section class="panel"><div class="panel-head"><h3>Execution trace</h3><span class="small muted">Model + tool spans</span></div>
+          <div class="trace-tree">
+            <div class="span-row"><strong>support.respond</strong><span class="duration">9.2s+</span></div>
+            <div class="span-row child"><span>Classify request &middot; 420 tokens</span><span class="duration good">0.3s</span></div>
+            <div class="span-row child"><span>Retrieve customer records</span><span class="duration good">0.2s</span></div>
+            <div class="span-row child"><span>Answer via EU-A</span><span class="duration bad">503</span></div>
+            <div class="span-row child"><span>Retry via EU-B</span><span class="duration bad">429</span></div>
+            <div class="span-row child selected"><span>Gateway eligibility: US-C</span><span class="duration">deny</span></div>
+            <div class="span-row child"><span>Queue for approved capacity</span><span class="duration warn">waiting</span></div>
+          </div>
+          <div class="alert-strip" style="margin-top:18px;border-color:var(--cp-warning)"><strong>No final answer sent.</strong><br>Technical completion and customer success are different states.</div>
+          <p class="footnote">The rejected route is checked before sending customer content to US-C.</p>
+        </section>
+        <div class="trace-details">
+          <section class="panel"><div class="panel-head"><h3>Task context</h3><span class="tag">Synthetic customer</span></div><div class="quote">“Summarize the history of my current support case and explain the next action.”</div><div class="row small muted" style="margin-top:10px"><span>Data: restricted</span><span>Purpose: customer-support</span><span>Approved regions: EU</span></div></section>
+          <section class="panel" style="flex:1"><div class="panel-head"><h3>Independent outcome and policy assessment</h3><span class="tag accent">Published by Drasi</span></div>
+            <div class="assessment-grid">
+              <div class="assessment"><div class="small muted">Task outcome</div><strong class="warn">Pending</strong><p class="small soft">Not inferred from span success.</p></div>
+              <div class="assessment"><div class="small muted">Outside-region request</div><strong class="good">Blocked by gateway</strong><p class="small soft">Policy r7 &middot; explicit denial.</p></div>
+            </div>
+            <div class="key-values"><span class="key">Observed dependency issue</span><span>EU-A unavailable; EU-B throttled</span><span class="key">Recovery candidate</span><span>P42 &middot; awaiting approval</span><span class="key">Evidence basis</span><span class="mono">inputs r108 / task T-1042</span></div>
+            <div class="row" style="margin-top:18px"><button class="primary" data-view="decisions">Open recovery assessment</button><button class="quiet" data-view="operations">Open service dashboard</button></div>
+            <p class="footnote">This concept represents scores, comments and links in the existing trace experience; final product layout may differ.</p>
+          </section>
+        </div>
+      </div>
+    </main>
+  </div>
+  <footer class="bottom-bar"><span>Concept layout, not an actual Langfuse screenshot &middot; synthetic trace and costs</span><span>Audience view 4 / 4 &middot; one focused AI-behavior drill-down</span></footer>
+</section>
+
+<section class="screen" id="presenter" aria-label="Private presenter screen mockup">
+  <header class="tool-header"><div class="row"><span class="brand-mark">P</span><span class="brand">Presenter desk</span><span class="breadcrumb">Reveal.js shell + demo controls &middot; proposed custom view</span></div><div class="row"><span class="tag accent">PRIVATE &middot; NOT PROJECTED</span><button class="small quiet" data-view="operations">Audience view</button></div></header>
+  <main class="presenter">
+    <div class="presenter-left">
+      <section class="panel">
+        <div class="panel-head"><div><div class="eyebrow">Currently projected</div><h2>Grafana / service operations</h2></div><span class="tag">Scene 3 &middot; endpoint failure</span></div>
+        <div class="projection">
+          <div class="row spread"><strong>Customer assistant / service operations</strong><span class="tag bad">Impact active</span></div>
+          <div class="metrics"><div class="panel metric"><div class="label">Request success</div><div class="value bad">72.4%</div></div><div class="panel metric"><div class="label">Latency p95</div><div class="value warn">8.4s</div></div><div class="panel metric"><div class="label">Queued requests</div><div class="value">24</div></div></div>
+          <svg class="plot" data-chart="success" aria-label="Miniature synthetic audience chart"></svg>
+          <div class="row spread small" style="margin-top:8px"><span class="muted">EU-A failed &middot; EU-B busy &middot; US-C available</span><strong class="accent">P42 ready for review</strong></div>
+        </div>
+        <div class="row spread" style="margin-top:14px"><p class="small muted">Next: explain why spare capacity is not necessarily usable.</p><button class="primary" data-view="decisions">Show Drasi decisions</button></div>
+      </section>
+      <section class="panel">
+        <div class="panel-head"><h3>Scenario controls</h3><span class="tag">Navigation never changes system state</span></div>
+        <div class="controls-grid">
+          <button data-info="Prototype only. In the final demo this explicitly injects a primary-endpoint fault. No runtime is connected.">Fail primary endpoint</button>
+          <button data-info="Prototype only. In the final demo this restores the primary endpoint. No runtime is connected.">Restore primary</button>
+          <button data-info="Prototype only. In the final demo this opens a versioned policy-parameter editor.">Edit permitted regions</button>
+          <button data-info="Prototype only. In the final demo this changes configured spare capacity for the resilience scene.">Reduce spare capacity</button>
+          <button data-info="Prototype only. The final reset must be explicit and confirmed; changing slides will never reset a scenario.">Reset scenario...</button>
+          <button data-info="Prototype only. Replay must always be visibly labelled REPLAY rather than LIVE.">Labelled replay fallback</button>
+        </div>
+        <p class="footnote">All buttons here are non-operative mockups. Audience navigation only changes the displayed view.</p>
+      </section>
+    </div>
+    <div class="presenter-right">
+      <section class="panel row spread"><div><div class="eyebrow">Illustrative elapsed time</div><div class="timer">06:20 <span class="muted" style="font-size:20px">/ 25:00</span></div></div><div><span class="tag good">On pace</span><p class="small muted" style="margin-top:8px">Reserve 3 minutes</p></div></section>
+      <section class="panel">
+        <div class="panel-head"><h3>Say / do / point to</h3><span class="tag">Private notes</span></div>
+        <div class="quote">“Our existing monitoring has correctly found the failure. Choosing a valid response is the next problem.”</div>
+        <ol class="notes-list"><li>Point to Grafana's actual failure alert and the queued customer requests.</li><li>Show the healthy US endpoint. Explain why customer data cannot be routed there.</li><li>Open Drasi decisions. Show that moving public-document batch work frees approved EU capacity.</li></ol>
+        <div class="alert-strip" style="border-color:var(--cp-warning)"><strong>If behind schedule:</strong> skip the separate policy-edit scene. Preserve recovery and the green-but-fragile assessment.</div>
+      </section>
+      <section class="panel"><h3>Main route / optional explanation</h3><div class="steps"><div class="step"><span class="number">1</span>Intro and normal operation</div><div class="step current"><span class="number">2</span>Failure &rarr; permitted, feasible recovery</div><div class="step"><span class="number">3</span>Follow one change &middot; optional depth</div><div class="step"><span class="number">4</span>Policy changes and resilience</div><div class="step"><span class="number">5</span>Observed recovery and close</div></div></section>
+    </div>
+  </main>
+  <footer class="bottom-bar"><span>Custom presenter concept, not a screenshot of built-in Reveal.js speaker view</span><span>Private screen &middot; notes and controls must never start a second simulator</span></footer>
+</section>
+
+<div class="toast" id="toast" role="status" hidden></div>
+<script>
+(() => {
+  const views = ['operations', 'decisions', 'inspector', 'trace', 'presenter'];
+  let toastTimer;
+  function showView(name) {
+    const current = views.includes(name) ? name : 'operations';
+    document.querySelectorAll('.screen').forEach(el => {
+      const active = el.id === current;
+      el.classList.toggle('active', active);
+      el.setAttribute('aria-hidden', String(!active));
+    });
+    document.querySelectorAll('.gallery [data-view]').forEach(button => {
+      if (button.dataset.view === current) button.setAttribute('aria-current', 'page');
+      else button.removeAttribute('aria-current');
+    });
+    document.title = `Drasi Ignite mockup - ${current}`;
+  }
+  document.querySelectorAll('[data-view]').forEach(button => {
+    button.addEventListener('click', () => { location.hash = button.dataset.view; });
+  });
+  document.querySelectorAll('[data-info]').forEach(button => {
+    button.addEventListener('click', () => {
+      const toast = document.getElementById('toast');
+      toast.textContent = button.dataset.info;
+      toast.hidden = false;
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => { toast.hidden = true; }, 6500);
+    });
+  });
+  window.addEventListener('hashchange', () => {
+    document.getElementById('toast').hidden = true;
+    showView(location.hash.slice(1));
+  });
+  showView(location.hash.slice(1));
+  const series = {
+    success: { values: [99.7,99.5,99.8,99.4,99.7,99.6,99.4,99.2,91.0,84.0,76.4,68.0,73.2,71.5,73.0,72.4], max:100, ticks:['100%','75%','50%','25%','0%'], target:99 },
+    latency: { values:[1.2,1.3,1.2,1.2,1.4,1.2,1.3,1.4,3.8,5.3,8.0,9.3,8.7,9.1,8.6,8.4], max:12, ticks:['12s','9s','6s','3s','0s'], target:3 },
+  };
+  document.querySelectorAll('svg[data-chart]').forEach(svg => {
+    const d = series[svg.dataset.chart];
+    const w=620,h=155,left=42,right=12,top=10,bottom=28;
+    const cw=w-left-right,ch=h-top-bottom;
+    const points=d.values.map((v,i)=>[left+i*cw/(d.values.length-1),top+ch*(1-v/d.max)]);
+    const p=points.map(v=>v.join(',')).join(' ');
+    const area=`${left},${top+ch} ${p} ${left+cw},${top+ch}`;
+    const grid=d.ticks.map((label,i)=>`<line class="grid" x1="${left}" x2="${w-right}" y1="${top+i*ch/4}" y2="${top+i*ch/4}"/><text x="0" y="${top+i*ch/4+4}">${label}</text>`).join('');
+    const marker=left+cw*.5;
+    const target=top+ch*(1-d.target/d.max);
+    svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+    svg.innerHTML=`${grid}<polygon class="area" points="${area}"/><line class="target" x1="${left}" x2="${w-right}" y1="${target}" y2="${target}"/><polyline class="series" points="${p}"/><line class="marker" x1="${marker}" x2="${marker}" y1="${top}" y2="${top+ch}"/><text x="${marker+7}" y="22">EU-A failure</text><text x="${left}" y="${h-5}">13:56</text><text x="${left+cw*.33}" y="${h-5}">14:00</text><text x="${left+cw*.66}" y="${h-5}">14:04</text><text x="${w-45}" y="${h-5}">14:08</text>`;
+  });
+})();
+</script>
+</body>
+</html>

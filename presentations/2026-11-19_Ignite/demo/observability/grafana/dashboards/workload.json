@@ -1,0 +1,948 @@
+{
+  "uid": "ignite-workload",
+  "title": "AI service · Operations",
+  "schemaVersion": 39,
+  "version": 9,
+  "refresh": "5s",
+  "time": {
+    "from": "now-5m",
+    "to": "now"
+  },
+  "tags": [
+    "ignite",
+    "workload"
+  ],
+  "description": "Top: standard service health measured from real requests. Bottom: customer impact maintained by Drasi continuous queries. Deployments and capacity are simulated.",
+  "annotations": {
+    "list": [
+      {
+        "name": "Show Drasi decisions on charts",
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": false,
+        "hide": false,
+        "iconColor": "#52d6a4",
+        "target": {
+          "type": "tags",
+          "tags": [
+            "ignite-decision"
+          ],
+          "matchAny": false,
+          "limit": 100
+        }
+      }
+    ]
+  },
+  "links": [
+    {
+      "title": "Policy and recovery",
+      "url": "/d/ignite-decisions?from=now-5m&to=now&refresh=5s",
+      "targetBlank": false
+    },
+    {
+      "title": "Langfuse traces",
+      "url": "http://localhost:13001/project/ignite-probe/traces",
+      "targetBlank": true
+    },
+    {
+      "title": "Drasi queries",
+      "url": "http://127.0.0.1:18421/ui/?instance=ignite",
+      "targetBlank": true
+    },
+    {
+      "title": "Closing slide",
+      "url": "http://127.0.0.1:18580/present?slide=closing",
+      "targetBlank": false
+    }
+  ],
+  "panels": [
+    {
+      "id": 100,
+      "type": "row",
+      "title": "Service health · measured from requests",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Model calls",
+      "description": "Model calls per second across both workloads, over the last minute.",
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 4,
+        "h": 3
+      },
+      "datasource": {
+        "uid": "ignite-prometheus",
+        "type": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(ignite_workload_requests_total[1m]))",
+          "instant": true,
+          "range": false,
+          "interval": "1s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Unknown",
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Unknown",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "unit": "reqps",
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "orientation": "auto",
+        "justifyMode": "center",
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "textMode": "value",
+        "wideLayout": true,
+        "text": {
+          "titleSize": 16,
+          "valueSize": 34
+        }
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Support errors",
+      "description": "Share of customer-support model calls that failed in the last minute.",
+      "gridPos": {
+        "x": 4,
+        "y": 1,
+        "w": 4,
+        "h": 3
+      },
+      "datasource": {
+        "uid": "ignite-prometheus",
+        "type": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "100 * (sum(rate(ignite_workload_requests_total{workload=\"support\",status!=\"200\"}[1m])) or vector(0)) / sum(rate(ignite_workload_requests_total{workload=\"support\"}[1m]))",
+          "instant": true,
+          "range": false,
+          "interval": "1s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Unknown",
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Unknown",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 5
+              },
+              {
+                "color": "red",
+                "value": 20
+              }
+            ]
+          },
+          "unit": "percent",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "orientation": "auto",
+        "justifyMode": "center",
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "textMode": "value",
+        "wideLayout": true,
+        "text": {
+          "titleSize": 16,
+          "valueSize": 34
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Support p95",
+      "description": "95th percentile duration of customer-support model calls in the last minute.",
+      "gridPos": {
+        "x": 8,
+        "y": 1,
+        "w": 4,
+        "h": 3
+      },
+      "datasource": {
+        "uid": "ignite-prometheus",
+        "type": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "1000 * histogram_quantile(0.95, sum by(le)(rate(ignite_workload_call_duration_seconds_bucket{workload=\"support\"}[1m])))",
+          "instant": true,
+          "range": false,
+          "interval": "1s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Unknown",
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Unknown",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1000
+              },
+              {
+                "color": "red",
+                "value": 3000
+              }
+            ]
+          },
+          "unit": "ms",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "orientation": "auto",
+        "justifyMode": "center",
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "textMode": "value",
+        "wideLayout": true,
+        "text": {
+          "titleSize": 16,
+          "valueSize": 34
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Support queue",
+      "description": "Customer-support requests queued and not yet answered.",
+      "gridPos": {
+        "x": 12,
+        "y": 1,
+        "w": 4,
+        "h": 3
+      },
+      "datasource": {
+        "uid": "ignite-prometheus",
+        "type": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "ignite_workload_queue_depth{workload=\"support\"} and on() (time() - max(ignite_drasi_projection_timestamp_seconds) < 5)",
+          "instant": true,
+          "range": false,
+          "interval": "1s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Unknown",
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Unknown",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "orientation": "auto",
+        "justifyMode": "center",
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "textMode": "value",
+        "wideLayout": true,
+        "text": {
+          "titleSize": 16,
+          "valueSize": 34
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Model calls by outcome",
+      "description": "HTTP 200 succeeded. 503: deployment failed. 429: deployment over quota. 409: refused because the route changed before sending.",
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 12,
+        "h": 6
+      },
+      "datasource": {
+        "uid": "ignite-prometheus",
+        "type": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "label_replace(sum by(workload,endpoint,status)(rate(ignite_workload_requests_total[1m])), \"workload\", \"summaries\", \"workload\", \"batch\")",
+          "legendFormat": "{{workload}} → {{endpoint}} · HTTP {{status}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "min": 0,
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*HTTP 200"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*HTTP 503"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*HTTP 429"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*HTTP 409"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "purple"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "right",
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Requests answered",
+      "description": "Customer-support and document-summary requests completed per second.",
+      "gridPos": {
+        "x": 12,
+        "y": 4,
+        "w": 12,
+        "h": 6
+      },
+      "datasource": {
+        "uid": "ignite-prometheus",
+        "type": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "label_replace(sum by(workload)(rate(ignite_workload_completed_total[1m])), \"workload\", \"summaries\", \"workload\", \"batch\")",
+          "legendFormat": "{{workload}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "min": 0,
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "support"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "summaries"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "right",
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 101,
+      "type": "row",
+      "title": "Customer impact · maintained by Drasi",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 10,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Support overdue",
+      "description": "Customer-support requests unanswered past their 15-second target. A time-aware continuous query: requests become late as time passes, with no new event. The target is short for the demo.",
+      "gridPos": {
+        "x": 0,
+        "y": 11,
+        "w": 5,
+        "h": 3
+      },
+      "datasource": {
+        "uid": "ignite-prometheus",
+        "type": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "ignite_drasi_dashboard{view=\"overdue\",workload=\"support\"} and on(view) (ignite_drasi_valid_until_seconds > time())",
+          "instant": true,
+          "range": false,
+          "interval": "1s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Unknown",
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Unknown",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "orientation": "auto",
+        "justifyMode": "center",
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "textMode": "value",
+        "wideLayout": true,
+        "text": {
+          "titleSize": 16,
+          "valueSize": 34
+        }
+      }
+    },
+    {
+      "id": 8,
+      "type": "stat",
+      "title": "Deployment status",
+      "description": "Latest status reported by each model deployment. Unknown means no report in the last 8 seconds: Drasi expires stale reports as time passes.",
+      "gridPos": {
+        "x": 5,
+        "y": 11,
+        "w": 9,
+        "h": 3
+      },
+      "datasource": {
+        "uid": "ignite-prometheus",
+        "type": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "ignite_drasi_dashboard{view=\"endpoint\"} and on(view) (ignite_drasi_valid_until_seconds > time())",
+          "instant": true,
+          "range": false,
+          "interval": "1s",
+          "legendFormat": "{{endpoint}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Unknown",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "-1": {
+                  "text": "Unknown",
+                  "color": "gray"
+                },
+                "0": {
+                  "text": "Healthy",
+                  "color": "green"
+                },
+                "1": {
+                  "text": "Throttled",
+                  "color": "orange"
+                },
+                "2": {
+                  "text": "Failed",
+                  "color": "red"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Unknown",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "gray"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "orientation": "auto",
+        "justifyMode": "center",
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "textMode": "value_and_name",
+        "wideLayout": true,
+        "text": {
+          "titleSize": 16,
+          "valueSize": 24
+        }
+      }
+    },
+    {
+      "id": 9,
+      "type": "stat",
+      "title": "Recovery",
+      "description": "Whether an approved recovery is working: verified only after real support requests succeed on the new route.",
+      "gridPos": {
+        "x": 14,
+        "y": 11,
+        "w": 5,
+        "h": 3
+      },
+      "datasource": {
+        "uid": "ignite-prometheus",
+        "type": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "ignite_drasi_dashboard{view=\"recovery\"} and on(view) (ignite_drasi_valid_until_seconds > time())",
+          "instant": true,
+          "range": false,
+          "interval": "1s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Unknown",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "-1": {
+                  "text": "Unknown",
+                  "color": "gray"
+                },
+                "0": {
+                  "text": "Awaiting evidence",
+                  "color": "orange"
+                },
+                "1": {
+                  "text": "Verified",
+                  "color": "green"
+                },
+                "2": {
+                  "text": "None in progress",
+                  "color": "text"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Unknown",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "gray"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "orientation": "auto",
+        "justifyMode": "center",
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "textMode": "value",
+        "wideLayout": true,
+        "text": {
+          "titleSize": 16,
+          "valueSize": 22
+        }
+      }
+    },
+    {
+      "id": 10,
+      "type": "alertlist",
+      "title": "Service alerts",
+      "gridPos": {
+        "x": 16,
+        "y": 1,
+        "w": 8,
+        "h": 3
+      },
+      "options": {
+        "viewMode": "list",
+        "maxItems": 3,
+        "sortOrder": 1,
+        "alertName": "Ignite workload HTTP failure",
+        "dashboardAlerts": false,
+        "stateFilter": {
+          "firing": true,
+          "pending": true,
+          "normal": true,
+          "noData": true,
+          "error": true
+        }
+      }
+    },
+    {
+      "id": 11,
+      "type": "stat",
+      "title": "Action needed",
+      "description": "Drasi's current recovery proposal. Open Policy and recovery to review and approve it.",
+      "gridPos": {
+        "x": 19,
+        "y": 11,
+        "w": 5,
+        "h": 3
+      },
+      "datasource": {
+        "uid": "ignite-prometheus",
+        "type": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "ignite_drasi_dashboard{view=\"approval\"} and on(view) (ignite_drasi_valid_until_seconds > time())",
+          "instant": true,
+          "range": false,
+          "interval": "1s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Unknown",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "-1": {
+                  "text": "Unknown",
+                  "color": "gray"
+                },
+                "0": {
+                  "text": "None",
+                  "color": "green"
+                },
+                "1": {
+                  "text": "Approve proposed plan",
+                  "color": "orange"
+                },
+                "2": {
+                  "text": "No valid plan",
+                  "color": "red"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Unknown",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "gray"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "orientation": "auto",
+        "justifyMode": "center",
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "textMode": "value",
+        "wideLayout": true,
+        "text": {
+          "titleSize": 16,
+          "valueSize": 22
+        }
+      }
+    }
+  ]
+}

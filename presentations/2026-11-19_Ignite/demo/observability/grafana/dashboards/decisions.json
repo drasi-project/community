@@ -1,0 +1,823 @@
+{
+  "uid": "ignite-decisions",
+  "title": "AI service · Policy and recovery",
+  "schemaVersion": 39,
+  "version": 8,
+  "refresh": "5s",
+  "time": {
+    "from": "now-5m",
+    "to": "now"
+  },
+  "tags": [
+    "ignite",
+    "drasi"
+  ],
+  "description": "Drasi's continuous policy and models: where each workload may run, the proposed routes, and whether recovery is verified. Capacity units are simulated tokens per minute.",
+  "links": [
+    {
+      "title": "Service operations",
+      "url": "/d/ignite-workload?from=now-5m&to=now&refresh=5s",
+      "targetBlank": false
+    },
+    {
+      "title": "Langfuse traces",
+      "url": "http://localhost:13001/project/ignite-probe/traces",
+      "targetBlank": true
+    },
+    {
+      "title": "Drasi queries",
+      "url": "http://127.0.0.1:18421/ui/?instance=ignite",
+      "targetBlank": true
+    },
+    {
+      "title": "Closing slide",
+      "url": "http://127.0.0.1:18580/present?slide=closing",
+      "targetBlank": false
+    }
+  ],
+  "panels": [
+    {
+      "id": 100,
+      "type": "row",
+      "title": "Recovery decision · Drasi",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Action needed",
+      "description": "Approve proposed plan: the current routes no longer work and Drasi has a complete plan that fits policy and capacity.",
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 8,
+        "h": 3
+      },
+      "datasource": {
+        "uid": "ignite-prometheus",
+        "type": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "ignite_drasi_dashboard{view=\"approval\"} and on(view) (ignite_drasi_valid_until_seconds > time())",
+          "instant": true,
+          "range": false,
+          "interval": "1s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Unknown",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "-1": {
+                  "text": "Unknown",
+                  "color": "gray"
+                },
+                "0": {
+                  "text": "None",
+                  "color": "green"
+                },
+                "1": {
+                  "text": "Approve proposed plan",
+                  "color": "orange"
+                },
+                "2": {
+                  "text": "No valid plan",
+                  "color": "red"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Unknown",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "gray"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "orientation": "auto",
+        "justifyMode": "center",
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "textMode": "value",
+        "wideLayout": true,
+        "text": {
+          "titleSize": 16,
+          "valueSize": 30
+        }
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Recovery",
+      "description": "Verified only after real support requests succeed on the new route.",
+      "gridPos": {
+        "x": 8,
+        "y": 1,
+        "w": 8,
+        "h": 3
+      },
+      "datasource": {
+        "uid": "ignite-prometheus",
+        "type": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "ignite_drasi_dashboard{view=\"recovery\"} and on(view) (ignite_drasi_valid_until_seconds > time())",
+          "instant": true,
+          "range": false,
+          "interval": "1s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Unknown",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "-1": {
+                  "text": "Unknown",
+                  "color": "gray"
+                },
+                "0": {
+                  "text": "Awaiting evidence",
+                  "color": "orange"
+                },
+                "1": {
+                  "text": "Verified",
+                  "color": "green"
+                },
+                "2": {
+                  "text": "None in progress",
+                  "color": "text"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Unknown",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "gray"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "orientation": "auto",
+        "justifyMode": "center",
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "textMode": "value",
+        "wideLayout": true,
+        "text": {
+          "titleSize": 16,
+          "valueSize": 30
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Safe if EU-A fails?",
+      "description": "Would every workload still fit somewhere it is allowed if EU-A were lost? A what-if assessment, not an outage.",
+      "gridPos": {
+        "x": 16,
+        "y": 1,
+        "w": 8,
+        "h": 3
+      },
+      "datasource": {
+        "uid": "ignite-prometheus",
+        "type": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "ignite_drasi_dashboard{view=\"resilience\"} and on(view) (ignite_drasi_valid_until_seconds > time())",
+          "instant": true,
+          "range": false,
+          "interval": "1s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Unknown",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "-1": {
+                  "text": "Unknown",
+                  "color": "gray"
+                },
+                "1": {
+                  "text": "Yes",
+                  "color": "green"
+                },
+                "0": {
+                  "text": "No",
+                  "color": "red"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Unknown",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "gray"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "orientation": "auto",
+        "justifyMode": "center",
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "textMode": "value",
+        "wideLayout": true,
+        "text": {
+          "titleSize": 16,
+          "valueSize": 30
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Current routes",
+      "description": "Where each workload runs now, with its reserved capacity.",
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 12,
+        "h": 3
+      },
+      "datasource": {
+        "uid": "ignite-prometheus",
+        "type": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "label_replace((ignite_drasi_dashboard{view=\"configured\"} > 0) and on(view) (ignite_drasi_valid_until_seconds > time()), \"workload\", \"summaries\", \"workload\", \"batch\") / 1000",
+          "instant": true,
+          "range": false,
+          "interval": "1s",
+          "legendFormat": "{{workload}} → {{endpoint}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Unknown",
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Unknown",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "unit": "suffix:k tokens/min"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "orientation": "auto",
+        "justifyMode": "center",
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "textMode": "value_and_name",
+        "wideLayout": true,
+        "text": {
+          "titleSize": 16,
+          "valueSize": 22
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Proposed routes",
+      "description": "Drasi's best complete allocation for the current facts. Identical to current routes when no change is needed.",
+      "gridPos": {
+        "x": 12,
+        "y": 4,
+        "w": 12,
+        "h": 3
+      },
+      "datasource": {
+        "uid": "ignite-prometheus",
+        "type": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "label_replace((ignite_drasi_dashboard{view=\"proposed\"} > 0) and on(view) (ignite_drasi_valid_until_seconds > time()), \"workload\", \"summaries\", \"workload\", \"batch\") / 1000",
+          "instant": true,
+          "range": false,
+          "interval": "1s",
+          "legendFormat": "{{workload}} → {{endpoint}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Unknown",
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Unknown",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "unit": "suffix:k tokens/min"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "orientation": "auto",
+        "justifyMode": "center",
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "textMode": "value_and_name",
+        "wideLayout": true,
+        "text": {
+          "titleSize": 16,
+          "valueSize": 22
+        }
+      }
+    },
+    {
+      "id": 101,
+      "type": "row",
+      "title": "Where each workload may run · Drasi continuous policy",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 7,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Customer support may run on",
+      "description": "Allowed or denied by the placement policy (Rego), maintained by Drasi as policy and deployments change.",
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 12,
+        "h": 3
+      },
+      "datasource": {
+        "uid": "ignite-prometheus",
+        "type": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "ignite_drasi_dashboard{view=\"policy\",workload=\"support\"} and on(view) (ignite_drasi_valid_until_seconds > time())",
+          "instant": true,
+          "range": false,
+          "interval": "1s",
+          "legendFormat": "{{endpoint}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Unknown",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "-1": {
+                  "text": "Unknown",
+                  "color": "gray"
+                },
+                "1": {
+                  "text": "Allowed",
+                  "color": "green"
+                },
+                "0": {
+                  "text": "Denied",
+                  "color": "red"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Unknown",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "gray"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "orientation": "auto",
+        "justifyMode": "center",
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "textMode": "value_and_name",
+        "wideLayout": true,
+        "text": {
+          "titleSize": 16,
+          "valueSize": 24
+        }
+      }
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Document summaries may run on",
+      "description": "Allowed or denied by the placement policy (Rego), maintained by Drasi as policy and deployments change.",
+      "gridPos": {
+        "x": 12,
+        "y": 8,
+        "w": 12,
+        "h": 3
+      },
+      "datasource": {
+        "uid": "ignite-prometheus",
+        "type": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "ignite_drasi_dashboard{view=\"policy\",workload=\"batch\"} and on(view) (ignite_drasi_valid_until_seconds > time())",
+          "instant": true,
+          "range": false,
+          "interval": "1s",
+          "legendFormat": "{{endpoint}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Unknown",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "-1": {
+                  "text": "Unknown",
+                  "color": "gray"
+                },
+                "1": {
+                  "text": "Allowed",
+                  "color": "green"
+                },
+                "0": {
+                  "text": "Denied",
+                  "color": "red"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Unknown",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "gray"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "orientation": "auto",
+        "justifyMode": "center",
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "textMode": "value_and_name",
+        "wideLayout": true,
+        "text": {
+          "titleSize": 16,
+          "valueSize": 24
+        }
+      }
+    },
+    {
+      "id": 12,
+      "type": "annolist",
+      "title": "Decision events",
+      "gridPos": {
+        "x": 0,
+        "y": 11,
+        "w": 12,
+        "h": 5
+      },
+      "options": {
+        "onlyFromThisDashboard": false,
+        "onlyInTimeRange": true,
+        "showUser": false,
+        "showTime": true,
+        "showTags": false,
+        "navigateToPanel": false,
+        "limit": 5,
+        "tags": [
+          "ignite-decision"
+        ]
+      },
+      "description": "Approvals, rejections, adopted routes and verified recovery, newest first."
+    },
+    {
+      "id": 14,
+      "type": "stat",
+      "title": "Capacity · tokens/min",
+      "description": "Total capacity across all deployments, the part on healthy deployments, and what the workloads need. Enough in total doesn't mean there's a valid place for each workload.",
+      "gridPos": {
+        "x": 12,
+        "y": 11,
+        "w": 6,
+        "h": 5
+      },
+      "datasource": {
+        "uid": "ignite-prometheus",
+        "type": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(ignite_workload_capacity_tpm and on() (time() - max(ignite_drasi_projection_timestamp_seconds) < 5)) / 1000",
+          "legendFormat": "Total",
+          "instant": true,
+          "range": false,
+          "interval": "1s"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(ignite_workload_capacity_tpm and on(endpoint) ((ignite_drasi_dashboard{view=\"endpoint\"} and on(view) (ignite_drasi_valid_until_seconds > time())) == 0)) / 1000",
+          "legendFormat": "Healthy",
+          "instant": true,
+          "range": false,
+          "interval": "1s"
+        },
+        {
+          "refId": "C",
+          "expr": "sum(ignite_drasi_dashboard{view=\"configured\"} and on(view) (ignite_drasi_valid_until_seconds > time())) / 1000",
+          "legendFormat": "Needed",
+          "instant": true,
+          "range": false,
+          "interval": "1s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Unknown",
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Unknown",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "unit": "suffix:k"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "orientation": "auto",
+        "justifyMode": "center",
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "textMode": "value_and_name",
+        "wideLayout": true,
+        "text": {
+          "titleSize": 16,
+          "valueSize": 24
+        }
+      }
+    },
+    {
+      "id": 13,
+      "type": "stat",
+      "title": "Deployment budgets",
+      "description": "Simulated capacity of each deployment, in tokens per minute.",
+      "gridPos": {
+        "x": 18,
+        "y": 11,
+        "w": 6,
+        "h": 5
+      },
+      "datasource": {
+        "uid": "ignite-prometheus",
+        "type": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(ignite_workload_capacity_tpm and on() (time() - max(ignite_drasi_projection_timestamp_seconds) < 5)) / 1000",
+          "instant": true,
+          "range": false,
+          "interval": "1s",
+          "legendFormat": "{{endpoint}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Unknown",
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Unknown",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "unit": "suffix:k"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "orientation": "auto",
+        "justifyMode": "center",
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "textMode": "value_and_name",
+        "wideLayout": true,
+        "text": {
+          "titleSize": 16,
+          "valueSize": 24
+        }
+      }
+    }
+  ]
+}

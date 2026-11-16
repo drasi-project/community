@@ -1,0 +1,156 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1450" viewBox="0 0 1920 1450" role="img" aria-labelledby="title description"><title id="title">Drasi AI observability demo solution</title><desc id="description">Customer support and background workloads share an AI gateway and constrained model endpoints. OTel, Prometheus, Grafana and Langfuse observe behavior. Drasi combines selected signals with PostgreSQL changes, evaluates policy, allocation and resilience, and publishes versioned candidate plans. An operator approves a plan; a separate controller revalidates it before changing gateway configuration. Fresh observations confirm recovery.</desc><defs><marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#0078D4"/></marker><marker id="arrow-orange" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#C76A00"/></marker><marker id="arrow-purple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#5C2D91"/></marker><marker id="arrow-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#107C10"/></marker><marker id="arrow-gray" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#495057"/></marker></defs><rect width="1920" height="1450" fill="#ffffff"/><rect x="40" y="145" width="1840" height="290" rx="18" fill="none" stroke="#0078D4" stroke-width="2"/>
+<rect x="40" y="510" width="990" height="320" rx="18" fill="none" stroke="#C76A00" stroke-width="2"/>
+<rect x="1110" y="510" width="770" height="320" rx="18" fill="none" stroke="#495057" stroke-width="2"/>
+<rect x="40" y="920" width="1440" height="380" rx="18" fill="none" stroke="#5C2D91" stroke-width="2"/>
+<rect x="1530" y="920" width="350" height="380" rx="18" fill="none" stroke="#495057" stroke-width="2"/>
+<rect x="750" y="975" width="650" height="220" rx="18" fill="none" stroke="#107C10" stroke-width="2"/>
+<text x="50" y="61" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="34" fill="#000000" font-weight="600">Keep the customer assistant working when AI capacity is constrained</text>
+<text x="50" y="104" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="21" fill="#000000" font-weight="400">Proposed Ignite demo | Traditional observability + AI traces + continuously maintained Drasi models</text>
+<text x="65" y="182" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="22" fill="#000000" font-weight="600">1  RUN THE AI WORKLOADS</text>
+<text x="1450" y="186" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="21" fill="#000000" font-weight="400">Approved, compatible model endpoints</text>
+<text x="65" y="547" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="22" fill="#000000" font-weight="600">2  OBSERVE INFRASTRUCTURE AND AI BEHAVIOR</text>
+<text x="1135" y="547" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="22" fill="#000000" font-weight="600">AUTHORITATIVE BUSINESS CONTEXT</text>
+<text x="65" y="956" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="21" fill="#000000" font-weight="600">3  DRASI: MAINTAIN ASSESSMENTS AND PLANS</text>
+<text x="1550" y="956" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="21" fill="#000000" font-weight="600">4  REVIEW AND APPLY</text>
+<text x="775" y="1008" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="21" fill="#000000" font-weight="600">Stateful model transformers</text>
+<polyline points="360,265 420,265 420,285 480,285" fill="none" stroke="#0078D4" stroke-width="2.3" stroke-linejoin="round" stroke-linecap="round"/>
+<polygon points="480,285 469,280 469,290" fill="#0078D4"/>
+<polyline points="360,370 420,370 420,345 480,345" fill="none" stroke="#0078D4" stroke-width="2.3" stroke-linejoin="round" stroke-linecap="round"/>
+<polygon points="480,345 469,340 469,350" fill="#0078D4"/>
+<polyline points="860,305 965,305 965,207 1720,207" fill="none" stroke="#0078D4" stroke-width="2.3" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="1160,207 1160,230" fill="none" stroke="#0078D4" stroke-width="2.3" stroke-linejoin="round" stroke-linecap="round"/>
+<polygon points="1160,230 1165,219 1155,219" fill="#0078D4"/>
+<polyline points="1440,207 1440,230" fill="none" stroke="#0078D4" stroke-width="2.3" stroke-linejoin="round" stroke-linecap="round"/>
+<polygon points="1440,230 1445,219 1435,219" fill="#0078D4"/>
+<polyline points="1720,207 1720,230" fill="none" stroke="#0078D4" stroke-width="2.3" stroke-linejoin="round" stroke-linecap="round"/>
+<polygon points="1720,230 1725,219 1715,219" fill="#0078D4"/>
+<polyline points="440,435 440,475 20,475 20,640 70,640" fill="none" stroke="#C76A00" stroke-width="2.3" stroke-linejoin="round" stroke-linecap="round"/>
+<polygon points="70,640 59,635 59,645" fill="#C76A00"/>
+<polyline points="330,650 380,650 380,617 420,617" fill="none" stroke="#C76A00" stroke-width="2.3" stroke-linejoin="round" stroke-linecap="round"/>
+<polygon points="420,617 409,612 409,622" fill="#C76A00"/>
+<polyline points="660,617 750,617" fill="none" stroke="#C76A00" stroke-width="2.3" stroke-linejoin="round" stroke-linecap="round"/>
+<polygon points="750,617 739,612 739,622" fill="#C76A00"/>
+<polyline points="330,705 375,705 375,757 420,757" fill="none" stroke="#C76A00" stroke-width="2.3" stroke-linejoin="round" stroke-linecap="round"/>
+<polygon points="420,757 409,752 409,762" fill="#C76A00"/>
+<polyline points="200,745 200,845 20,845 20,1030 70,1030" fill="none" stroke="#C76A00" stroke-width="2.3" stroke-linejoin="round" stroke-linecap="round"/>
+<polygon points="70,1030 59,1025 59,1035" fill="#C76A00"/>
+<polyline points="870,665 870,686 1055,686 1055,865 360,865 360,1055 330,1055" fill="none" stroke="#C76A00" stroke-width="2.3" stroke-linejoin="round" stroke-linecap="round"/>
+<polygon points="330,1055 341,1060 341,1050" fill="#C76A00"/>
+<polyline points="1810,760 1810,888 570,888 570,990" fill="none" stroke="#495057" stroke-width="2.3" stroke-linejoin="round" stroke-linecap="round"/>
+<polygon points="570,990 575,979 565,979" fill="#495057"/>
+<polyline points="330,1040 410,1040" fill="none" stroke="#5C2D91" stroke-width="2.3" stroke-linejoin="round" stroke-linecap="round"/>
+<polygon points="410,1040 399,1035 399,1045" fill="#5C2D91"/>
+<polyline points="680,1055 750,1055" fill="none" stroke="#5C2D91" stroke-width="2.3" stroke-linejoin="round" stroke-linecap="round"/>
+<polygon points="750,1055 739,1050 739,1060" fill="#5C2D91"/>
+<polyline points="960,1090 980,1090" fill="none" stroke="#107C10" stroke-width="2.3" stroke-linejoin="round" stroke-linecap="round"/>
+<polygon points="980,1090 969,1085 969,1095" fill="#107C10"/>
+<polyline points="867,1150 867,1172 1277,1172 1277,1150" fill="none" stroke="#107C10" stroke-width="2.3" stroke-linejoin="round" stroke-linecap="round"/>
+<polygon points="1277,1150 1272,1161 1282,1161" fill="#107C10"/>
+<polyline points="1075,1195 1075,1220" fill="none" stroke="#107C10" stroke-width="2.3" stroke-linejoin="round" stroke-linecap="round"/>
+<polygon points="1075,1220 1080,1209 1070,1209" fill="#107C10"/>
+<polyline points="410,1247 330,1247" fill="none" stroke="#5C2D91" stroke-width="2.3" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="8 6"/>
+<polygon points="330,1247 341,1252 341,1242" fill="#5C2D91"/>
+<polyline points="1400,1247 1495,1247 1495,1032 1560,1032" fill="none" stroke="#5C2D91" stroke-width="2.3" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="8 6"/>
+<polygon points="1560,1032 1549,1027 1549,1037" fill="#5C2D91"/>
+<polyline points="1705,1080 1705,1125" fill="none" stroke="#5C2D91" stroke-width="2.3" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="8 6"/>
+<polygon points="1705,1125 1710,1114 1700,1114" fill="#5C2D91"/>
+<polyline points="1850,1180 1900,1180 1900,470 690,470 690,390" fill="none" stroke="#5C2D91" stroke-width="2.8" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="8 6"/>
+<polygon points="690,390 685,401 695,401" fill="#5C2D91"/>
+<rect x="70" y="225" width="290" height="80" rx="12" fill="#CFE4FA" stroke="#0078D4" stroke-width="1.5"/>
+<text x="215" y="260.25" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#000000" font-weight="600">Customer-support assistant</text>
+<text x="215" y="284" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#000000" font-weight="400">Restricted customer records</text>
+<rect x="70" y="330" width="290" height="80" rx="12" fill="#CFE4FA" stroke="#0078D4" stroke-width="1.5"/>
+<text x="215" y="365.25" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#000000" font-weight="600">Background summarization</text>
+<text x="215" y="389" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#000000" font-weight="400">Public / unrestricted inputs</text>
+<rect x="480" y="240" width="380" height="150" rx="12" fill="#CFE4FA" stroke="#0078D4" stroke-width="1.5"/>
+<text x="670" y="285" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#000000" font-weight="600">AI gateway / request controller</text>
+<text x="670" y="310" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#000000" font-weight="400">Enforce policy + budgets</text>
+<text x="670" y="335" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#000000" font-weight="400">Route / queue new requests</text>
+<text x="670" y="360" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#000000" font-weight="400">Validate current plan revision</text>
+<rect x="1040" y="230" width="240" height="155" rx="12" fill="#CFE4FA" stroke="#0078D4" stroke-width="1.5"/>
+<text x="1160" y="276" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="21" fill="#000000" font-weight="600">EU primary</text>
+<text x="1160" y="302.25" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="21" fill="#000000" font-weight="400">Approved model</text>
+<text x="1160" y="328.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="21" fill="#000000" font-weight="400">Inject throttling</text>
+<text x="1160" y="354.75" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="21" fill="#000000" font-weight="400">or an outage</text>
+<rect x="1320" y="230" width="240" height="155" rx="12" fill="#CFE4FA" stroke="#0078D4" stroke-width="1.5"/>
+<text x="1440" y="277.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#000000" font-weight="600">EU secondary</text>
+<text x="1440" y="302.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#000000" font-weight="400">Approved model</text>
+<text x="1440" y="327.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#000000" font-weight="400">Shared capacity</text>
+<text x="1440" y="352.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#000000" font-weight="400">Support + batch work</text>
+<rect x="1600" y="230" width="240" height="155" rx="12" fill="#CFE4FA" stroke="#0078D4" stroke-width="1.5"/>
+<text x="1720" y="277.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#000000" font-weight="600">Other region</text>
+<text x="1720" y="302.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#000000" font-weight="400">Approved model</text>
+<text x="1720" y="327.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#000000" font-weight="400">Spare capacity</text>
+<text x="1720" y="352.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#000000" font-weight="400">Restricted data: deny</text>
+<rect x="70" y="600" width="260" height="145" rx="12" fill="#FFF4CE" stroke="#C76A00" stroke-width="1.5"/>
+<text x="200" y="642.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#000000" font-weight="600">OTel Collector</text>
+<text x="200" y="667.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#000000" font-weight="400">Metrics + traces</text>
+<text x="200" y="692.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#000000" font-weight="400">Shared task, service</text>
+<text x="200" y="717.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#000000" font-weight="400">and trace identifiers</text>
+<rect x="420" y="570" width="240" height="95" rx="12" fill="#FFF4CE" stroke="#C76A00" stroke-width="1.5"/>
+<text x="540" y="612" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" fill="#000000" font-weight="600">Prometheus</text>
+<text x="540" y="639.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" fill="#000000" font-weight="400">Metrics + history</text>
+<rect x="750" y="570" width="240" height="95" rx="12" fill="#FFF4CE" stroke="#C76A00" stroke-width="1.5"/>
+<text x="870" y="612" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" fill="#000000" font-weight="600">Grafana</text>
+<text x="870" y="639.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" fill="#000000" font-weight="400">Dashboards + alerts</text>
+<rect x="420" y="715" width="570" height="85" rx="12" fill="#FFF4CE" stroke="#C76A00" stroke-width="1.5"/>
+<text x="705" y="752.75" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#000000" font-weight="600">Langfuse</text>
+<text x="705" y="776.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#000000" font-weight="400">AI traces, tool calls, latency, cost and outcome scores</text>
+<rect x="1140" y="580" width="710" height="180" rx="12" fill="#F3F2F1" stroke="#495057" stroke-width="1.5"/>
+<text x="1495" y="637" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" fill="#000000" font-weight="600">PostgreSQL: configuration + task state</text>
+<text x="1495" y="664.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" fill="#000000" font-weight="400">Customer / data policies and approved endpoints</text>
+<text x="1495" y="692" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" fill="#000000" font-weight="400">Workload priority, quotas, budgets and demand</text>
+<text x="1495" y="719.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" fill="#000000" font-weight="400">Task outcomes and versioned configuration</text>
+<rect x="70" y="990" width="260" height="130" rx="12" fill="#E8DAEF" stroke="#5C2D91" stroke-width="1.5"/>
+<text x="200" y="1026.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#000000" font-weight="600">Signal adapter</text>
+<text x="200" y="1050.25" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#000000" font-weight="400">Normalize observations</text>
+<text x="200" y="1074" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#000000" font-weight="400">Alert lifecycle + identity</text>
+<text x="200" y="1097.75" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#000000" font-weight="400">Fresh / stale / unknown</text>
+<rect x="410" y="990" width="270" height="130" rx="12" fill="#E8DAEF" stroke="#5C2D91" stroke-width="1.5"/>
+<text x="545" y="1026.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#000000" font-weight="600">Context queries</text>
+<text x="545" y="1050.25" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#000000" font-weight="400">Join signals and state</text>
+<text x="545" y="1074" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#000000" font-weight="400">Affected tasks / tenants</text>
+<text x="545" y="1097.75" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#000000" font-weight="400">Current model inputs</text>
+<rect x="775" y="1030" width="185" height="120" rx="12" fill="#DFF6DD" stroke="#107C10" stroke-width="1.5"/>
+<text x="867.5" y="1063" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#000000" font-weight="600">Policy / Rego</text>
+<text x="867.5" y="1085.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#000000" font-weight="400">Allowed targets</text>
+<text x="867.5" y="1108" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#000000" font-weight="400">Explicit reasons</text>
+<text x="867.5" y="1130.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#000000" font-weight="400">Current revision</text>
+<rect x="980" y="1030" width="185" height="120" rx="12" fill="#DFF6DD" stroke="#107C10" stroke-width="1.5"/>
+<text x="1072.5" y="1063" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#000000" font-weight="600">Allocation</text>
+<text x="1072.5" y="1085.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#000000" font-weight="400">Feasible plans</text>
+<text x="1072.5" y="1108" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#000000" font-weight="400">Shared capacity</text>
+<text x="1072.5" y="1130.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#000000" font-weight="400">Priority + budget</text>
+<rect x="1185" y="1030" width="185" height="120" rx="12" fill="#DFF6DD" stroke="#107C10" stroke-width="1.5"/>
+<text x="1277.5" y="1063" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#000000" font-weight="600">Resilience</text>
+<text x="1277.5" y="1085.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#000000" font-weight="400">What-if failures</text>
+<text x="1277.5" y="1108" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#000000" font-weight="400">Recovery capacity</text>
+<text x="1277.5" y="1130.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#000000" font-weight="400">Read-only analysis</text>
+<rect x="410" y="1220" width="990" height="55" rx="12" fill="#E8DAEF" stroke="#5C2D91" stroke-width="1.5"/>
+<text x="905" y="1255.375" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="21" fill="#000000" font-weight="600">Result queries: live decisions, evidence, risks and candidate plans</text>
+<rect x="70" y="1160" width="260" height="110" rx="12" fill="#E8DAEF" stroke="#5C2D91" stroke-width="1.5"/>
+<text x="200" y="1198.375" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#000000" font-weight="600">Publish assessments</text>
+<text x="200" y="1222.125" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#000000" font-weight="400">Grafana annotations</text>
+<text x="200" y="1245.875" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#000000" font-weight="400">Langfuse trace scores</text>
+<rect x="1560" y="985" width="290" height="95" rx="12" fill="#F3F2F1" stroke="#495057" stroke-width="1.5"/>
+<text x="1705" y="1015" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#000000" font-weight="600">Operator review</text>
+<text x="1705" y="1040" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#000000" font-weight="400">Plan + reasons + revision</text>
+<text x="1705" y="1065" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#000000" font-weight="400">Approve or reject</text>
+<rect x="1560" y="1125" width="290" height="115" rx="12" fill="#F3F2F1" stroke="#495057" stroke-width="1.5"/>
+<text x="1705" y="1155.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#000000" font-weight="600">Control service</text>
+<text x="1705" y="1178" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#000000" font-weight="400">Recheck policy + version</text>
+<text x="1705" y="1200.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#000000" font-weight="400">Apply config; record audit</text>
+<text x="1705" y="1223" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#000000" font-weight="400">Gateway enforces requests</text>
+<text x="70" y="465" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#000000" font-weight="400">OTel telemetry from the application and gateway</text>
+<text x="1365" y="457" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#000000" font-weight="400">Approved, version-checked routing / admission changes</text>
+<text x="352" y="596" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#000000" font-weight="400">metrics</text>
+<text x="675" y="598" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#000000" font-weight="400">query</text>
+<text x="236" y="783" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="17" fill="#000000" font-weight="400">AI traces</text>
+<text x="65" y="875" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#000000" font-weight="400">Selected signal events</text>
+<text x="65" y="897.5" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#000000" font-weight="400">via push adapter</text>
+<text x="640" y="856" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#000000" font-weight="400">Firing / resolved alert webhooks</text>
+<text x="1485" y="801" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#000000" font-weight="400">Bootstrap + CDC; no repeated full-state polling</text>
+<text x="1135" y="913" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#000000" font-weight="400">Committed configuration and task changes</text>
+<text x="72" y="1338" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#000000" font-weight="600">RECOVERY: a saved plan is not success. Fresh telemetry and task outcomes must confirm that service has recovered.</text>
+<text x="72" y="1381" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#000000" font-weight="400">Local demo: containerized services; endpoint mocks simulate logical regions, capacity and faults. No real GPU relocation.</text>
+<text x="72" y="1411" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#000000" font-weight="400">Solid arrows: requests / observations / model inputs. Dashed arrows: assessments and approved control. Feasibility is model-based.</text></svg>

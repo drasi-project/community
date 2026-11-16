@@ -1,0 +1,30 @@
+{
+  "name": "ignite-live-presentation",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 18580 --strictPort",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 18580 --strictPort",
+    "test": "playwright test",
+    "test:live": "playwright test --config playwright.live.config.ts",
+    "sync-presenter": "UPDATE_PRESENTER_DOC=1 playwright test -g \"PRESENTER.md matches\""
+  },
+  "dependencies": {
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "reveal.js": "5.2.1",
+    "zod": "4.1.12"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1",
+    "@types/node": "24.10.0",
+    "@types/react": "19.2.2",
+    "@types/react-dom": "19.2.2",
+    "@types/reveal.js": "5.2.0",
+    "@vitejs/plugin-react": "5.1.0",
+    "typescript": "5.9.3",
+    "vite": "7.2.2"
+  }
+}

@@ -1,0 +1,16 @@
+opentelemetry-sdk==1.38.0
+opentelemetry-exporter-otlp-proto-http==1.38.0
+opentelemetry-api==1.38.0
+opentelemetry-exporter-otlp-proto-common==1.38.0
+opentelemetry-proto==1.38.0
+opentelemetry-semantic-conventions==0.59b0
+certifi==2026.10.23
+charset-normalizer==3.5.2
+googleapis-common-protos==1.76.0
+idna==3.20
+importlib-metadata==8.7.1
+protobuf==6.33.6
+requests==2.34.2
+typing-extensions==4.16.0
+urllib3==2.8.0
+zipp==4.1.2

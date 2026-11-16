@@ -1,0 +1,13 @@
+MATCH (o:RecoveryObservation)-[:RECOVERY_SUMMARY]-(t:RecoveryTasks)
+WHERE o.run_epoch = t.run_epoch AND o.applied_revision = t.revision
+RETURN o.id AS id, o.run_epoch AS run_epoch, o.applied_revision AS applied_revision,
+       o.applied_ms AS applied_ms, o.expires_ms AS expires_ms,
+       t.outstanding AS outstanding, t.last_success_ms AS last_success_ms,
+       CASE WHEN t.last_success_ms >= o.applied_ms
+         AND NOT drasi.trueLater(true, t.last_success_ms + 15000) THEN 1 ELSE 0 END AS recent_successes,
+       CASE WHEN drasi.trueLater(true, o.expires_ms) THEN 'unknown'
+            WHEN o.endpoint_status <> 'ok' THEN 'unconfirmed'
+            WHEN t.outstanding = 0 AND t.last_success_ms >= o.applied_ms
+              AND NOT drasi.trueLater(true, t.last_success_ms + 15000)
+              AND drasi.trueLater(true, o.applied_ms + 5000)
+              THEN 'confirmed' ELSE 'unconfirmed' END AS state

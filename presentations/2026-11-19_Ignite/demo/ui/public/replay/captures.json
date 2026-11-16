@@ -1,0 +1,46 @@
+[
+  {
+    "scene": "failure",
+    "capturedAt": "2026-11-16T16:16:39.348Z",
+    "runEpoch": "525fac42-af8a-458e-8b60-6e73715cc943",
+    "surface": "grafana",
+    "duration_seconds": 22.581,
+    "src": "/replay/failure.webm",
+    "sha256": "508643b3937e7d76d23cc1fcb4fea0ecf9861cfd00174f48a399abfe955d7c38",
+    "bytes": 1154288,
+    "provenance": "Actual Grafana recording 2026-11-16T16:16:39.348Z; epoch 525fac42-af8a-458e-8b60-6e73715cc943; native build bab08c5e0a63521968048013a9d074dbb47c40283f4c92be5fa44e20c75a86dd. Synthetic endpoints; real requests, telemetry and change-driven computation."
+  },
+  {
+    "scene": "recovery",
+    "capturedAt": "2026-11-16T16:17:02.153Z",
+    "runEpoch": "525fac42-af8a-458e-8b60-6e73715cc943",
+    "surface": "grafana",
+    "duration_seconds": 18.296,
+    "src": "/replay/recovery.webm",
+    "sha256": "e37a73cff7a6c0632d565e8b110d47816a95bee1d719363f1e3a8ba8fdaac62d",
+    "bytes": 851991,
+    "provenance": "Actual Grafana recording 2026-11-16T16:17:02.153Z; epoch 525fac42-af8a-458e-8b60-6e73715cc943; native build bab08c5e0a63521968048013a9d074dbb47c40283f4c92be5fa44e20c75a86dd. Synthetic endpoints; real requests, telemetry and change-driven computation."
+  },
+  {
+    "scene": "policy",
+    "capturedAt": "2026-11-16T16:17:49.042Z",
+    "runEpoch": "525fac42-af8a-458e-8b60-6e73715cc943",
+    "surface": "grafana",
+    "duration_seconds": 14.251,
+    "src": "/replay/policy.webm",
+    "sha256": "befeab1edad57b90926e376e32d211b971460de499f3f36cfb5a88bcff428409",
+    "bytes": 633204,
+    "provenance": "Actual Grafana recording 2026-11-16T16:17:49.042Z; epoch 525fac42-af8a-458e-8b60-6e73715cc943; native build bab08c5e0a63521968048013a9d074dbb47c40283f4c92be5fa44e20c75a86dd. Synthetic endpoints; real requests, telemetry and change-driven computation."
+  },
+  {
+    "scene": "resilience",
+    "capturedAt": "2026-11-16T16:18:14.364Z",
+    "runEpoch": "525fac42-af8a-458e-8b60-6e73715cc943",
+    "surface": "grafana",
+    "duration_seconds": 13.016,
+    "src": "/replay/resilience.webm",
+    "sha256": "edc467bf55f566380989e606cf16740bf8456b3d19b4f09b1c3510b1a9a8ee59",
+    "bytes": 589871,
+    "provenance": "Actual Grafana recording 2026-11-16T16:18:14.364Z; epoch 525fac42-af8a-458e-8b60-6e73715cc943; native build bab08c5e0a63521968048013a9d074dbb47c40283f4c92be5fa44e20c75a86dd. Synthetic endpoints; real requests, telemetry and change-driven computation."
+  }
+]

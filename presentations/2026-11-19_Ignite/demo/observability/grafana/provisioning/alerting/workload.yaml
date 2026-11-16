@@ -1,0 +1,50 @@
+apiVersion: 1
+contactPoints:
+  - orgId: 1
+    name: ignite-workload-webhook
+    receivers:
+      - uid: ignite-workload-webhook
+        type: webhook
+        disableResolveMessage: false
+        settings:
+          url: http://host.containers.internal:18500/alerts/grafana
+          httpMethod: POST
+groups:
+  - orgId: 1
+    name: support-workload
+    folder: Ignite
+    interval: 10s
+    rules:
+      - uid: ignite-workload-http-failure
+        title: Ignite workload HTTP failure
+        condition: B
+        for: 0s
+        noDataState: NoData
+        execErrState: Error
+        annotations:
+          summary: Model-call errors were measured in the last 30 seconds.
+        labels:
+          component: workload
+        data:
+          - refId: A
+            datasourceUid: ignite-prometheus
+            relativeTimeRange: {from: 60, to: 0}
+            model:
+              expr: >-
+                (sum by(workload,endpoint) (increase(ignite_workload_requests_total{status!="200"}[30s]))
+                or on(workload,endpoint) (0 * sum by(workload,endpoint) (increase(ignite_workload_requests_total[30s]))))
+                and on() (time() - max(ignite_drasi_projection_timestamp_seconds) < 8)
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            relativeTimeRange: {from: 60, to: 0}
+            model:
+              type: threshold
+              expression: A
+              refId: B
+              conditions:
+                - type: query
+                  evaluator: {type: gt, params: [0]}
+                  operator: {type: and}
+                  reducer: {type: last}

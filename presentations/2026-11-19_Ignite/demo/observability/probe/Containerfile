@@ -1,0 +1,7 @@
+FROM docker.io/library/python:3.12.12-slim-bookworm@sha256:228390eced221ad2986a3dd77e10b1accca6ba8ceb36f1572de1b346a337cc1a
+WORKDIR /app
+COPY requirements.txt .
+COPY wheels /wheels
+RUN pip install --no-cache-dir --no-index --find-links=/wheels -r requirements.txt
+COPY probe.py .
+CMD ["python", "-u", "probe.py"]

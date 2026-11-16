@@ -1,0 +1,9 @@
+<clickhouse>
+  <max_server_memory_usage>1610612736</max_server_memory_usage>
+  <mark_cache_size>134217728</mark_cache_size>
+  <uncompressed_cache_size>67108864</uncompressed_cache_size>
+  <background_schedule_pool_size>16</background_schedule_pool_size>
+  <background_buffer_flush_schedule_pool_size>4</background_buffer_flush_schedule_pool_size>
+  <background_message_broker_schedule_pool_size>4</background_message_broker_schedule_pool_size>
+  <background_distributed_schedule_pool_size>4</background_distributed_schedule_pool_size>
+</clickhouse>

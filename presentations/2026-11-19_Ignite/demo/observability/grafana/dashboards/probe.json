@@ -1,0 +1,16 @@
+{
+  "uid": "ignite-integration-probe",
+  "title": "Ignite integration probe - real HTTP telemetry",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5s",
+  "time": {"from": "now-15m", "to": "now"},
+  "tags": ["ignite", "integration-probe"],
+  "panels": [
+    {"id": 1, "type": "text", "title": "Phase 1 integration proof, not the finished workload", "gridPos": {"x": 0, "y": 0, "w": 24, "h": 3}, "options": {"mode": "markdown", "content": "Each sample comes from an actual local HTTP request to the integration probe. Failures are deliberate HTTP 503 responses. Trace IDs are returned to the caller and recorded in Langfuse. No model or customer traffic is used."}},
+    {"id": 2, "type": "timeseries", "title": "Completed HTTP requests by status", "gridPos": {"x": 0, "y": 3, "w": 12, "h": 8}, "datasource": {"type": "prometheus", "uid": "ignite-prometheus"}, "targets": [{"refId": "A", "expr": "ignite_probe_http_requests_total", "legendFormat": "{{http_response_status_code}}"}]},
+    {"id": 3, "type": "timeseries", "title": "Measured HTTP processing duration (seconds)", "gridPos": {"x": 12, "y": 3, "w": 12, "h": 8}, "datasource": {"type": "prometheus", "uid": "ignite-prometheus"}, "targets": [{"refId": "A", "expr": "rate(ignite_probe_http_duration_seconds_sum[1m]) / rate(ignite_probe_http_duration_seconds_count[1m])", "legendFormat": "mean duration"}]},
+    {"id": 4, "type": "stat", "title": "Last real request failed (1=yes, 0=no)", "gridPos": {"x": 0, "y": 11, "w": 12, "h": 5}, "datasource": {"type": "prometheus", "uid": "ignite-prometheus"}, "targets": [{"refId": "A", "expr": "ignite_probe_last_request_failed", "instant": true}], "fieldConfig": {"defaults": {"min": 0, "max": 1, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}}, "overrides": []}},
+    {"id": 5, "type": "text", "title": "Follow a request", "gridPos": {"x": 12, "y": 11, "w": 12, "h": 5}, "options": {"mode": "markdown", "content": "[Open local Langfuse](http://localhost:13001/project/ignite-probe/traces). Use the trace ID returned by `GET http://127.0.0.1:18888/probe?outcome=ok` or the smoke evidence. The smoke check queries this Grafana datasource, not a fabricated chart."}}
+  ]
+}

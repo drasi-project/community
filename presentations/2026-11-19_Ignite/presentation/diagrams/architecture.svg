@@ -1,0 +1,128 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080" font-family="Aptos, 'Segoe UI', Arial, sans-serif">
+  <title>Ignite demo architecture</title>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#bdc5d3"/>
+    </marker>
+    <marker id="arrow-accent" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#9ee8d7"/>
+    </marker>
+    <style>
+      .box { fill: #1a202b; stroke: #3a4351; stroke-width: 2; }
+      .group { fill: none; stroke: #3a4351; stroke-width: 2; stroke-dasharray: 8 8; }
+      .drasi { fill: #142a2b; stroke: #9ee8d7; stroke-width: 3; }
+      .title { fill: #eeeef2; font-size: 26px; font-weight: 700; }
+      .sub { fill: #bdc5d3; font-size: 18px; }
+      .glabel { fill: #bdc5d3; font-size: 15px; font-weight: 700; letter-spacing: 2px; }
+      .edge { fill: #bdc5d3; font-size: 15px; }
+      .edge-accent { fill: #9ee8d7; font-size: 15px; }
+      .flow { fill: none; stroke: #bdc5d3; stroke-width: 2.5; marker-end: url(#arrow); }
+      .answer { fill: none; stroke: #9ee8d7; stroke-width: 2.5; stroke-dasharray: 9 7; marker-end: url(#arrow-accent); }
+    </style>
+  </defs>
+
+  <rect width="1920" height="1080" fill="#10141c"/>
+  <text x="60" y="82" fill="#eeeef2" font-size="44" font-weight="700">Demo architecture</text>
+  <text x="60" y="122" class="sub" font-size="22">A local AI service, the observability tools teams already run, and Drasi</text>
+
+  <!-- Clients -->
+  <text x="60" y="228" class="glabel">CLIENTS</text>
+  <rect x="60" y="250" width="270" height="120" rx="14" class="box"/>
+  <text x="84" y="295" class="title">Demo traffic</text>
+  <text x="84" y="328" class="sub">Support and summary</text>
+  <text x="84" y="352" class="sub">requests every 5 s</text>
+  <rect x="60" y="520" width="270" height="120" rx="14" class="box"/>
+  <text x="84" y="565" class="title">Presenter desk</text>
+  <text x="84" y="598" class="sub">Faults, approvals,</text>
+  <text x="84" y="622" class="sub">policy edits</text>
+
+  <!-- AI service -->
+  <rect x="390" y="200" width="520" height="460" rx="18" class="group"/>
+  <text x="410" y="228" class="glabel">AI SERVICE · RUST WORKLOAD SERVICE</text>
+  <rect x="420" y="250" width="460" height="100" rx="14" class="box"/>
+  <text x="444" y="292" class="title">Gateway</text>
+  <text x="444" y="324" class="sub">Routing, admission, Rego policy check</text>
+  <rect x="420" y="390" width="146" height="110" rx="14" class="box"/>
+  <text x="440" y="430" class="title">EU-A</text>
+  <text x="440" y="458" class="sub">Simulated</text>
+  <text x="440" y="481" class="sub">model · 100k</text>
+  <rect x="577" y="390" width="146" height="110" rx="14" class="box"/>
+  <text x="597" y="430" class="title">EU-B</text>
+  <text x="597" y="458" class="sub">Simulated</text>
+  <text x="597" y="481" class="sub">model · 100k</text>
+  <rect x="734" y="390" width="146" height="110" rx="14" class="box"/>
+  <text x="754" y="430" class="title">US-C</text>
+  <text x="754" y="458" class="sub">Simulated</text>
+  <text x="754" y="481" class="sub">model · 100k</text>
+  <rect x="420" y="530" width="460" height="100" rx="14" class="box"/>
+  <text x="444" y="572" class="title">Control service</text>
+  <text x="444" y="604" class="sub">Approvals, idempotent commands, audit</text>
+
+  <!-- PostgreSQL -->
+  <rect x="390" y="740" width="520" height="140" rx="14" class="box"/>
+  <text x="414" y="785" class="title">PostgreSQL</text>
+  <text x="414" y="818" class="sub">System of record: tasks, attempts, deployment</text>
+  <text x="414" y="842" class="sub">reports, model and policy, commands, alerts</text>
+
+  <!-- Observability -->
+  <rect x="1010" y="200" width="850" height="360" rx="18" class="group"/>
+  <text x="1030" y="228" class="glabel">OBSERVABILITY · TOOLS TEAMS ALREADY RUN</text>
+  <rect x="1040" y="250" width="240" height="110" rx="14" class="box"/>
+  <text x="1064" y="292" class="title">OpenTelemetry</text>
+  <text x="1064" y="324" class="sub">Collector</text>
+  <rect x="1320" y="250" width="220" height="110" rx="14" class="box"/>
+  <text x="1344" y="292" class="title">Prometheus</text>
+  <text x="1344" y="324" class="sub">Metrics store</text>
+  <rect x="1580" y="250" width="250" height="110" rx="14" class="box"/>
+  <text x="1604" y="292" class="title">Grafana</text>
+  <text x="1604" y="324" class="sub">Dashboards, alerts,</text>
+  <text x="1604" y="346" class="sub">annotations</text>
+  <rect x="1320" y="410" width="510" height="110" rx="14" class="box"/>
+  <text x="1344" y="452" class="title">Langfuse</text>
+  <text x="1344" y="484" class="sub">AI request traces and scores</text>
+
+  <!-- Drasi -->
+  <rect x="1010" y="690" width="560" height="230" rx="18" class="drasi"/>
+  <text x="1040" y="740" fill="#eeeef2" font-size="32" font-weight="700">Drasi Server</text>
+  <text x="1040" y="774" fill="#9ee8d7" font-size="20" font-weight="700">Change-driven computation</text>
+  <text x="1040" y="812" class="sub">Continuous queries, continuous policy and</text>
+  <text x="1040" y="836" class="sub">continuous models over the live data</text>
+  <text x="1040" y="874" class="sub">Time-aware: missed deadlines, stale reports</text>
+  <text x="1040" y="898" class="sub">25 components · native plugins</text>
+
+  <!-- Flows -->
+  <path d="M330,310 H420" class="flow"/>
+  <path d="M330,580 H420" class="flow"/>
+  <path d="M650,350 V390" class="flow"/>
+  <text x="660" y="376" class="edge">HTTP</text>
+  <path d="M650,660 V740" class="flow"/>
+  <text x="664" y="706" class="edge">Writes state changes</text>
+  <path d="M910,810 H1010" class="flow"/>
+  <text x="960" y="796" class="edge" text-anchor="middle">Change feed</text>
+  <text x="960" y="834" class="edge" text-anchor="middle">+ bootstrap</text>
+  <path d="M910,290 H1040" class="flow"/>
+  <text x="975" y="278" class="edge" text-anchor="middle">OTLP metrics</text>
+  <text x="975" y="314" class="edge" text-anchor="middle">and traces</text>
+  <path d="M1280,305 H1320" class="flow"/>
+  <path d="M1540,305 H1580" class="flow"/>
+  <path d="M1160,360 V465 H1320" class="flow"/>
+  <text x="1172" y="452" class="edge">Traces</text>
+  <path d="M1600,360 V385 H930 V335 H880" class="flow"/>
+  <text x="1440" y="378" class="edge">Alert webhook</text>
+
+  <!-- Drasi answers -->
+  <path d="M1100,690 V610 H910" class="answer"/>
+  <text x="1005" y="582" class="edge-accent" text-anchor="middle">Live answers,</text>
+  <text x="1005" y="600" class="edge-accent" text-anchor="middle">snapshot-first</text>
+  <path d="M780,200 V165 H1705 V250" class="answer"/>
+  <path d="M1705,165 H1848 V465 H1830" class="answer"/>
+  <text x="1240" y="155" class="edge-accent" text-anchor="middle">Drasi answers published as Grafana annotations and Langfuse scores (and as metrics via OTLP)</text>
+
+  <!-- Legend -->
+  <path d="M60,1000 H130" class="flow"/>
+  <text x="145" y="1006" class="sub">Requests and data</text>
+  <path d="M340,1000 H410" class="answer"/>
+  <text x="425" y="1006" class="sub">Drasi answers</text>
+  <text x="1860" y="996" class="sub" text-anchor="end">Simulated: model deployments, regions, capacity</text>
+  <text x="1860" y="1022" class="sub" text-anchor="end">Real: requests, telemetry, data changes, Drasi computation · runs locally with Podman</text>
+</svg>
