@@ -254,9 +254,32 @@ batch may use all three; removing EU-B from support's destinations denies it.
 The talk's policy edit is a data change to `ignite_policy_destinations`; a rule
 change is a component configuration update.
 
-Implementation notes: `evaluate::Evaluator` (host-free) is done; workstream 2
-writes the component (bind inputs per port, snapshot bootstrap, emit changed
-pairs, `describe` as a volatile transformer).
+Implementation (workstream 2, done): `evaluate` (Rego, host-free), `decide`
+(pairs, basis, unknown rules, changed-only diff, host-free) and the component
+in `lib.rs`. Behaviour beyond the table above:
+
+- **Ports and edges:** each port takes any number of edges; rows are keyed by
+  edge and record identity. A port with no edge, or an edge whose snapshot has
+  not loaded, means nothing is emitted. An edge added after start is read from
+  its snapshot at once; a removed edge drops its rows.
+- **Upstream restart:** an envelope from a new producer epoch makes the plugin
+  re-read that edge's snapshot (no component failure).
+- **Unknown** (and `allowed = false`) also when: a row has no key property or
+  cannot be decoded (every pair); distinct rows share a subject or target key;
+  subject, target or parameter rows carry different `run_epoch` values; the
+  rule's result is undefined or not `{allowed: bool, reason: string}`.
+- **Time bound:** regorus's execution timer (`timeoutMs`) stops iteration; a
+  single long builtin call runs to completion and is then reported as unknown.
+- **Invalid module** (does not compile) fails construction, so a bad rule
+  update is rejected rather than turning every decision unknown.
+- **Output:** stream and element namespace `{component id}/out`; changes are
+  `Insert`/`Replace`/`Delete` nodes in sorted `id` order, one envelope per
+  input envelope. The plugin also serves an output snapshot on `out`
+  (`output_snapshots: [out]`), ready once all three ports have loaded, so a
+  downstream query can bootstrap from it.
+- **Basis** hashes canonical JSON of `{policy_hash, subject, target,
+  parameters}` with parameter rows sorted and de-duplicated, so row order never
+  changes it. A settled decision is reused while its basis is unchanged.
 
 ## 7. Optimizer plugin
 
