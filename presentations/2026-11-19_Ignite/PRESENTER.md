@@ -191,7 +191,7 @@ Say it in your own words.
    - **Watch for:** Support errors red, Support queue rising, Grafana alerts firing 1 or 2 (the second is an alert on Drasi's overdue answer).
 4. **Grafana · Operations.** And Support overdue is climbing. Each request has a 15-second deadline. When a request passes it, nothing happens to that request: no new row, no new metric. Drasi counts it at that exact moment anyway, because its query re-checks each request at its deadline. On the chart, the red overdue line follows the orange waiting line 15 seconds later. I'll show you how in a moment.
    - **Watch for:** Support overdue above 0; on the right-hand chart, the red line trails the orange one.
-5. **What Drasi just did.** Drasi saw the failed attempts and EU-A's health turn to Failed, worked out which requests were late as each deadline passed, and re-ran the planner. It didn't re-scan the database; it reacted to each change and each deadline. And notice the order: Drasi had a plan ready before Grafana's alert fired.
+5. **What Drasi just did.** Drasi saw the failed attempts and EU-A's health turn to Failed, worked out which requests were late as each deadline passed, and re-ran the planner. It didn't re-scan the database; it reacted to each change and each deadline. And notice the order: Drasi had a plan ready within seconds, before Grafana's alert rule fired, about 20 seconds later.
 
 **If it breaks:** If nothing changes within 30 seconds, press Use recordings from here on and say it's a recording.
 
@@ -233,9 +233,9 @@ Say it in your own words.
 
 ### 8. Healthy but fragile (3½ minutes)
 
-1. **Grafana · Recovery plan.** Later that day EU-A is fixed, but it comes back with only 50k of capacity. Nothing is broken.
+1. **Grafana · Recovery plan.** Later that day EU-A is fixed, but it comes back with only 50k of capacity. Nothing is broken. Recovery now says Nothing to verify: it checks the last fix only until the setup changes, and the earlier approval stays recorded as Applied and verified.
    - **Press:** EU-A back at 50k
-   - **Watch for:** Deployment capacity EU-A 50k. Safe if one fails? No: not if EU-B fails. Action needed: At risk.
+   - **Watch for:** Deployment capacity EU-A 50k. Safe if one fails? No: not if EU-B fails. Action needed: At risk. Recovery: Nothing to verify; Last approval: Applied and verified.
 2. **Grafana · Operations.** Every service-health signal is green. But Drasi says we're not safe. Support now runs on EU-B. If EU-B failed, support would need 60k in Europe, and EU-A has only 50k.
 3. **Grafana · Recovery plan.** That's the what-if model: for each deployment, would every workload still fit somewhere allowed if that one failed? It re-asks whenever anything changes. A game-day question, answered all the time. And it's a metric, so you can alert on it.
 4. **Grafana · Recovery plan.** Give EU-A its full capacity back, and the answer is Yes again, without any outage.
@@ -306,7 +306,7 @@ out of date or unavailable; it never means healthy.
 | | Support requests waiting (chart) | Orange: waiting. Red: overdue, from Drasi. The red line trails the orange one by the 15-second deadline |
 | Drasi's answers (bottom) | Support overdue | Support requests past their 15-second deadline |
 | | Deployment status | Each deployment's latest health report: Healthy, Over quota or Failed; Unknown if it has been silent for 8 seconds |
-| | Recovery | Nothing to verify, Awaiting evidence, or Verified |
+| | Recovery | Nothing to verify, Awaiting evidence, or Verified. It checks the latest applied plan only while the setup is unchanged: after any capacity or policy change it goes back to Nothing to verify |
 | | Action needed | None; Approve proposed plan; No valid plan; At risk (healthy, but losing one deployment would leave no valid plan) |
 | | Safe if one fails? | If any one deployment failed, would every workload still fit somewhere allowed? **No** names the deployment whose loss would hurt. **Already one down** while a deployment has failed: the question doesn't apply |
 
@@ -318,8 +318,8 @@ verified recovery), which Drasi posts to Grafana.
 | Tile | Meaning |
 |---|---|
 | Action needed, Recovery, Safe if one fails? | As above |
-| Last approval | None yet; Approved, applying; Applied, awaiting evidence; Applied and verified; Rejected: out of date |
-| Running now | Where each workload runs and the capacity it needs. **held: not allowed** when policy no longer allows it there |
+| Last approval | None yet; Approved, applying; Applied, awaiting evidence; Applied and verified; Rejected |
+| Running now | Where each workload runs and the capacity it needs. **(not allowed)** when policy no longer allows it there; the requests still go there until a plan is applied |
 | Proposed plan | The planner's plan, in orange when it differs from what's running. **Same as running now** or **No valid plan** otherwise |
 | Customer support / Document summaries may run on | Drasi's Rego policy answer for each deployment: Allowed or Not allowed |
 | Decision events | Newest first: plans, approvals, rejections with the reason, verified recovery |

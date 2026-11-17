@@ -225,7 +225,8 @@ query results), never from the AI service.
 | Command | Checks | Changes data? |
 |---|---|---|
 | `cd ui && npm run test:live` | Slides and desk against the real services | No |
-| `python3 tests/workload-telemetry.py` | Metrics, Langfuse traces and Grafana alerts for real requests | Yes |
+| `python3 tests/workload-integration.py` | The application and simulated deployments as Drasi sees them: deployment status, overdue requests and their history | Yes |
+| `python3 tests/workload-telemetry.py` | The application's metrics and Langfuse traces, Drasi's overdue metric, and Grafana's alerts on both | Yes |
 | `python3 tests/decision-integration.py` | Policy, plan and what-if | Yes |
 | `python3 tests/recovery-integration.py` | Approval checked by Drasi, routes changed by its gateway reaction, stale rejection, verified recovery, annotations and scores | Yes |
 | `node ui/scripts/walkthrough.mjs capture <folder>` | The whole talk through the desk, beat by beat, as a presenter would; saves the projector and the desk at every beat (about 12 minutes) | Yes; resets at the start and the end |
@@ -234,9 +235,15 @@ query results), never from the AI service.
 After `record`, run `cd ui && npm run build` so the app serves the new clips.
 Tests that change data must not run while someone else is using the demo.
 
-**Tests that start their own processes** (stop Server and the AI service
-first): `tests/native-integration.py`, `tests/workload-lifecycle.py`,
-`tests/recovery-lifecycle.py`.
+**Tests that start their own processes:**
+
+| Command | Checks | Stop first |
+|---|---|---|
+| `python3 tests/native-integration.py` | Server lifecycle: bootstrap from populated tables, a restart that rebuilds every answer (including changes and an approval made while it was down), replication reconnect | Server |
+| `python3 tests/workload-lifecycle.py` | Drasi's answers while the AI service or Server is down | Server and the AI service |
+| `python3 tests/recovery-lifecycle.py` | The reactions while the systems they call are down: the gateway reaction applies once the API is back; Grafana and Langfuse outages don't hold up recovery | Server and the AI service |
+
+Each leaves the processes it owns stopped.
 
 **Release qualification** (long-running, before an event):
 
@@ -248,6 +255,7 @@ python3 ops/release.py stamp      # record the exact build as the release
 python3 ops/release.py verify     # check nothing changed since the stamp
 ```
 
+`cycles`, `soak` and `preflight` read Drasi's outputs, like the integration tests.
 Any later change invalidates the stamp; rebuild, retest and stamp again.
 Evidence from every run, including failures, is kept under `.native/evidence/`.
 
@@ -270,7 +278,6 @@ here, except where [Known issues](#known-issues) says so.
 | Issue | Effect | Status |
 |---|---|---|
 | A query fed by another query receives only that query's changes, not its bootstrap rows | Query-to-query edges are used only where the upstream's rows arrive live after startup: the models' results and the recovery chain (`recovery-task-context` and `recovery-observation-context` → `recovery-results`, a workaround: it should bootstrap from their snapshots). Tiles over rows that rarely change read PostgreSQL directly instead of an upstream query: `tile-capacity` joins the deployment and report tables itself rather than reading `plan-bins`. These queries rebuild only when the whole graph starts, so restart all of Server, never one query | Open. Queries now have a `snapshot` output; try bootstrap edges from upstream queries in `ops/config/src/main.rs` |
-| Not yet ported to the new tables: `tests/workload-integration.py`, `workload-lifecycle.py`, `recovery-lifecycle.py`, and `ops/release.py` `cycles`, `soak` and `preflight` | They read `ignite_model`, `ignite_commands` or the AI service's removed `continuous_context`, and fail | Open |
 | Drasi Server's API lists no reactions (`GET …/instances/ignite/reactions` is empty) | The Server UI shows the queries and sources but none of the five native sinks; see `.native/server.json` | Drasi Server issue, not yet filed |
 | Drasi Server UI requests component details by ID, but the API now expects names | The UI shows no query text or configuration | Drasi Server issue, not yet filed |
 | Drasi Server's expanded query view uses 14 px text | Too small to read on a projector; use browser zoom | Drasi Server issue, not yet filed |
