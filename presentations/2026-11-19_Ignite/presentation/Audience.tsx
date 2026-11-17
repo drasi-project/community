@@ -63,8 +63,11 @@ export function Audience({ control, preview }: { control: StageControl; preview:
     </div>
     {(["ops", "plan"] as const).filter(id => loaded.has(id)).map(id =>
       <iframe key={id} className="stage-dashboard" title={id === "ops" ? "Grafana · Operations" : "Grafana · Recovery plan"} scrolling="no"
-        src={dashboards[id]} hidden={!!replay || dashboard !== id}
-        style={{ width: `${100 / zoom}vw`, height: `${100 / zoom}vh`, transform: `scale(${zoom})` }} />)}
+        src={dashboards[id]} aria-hidden={!!replay || dashboard !== id}
+        // Hidden with visibility, not display:none: after display:none Grafana's annotation list
+        // ("Decision events") stops refreshing.
+        style={{ width: `${100 / zoom}vw`, height: `${100 / zoom}vh`, transform: `scale(${zoom})`,
+          visibility: !!replay || dashboard !== id ? "hidden" : "visible" }} />)}
     {view === "request" && !replay && <section className="stage-request"><RequestView taskId={trace} /></section>}
     {replay && <section className="replay-screen">
       <strong className="replay-label">REPLAY · NOT LIVE</strong><h1>{replay.title}</h1>

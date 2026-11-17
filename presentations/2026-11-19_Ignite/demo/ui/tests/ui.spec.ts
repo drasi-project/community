@@ -72,6 +72,9 @@ test("Next on the desk moves through beats and changes what the projector shows"
   await expect(projector.locator("iframe.stage-dashboard").first()).toHaveAttribute("src", dashboards.ops);
   await page.getByRole("button", { name: "◀ Back" }).click();
   await expect(projector.locator('[data-slide="drasi"]')).toBeVisible();
+  // Off-screen dashboards stay rendered (visibility, not display:none) so Grafana keeps refreshing them.
+  await expect(projector.locator("iframe.stage-dashboard").first()).toBeHidden();
+  await expect(projector.locator("iframe.stage-dashboard").first()).toHaveCSS("display", "block");
   expect(await mutations(request)).toEqual([]);
 });
 
