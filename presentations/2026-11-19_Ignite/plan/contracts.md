@@ -539,22 +539,32 @@ Agreed between workstreams 1 and 6; the desk and its test fixture
 | `POST /approvals` | `{id, candidate_id, basis, revision}`; the desk always sends its own UUID `id` and the `Plan`'s `candidate_id`, `basis` and `revision` | `200 {id}` (above) |
 | `POST /reset`, `POST /traffic`, `POST /tasks`, `GET /tasks/{id}` | unchanged | unchanged |
 
-### What the desk and projector read from Drasi Server
+### What the desk and projector read from Drasi
 
-Through the web app's `/server` proxy (`/server/api/v1/instances/ignite/queries/{name}/…`):
+Every answer comes from the `desk-stream` SSE reaction (section 4), proxied by
+the web app as `/drasi-stream` (same origin; the test build points it at the
+fixture). Each window opens one `GET /drasi-stream/events` and nothing polls Drasi:
 
-| Query | How | Used for |
-|---|---|---|
-| `overdue-tasks` | `attach` (snapshot, then diffs) | Support overdue, the oldest late request, the query slide. Rows keyed by `id` |
-| `plan-results` | `attach` | The proposed plan and what "Select proposed plan" takes to the approval tool. The `Plan` row has `id` = `plan` and the §5 properties; `assignments` may be JSON text or an object |
-| `tile-action`, `tile-recovery`, `tile-resilience`, `tile-running`, `tile-last-approval` | `GET …/results` once a second, all five together | The four answers (the same values Grafana shows) and the approval outcome |
+1. Open `/events` and buffer its frames.
+2. Read `/snapshot/{alias}` for each output the window needs. The desk needs all
+   seven aliases; the query slide needs only `overdue-tasks`.
+3. Apply each snapshot, then the buffered frames whose `sequence` is after that
+   output's `x-drasi-output-position`, and continue live. Rows are keyed by
+   `identity` (`namespace`/`id`); `ADD`/`REPLACE` set `after`, `PATCH` merges
+   `after` and drops `removedProperties`, and `DELETE` removes the row.
+4. On disconnect, an error, or 35 s without bytes, start again from step 1.
 
-A browser allows six HTTP/1.1 connections per host, shared by the desk and the
-projector window, so only the two row sets that change with every event are
-attached; seven attachments starved `/api/health`. A query whose latest read
-failed or is over 3 s old makes the desk NOT READY and its answer Unknown.
-Diffs are applied by content for rows without `id` (tile queries), including
-`aggregation` and `noop` diffs.
+READY means the stream is connected, a heartbeat arrived within 25 s, and every
+alias has loaded its snapshot; otherwise each answer shows Unknown.
+
+| Alias | Used for |
+|---|---|
+| `overdue-tasks` | Support overdue, the oldest late request, the query slide |
+| `plan-results` | The proposed plan and what "Select proposed plan" takes to the approval tool (`id` = `plan`, section 5 properties; `assignments` is JSON text) |
+| `tile-action`, `tile-recovery`, `tile-resilience`, `tile-running`, `tile-last-approval` | The four answers (the values Grafana shows), Running now, and the approval outcome with Drasi's `reason` |
+
+Only the private diagnostics page (`/inspect`) still attaches to other queries
+through Server's `/server/…/queries/{name}/attach`.
 
 Known limits: Grafana's annotation API has no idempotency key, so a retried
 POST whose response was lost, or a Server restart within 30 s of an event,

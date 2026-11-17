@@ -1,8 +1,8 @@
-import { useQuery } from "../demo/ui/src/live";
+import { useDrasiStream } from "../demo/ui/src/live";
 
 // demo/drasi/overdue-tasks.cypher, laid out for the projector. A UI test checks it matches the file.
 export const displayQuery = [
-  ["MATCH (t:ignite_tasks)-[:TASK_SCENARIO]-(s:ignite_scenario)", 1],
+  ["MATCH (t:ignite_tasks)-[:TASK_SCENARIO]->(s:ignite_scenario)", 1],
   ["WHERE t.run_epoch = s.run_epoch", 0],
   ["  AND t.completed_ms IS NULL AND t.cancelled_ms IS NULL", 2],
   ["  AND drasi.trueLater(true, t.deadline_ms)", 3],
@@ -18,8 +18,10 @@ const notes = [
   "The result is the list of late requests, with their traces. Drasi keeps it current and passes on every change",
 ];
 
+const overdueOnly = ["overdue-tasks"] as const;
+
 function LiveResult() {
-  const live = useQuery("overdue-tasks");
+  const live = useDrasiStream(overdueOnly).queries["overdue-tasks"];
   const late = live.rows.filter(row => row.workload === "support")
     .sort((a, b) => Number(a.deadline_ms) - Number(b.deadline_ms));
   if (!live.attached) return <div className="query-live"><p><b>Live from Drasi:</b> connecting…</p></div>;
@@ -33,7 +35,7 @@ function LiveResult() {
   </div>;
 }
 
-// The live result connects to Drasi Server only while this slide is showing.
+// The live result connects to Drasi's SSE reaction only while this slide is showing.
 export function QuerySlide({ live }: { live: boolean }) {
   return <div className="query-slide">
     <span className="eyebrow">Who is affected · a continuous query</span>

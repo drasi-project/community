@@ -12,6 +12,11 @@ const proxy = {
     target: url("DRASI_API"),
     rewrite: (path: string) => path.replace(/^\/server/, ""),
   },
+  // Drasi's SSE reaction (desk-stream): the desk's and projector's live answers.
+  "/drasi-stream": {
+    target: url("DRASI_SSE"),
+    rewrite: (path: string) => path.replace(/^\/drasi-stream/, ""),
+  },
 };
 
 function localActions(): Plugin {
@@ -19,7 +24,7 @@ function localActions(): Plugin {
     server.middlewares.use((request, response, next) => {
       if (!["GET", "HEAD", "OPTIONS"].includes(request.method ?? "GET")) {
         const origin = request.headers.origin;
-        if (request.url?.startsWith("/server") ||
+        if (request.url?.startsWith("/server") || request.url?.startsWith("/drasi-stream") ||
             request.headers["sec-fetch-site"] === "cross-site" ||
             (origin && origin !== `http://${request.headers.host}`)) {
           response.writeHead(403, { "Content-Type": "text/plain" });

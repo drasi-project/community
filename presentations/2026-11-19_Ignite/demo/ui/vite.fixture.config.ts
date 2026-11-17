@@ -7,5 +7,6 @@ export default mergeConfig(base, defineConfig({
   preview: { port: port("UI_TEST"), proxy: {
     "/api": { target: url("UI_FIXTURE"), rewrite: (path: string) => path.replace(/^\/api/, "") },
     "/server": { target: url("UI_FIXTURE"), rewrite: (path: string) => path.replace(/^\/server/, "") },
+    "/drasi-stream": { target: url("UI_FIXTURE"), rewrite: (path: string) => path.replace(/^\/drasi-stream/, "/drasi-stream") },
   } },
 }));

@@ -1,6 +1,6 @@
 import { settings, url, port } from "../settings.mjs";
 import { test, expect, type Page } from "@playwright/test";
-import { applyFrame } from "../src/live";
+import { applyFrame, applyChanges } from "../src/live";
 import { healthSchema, readPlan } from "../src/contracts";
 import { scenes, slides, recaps, allSlides, dashboards } from "../../../presentation/scenes";
 import { notes } from "../../../presentation/notes";
@@ -199,6 +199,17 @@ test("snapshot-first reducer preserves explicit delta semantics", () => {
   expect(tile).toEqual({});
 });
 
+test("stream changes apply by Drasi identity: add, replace, patch and delete", () => {
+  const id = (n: string) => ({ namespace: "drasi.output/x", id: n });
+  let rows = applyChanges({}, [{ operation: "ADD", identity: id("a"), after: { value: 1, lost: "EU-A" } }]);
+  rows = applyChanges(rows, [{ operation: "REPLACE", identity: id("a"), after: { value: 2, lost: "EU-B" } }]);
+  rows = applyChanges(rows, [{ operation: "PATCH", identity: id("a"), after: { value: 3 }, removedProperties: ["lost"] }]);
+  expect(Object.values(rows)).toEqual([{ value: 3 }]);
+  rows = applyChanges(rows, [{ operation: "ADD", identity: id("b"), after: { value: 9 } }, { operation: "DELETE", identity: id("a") }]);
+  expect(Object.values(rows)).toEqual([{ value: 9 }]);
+  expect(() => applyChanges({}, [{ operation: "ADD", identity: id("c") }])).toThrow("without its row");
+});
+
 test("the fixture speaks the agreed AI service and Drasi shapes", async ({ request }) => {
   const health = healthSchema.parse(await (await request.get(`${fixture}/health`)).json());
   expect(health.destinations.batch).toContain("US-C");
@@ -221,15 +232,17 @@ test("the desk shows Drasi's answers from Drasi Server and never asks the AI ser
   await request.post(`${fixture}/test/expire`);
   await expect(answers.locator("div", { hasText: "Action needed" })).toContainText("Unknown");
   await expect(page.locator(".plan-table")).toContainText("Unknown");
-  for (const query of ["plan-results", "overdue-tasks"]) expect(asked).toContain(`/server/api/v1/instances/ignite/queries/${query}/attach`);
-  for (const query of ["tile-action", "tile-resilience", "tile-recovery", "tile-last-approval", "tile-running"])
-    expect(asked).toContain(`/server/api/v1/instances/ignite/queries/${query}/results`);
+  // One event stream from Drasi's SSE reaction, each output's snapshot once, and no polling of Drasi.
+  expect(asked.filter(path => path === "/drasi-stream/events")).toHaveLength(1);
+  for (const query of ["plan-results", "overdue-tasks", "tile-action", "tile-resilience", "tile-recovery", "tile-last-approval", "tile-running"])
+    expect(asked.filter(path => path === `/drasi-stream/snapshot/${query}`)).toHaveLength(1);
+  expect(asked.filter(path => path.startsWith("/server/"))).toEqual([]);
   expect(asked.filter(path => /^\/api\/(decisions|context)/.test(path))).toEqual([]);
   expect(asked.filter(path => path.startsWith("/api/")).every(path => path === "/api/health" || path.startsWith("/api/control"))).toBe(true);
 });
 
-test("Drasi Server unavailable means NOT READY", async ({ page }) => {
-  await page.route("**/server/**", route => route.fulfill({ status: 503, body: "down" }));
+test("Drasi's stream unavailable means NOT READY", async ({ page }) => {
+  await page.route("**/drasi-stream/**", route => route.fulfill({ status: 503, body: "down" }));
   await desk(page, "recovery", 1);
   await expect(page.locator(".badge", { hasText: "NOT READY" })).toBeVisible();
   await expect(page.locator(".now").getByRole("button", { name: "Select proposed plan" })).toBeDisabled();
