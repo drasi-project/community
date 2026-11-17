@@ -1,46 +1,46 @@
 [
   {
     "scene": "failure",
-    "capturedAt": "2026-11-17T06:39:56.323Z",
-    "runEpoch": "1868d079-3fc3-41dd-8464-8f6a7cfbb8a3",
+    "capturedAt": "2026-11-17T23:26:46.289Z",
+    "runEpoch": "f1cba2bd-1da3-47de-9cad-ab713e837bd3",
     "surface": "grafana",
-    "duration_seconds": 136.586,
+    "duration_seconds": 134.463,
     "src": "/replay/failure.webm",
-    "sha256": "b50f5e46435f61efa5a5ea6e7a18e128609c5f75b0369708de759ad7088f1b22",
-    "bytes": 5785485,
-    "provenance": "Recorded from the live demo 2026-11-17T06:39:56.323Z. Simulated deployments; real requests, monitoring and Drasi."
+    "sha256": "982a26f811268afa35a25e7550ccc1b0bc1d9985f3192e2e7e7720e8369036db",
+    "bytes": 5460682,
+    "provenance": "Recorded from the live demo 2026-11-17T23:26:46.289Z. Simulated deployments; real requests, monitoring and Drasi."
   },
   {
     "scene": "policy",
-    "capturedAt": "2026-11-17T06:39:56.358Z",
-    "runEpoch": "1868d079-3fc3-41dd-8464-8f6a7cfbb8a3",
+    "capturedAt": "2026-11-17T23:26:46.449Z",
+    "runEpoch": "f1cba2bd-1da3-47de-9cad-ab713e837bd3",
     "surface": "grafana",
-    "duration_seconds": 49.664,
+    "duration_seconds": 42.506,
     "src": "/replay/policy.webm",
-    "sha256": "7ef6dc175dd2495ea6e1d1bb7381cf9dffdea3391423b4dfb0f4504de887cd81",
-    "bytes": 2093674,
-    "provenance": "Recorded from the live demo 2026-11-17T06:39:56.358Z. Simulated deployments; real requests, monitoring and Drasi."
+    "sha256": "baf8af8eaceb83163d9fdc1aa673af3d1eaa734da921eb28558abe5174350a9d",
+    "bytes": 1777230,
+    "provenance": "Recorded from the live demo 2026-11-17T23:26:46.449Z. Simulated deployments; real requests, monitoring and Drasi."
   },
   {
     "scene": "recovery",
-    "capturedAt": "2026-11-17T06:39:56.382Z",
-    "runEpoch": "1868d079-3fc3-41dd-8464-8f6a7cfbb8a3",
+    "capturedAt": "2026-11-17T23:26:46.482Z",
+    "runEpoch": "f1cba2bd-1da3-47de-9cad-ab713e837bd3",
     "surface": "grafana",
-    "duration_seconds": 232.737,
+    "duration_seconds": 227.456,
     "src": "/replay/recovery.webm",
-    "sha256": "d41b4bb44b91cc76bf7e3b14779ac9a95246babcca412d69e582598eed6ecc72",
-    "bytes": 9971462,
-    "provenance": "Recorded from the live demo 2026-11-17T06:39:56.382Z. Simulated deployments; real requests, monitoring and Drasi."
+    "sha256": "cb7d311c6bbefd55202d6d9acdc32fb4472c8353cc42b7f67954a7d340c9886c",
+    "bytes": 9496701,
+    "provenance": "Recorded from the live demo 2026-11-17T23:26:46.482Z. Simulated deployments; real requests, monitoring and Drasi."
   },
   {
     "scene": "resilience",
-    "capturedAt": "2026-11-17T06:39:56.395Z",
-    "runEpoch": "1868d079-3fc3-41dd-8464-8f6a7cfbb8a3",
+    "capturedAt": "2026-11-17T23:26:46.493Z",
+    "runEpoch": "f1cba2bd-1da3-47de-9cad-ab713e837bd3",
     "surface": "grafana",
-    "duration_seconds": 105.873,
+    "duration_seconds": 107.933,
     "src": "/replay/resilience.webm",
-    "sha256": "f76b29ec62c11cf3fdcb52bc03447be894ef850d65447083dc6434ee1721cb3f",
-    "bytes": 4467298,
-    "provenance": "Recorded from the live demo 2026-11-17T06:39:56.395Z. Simulated deployments; real requests, monitoring and Drasi."
+    "sha256": "4f4f4b033ad526e59358edcf410b0908fdc8180e8808bb1d229bb09d978cc497",
+    "bytes": 4448327,
+    "provenance": "Recorded from the live demo 2026-11-17T23:26:46.493Z. Simulated deployments; real requests, monitoring and Drasi."
   }
 ]
