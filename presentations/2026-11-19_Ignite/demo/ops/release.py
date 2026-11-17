@@ -26,8 +26,18 @@ def load(name, path):
     return module
 
 
+sys.path.insert(0, str(DEMO / "tests"))
+import drasi_outputs as drasi  # noqa: E402
 recovery = load("release_recovery", "tests/recovery-integration.py")
-work = recovery.work
+INPUTS = ["action", "capacity", "demand", "deployments", "last-approval", "overdue", "policy",
+          "proposed", "recovery", "resilience", "running"]
+
+
+def drasi_ready():
+    """Every Prometheus reaction input is ready and every deployment is Healthy in Drasi."""
+    return (all(drasi.metric("drasi_reaction_input_ready", output=o) == 1 for o in INPUTS)
+            and all(drasi.metric("ignite_drasi_deployment_status", deployment=dep) == 0
+                    for dep in ["EU-A", "EU-B", "US-C"]))
 
 
 def utc():
@@ -47,50 +57,24 @@ def command(args, cwd=DEMO, timeout=60):
 
 
 def baseline():
-    before = work.api("/health")
+    before = drasi.health()
     started = time.monotonic()
-    recovery.reset()
-    work.wait(lambda: work.api("/health")["continuous_context"] == "ready")
-    state = work.api("/health")
+    drasi.reset()
+    drasi.wait(drasi_ready, 60, "Drasi ready and every deployment Healthy")
+    state = drasi.health()
     assert state["run_epoch"] != before["run_epoch"]
     assert state["revision"] == 1 and state["pending"] == 0
-    assert all(e["mode"] == "ok" and e["reporting"] for e in state["model"]["endpoints"])
-    assert {w["id"]: w["destination"] for w in state["model"]["workloads"]} == {
-        "support": "EU-A", "batch": "EU-B"}
+    assert all(e["mode"] == "ok" and e["reporting"] for e in state["deployments"])
+    assert drasi.routes() == {"support": "EU-A", "batch": "EU-B"}
     return {"at": utc(), "reset_seconds": time.monotonic() - started, "health": state}
 
 
 def incident():
-    started = time.monotonic()
-    epoch = work.api("/health")["run_epoch"]
-    work.control("fail")
-    candidate = work.wait(recovery.candidate)
-    assessment_seconds = time.monotonic() - started
-    body, trace = work.submit()
-    before = work.api("/tasks/" + body["id"])["task"]
-    work.wait(lambda: any(a["status"] == 503 for a in work.api("/tasks/" + body["id"])["attempts"]))
-    work.wait(lambda: body["id"] in work.api("/context")["queries"]["overdue-tasks"], 25)
-    after = work.api("/tasks/" + body["id"])["task"]
-    assert before == after, "Deadline must change result without changing task input"
-    overdue = work.api("/context")["queries"]["overdue-tasks"][body["id"]]
-    approved = recovery.approve(candidate)
-    ident = approved["command"]["id"]
-    work.wait(lambda: recovery.command(ident)["status"] == "recovery_confirmed", 30)
-    result = work.api("/tasks/" + body["id"])
-    applied = recovery.command(ident)
-    assert result["task"]["endpoint"] == "EU-B"
-    assert result["task"]["completed_revision"] == applied["applied_revision"]
-    assert applied["run_epoch"] == epoch
-    assert applied["recovered_ms"] >= applied["applied_ms"] + 5000
-    decisions = work.api("/decisions")
-    assert decisions["recovery"][ident]["state"] == "confirmed"
-    assert {w["id"]: w["destination"] for w in work.api("/health")["model"]["workloads"]} == {
-        "support": "EU-B", "batch": "US-C"}
-    return {"at": utc(), "epoch": epoch, "input_to_assessment_seconds": assessment_seconds,
-            "applied_to_recovery_seconds": (applied["recovered_ms"] - applied["applied_ms"]) / 1000,
-            "elapsed_seconds": time.monotonic() - started, "candidate": candidate,
-            "trace": trace, "unchanged_task": before, "overdue": overdue, "task": result,
-            "command": applied, "recovery": decisions["recovery"][ident]}
+    with drasi.DeskStream(recovery.ALIASES) as stream:
+        item = recovery.incident(stream)
+    assert item["task"]["endpoint"] == "EU-B"
+    assert drasi.routes() == {"support": "EU-B", "batch": "US-C"}
+    return {"at": utc(), **item}
 
 
 def cycles():
@@ -138,16 +122,16 @@ def listeners():
 
 def sample(names, processes):
     disk = shutil.disk_usage(DEMO)
-    return {"at": utc(), "health": work.api("/health"),
-            "reports": work.api("/context")["queries"]["endpoint-freshness"],
-            "publications_pending": len(work.api("/decisions")["publications"]),
+    return {"at": utc(), "health": drasi.health(),
+            "drasi": [[name, labels, value] for name, labels, value in drasi.metrics()],
+            "drasi_ready": drasi_ready(),
             "host_processes": command(["ps", "-p", ",".join(str(p["pid"]) for p in processes.values()),
                                        "-o", "pid=,pcpu=,rss=,etime=,command="]),
             "containers": json.loads(command(["podman", "stats", "--no-stream", "--format", "json", *names])),
-            "database": json.loads(work.native.runtime.sql(
+            "database": json.loads(drasi.runtime.sql(
                 "SELECT json_build_object('bytes',pg_database_size(current_database()),"
                 "'tasks',(SELECT count(*) FROM ignite_tasks),"
-                "'commands',(SELECT count(*) FROM ignite_commands),"
+                "'approvals',(SELECT count(*) FROM ignite_approvals),"
                 "'reports',(SELECT json_agg(r) FROM ignite_reports r));", tuples=True)),
             "disk": {"total": disk.total, "used": disk.used, "free": disk.free}}
 
@@ -170,15 +154,15 @@ def soak():
             elapsed = time.monotonic() - begin
             if elapsed >= 120 and "incident" not in evidence:
                 evidence["incident"] = incident()
-                work.control("restore")
+                drasi.control("restore")
             if elapsed >= 180 and "browser_reconnect" not in evidence:
                 command(["node", "scripts/release-browser.mjs", "reconnect"], cwd=DEMO / "ui", timeout=90)
                 evidence["browser_reconnect"] = json.loads((OUT / "browser-reconnect.json").read_text())
             if time.monotonic() >= next_traffic:
                 for workload in ["support", "batch"]:
-                    body, trace = work.submit(workload)
-                    work.wait(lambda: work.api("/tasks/" + body["id"])["task"]["completed_ms"], 20)
-                    task = work.api("/tasks/" + body["id"])["task"]
+                    body, trace = drasi.submit(workload)
+                    drasi.wait(lambda: drasi.task(body["id"])["task"]["completed_ms"], 20)
+                    task = drasi.task(body["id"])["task"]
                     assert task["run_epoch"] == evidence["initial"]["health"]["run_epoch"]
                     evidence["tasks"].append({"id": task["id"], "workload": workload,
                                               "trace_id": trace["trace_id"], "endpoint": task["endpoint"],
@@ -187,7 +171,7 @@ def soak():
             if time.monotonic() >= next_sample:
                 point = sample(names, processes)
                 evidence["samples"].append(point)
-                assert point["health"]["continuous_context"] == "ready", "Unexpected unknown context"
+                assert point["drasi_ready"], "Drasi not ready or a deployment not Healthy"
                 assert point["health"]["pending"] == 0, "Queue did not drain"
                 assert point["disk"]["free"] > 1024 ** 3, "Less than 1 GiB disk headroom"
                 save("soak.json", evidence)
@@ -198,7 +182,6 @@ def soak():
         assert evidence["duration_seconds"] >= 3600
         assert len(evidence["tasks"]) >= 600 and len(evidence["samples"]) >= 55
         assert evidence["browser_reconnect"]["passed"]
-        work.wait(lambda: not work.api("/decisions")["publications"], 60)
         evidence["final"] = baseline()
         assert sha(DEMO / ".native/build.json") == evidence["native_build_sha256"], "Build changed during soak"
         evidence["passed"] = True
@@ -214,13 +197,15 @@ def soak():
 
 
 def preflight():
-    recovery.work.native.runtime.verify_bundle()
+    drasi.runtime.verify_bundle()
     assert (DEMO / ".env").stat().st_mode & 0o077 == 0, ".env must be private"
     for file in ["ui/node_modules/.package-lock.json", "ui/dist/index.html",
                  ".native/build.json", "Cargo.lock", "ui/package-lock.json"]:
         assert (DEMO / file).is_file(), f"Missing prebuilt/locked prerequisite: {file}"
-    state = work.api("/health")
-    assert state["continuous_context"] == "ready" and state["streams_attached"]
+    state = drasi.health()
+    assert drasi_ready(), "Drasi's Prometheus reaction is not ready or a deployment is not Healthy"
+    with drasi.DeskStream(recovery.ALIASES) as stream:
+        stream.until("plan-results", lambda rows: len(rows) == 1)
     result = {"at": utc(), "health": state, "processes": listeners(), "containers": containers()}
     save("preflight.json", result)
     print(json.dumps(result, indent=2))
@@ -317,7 +302,7 @@ def stamp():
     native = json.loads((DEMO / ".native/build.json").read_text())
     for path, digest in native["demo_sources"].items():
         assert sha(DEMO / path) == digest, f"Rebuild native source before stamping: {path}"
-    recovery.work.native.runtime.verify_bundle()
+    drasi.runtime.verify_bundle()
     paths = [ROOT / p for p in native["files"]]
     paths += [p for p in (DEMO / "ui/dist").rglob("*") if p.is_file()]
     paths += [ROOT / "drasi-core/Cargo.lock", ROOT / "drasi-server/Cargo.lock",

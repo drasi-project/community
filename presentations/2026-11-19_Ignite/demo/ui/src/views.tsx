@@ -43,7 +43,6 @@ const statusLabel = ["Healthy", "Over quota", "Failed"];
 function Operations({ live, setView }: { live: Live; setView: (view: View) => void }) {
   const health = live.health;
   const deployments = useQuery("tile-deployments");
-  const alerts = useQuery("grafana-alerts");
   return <div className="operations-grid">
     <Panel title="Grafana is the operational home" className="product-home">
       <p className="lead">Start with measured requests.<br />Return here to confirm outcomes.</p>
@@ -68,12 +67,6 @@ function Operations({ live, setView }: { live: Live; setView: (view: View) => vo
           <td>{typeof row.status === "number" && row.status >= 0 ? statusLabel[row.status] ?? text(row.status) : "Unknown"}</td><td>{text(row.capacity_tpm)}</td></tr>)}
       </tbody></table>
       {!deployments.attached && <p className="warning">{deployments.error}</p>}
-    </Panel>
-    <Panel title="Grafana alerts → Drasi (grafana-alerts)">
-      {alerts.rows.length ? alerts.rows.slice(-3).map(row =>
-        <div className="alert-row" key={text(row.id)}><Status bad={row.status !== "resolved"}>{text(row.status)}</Status><span>{text(row.title)}</span></div>
-      ) : <p>{alerts.attached ? "No alert rows. This is not a health assertion." : alerts.error}</p>}
-      <p className="muted">Grafana's contact point posts to Drasi's HTTP source.</p>
     </Panel>
   </div>;
 }

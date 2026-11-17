@@ -2,8 +2,9 @@
 BEGIN;
 -- Superseded by the scenario tables below (plan/contracts.md section 3). Grafana alerts now
 -- reach Drasi through its HTTP source; decisions, annotations and scores are Drasi's.
+-- ignite_breaches held the AI service's copy of Drasi's deadline-history results.
 DROP TABLE IF EXISTS ignite_model, ignite_endpoints, ignite_commands, ignite_publications,
-    ignite_audit, ignite_alerts;
+    ignite_audit, ignite_alerts, ignite_breaches;
 
 -- Scenario: what the company has configured. Every change raises ignite_scenario.revision by one.
 CREATE TABLE IF NOT EXISTS ignite_workloads (
@@ -122,13 +123,6 @@ CREATE TABLE IF NOT EXISTS ignite_reports (
     status text NOT NULL CHECK (status IN ('ok','failed','throttled','unknown')),
     sequence bigint NOT NULL
 );
-CREATE TABLE IF NOT EXISTS ignite_breaches (
-    id text PRIMARY KEY REFERENCES ignite_tasks(id),
-    run_epoch text NOT NULL,
-    deadline_ms bigint NOT NULL,
-    observed_ms bigint NOT NULL,
-    trace_id text NOT NULL
-);
 
 -- Rows must belong to the current run; the scenario revision rises by exactly one per change
 -- and restarts at 1 with a new run; reports and tasks only move forward.
@@ -190,12 +184,11 @@ ALTER TABLE ignite_approvals REPLICA IDENTITY FULL;
 ALTER TABLE ignite_tasks REPLICA IDENTITY FULL;
 ALTER TABLE ignite_attempts REPLICA IDENTITY FULL;
 ALTER TABLE ignite_reports REPLICA IDENTITY FULL;
-ALTER TABLE ignite_breaches REPLICA IDENTITY FULL;
 -- :publication comes from ports.env (ops/native-runtime.py passes it to psql).
 -- ignite_simulation, ignite_deliveries and ignite_receipts are deliberately not published.
 ALTER PUBLICATION :"publication" SET TABLE ignite_scenario, ignite_workloads, ignite_deployments,
     ignite_routes, ignite_policy_destinations, ignite_approvals, ignite_tasks, ignite_attempts,
-    ignite_reports, ignite_breaches;
+    ignite_reports;
 -- The native PostgreSQL source refuses publications that replicate TRUNCATE.
 ALTER PUBLICATION :"publication" SET (publish = 'insert, update, delete');
 COMMIT;

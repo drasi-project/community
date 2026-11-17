@@ -53,7 +53,6 @@ def create_env():
         "GRAFANA_ADMIN_PASSWORD": secret(),
         # Filled by `observability-env.py grafana-token` once Grafana runs.
         "IGNITE_GRAFANA_TOKEN": "",
-        "DRASI_ALERT_URL": "",
     }
     with os.fdopen(os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "w") as stream:
         stream.writelines(f"{key}='{value}'\n" for key, value in values.items())

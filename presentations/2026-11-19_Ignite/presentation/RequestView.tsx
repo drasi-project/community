@@ -6,7 +6,7 @@ import { request, taskSchema, type TaskDetail } from "../demo/ui/src/contracts";
 type Group = { endpoint: string; outcome: string; count: number; first: number };
 
 const outcome = (status: unknown) => status === 200 ? "answered" : status === 503 ? "failed (HTTP 503)"
-  : status === 429 ? "over quota (HTTP 429)" : status === 403 ? "blocked by policy" : status == null ? "in progress" : `HTTP ${String(status)}`;
+  : status === 429 ? "over quota (HTTP 429)" : status == null ? "in progress" : `HTTP ${String(status)}`;
 const clock = (ms: number) => new Date(ms).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 const ago = (seconds: number) => seconds < 60 ? `${seconds} s` : `${Math.floor(seconds / 60)} min ${seconds % 60} s`;
 

@@ -63,7 +63,7 @@ def stamp():
         "files": {str(path.relative_to(ROOT)): digest(path) for path in files},
         "demo_sources": {
             str(path.relative_to(DEMO)): digest(path)
-            for directory in ["domain", "plugins", "ops/config", "drasi", "workloads", "database", "policies"]
+            for directory in ["plugins", "ops/config", "drasi", "workloads", "database"]
             for path in sorted((DEMO / directory).rglob("*"))
             if path.is_file() and path.suffix in {".rs", ".toml", ".cypher", ".sql", ".rego"}
         },
@@ -88,7 +88,7 @@ def prune():
     # Every query snapshots these tables on start but only reads the current
     # run, so earlier runs' rows only slow startup. Delete them while Server is
     # stopped, in batches below the source's per-transaction change limit.
-    for table in ["ignite_attempts", "ignite_breaches", "ignite_receipts", "ignite_tasks",
+    for table in ["ignite_attempts", "ignite_receipts", "ignite_tasks",
                   "ignite_approvals"]:
         removed = 0
         while True:

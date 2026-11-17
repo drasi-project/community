@@ -152,8 +152,6 @@ services:
       GF_NEWS_NEWS_FEED_ENABLED: "false"
       GF_PLUGINS_PREINSTALL_DISABLED: "true"
       GF_SERVER_ROOT_URL: http://localhost:${IGNITE_GRAFANA_PORT:?}
-      # Read by provisioning/alerting/workload.yaml: the contact point posts to Drasi's HTTP source.
-      IGNITE_DRASI_ALERT_PORT: ${IGNITE_DRASI_ALERT_PORT:?}
       # The projected stage shows dashboards inside the slides page, read-only, without sign-in.
       GF_SECURITY_ALLOW_EMBEDDING: "true"
       GF_AUTH_ANONYMOUS_ENABLED: "true"
@@ -170,7 +168,6 @@ services:
     ports: ["127.0.0.1:${IGNITE_PROBE_PORT:?}:8888"]
     environment:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://collector:4318
-      DRASI_ALERT_URL: ${DRASI_ALERT_URL:-}
       LANGFUSE_PUBLIC_URL: http://localhost:${IGNITE_LANGFUSE_PORT:?}
     volumes:
       - probe-data:/data

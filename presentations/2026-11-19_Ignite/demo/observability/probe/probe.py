@@ -8,9 +8,7 @@ import signal
 import sqlite3
 import threading
 import time
-import urllib.error
 import urllib.parse
-import urllib.request
 import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -26,7 +24,6 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.trace import SpanKind, Status, StatusCode
 
 logging.basicConfig(level=logging.INFO)
-LOG = logging.getLogger("ignite-probe")
 RESOURCE = Resource.create({"service.name": "ignite-integration-probe", "service.version": "phase-1"})
 TRACES = TracerProvider(resource=RESOURCE)
 TRACES.add_span_processor(BatchSpanProcessor(OTLPSpanExporter(), schedule_delay_millis=500))
@@ -61,34 +58,15 @@ with sqlite3.connect(DATABASE) as db:
 
 
 def record_webhook(payload):
-    with WEBHOOK_LOCK:
-        return _deliver_webhook(payload)
-
-
-def _deliver_webhook(payload):
+    """Record one Grafana notification (deduplicated by content) for the smoke test."""
     encoded = json.dumps(payload, sort_keys=True)
     digest = hashlib.sha256(encoded.encode()).hexdigest()
-    with sqlite3.connect(DATABASE) as db:
+    with WEBHOOK_LOCK, sqlite3.connect(DATABASE) as db:
         db.execute(
             "INSERT OR IGNORE INTO webhooks(digest, received_at, payload) VALUES (?, ?, ?)",
             (digest, time.time(), encoded),
         )
-        row = db.execute("SELECT id, forwarded_at FROM webhooks WHERE digest=?", (digest,)).fetchone()
-    target = os.environ.get("DRASI_ALERT_URL", "")
-    if not target or row[1]:
-        return row[0], None
-    try:
-        req = urllib.request.Request(target, encoded.encode(), {"Content-Type": "application/json"})
-        with urllib.request.urlopen(req, timeout=5) as response:
-            response.read()
-        with sqlite3.connect(DATABASE) as db:
-            db.execute("UPDATE webhooks SET forwarded_at=?, delivery_error=NULL WHERE id=?", (time.time(), row[0]))
-        return row[0], None
-    except (urllib.error.URLError, TimeoutError, OSError) as exc:
-        LOG.error("Drasi webhook delivery failed: %s", exc)
-        with sqlite3.connect(DATABASE) as db:
-            db.execute("UPDATE webhooks SET delivery_error=? WHERE id=?", (str(exc), row[0]))
-        return row[0], str(exc)
+        return db.execute("SELECT id FROM webhooks WHERE digest=?", (digest,)).fetchone()[0]
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -162,8 +140,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply(400, {"error": "expected native Grafana webhook status and groupKey"})
         except (ValueError, json.JSONDecodeError):
             return self.reply(400, {"error": "invalid JSON or content length"})
-        event_id, error = record_webhook(payload)
-        self.reply(502 if error else 200, {"event_id": event_id, "delivery_error": error})
+        self.reply(200, {"event_id": record_webhook(payload)})
 
 
 if __name__ == "__main__":

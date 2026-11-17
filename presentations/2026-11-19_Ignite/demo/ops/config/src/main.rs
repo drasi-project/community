@@ -30,7 +30,7 @@ fn reference(key: &str) -> Result<ConfigurationValue> {
 }
 
 const PG: &str = "postgres";
-const TABLES: [&str; 10] = [
+const TABLES: [&str; 9] = [
     "ignite_scenario",
     "ignite_workloads",
     "ignite_deployments",
@@ -40,7 +40,6 @@ const TABLES: [&str; 10] = [
     "ignite_tasks",
     "ignite_attempts",
     "ignite_reports",
-    "ignite_breaches",
 ];
 
 /// Synthetic relationships the queries use: name → (label, property) = (label, property).
@@ -128,12 +127,6 @@ fn queries() -> Vec<Query> {
         query!("approval-events", ["postgres"]),
         query!("plan-events", ["plan-results"]),
         query!("recovery-scores", ["postgres"]),
-        Query {
-            name: "grafana-alerts",
-            text: "MATCH (a:GrafanaAlert) RETURN a.id AS id, a.status AS status, a.title AS title, a.message AS message",
-            inputs: &["grafana-input"],
-            label: None,
-        },
     ]
 }
 
@@ -281,7 +274,6 @@ fn main() -> Result<()> {
     let pg = load(directory, "drasi_computation_source_postgres")?;
     let bootstrap = load(directory, "drasi_computation_bootstrap_postgres")?;
     let query_plugin = load(directory, "drasi_computation_transformer_query")?;
-    let http_source = load(directory, "drasi_computation_source_http")?;
     let http_sink = load(directory, "drasi_computation_sink_http")?;
     let policy = load(directory, "drasi_computation_ignite_policy")?;
     let optimizer = load(directory, "drasi_computation_ignite_optimizer")?;
@@ -304,7 +296,7 @@ fn main() -> Result<()> {
         .collect();
 
     let plugins = ["policy", "plan", "resilience"];
-    let ids: BTreeMap<&str, ComponentId> = [PG, "postgres-bootstrap", "grafana-input", "query-results", "metrics", "desk-stream"]
+    let ids: BTreeMap<&str, ComponentId> = [PG, "postgres-bootstrap", "query-results", "metrics", "desk-stream"]
         .into_iter()
         .chain(plugins)
         .chain(REACTIONS.iter().map(|(name, _)| *name))
@@ -539,30 +531,6 @@ fn main() -> Result<()> {
         builder = builder.component(ComponentName::try_new(*name)?, specification, sink_factory.clone());
     }
 
-    // Grafana's contact point posts alerts to Drasi's HTTP source.
-    let factory = http_source.factories().first().context("HTTP source factory")?.clone();
-    builder = builder.component(
-        ComponentName::try_new("grafana-input")?,
-        factory.specification(
-            ids["grafana-input"].clone(),
-            json!({
-                "stream":stream("grafana-input")?,
-                "host":"127.0.0.1", "port":settings.port("DRASI_ALERT")?,
-                "webhooks":{"errorBehavior":"reject", "routes":[{
-                    "path":"/alerts/grafana","methods":["POST"],
-                    "mappings":[{"operation":"update", "elementType":"node", "template":{
-                        "id":"{{payload.groupKey}}", "labels":["GrafanaAlert"],
-                        "properties":{
-                            "id":"{{payload.groupKey}}", "status":"{{payload.status}}",
-                            "title":"{{payload.title}}", "message":"{{payload.message}}"
-                        }
-                    }}]
-                }]}
-            }),
-        )?,
-        factory,
-    );
-
     // Every query's results through Server's query API (attach, snapshot).
     let factory = Arc::new(QueryResultsOutletFactory::default());
     let mut outlet = factory.specification_from_config(ids["query-results"].clone(), json!({}))?;
@@ -581,7 +549,7 @@ fn main() -> Result<()> {
         for input in query.inputs {
             let edge = EdgeDefinition::new(endpoint(input, "out")?, endpoint(query.name, "in")?);
             builder = builder.connect(edge.clone(), pipe(32));
-            if *input != PG && !plugins.contains(input) && *input != "grafana-input" {
+            if *input != PG && !plugins.contains(input) {
                 builder = builder.relationship_policy(edge, requires_running());
             }
         }
@@ -625,7 +593,7 @@ fn main() -> Result<()> {
             pipe(8),
         );
     }
-    for name in [PG, "grafana-input"].into_iter().chain(queries.iter().map(|q| q.name)) {
+    for name in std::iter::once(PG).chain(queries.iter().map(|q| q.name)) {
         builder = builder.bind_stream(endpoint(name, "out")?, stream(name)?);
     }
     // The plugins name their output stream after their component ID.

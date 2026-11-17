@@ -2,7 +2,7 @@
   "uid": "ignite-workload",
   "title": "AI service · Operations",
   "schemaVersion": 39,
-  "version": 27,
+  "version": 28,
   "refresh": "5s",
   "time": {
     "from": "now-5m",
@@ -723,13 +723,14 @@
         "defaults": {
           "unit": "short",
           "min": 0,
-          "decimals": 2,
+          "decimals": 0,
           "custom": {
             "lineWidth": 3,
             "fillOpacity": 8,
             "showPoints": "never",
             "spanNulls": true
-          }
+          },
+          "softMax": 10
         },
         "overrides": [
           {

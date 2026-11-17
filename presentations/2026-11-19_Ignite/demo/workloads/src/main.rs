@@ -692,16 +692,23 @@ async fn main() -> Result<()> {
     for workload in ["support", "batch"] {
         let app = app.clone();
         jobs.spawn(async move {
+            // A transient error (database or simulator briefly unavailable) is retried on the
+            // next pass instead of stopping the service.
             loop {
-                dispatch_once(&app, workload).await?;
+                if let Err(error) = dispatch_once(&app, workload).await {
+                    eprintln!("{workload} dispatch failed, retrying: {error:#}");
+                }
                 tokio::time::sleep(Duration::from_millis(500)).await;
             }
         });
     }
     let reports = app.clone();
     jobs.spawn(async move {
+        // A missed report just ages; Drasi turns it Unknown if reports stay missing.
         loop {
-            report_once(&reports).await?;
+            if let Err(error) = report_once(&reports).await {
+                eprintln!("Health report failed, retrying: {error:#}");
+            }
             tokio::time::sleep(Duration::from_secs(1)).await;
         }
     });
@@ -720,7 +727,13 @@ async fn main() -> Result<()> {
     };
     jobs.abort_all();
     while jobs.join_next().await.is_some() {}
-    app.telemetry.shutdown()?;
+    // A collector that is down must not hide why the service stopped.
+    if let Err(error) = app.telemetry.shutdown() {
+        eprintln!("Telemetry not flushed at shutdown: {error:#}");
+    }
+    if let Err(error) = &result {
+        eprintln!("Workload service stopped: {error:#}");
+    }
     result
 }
 

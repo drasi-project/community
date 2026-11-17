@@ -156,6 +156,10 @@ ops["panels"] = [
          mappings=SAFE, name=True, value_size=30),
 ]
 
+# Request counts: whole numbers, and a readable scale while nothing is waiting.
+waiting = next(p for p in ops["panels"] if p["id"] == 6)
+waiting["fieldConfig"]["defaults"].update({"decimals": 0, "softMax": 10})
+
 # ---------- Recovery plan ----------
 dec = json.load(open(f"{D}/decisions.json"))
 dec.update({
@@ -164,8 +168,8 @@ dec.update({
     "refresh": "5s", "version": dec.get("version", 1) + 1,
 })
 LAST = states({0: ("None yet", GREY), 1: ("Approved, applying", "orange"), 2: ("Applied, awaiting evidence", "orange"),
-               3: ("Applied and verified", "green"), 4: ("Rejected: out of date", "orange")})
-HELD = {"type": "range", "options": {"from": -100000, "to": -0.001, "result": {"text": "held: not allowed", "color": "orange"}}}
+               3: ("Applied and verified", "green"), 4: ("Rejected", "orange")})
+HELD = {"type": "range", "options": {"from": -100000, "to": -0.001, "result": {"text": "not allowed", "color": "orange"}}}
 panels = [
     stat(1, "Action needed", ACTION_NOW, 0, 0, 6, 4,
          "Approve proposed plan: Drasi has a plan that fits policy and capacity. No valid plan: nothing fits. At risk: losing one deployment would leave no valid plan.",
@@ -179,7 +183,7 @@ panels = [
          18, 0, 6, 4, "Drasi's what-if: if any single deployment failed, would every workload still fit somewhere allowed?",
          mappings=SAFE, name=True, value_size=34),
     stat(4, "Running now", [(SUMMARIES(f'{drasi("ignite_drasi_running_tpm", "running")} != 0') + " / 1000", "{{workload}} → {{deployment}}")], 0, 4, 12, 4,
-         "Where each workload runs now, with the capacity it needs. Held: policy no longer allows its deployment, so the AI service holds its requests.",
+         "Where each workload runs now, with the capacity it needs. Not allowed: Drasi's policy model no longer allows the deployment it runs on; Drasi's plan moves it once approved.",
          unit=TOKENS, name=True, value_size=30, extra_mappings=[HELD]),
     stat(5, "Proposed plan", [
         (SUMMARIES(f'({drasi("ignite_drasi_proposed_tpm", "proposed")} > 0) and on() ({ACTION_NOW} == 1)') + " / 1000", "{{workload}} → {{deployment}}"),

@@ -16,11 +16,6 @@ policies:
     group_wait: 1s
     group_interval: 5s
     repeat_interval: 1h
-    routes:
-      - receiver: drasi-http-source
-        object_matchers:
-          - [component, "=", workload]
-        group_by: [alertname, workload, endpoint]
 groups:
   - orgId: 1
     name: integration-probe

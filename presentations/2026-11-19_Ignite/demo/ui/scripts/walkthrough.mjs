@@ -32,28 +32,33 @@ const metric = async (query) => {
   const r = await (await fetch(`${url("PROMETHEUS", "localhost")}/api/v1/query?query=${encodeURIComponent(query)}`)).json();
   return r.data.result.map(x => ({ labels: x.metric, value: Number(x.value[1]) }));
 };
-const view = (name, workload) => metric(`ignite_drasi_dashboard{view="${name}"${workload ? `,workload="${workload}"` : ""}} and on(view) (ignite_drasi_valid_until_seconds > time())`);
-const one = async (name) => (await view(name))[0]?.value;
+// Drasi's answers as Grafana reads them: the Prometheus reaction's series (plan/contracts.md section 9).
+const drasi = async (name, labels = "") => (await metric(`${name}${labels}`))[0]?.value;
+const action = () => drasi("ignite_drasi_action_needed");
+const lastApproval = () => drasi("ignite_drasi_last_approval_state");
 
 // What each beat waits for before its screenshot, keyed by "<part>/<beat>".
 const waits = {
   "normal/0": async () => until("traffic history", async () => (await api("/health")).traffic?.running, 10).then(() => sleep(15000)),
-  "failure/0": () => until("Action needed: Approve", async () => await one("approval") === 1, 60),
-  "failure/2": () => until("errors and alert", async () => (await view("overdue", "support"))[0]?.value > 0, 60).then(() => sleep(15000)),
+  "failure/0": () => until("Action needed: Approve", async () => await action() === 1, 60),
+  "failure/2": () => until("errors and alert", async () => await drasi("ignite_drasi_overdue_requests", '{workload="support"}') > 0, 60).then(() => sleep(15000)),
   "who/1": () => sleep(3000),
-  "recovery/2": () => until("no valid plan", async () => await one("approval") === 2, 30).then(() => sleep(6000)),
-  "recovery/3": () => until("rejected", async () => await one("last_approval") === 4, 30).then(() => sleep(6000)),
-  "recovery/4": () => until("plan back", async () => await one("approval") === 1, 30).then(() => sleep(6000)),
-  "recovery/6": () => until("applied", async () => [2, 3].includes(await one("last_approval")), 30).then(() => sleep(6000)),
-  "recovery/7": () => until("verified", async () => await one("recovery") === 1, 150).then(() => sleep(6000)),
+  "recovery/2": () => until("no valid plan", async () => await action() === 2, 30).then(() => sleep(6000)),
+  "recovery/3": () => until("rejected", async () => await lastApproval() === 4, 30).then(() => sleep(6000)),
+  "recovery/4": () => until("plan back", async () => await action() === 1, 30).then(() => sleep(6000)),
+  "recovery/6": () => until("applied", async () => [2, 3].includes(await lastApproval()), 30).then(() => sleep(6000)),
+  "recovery/7": () => until("verified", async () => await drasi("ignite_drasi_recovery_state") === 1, 150).then(() => sleep(6000)),
   "recovery/8": () => sleep(30000),
-  "resilience/0": () => until("not safe", async () => (await view("resilience"))[0]?.value === 0, 30).then(() => sleep(8000)),
-  "resilience/3": () => until("safe again", async () => (await view("resilience"))[0]?.value === 1, 30).then(() => sleep(8000)),
+  "resilience/0": () => until("not safe", async () => await drasi("ignite_drasi_safe_if_one_fails") === 0, 30).then(() => sleep(8000)),
+  "resilience/3": () => until("safe again", async () => await drasi("ignite_drasi_safe_if_one_fails") === 1, 30).then(() => sleep(8000)),
 };
 const recordings = { failure: ["failure/0", "failure/3"], policy: ["recovery/2", "recovery/4"], recovery: ["recovery/6", "recovery/8"], resilience: ["resilience/0", "resilience/3"] };
 
 await fs.mkdir(output, { recursive: true });
-const browser = await chromium.launch();
+// The projector and recording pages run in background tabs: keep Chromium from throttling their
+// timers, so Grafana keeps refreshing as it would in a visible projector window.
+const browser = await chromium.launch({ args: ["--disable-background-timer-throttling",
+  "--disable-backgrounding-occluded-windows", "--disable-renderer-backgrounding"] });
 // One browser context, so the desk and the projector windows can talk to each other.
 const context = await browser.newContext({ viewport: { width: 1920, height: 1080 },
   ...(mode === "record" ? { recordVideo: { dir: path.join(output, "raw"), size: { width: 1280, height: 720 } } } : {}) });
@@ -61,6 +66,7 @@ const desk = await context.newPage();
 await desk.setViewportSize({ width: 1440, height: 900 });
 const shots = [];
 async function shot(name) {
+  await desk.evaluate(() => window.scrollTo(0, 0));
   await desk.screenshot({ path: path.join(output, `${name}-desk.png`) });
   await projector.screenshot({ path: path.join(output, `${name}-projector.png`) });
   shots.push(name);

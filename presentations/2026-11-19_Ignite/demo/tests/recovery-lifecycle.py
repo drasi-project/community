@@ -1,133 +1,87 @@
 #!/usr/bin/env python3
-"""Owns processes. Real crash/approval and publication-outage boundaries; retains all data."""
+"""Reaction lifecycle gate: Drasi's reactions when the systems they call are down.
+
+Owns both processes: run it with Drasi Server and the AI service stopped (containers and UI keep
+running); it leaves both stopped and Grafana and Langfuse running.
+- The gateway reaction (failurePolicy strict, 10 retries within 30 s) applies an approval once the
+  gateway configuration API is back.
+- Grafana and Langfuse outages do not hold up the gateway reaction or recovery verification; their
+  reactions skip what they could not deliver (plan/contracts.md section 10, known limits)."""
 import importlib.util
 import json
 import socket
 import subprocess
+import time
 import uuid
-from pathlib import Path
-import sys
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "ops"))
-import settings  # noqa: E402
 
-DEMO=Path(__file__).resolve().parents[1]
-def load(name,file):
-    spec=importlib.util.spec_from_file_location(name,DEMO/"tests"/file)
-    m=importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(m)
-    return m
-recovery=load("recovery","recovery-integration.py")
-life=load("life","workload-lifecycle.py")
-work=recovery.work
-native=work.native
+import drasi_outputs as d
+from drasi_outputs import settings, native
 
-
-def crash(service):
-    service.process.kill()
-    service.process.wait(timeout=10)
-    service.log.close()
-
-
-def command(id):
-    return json.loads(native.runtime.sql(f"SELECT to_jsonb(c) FROM ignite_commands c WHERE id='{id}'",tuples=True))
-
-
-def committed_crash(service):
-    # Capture an actual accepted approval before its independent 500ms adoption pass.
-    # Never seed a command/receipt or turn a missed boundary into passing evidence.
-    for _ in range(4):
-        recovery.reset()
-        work.control("fail")
-        d=work.wait(recovery.candidate)
-        task,trace=work.submit()
-        id=str(uuid.uuid4())
-        recovery.approve(d,id)
-        crash(service)
-        if command(id)["status"]=="committed":
-            return id,d,task,trace
-        service.start()
-    raise AssertionError("Could not capture committed-before-adopted boundary in four attempts")
+spec = importlib.util.spec_from_file_location("ignite_workload_lifecycle", d.DEMO / "tests/workload-lifecycle.py")
+lifecycle = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(lifecycle)
+recovery_spec = importlib.util.spec_from_file_location("ignite_recovery", d.DEMO / "tests/recovery-integration.py")
+recovery = importlib.util.module_from_spec(recovery_spec)
+recovery_spec.loader.exec_module(recovery)
+OBSERVERS = [settings.container("grafana"), settings.container("langfuse-web")]
 
 
 def main():
-    for port in [settings.port(name) for name in ("DRASI_API","DRASI_ALERT","WORKLOAD","DEPLOYMENT_EU_A","DEPLOYMENT_EU_B","DEPLOYMENT_US_C")]:
-        with socket.socket() as s:
-            s.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
-            s.bind(("127.0.0.1",port))
-    server,service=native.Server(),life.Service()
-    checks=[]
+    for name in ("DRASI_API", "DRASI_METRICS", "DRASI_SSE", "WORKLOAD"):
+        with socket.socket() as listener:
+            listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            listener.bind(("127.0.0.1", settings.port(name)))
+    d.EVIDENCE.mkdir(parents=True, exist_ok=True)
+    server, service = native.Server(), lifecycle.Service()
+    checks = []
     try:
         server.start()
         service.start()
-        work.wait(lambda:work.api("/decisions").get("candidate_current"))
-        id,d,task,_=committed_crash(service)
-        service.start()
-        work.wait(lambda:recovery.command(id)["status"] in ["gateway_applied","recovery_confirmed"])
-        work.wait(lambda:work.api("/tasks/"+task["id"])["task"]["completed_ms"])
-        assert recovery.approve(d,id)["duplicate"]
-        service.stop()
-        service.start()
-        assert int(native.runtime.sql(f"SELECT count(*) FROM ignite_audit WHERE command_id='{id}' AND action='gateway_applied'",tuples=True))==1
-        checks.append("real crash after approval commit reconciles once on restart; acknowledged or uncertain adoption never reapproves")
+        d.reset()
+        with d.DeskStream(recovery.ALIASES) as stream:
+            d.control("fail")
+            plan = recovery.proposed(stream)
+            body, _, _ = recovery.stuck_request(stream)
+            service.stop()
+            # The approval tool is a separate system in a real company; here its record is written
+            # directly because the AI service (which plays it) is the system that is down.
+            ident = str(uuid.uuid4())
+            d.sql(f"""BEGIN; UPDATE ignite_approvals SET latest=false WHERE latest;
+                INSERT INTO ignite_approvals (id, run_epoch, candidate_id, basis, revision, status, latest, requested_ms)
+                SELECT '{ident}', run_epoch, '{plan['candidate_id']}', '{plan['basis']}', {plan['revision']},
+                       'pending', true, (extract(epoch FROM clock_timestamp())*1000)::bigint
+                FROM ignite_scenario WHERE singleton; COMMIT;""")
+            time.sleep(5)
+            assert d.approval(ident)["status"] == "pending"
+            service.start()
+            recovery.applied(stream, ident, body)
+            assert len(json.loads(d.sql("SELECT coalesce(json_agg(id),'[]') FROM ignite_deliveries WHERE "
+                                         f"result->>'result'='applied' AND received_ms >= {d.approval(ident)['requested_ms']};"))) == 1
+            checks.append("gateway configuration API down when Drasi approved: the strict gateway reaction "
+                          "retries and applies the plan once when it is back")
 
-        id,d,task,_=committed_crash(service)
-        native.runtime.sql("""UPDATE ignite_model SET revision=revision+1,
-          payload=jsonb_set(jsonb_set(payload,'{policy,destinations,support}','["EU-A"]'),
-          '{policy,revision}',to_jsonb((payload#>>'{policy,revision}')::bigint+1)) WHERE id='active';""")
-        service.start()
-        work.wait(lambda:recovery.command(id)["status"]=="rejected")
-        assert int(native.runtime.sql(f"SELECT count(*) FROM ignite_receipts WHERE task_id='{task['id']}'",tuples=True))==0
-        assert recovery.command(id)["applied_ms"] is None
-        checks.append("policy changes after durable approval but before gateway adoption reject stale command on restart")
-
-        recovery.reset()
-        work.control("fail")
-        d=work.wait(recovery.candidate)
-        server.stop()
-        work.wait(lambda:not work.api("/decisions")["streams_attached"])
-        recovery.approve(d,expected=409)
-        server.start()
-        d=work.wait(recovery.candidate)
-        checks.append("disconnected Server rejects approval; populated restart snapshots restore current candidate without fake input updates")
-
-        # Stop only this demo's known publication destinations, not PostgreSQL or unrelated containers.
-        subprocess.run(["podman","stop",*[settings.container("grafana"),settings.container("langfuse-web")]],check=True,capture_output=True)
-        task,trace=work.submit()
-        id=str(uuid.uuid4())
-        recovery.approve(d,id)
-        work.wait(lambda:recovery.command(id)["status"]=="recovery_confirmed")
-        def failed_targets():
-            rows=[p for p in work.api("/decisions")["publications"] if p["last_error"]]
-            return rows if {p["target"] for p in rows}=={"grafana","langfuse"} else None
-        failures=work.wait(failed_targets)
-        service.stop()
-        service.start()
-        assert work.api("/decisions")["publications"]
-        subprocess.run(["podman","start",*[settings.container("grafana"),settings.container("langfuse-web")]],check=True,capture_output=True)
-        work.wait(lambda:not work.api("/decisions")["publications"],timeout=120)
-        count=int(native.runtime.sql(f"SELECT attempts FROM ignite_publications WHERE id='{id}-recovered'",tuples=True))
-        assert count>1
-        env=recovery.obs.environment()
-        auth=recovery.base64.b64encode(f"admin:{env['GRAFANA_ADMIN_PASSWORD']}".encode()).decode()
-        annotations=recovery.obs.get(settings.url("GRAFANA")+"/api/annotations?"+
-            recovery.urllib.parse.urlencode({"tags":f"{id}-recovered"}),auth)
-        assert len(annotations)==1
-        score_url=settings.url("LANGFUSE")+"/api/public/v3/scores?"+recovery.urllib.parse.urlencode({
-            "traceId":trace["trace_id"],"name":"drasi_recovery","fields":"subject"})
-        scores,_=recovery.obs.wait_for("redelivered exact recovery score",lambda:
-            recovery.obs.get(score_url,env["LANGFUSE_AUTH_BASE64"])["data"])
-        assert len(scores)==1 and scores[0]["subject"]=={"kind":"trace","id":trace["trace_id"]}
-        checks.append("real Grafana/Langfuse outages expose durable retriable publication errors, survive service restart and redeliver")
-        recovery.reset()
-        path=DEMO/".native/evidence/recovery-lifecycle.json"
-        path.write_text(json.dumps({"checks":checks,"publication_failures":failures,"recovered_annotation_attempts":count,
-            "last_task":task,"trace":trace,"redelivered_annotations":annotations,"redelivered_scores":scores},indent=2))
-        print(json.dumps({"passed":checks,"evidence":str(path)},indent=2))
+        d.reset()
+        subprocess.run(["podman", "stop", *OBSERVERS], check=True, capture_output=True)
+        with d.DeskStream(recovery.ALIASES) as stream:
+            d.control("fail")
+            plan = recovery.proposed(stream)
+            body, _, _ = recovery.stuck_request(stream)
+            ident = d.approve(plan)
+            recovery.applied(stream, ident, body)
+            recovery.verified(stream, ident)
+        checks.append("with Grafana and Langfuse down, Drasi still applies the approval and verifies "
+                      "recovery; the annotation and score reactions skip what they cannot deliver")
+        path = d.save("recovery-lifecycle.json", {"checks": checks})
+        print(json.dumps({"passed": checks, "evidence": str(path)}, indent=2))
     finally:
-        subprocess.run(["podman","start",*[settings.container("grafana"),settings.container("langfuse-web")]],check=True,capture_output=True)
+        subprocess.run(["podman", "start", *OBSERVERS], check=True, capture_output=True)
+        try:
+            d.reset()
+        except Exception as error:  # leave the processes stopped either way
+            print(f"final reset failed: {error}")
         service.stop()
         server.stop()
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     main()

@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Executable Phase 1 gate. Mutates only Ignite fixture records; leaves a reset fixture."""
+"""Drasi Server lifecycle gate on the demo graph. Owns Server: run it with Server stopped
+(the AI service, containers and UI keep running). Covers bootstrap from populated tables,
+change capture, a restart that must reconstruct every answer including changes made while
+Server was down, an approval recorded while Server was down, and replication reconnect.
+Resets this copy's demo; leaves Server stopped."""
 import importlib.util
 import http.client
 import json
@@ -122,7 +126,7 @@ class Server:
             if self.process.poll() is not None:
                 raise AssertionError((EVIDENCE / "server.log").read_text()[-12000:])
             try:
-                api("/queries/capacity-results")
+                api("/queries/plan-results")
                 return
             except (urllib.error.URLError, ConnectionError):
                 time.sleep(0.2)
@@ -143,109 +147,68 @@ class Server:
 
 def main():
     # Do not stop or borrow another session's running Server.
-    for port in (settings.port("DRASI_API"), settings.port("DRASI_ALERT")):
+    for name in ("DRASI_API", "DRASI_METRICS", "DRASI_SSE"):
         with socket.socket() as listener:
             listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            listener.bind(("127.0.0.1", port))
+            listener.bind(("127.0.0.1", settings.port(name)))
+    import drasi_outputs as d
     EVIDENCE.mkdir(parents=True, exist_ok=True)
     (EVIDENCE / "server.log").write_text("")
     runtime.verify_bundle()
-    runtime.sql((DEMO / "database/schema.sql").read_text())
-    runtime.sql((DEMO / "database/workload.sql").read_text())
-    runtime.sql((DEMO / "database/reset.sql").read_text())
-    passed, histories, attachments = [], {}, []
+    passed, histories = [], {}
     server = Server()
+    outputs = ["action", "capacity", "demand", "deployments", "last-approval", "overdue", "policy",
+               "proposed", "recovery", "resilience", "running"]
+
+    def ready():
+        return all(d.metric("drasi_reaction_input_ready", output=o) == 1 for o in outputs)
+
     try:
         server.start()
-        context = Attachment("endpoint-context")
-        results = Attachment("capacity-results")
-        attachments += [context, results]
-        context.until(lambda rows: len(rows) == 3)
-        results.until(lambda rows: len(rows) == 3)
-        assert results.rows["EU-A"]["spare_tpm"] == 40000, results.rows
-        assert results.rows["EU-B"]["spare_tpm"] == 20000, results.rows
-        assert results.rows["US-C"]["spare_tpm"] == 100000, results.rows
-        epoch = results.rows["EU-A"]["run_epoch"]
-        passed.append("populated PostgreSQL bootstrap -> context CQ -> native capacity -> result CQ")
+        d.reset()
+        d.wait(ready, 60, "every Prometheus reaction input ready")
+        with d.DeskStream(["plan-results", "tile-action", "tile-resilience"]) as stream:
+            plan = stream.until("plan-results", lambda r: r and r[0]["state"] == "feasible")[0]
+            stream.until("tile-action", lambda r: r and r[0]["value"] == 0)
+            stream.until("tile-resilience", lambda r: r and r[0]["value"] == 1)
+        passed.append("populated PostgreSQL bootstrap -> context queries -> Rego and optimizer -> result and "
+                      "tile queries -> Prometheus and SSE reactions")
 
-        runtime.sql("UPDATE ignite_endpoints SET available=false, revision=revision+1 WHERE id='EU-A';")
-        results.until(lambda rows: rows.get("EU-A", {}).get("status") == "unavailable")
-        context.until(lambda rows: rows.get("EU-A", {}).get("available") is False)
-        assert results.rows["EU-A"]["input_revision"] == 2
-        passed.append("CDC update propagates through both CQs and plugin")
+        d.configure(capacity={"EU-B": 90000})
+        d.metric_until("ignite_drasi_deployment_capacity_tpm", lambda v: v == 90000, deployment="EU-B")
+        passed.append("a scenario change propagates through change capture to the reaction")
 
-        runtime.sql("DELETE FROM ignite_endpoints WHERE id='US-C';")
-        results.until(lambda rows: "US-C" not in rows)
-        passed.append("CDC delete retracts assessment")
-        histories["live"] = results.history
-        results.close()
-        runtime.sql("UPDATE ignite_endpoints SET budget_tpm=50000, revision=revision+1 WHERE id='EU-B';")
-        reconnected = Attachment("capacity-results")
-        attachments.append(reconnected)
-        reconnected.until(lambda rows: rows.get("EU-B", {}).get("status") == "overcommitted")
-        assert set(reconnected.rows) == {"EU-A", "EU-B"}
-        histories["reconnect"] = reconnected.history
-        passed.append("snapshot-first reconnect replaces state, including missed deletion/update")
-
-        for attachment in attachments:
-            attachment.close()
-        attachments.clear()
+        d.control("fail")
+        d.metric_until("ignite_drasi_deployment_status", lambda v: v == 2, deployment="EU-A")
+        with d.DeskStream(["plan-results"]) as stream:
+            plan = stream.until("plan-results", lambda r: r and r[0]["state"] == "feasible" and r[0]["moves"] > 0)[0]
         server.stop()
-        runtime.sql("UPDATE ignite_endpoints SET budget_tpm=90000, revision=revision+1 WHERE id='EU-B';")
+        d.configure(capacity={"EU-B": 95000})
+        body, _ = d.submit()
+        approval = d.approve(plan)
         server.start()
-        restarted = Attachment("capacity-results")
-        attachments.append(restarted)
-        restarted.until(lambda rows: len(rows) == 2 and rows["EU-B"]["spare_tpm"] == 10000)
-        assert restarted.rows["EU-A"]["status"] == "unavailable"
-        assert restarted.rows["EU-A"]["run_epoch"] == epoch
-        passed.append("Server restart preserves authoritative data and bootstraps downtime changes")
+        d.wait(ready, 60, "every input ready after restart")
+        d.metric_until("ignite_drasi_deployment_capacity_tpm", lambda v: v == 95000, deployment="EU-B")
+        d.metric_until("ignite_drasi_deployment_status", lambda v: v == 2, deployment="EU-A")
+        with d.DeskStream(["plan-results", "tile-action", "tile-last-approval", "overdue-tasks"]) as stream:
+            stream.until("overdue-tasks", lambda r: any(row["id"] == body["id"] for row in r), 30)
+            row = stream.until("tile-last-approval", lambda r: r and r[0]["approval"] == approval
+                               and r[0]["status"] != "pending", 45)[0]
+            assert row["status"] == "rejected" and row["reason"] == "The facts changed since this plan was proposed", row
+            stream.until("tile-action", lambda r: r and r[0]["value"] == 1)
+            histories["restart"] = stream.history
+        passed.append("Server restart reconstructs every answer from the tables, including changes made while "
+                      "it was down; an approval recorded while it was down is decided after restart (here "
+                      "rejected, because capacity changed after the plan was proposed)")
 
-        # Terminate only this demo's actual replication backend, then update while reconnecting.
-        runtime.sql(f"SELECT pg_terminate_backend(active_pid) FROM pg_replication_slots WHERE slot_name='{settings.SLOT}' AND active_pid IS NOT NULL;")
-        runtime.sql("UPDATE ignite_endpoints SET budget_tpm=95000, revision=revision+1 WHERE id='EU-B';")
-        restarted.until(lambda rows: rows["EU-B"]["spare_tpm"] == 15000)
-        passed.append("PostgreSQL replication reconnect resumes CDC")
+        runtime.sql(f"SELECT pg_terminate_backend(active_pid) FROM pg_replication_slots "
+                    f"WHERE slot_name='{settings.SLOT}' AND active_pid IS NOT NULL;")
+        d.configure(capacity={"EU-B": 100000})
+        d.metric_until("ignite_drasi_deployment_capacity_tpm", lambda v: v == 100000, 60, deployment="EU-B")
+        passed.append("PostgreSQL replication reconnect resumes change capture")
 
-        alerts = Attachment("grafana-alerts")
-        attachments.append(alerts)
-        for status in ("firing", "resolved"):
-            payload = {"groupKey": "native-check", "status": status, "title": "AI capacity", "message": status}
-            request = urllib.request.Request(
-                settings.url("DRASI_ALERT")+"/alerts/grafana",
-                data=json.dumps(payload).encode(), headers={"Content-Type": "application/json"},
-            )
-            with urllib.request.urlopen(request, timeout=5) as response:
-                assert 200 <= response.status < 300
-            alerts.until(lambda rows: rows.get("native-check", {}).get("status") == status)
-        histories["alerts"] = alerts.history
-        passed.append("native Grafana webhook firing/resolved -> actual alert CQ")
-
-        runtime.sql((DEMO / "database/reset.sql").read_text())
-        restarted.until(lambda rows: len(rows) == 3 and all(row["run_epoch"] != epoch for row in rows.values()))
-        assert restarted.rows["EU-A"]["status"] == "within_budget"
-        assert restarted.rows["EU-B"]["spare_tpm"] == 20000
-        assert restarted.rows["US-C"]["spare_tpm"] == 100000
-        assert len({row["run_epoch"] for row in restarted.rows.values()}) == 1
-        histories["restart-reset"] = restarted.history
-        passed.append("explicit scenario reset changes epoch and restores fixture via CDC")
-
-        for attachment in attachments:
-            attachment.close()
-        attachments.clear()
-        server.stop()
-        runtime.sql("DELETE FROM ignite_endpoints;")
-        server.start()
-        empty = Attachment("capacity-results")
-        attachments.append(empty)
-        assert empty.rows == {}, empty.rows
-        runtime.sql((DEMO / "database/reset.sql").read_text())
-        empty.until(lambda rows: len(rows) == 3)
-        assert empty.rows["EU-A"]["spare_tpm"] == 40000
-        histories["empty-start"] = empty.history
-        passed.append("empty bootstrap followed by CDC insertion populates all three assessments")
+        d.reset()
     finally:
-        for attachment in attachments:
-            attachment.close()
         server.stop()
         (EVIDENCE / "events.json").write_text(json.dumps(histories, indent=2) + "\n")
         (EVIDENCE / "checks.json").write_text(json.dumps({"passed": passed}, indent=2) + "\n")

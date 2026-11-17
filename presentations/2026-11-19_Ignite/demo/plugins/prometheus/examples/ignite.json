@@ -28,7 +28,7 @@
     "recovery": [{"metric": "ignite_drasi_recovery_state", "help": "Recovery after an applied plan: 0 awaiting evidence, 1 verified, 2 nothing to verify, -1 unknown.", "value": "value"}],
     "action": [{"metric": "ignite_drasi_action_needed", "help": "0 none, 1 approve proposed plan, 2 no valid plan, 3 at risk, -1 unknown.", "value": "value"}],
     "resilience": [{"metric": "ignite_drasi_safe_if_one_fails", "help": "1 yes, 0 no (lost names the first deployment whose loss leaves no plan), 2 already one down, -1 unknown.", "value": "value", "labels": {"lost": "lost"}}],
-    "running": [{"metric": "ignite_drasi_running_tpm", "help": "Demand of each workload on its configured deployment; negative when policy no longer allows it (held).", "value": "value", "labels": {"workload": "workload", "deployment": "deployment"}}],
+    "running": [{"metric": "ignite_drasi_running_tpm", "help": "Demand of each workload on its configured deployment; negative when policy no longer allows it.", "value": "value", "labels": {"workload": "workload", "deployment": "deployment"}}],
     "proposed": [{"metric": "ignite_drasi_proposed_tpm", "help": "Demand of each workload on the deployment Drasi's feasible plan assigns.", "value": "demand_tpm", "labels": {"workload": "workload", "deployment": "deployment"}}],
     "policy": [{"metric": "ignite_drasi_policy_allowed", "help": "Placement policy: 1 allowed, 0 not allowed, -1 unknown.", "value": "value", "labels": {"workload": "workload", "deployment": "deployment"}}],
     "last-approval": [{"metric": "ignite_drasi_last_approval_state", "help": "Latest approval: 1 applying, 2 applied awaiting evidence, 3 verified, 4 rejected, -1 unknown.", "value": "value", "labels": {"approval": "approval"}}]

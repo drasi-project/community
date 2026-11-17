@@ -53,7 +53,6 @@ function queries() {
       return [`${w.id}/${d.id}`, { id: `${w.id}/${d.id}`, subject: w.id, target: d.id, state: allowed ? "allowed" : "denied", allowed, reason: `TEST FIXTURE ${allowed ? "allows" : "denies"} it`, run_epoch: epoch }];
     }))),
     "resilience-results": { resilience: { id: "resilience", state: expired ? "unknown" : "at_risk", first_failure: "EU-A", baseline: p.state, unhealthy_bins: down ? 1 : 0, run_epoch: epoch } },
-    "grafana-alerts": {},
   };
   return { ...result, ...extraRows };
 }

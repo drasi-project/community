@@ -83,9 +83,9 @@ export default function Presenter({ live, now, control }: { live: Live; now: num
     candidate.run_epoch === health.run_epoch && candidate.revision === health.revision;
   const feasible = proposalCurrent && candidate.state === "feasible";
   const needsChange = feasible && candidate.moves > 0;
-  // What runs now, as Drasi sees it (tile-running): a negative value means policy holds that route.
+  // What runs now, as Drasi sees it (tile-running): a negative value means policy no longer allows that route.
   const running = Object.fromEntries(live.queries["tile-running"].rows.map(row =>
-    [String(row.workload), `${String(row.deployment)}${typeof row.value === "number" && row.value < 0 ? " (held)" : ""}`]));
+    [String(row.workload), `${String(row.deployment)}${typeof row.value === "number" && row.value < 0 ? " (not allowed)" : ""}`]));
   const selection = stage.selection;
   const stale = !!selection && selection.basis !== candidate?.basis;
   const overdue = live.queries["overdue-tasks"].rows

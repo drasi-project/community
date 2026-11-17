@@ -21,11 +21,8 @@ smoke = runpy.run_path(str(ROOT / "tests/observability-smoke.py"))
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--include-postgres", action="store_true", help="Also restart the native demo's shared PostgreSQL; coordinate first")
-    parser.add_argument("--require-drasi", action="store_true")
-    parser.add_argument("--history-only", action="store_true", help="Leave fresh traffic to a subsequent strict smoke after the native Server is restarted")
+    parser.add_argument("--history-only", action="store_true", help="Check history only; skip the fresh smoke cycle")
     args = parser.parse_args()
-    if args.history_only and args.require_drasi:
-        parser.error("--history-only cannot claim --require-drasi")
     old = json.loads((ROOT / "observability/evidence/smoke.json").read_text())
     env = smoke["environment"]()
     services = ["redis", "minio", "clickhouse", "langfuse-web", "langfuse-worker", "collector", "prometheus", "grafana", "probe"]
@@ -58,10 +55,7 @@ def main():
     history = get(settings.url("GRAFANA")+"/api/datasources/proxy/uid/ignite-prometheus/api/v1/query_range?" + params, auth)
     assert history["data"]["result"], "Historical metric samples lost"
     if not args.history_only:
-        command = [sys.executable, str(ROOT / "tests/observability-smoke.py")]
-        if args.require_drasi:
-            command.append("--require-drasi")
-        subprocess.run(command, check=True)
+        subprocess.run([sys.executable, str(ROOT / "tests/observability-smoke.py")], check=True)
     result = {
         "result": "history-pass" if args.history_only else "pass",
         "services": services, "stop_to_ready_seconds": startup_seconds,

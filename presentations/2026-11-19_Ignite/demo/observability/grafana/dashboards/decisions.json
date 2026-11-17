@@ -2,7 +2,7 @@
   "uid": "ignite-decisions",
   "title": "AI service · Recovery plan",
   "schemaVersion": 39,
-  "version": 26,
+  "version": 27,
   "refresh": "5s",
   "time": {
     "from": "now-5m",
@@ -192,7 +192,7 @@
                   "color": "green"
                 },
                 "4": {
-                  "text": "Rejected: out of date",
+                  "text": "Rejected",
                   "color": "orange"
                 }
               }
@@ -483,7 +483,7 @@
                 "from": -100000,
                 "to": -0.001,
                 "result": {
-                  "text": "held: not allowed",
+                  "text": "not allowed",
                   "color": "orange"
                 }
               }

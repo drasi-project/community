@@ -1,16 +1,9 @@
 apiVersion: 1
-contactPoints:
+# Grafana's alerts stay in Grafana (the probe's webhook records them for the smoke test);
+# removes the contact point that earlier versions posted to Drasi.
+deleteContactPoints:
   - orgId: 1
-    name: drasi-http-source
-    receivers:
-      - uid: drasi-http-source
-        type: webhook
-        disableResolveMessage: false
-        settings:
-          # Drasi's HTTP source (grafana-input). Grafana expands $IGNITE_DRASI_ALERT_PORT
-          # from its environment (compose.yaml, from ports.env).
-          url: http://host.containers.internal:$IGNITE_DRASI_ALERT_PORT/alerts/grafana
-          httpMethod: POST
+    uid: drasi-http-source
 groups:
   - orgId: 1
     name: support-workload
