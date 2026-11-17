@@ -1,136 +1,176 @@
 #!/usr/bin/env python3
-"""Phase 5 live gate: real approval, queue recovery, current-policy denial and products."""
-import base64
+"""Live gate for Drasi's reactions: approvals checked by Drasi, routes changed by its gateway
+reaction, recovery verified by its queries, and its Grafana annotations and Langfuse scores.
+
+The AI service only records approvals (the approval tool), simulates the deployments and serves
+requests; every decision is read from Drasi's outputs or from the effect of its reactions.
+Resets this copy's demo before and after; needs the running services (SETUP.md)."""
 import concurrent.futures
-import importlib.util
 import json
 import time
-import urllib.parse
-import uuid
-from pathlib import Path
-import sys
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "ops"))
-import settings  # noqa: E402
 
-DEMO = Path(__file__).resolve().parents[1]
-def load(name, file):
-    spec = importlib.util.spec_from_file_location(name, DEMO / "tests" / file)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-work = load("work", "workload-integration.py")
-obs = load("obs", "observability-smoke.py")
+import drasi_outputs as d
+
+ALIASES = ["plan-results", "tile-action", "tile-last-approval", "tile-recovery", "overdue-tasks"]
 
 
-def reset():
-    state = work.api("/health")
-    work.api("/reset", {k:state[k] for k in ["run_epoch","revision"]})
-    work.wait(lambda: work.api("/decisions").get("candidate_current"))
+def latest(stream, ident, predicate=lambda row: True, timeout=30):
+    return stream.until("tile-last-approval", lambda r: r and r[0]["approval"] == ident and predicate(r[0]),
+                        timeout)[0]
 
 
-def candidate():
-    result = work.api("/decisions")
-    return result["allocation"] if result["approval"] == "awaiting_approval" else None
+def proposed(stream, timeout=30):
+    return stream.until("plan-results", lambda r: r and r[0]["state"] == "feasible" and r[0]["moves"] > 0,
+                        timeout)[0]
 
 
-def approve(d, command=None, expected=200):
-    return work.api("/approvals", {"command_id":command or str(uuid.uuid4()),
-        "candidate_id":d["candidate_id"],"basis":d["basis"]}, expected=expected)
+def stuck_request(stream):
+    """A support request on the failed EU-A that Drasi reports overdue; the task itself never changes."""
+    body, trace = d.submit()
+    d.wait(lambda: any(a["status"] == 503 for a in d.task(body["id"])["attempts"]), 20, "a 503 from EU-A")
+    before = d.task(body["id"])["task"]
+    stream.until("overdue-tasks", lambda rows: any(r["id"] == body["id"] for r in rows), 30)
+    d.metric_until("ignite_drasi_overdue_requests", lambda v: v and v >= 1, workload="support")
+    assert d.task(body["id"])["task"] == before, "the deadline changes Drasi's answer, not the task"
+    return body, trace, before
 
 
-def command(id):
-    return next(c for c in work.api("/decisions")["commands"] if c["id"] == id)
+def applied(stream, ident, body):
+    """Drasi's gateway reaction applied approval `ident`; the stuck request completes on EU-B."""
+    row = latest(stream, ident, lambda r: r["status"] in ("applied", "verified"))
+    assert d.routes() == {"support": "EU-B", "batch": "US-C"}
+    stored = d.approval(ident)
+    d.wait(lambda: d.task(body["id"])["task"]["completed_ms"], 30, "the stuck request completes")
+    task = d.task(body["id"])["task"]
+    assert task["endpoint"] == "EU-B" and task["completed_revision"] == stored["applied_revision"], (task, stored)
+    stream.until("overdue-tasks", lambda rows: all(r["id"] != body["id"] for r in rows))
+    return row, stored, task
 
 
-def configure(edit):
-    state = work.api("/health")
-    edit(state["model"])
-    return work.api("/configuration", {k:state[k] for k in ["run_epoch","revision","model"]})
+def verified(stream, ident):
+    """Three support answers on the new route: Drasi's recovery query confirms, its reaction records it."""
+    traces = []
+    for _ in range(3):
+        body, trace = d.submit()
+        d.wait(lambda: d.task(body["id"])["task"]["completed_ms"], 20, "a support answer")
+        traces.append(trace["trace_id"])
+    stream.until("tile-recovery", lambda r: r and r[0]["value"] == 1, 30)
+    d.metric_until("ignite_drasi_recovery_state", lambda v: v == 1)
+    latest(stream, ident, lambda r: r["status"] == "verified" and r["value"] == 3)
+    d.metric_until("ignite_drasi_last_approval_state", lambda v: v == 3, approval=ident)
+    return d.approval(ident), traces
+
+
+def incident(stream):
+    """One talk cycle from Drasi's outputs: failure, overdue, plan, approval, apply, recovery."""
+    started = time.monotonic()
+    epoch = d.health()["run_epoch"]
+    d.control("fail")
+    plan = proposed(stream)
+    assessment_seconds = time.monotonic() - started
+    body, trace, before = stuck_request(stream)
+    ident = d.approve(plan)
+    row, stored, task = applied(stream, ident, body)
+    record, _ = verified(stream, ident)
+    assert record["run_epoch"] == epoch and record["verified_ms"] >= stored["decided_ms"]
+    return {"epoch": epoch, "input_to_plan_seconds": assessment_seconds,
+            "applied_to_verified_seconds": (record["decided_ms"] - stored["decided_ms"]) / 1000,
+            "elapsed_seconds": time.monotonic() - started, "plan": plan, "trace": trace,
+            "unchanged_task": before, "task": task, "approval": record}
 
 
 def main():
-    checks = []
-    reset()
-    recovery = work.native.Attachment("recovery-results")
+    checks, evidence = [], {}
+    d.reset()
+    stream = d.DeskStream(ALIASES)
     try:
-        work.control("fail")
-        d = work.wait(candidate)
-        approve(work.api("/decisions")["resilience"], expected=409)
-        checks.append("read-only named-failure result cannot be approved as a live allocation")
-        configure(lambda m:m["policy"]["destinations"].update({"support":["EU-A"]}))
-        approve(d, expected=409)
-        checks.append("policy change rejects captured stale candidate and records rejection")
-        configure(lambda m:m["policy"]["destinations"].update({"support":["EU-A","EU-B"]}))
-        d = work.wait(candidate)
-        work.control("pause-reports", "EU-B")
-        work.wait(lambda: work.api("/decisions")["allocation"]["state"] == "unknown", 15)
-        approve(d, expected=409)
-        work.control("resume-reports", "EU-B")
-        work.wait(candidate)
-        body, trace = work.submit()
-        work.wait(lambda:any(a["status"]==503 for a in work.api("/tasks/"+body["id"])["attempts"]))
-        overdue = work.native.Attachment("overdue-tasks")
-        overdue.until(lambda rows:body["id"] in rows, timeout=25)
-        overdue.close()
-        d = work.wait(candidate)
-        id = str(uuid.uuid4())
+        start_routes = d.routes()
+        d.control("fail")
+        first = proposed(stream)
+
+        stale = d.approve(first, basis="not-the-basis-drasi-solved")
+        row = latest(stream, stale, lambda r: r["status"] == "rejected")
+        assert row["reason"] == "The facts changed since this plan was proposed", row
+        assert d.approval(stale)["reason"] == row["reason"] and d.routes() == start_routes
+        d.metric_until("ignite_drasi_last_approval_state", lambda v: v == 4, approval=stale)
+        checks.append("an approval whose basis is not the one Drasi solved is rejected by Drasi's "
+                      "approval-stale query through the gateway reaction, with Drasi's reason; routes unchanged")
+
+        d.configure(destinations={"support": ["EU-A"]})
+        stream.until("plan-results", lambda r: r and r[0]["state"] == "infeasible")
+        denied = d.approve(first)
+        row = latest(stream, denied, lambda r: r["status"] == "rejected")
+        assert row["reason"].startswith("Drasi has no valid plan now"), row
+        d.configure(destinations={"support": ["EU-A", "EU-B"]})
+        plan = proposed(stream)
+        assert plan["revision"] != first["revision"]
+        old = d.approve(first)
+        row = latest(stream, old, lambda r: r["status"] == "rejected")
+        assert row["reason"] == "The facts changed since this plan was proposed", row
+        assert d.routes() == start_routes
+        checks.append("after a policy edit Drasi rejects the captured plan ('no valid plan now'), and after "
+                      "restoring it rejects the superseded plan ('facts changed'); nothing applied")
+
+        body, trace, before = stuck_request(stream)
+        evidence["stuck_request"] = {"task": before, "trace": trace}
+        checks.append("a support request stuck on failed EU-A becomes overdue in Drasi (desk stream and "
+                      "Prometheus reaction) through Drasi's timer, without any change to the task")
+
+        d.control("pause-reports", "EU-B")
+        stream.until("plan-results", lambda r: r and r[0]["state"] == "unknown", 25)
+        ident = d.approve(plan)
         with concurrent.futures.ThreadPoolExecutor(2) as pool:
-            results = list(pool.map(lambda _:approve(d,id), range(2)))
-        assert sorted(r["duplicate"] for r in results) == [False,True]
-        approve({**d,"basis":"conflicting"},id,expected=409)
-        approve(d,expected=409)
-        work.wait(lambda:command(id)["status"] in ["gateway_applied","recovery_confirmed"])
-        work.wait(lambda:work.api("/tasks/"+body["id"])["task"]["completed_ms"])
-        completed = work.api("/tasks/"+body["id"])["task"]
-        assert completed["endpoint"] == "EU-B"
-        assert command(id)["applied_revision"] == completed["completed_revision"]
-        assert work.api("/health")["model"]["workloads"][1]["destination"] == "US-C"
-        checks.append("concurrent duplicate command applies once; complete assignment adopted for queued request")
-        for _ in range(3):
-            work.submit()
-        recovery.until(lambda rows:rows.get(id,{}).get("state")=="confirmed")
-        work.wait(lambda:command(id)["status"]=="recovery_confirmed")
-        c = command(id)
-        assert c["recovered_ms"] >= c["applied_ms"]+5000
-        assert int(work.native.runtime.sql(f"SELECT count(*) FROM ignite_breaches WHERE id='{body['id']}';",tuples=True)) == 1
-        checks.append("three actual support completions at applied revision + native five-second window confirm recovery, preserving overdue history")
-        recovery.until(lambda rows:rows.get(id,{}).get("state")=="unconfirmed",timeout=22)
-        assert command(id)["status"]=="recovery_confirmed"
-        checks.append("native success-evidence expiry retracts current recovery without erasing historical confirmation")
+            assert set(pool.map(lambda _: d.approve(plan, ident), range(2))) == {ident}
+        assert d.sql(f"SELECT count(*) FROM ignite_approvals WHERE id='{ident}';") == "1"
+        latest(stream, ident, lambda r: r["status"] == "pending")
+        stream.holds("tile-last-approval", lambda r: r and r[0]["approval"] == ident and r[0]["status"] == "pending", 4)
+        assert d.routes() == start_routes
+        checks.append("while Drasi does not know (EU-B silent, plan Unknown) an approval waits pending; "
+                      "repeated submissions of one approval ID record one approval")
 
-        configure(lambda m:m["policy"]["destinations"].update({"support":["EU-A"]}))
-        blocked, blocked_trace = work.submit()
-        work.wait(lambda:any(a["status"]==403 for a in work.api("/tasks/"+blocked["id"])["attempts"]))
-        assert int(work.native.runtime.sql(f"SELECT count(*) FROM ignite_receipts WHERE task_id='{blocked['id']}';",tuples=True)) == 0
-        assert not work.api("/tasks/"+blocked["id"])["task"]["completed_ms"]
-        checks.append("gateway current Rego policy blocks previously applied destination before any HTTP content transmission")
-        configure(lambda m:m["policy"]["destinations"].update({"support":["EU-A","EU-B"]}))
-        work.wait(lambda:work.api("/tasks/"+blocked["id"])["task"]["completed_ms"])
-        env = obs.environment()
-        grafana_auth = base64.b64encode(f"admin:{env['GRAFANA_ADMIN_PASSWORD']}".encode()).decode()
-        def annotation():
-            return obs.get(settings.url("GRAFANA")+"/api/annotations?"+urllib.parse.urlencode({"tags":f"{id}-recovered"}),grafana_auth)
-        annotations,_ = obs.wait_for("real recovered Grafana annotation",annotation)
-        def scores(trace_id):
-            return obs.get(settings.url("LANGFUSE")+"/api/public/v3/scores?"+urllib.parse.urlencode({"traceId":trace_id,"fields":"subject,details"}),
-                           env["LANGFUSE_AUTH_BASE64"])["data"]
-        actual_scores,_=obs.wait_for("correlated Langfuse recovery score",lambda:[s for s in scores(trace["trace_id"]) if s["name"]=="drasi_recovery"])
-        blocked_scores,_=obs.wait_for("correlated Langfuse current-policy denial",lambda:[s for s in scores(blocked_trace["trace_id"]) if s["name"]=="drasi_policy_allowed" and s["value"]==0])
-        assert all(s["subject"] == {"kind":"trace","id":trace["trace_id"]} for s in actual_scores)
-        assert all(s["subject"] == {"kind":"trace","id":blocked_trace["trace_id"]} for s in blocked_scores)
-        metric_url=settings.url("PROMETHEUS")+"/api/v1/query?"+urllib.parse.urlencode({"query":'ignite_drasi_assessment{kind="allocation",state="feasible"}'})
-        metrics,_=obs.wait_for("real derived Prometheus summary",lambda:obs.get(metric_url)["data"]["result"])
-        assert all(not any(key in r["metric"] for key in ["task","task_id","trace_id"]) for r in metrics)
-        checks.append("actual Grafana annotation, low-cardinality Prometheus assessment and exact Langfuse trace scores")
-        path=DEMO/".native/evidence/recovery.json"
-        path.write_text(json.dumps({"checks":checks,"command":c,"task":completed,"trace":trace,
-            "recovery_events":recovery.history,"annotations":annotations,"scores":actual_scores,
-            "blocked_scores":blocked_scores,"metrics":metrics},indent=2))
-        print(json.dumps({"passed":checks,"evidence":str(path)},indent=2))
+        d.control("resume-reports", "EU-B")
+        row, stored, task = applied(stream, ident, body)
+        assert stored["applied_revision"] == d.health()["revision"]
+        d.approve(plan, ident)
+        assert d.approval(ident)["status"] in ("applied", "verified")
+        deliveries = json.loads(d.sql("SELECT coalesce(json_agg(result),'[]') FROM ignite_deliveries "
+                                      f"WHERE result->>'result'='applied' AND received_ms >= {stored['requested_ms']};"))
+        assert len(deliveries) == 1, deliveries
+        evidence["applied"] = {"approval": stored, "task": task, "deliveries": deliveries}
+        checks.append("once Drasi knows again its approval-valid query matches, the gateway reaction "
+                      "applies the plan once (compare-and-set on revision), and the overdue request "
+                      "completes on EU-B at the applied revision")
+
+        record, traces = verified(stream, ident)
+        # Drasi's recovery rule waits five seconds after the route changed before it confirms.
+        assert record["decided_ms"] >= stored["decided_ms"] + 5000, (record, stored)
+        assert record["verified_ms"] >= stored["decided_ms"], (record, stored)
+        evidence["verified"] = record
+        checks.append("three support answers on the new route: Drasi's recovery query confirms and its "
+                      "reaction marks the approval verified (desk stream and Prometheus reaction)")
+
+        for tag in [f"{stale}-rejected", f"{ident}-applied", f"{ident}-verified"]:
+            d.wait(lambda: d.annotations(tag), 30, f"Grafana annotation {tag}")
+        d.wait(lambda: d.annotations(f"plan-{first['candidate_id']}") or d.annotations(f"plan-{plan['candidate_id']}"),
+               30, "Grafana plan annotation")
+        evidence["annotations"] = d.annotations(f"{ident}-verified")
+        for trace_id in [trace["trace_id"], *traces]:
+            found = d.wait(lambda: d.scores(trace_id, "drasi_recovery"), 60, f"Langfuse score for {trace_id}")
+            assert all(s["subject"] == {"kind": "trace", "id": trace_id} for s in found), found
+        evidence["scores"] = d.scores(traces[0], "drasi_recovery")
+        checks.append("Drasi's annotation reaction posted the rejection, apply and verification and the plan "
+                      "to Grafana; its score reaction posted drasi_recovery to each recovered request's trace")
+
+        stream.until("tile-recovery", lambda r: r and r[0]["value"] == 0, 40)
+        assert d.approval(ident)["status"] == "verified"
+        checks.append("with no new answers Drasi's recovery evidence expires (timer) and the tile returns to "
+                      "'awaiting evidence'; the recorded verification stays")
+        path = d.save("recovery.json", {"checks": checks, **evidence, "stream": stream.history})
+        print(json.dumps({"passed": checks, "evidence": str(path)}, indent=2))
     finally:
-        recovery.close()
-        reset()
+        stream.close()
+        d.reset()
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     main()
