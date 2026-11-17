@@ -236,12 +236,19 @@ on their own.
   bootstrap edges is configured to bootstrap. Without it every query reading
   PostgreSQL fails to start with "bootstrap configuration requires its actual
   provider before initialization".
+- `drasi-core/components/computation-plugins/sinks/http` (`unroutedChanges`,
+  branch `agentofreality-ignite-native`): a change whose operation has no
+  template route can be ignored instead of posted to `{baseUrl}/changes/{alias}`.
+  The gateway, annotation and score reactions route only `added` (and
+  `updated` for annotations); without it every delete would be posted to a
+  path the receiver doesn't have, and the strict gateway reaction would retry it
+  forever.
 
 ## Known issues
 
 | Issue | Effect | Status |
 |---|---|---|
-| `recovery-results` can't bootstrap from its upstream queries' snapshots (the `drasi.experimental/volatile-query` type it was written for couldn't publish results, and Drasi Core has since removed it) | It runs as an ordinary query fed by its two upstream queries instead. It only rebuilds its state when the whole graph starts, so restart all of Server, never just this query | Open. Queries now have a `snapshot` output; try bootstrap edges from the two upstreams in `ops/config/src/main.rs` |
+| A query fed by another query receives only that query's changes, not its bootstrap rows | Query-to-query edges are used only where the upstream's rows arrive live after startup: plugin results (`policy-results`, `plan-results`, `assignment-results`, `resilience-results`) and the recovery chain, which changes with every answered request. Tiles over static data (`tile-capacity`) read PostgreSQL directly. These queries rebuild only when the whole graph starts, so restart all of Server, never one query | Open. Queries now have a `snapshot` output; try bootstrap edges from upstream queries in `ops/config/src/main.rs` |
 | Drasi Server UI requests component details by ID, but the API now expects names | The UI shows no query text or configuration | Drasi Server issue, not yet filed |
 | Drasi Server's expanded query view uses 14 px text | Too small to read on a projector; use browser zoom | Drasi Server issue, not yet filed |
 | A macOS linker release leaves some plugin libraries unloadable ("mis-aligned LINKEDIT string pool") | `ops/macho-align.py` repairs them during the build | Apple toolchain bug |

@@ -1,8 +1,6 @@
 [workspace]
 members = [
-    "domain", "settings", "ops/config", "workloads",
-    # Today's plugins; removed by graph integration (workstream 7) once replaced.
-    "plugins/capacity", "plugins/decisions",
+    "settings", "ops/config", "workloads",
     # Drasi-native plugins (plan/contracts.md): Rego policy, good_lp optimizer, Prometheus reaction.
     "plugins/policy", "plugins/optimizer", "plugins/prometheus",
 ]

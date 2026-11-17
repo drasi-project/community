@@ -1,5 +1,7 @@
-MATCH (r:ignite_reports)-[:REPORT_MODEL]-(m:ignite_model)-[:MODEL_COMMAND]-(c:ignite_commands)
-WHERE r.run_epoch = m.run_epoch AND c.run_epoch = m.run_epoch
-  AND r.id = c.support_endpoint AND c.applied_revision = m.revision AND c.applied_ms IS NOT NULL
-RETURN c.id AS id, c.run_epoch AS run_epoch, c.applied_revision AS applied_revision,
-       c.applied_ms AS applied_ms, r.expires_ms AS expires_ms, r.status AS endpoint_status
+MATCH (a:ignite_approvals)-[:APPROVAL_ROUTE]->(rt:ignite_routes)-[:ROUTE_REPORT]->(r:ignite_reports),
+      (a)-[:APPROVAL_SCENARIO]->(s:ignite_scenario)
+WHERE rt.workload = 'support' AND a.run_epoch = s.run_epoch AND rt.run_epoch = s.run_epoch
+  AND r.run_epoch = s.run_epoch AND a.applied_revision = s.revision
+  AND (a.status = 'applied' OR a.status = 'verified')
+RETURN a.id AS id, a.run_epoch AS run_epoch, a.applied_revision AS applied_revision,
+       rt.applied_ms AS applied_ms, r.expires_ms AS expires_ms, r.status AS endpoint_status

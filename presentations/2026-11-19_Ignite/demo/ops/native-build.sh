@@ -29,14 +29,16 @@ cargo build --locked --manifest-path "$SERVER/Cargo.toml" --bin drasi-server
 if [ ! -f "$CORE/Cargo.lock" ]; then
     cargo generate-lockfile --manifest-path "$CORE/Cargo.toml"
 fi
-for package in drasi-computation-source-postgres drasi-computation-bootstrap-postgres drasi-computation-transformer-query drasi-computation-source-http; do
+for package in drasi-computation-source-postgres drasi-computation-bootstrap-postgres drasi-computation-transformer-query drasi-computation-source-http drasi-computation-sink-http drasi-computation-sink-sse; do
     cargo build --locked --manifest-path "$CORE/Cargo.toml" -p "$package" --lib --features "$package/dynamic-plugin"
     install_plugin "$CARGO_TARGET_DIR/debug/lib${package//-/_}.$extension"
 done
-cargo build --locked -p ignite-capacity --lib --features dynamic-plugin
-install_plugin "$CARGO_TARGET_DIR/debug/libdrasi_computation_ignite_capacity.$extension"
-cargo build --locked -p ignite-decisions --lib --features dynamic-plugin
-install_plugin "$CARGO_TARGET_DIR/debug/libdrasi_computation_ignite_decisions.$extension"
+# This demo's native plugins: Rego policy, good_lp optimizer (plan and resilience), Prometheus reaction.
+for package in ignite-policy ignite-optimizer ignite-prometheus; do
+    cargo build --locked -p "$package" --lib --features "$package/dynamic-plugin"
+    install_plugin "$CARGO_TARGET_DIR/debug/libdrasi_computation_${package//-/_}.$extension"
+done
+rm -f "$DEMO"/.native/plugins/libdrasi_computation_ignite_{capacity,decisions}.$extension
 if [ "$extension" = dylib ]; then
     python3 "$DEMO/ops/macho-align.py" "$DEMO"/.native/plugins/*.dylib
 fi

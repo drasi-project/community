@@ -150,6 +150,41 @@ from their upstream outputs' snapshots (`output_snapshots` dependency on a
 `nativeOutputSnapshots` resource that lists every upstream output), and are
 volatile: a restart rebuilds them from those snapshots.
 
+Implementation notes (workstream 7, `ops/config/src/main.rs`, `drasi/`):
+
+- **Joins** are synthetic relationships declared per query in `JOINS` and
+  written as directed patterns (`(a)-[:NAME]->(b)`, first label to second);
+  an undirected pattern matches each join twice and duplicates rows.
+- **Result labels** for query-to-query edges: `PolicyResult`, `PlanResult`,
+  `AssignmentResult`, `ResilienceResult`, `RecoveryTasks`,
+  `RecoveryObservation`, `RecoveryResult`. A downstream query receives only its
+  upstream query's changes, not its bootstrap rows, so tiles over static rows
+  read PostgreSQL directly (see DEVELOPERS.md, Known issues).
+- **Extra result queries:** `assignment-results` (`Assignment`), `loss-results`
+  (`LossScenario`, `id` = lost bin); `plan-results` and `resilience-results` use
+  `id` = `plan` and `resilience`. `tile-last-approval` also returns `status` and
+  `reason`; `recovery-results` also returns `approval`.
+- **`recovery-verified`** sends `verified_ms` = the latest support answer that
+  confirmed recovery (`last_success_ms`).
+- **HTTP reactions** set `unroutedChanges: ignore` (drasi-core sink option), so
+  only the listed operations call out: gateway `added`, annotations `added` and
+  `updated` (an approval's row changes as its status changes), scores `added`.
+  `plan-events` sends no `time` (Grafana uses the post time). Langfuse accepts
+  the non-UUID score IDs.
+- **Secrets** for Server's environment: `IGNITE_GRAFANA_TOKEN` (from `.env`) and
+  `IGNITE_LANGFUSE_HEADERS` = `{"authorization":"Basic $LANGFUSE_AUTH_BASE64"}`
+  (an `env-json:` reference for the sink's `secretHeaders`).
+- **SSE reaction** `desk-stream` (`drasi.network/sse-sink`) on
+  `127.0.0.1:$IGNITE_DRASI_SSE_PORT` (19424 here, 18424 originally), CORS for
+  the UI origin: `GET /events` carries every output on one stream, one frame per
+  input `{"output":{"alias",…},"sequence","publishedAt","changes":[{operation,
+  identity,element,before?,after?,effectiveFrom}]}` plus heartbeats
+  `{"type":"heartbeat","ts"}` every 10 s; `GET /snapshot/{alias}` returns the
+  output's current rows as change records (`after`) with headers
+  `x-drasi-output-epoch` and `x-drasi-output-position`. Aliases are the query
+  names: `overdue-tasks`, `plan-results`, `tile-action`, `tile-recovery`,
+  `tile-resilience`, `tile-running`, `tile-last-approval`.
+
 ## 5. Element contracts
 
 Rows are query result rows (`QueryChangeCodec::decode_row`); elements are graph
