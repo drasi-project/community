@@ -15,10 +15,10 @@ test("live projected slides contain no private controls", async ({ page }) => {
   expect(writes).toEqual([]);
 });
 
-test("actual Drasi context, embedded Grafana and the operator's links are available", async ({ page, request }) => {
+test("the AI service, Drasi's answers, embedded Grafana and the operator's links are available", async ({ page, request }) => {
   const response = await request.get("/api/health");
   expect(response.ok()).toBe(true);
-  expect(healthSchema.parse(await response.json()).continuous_context).toBe("ready");
+  healthSchema.parse(await response.json());
   await page.goto("/presenter");
   await expect(page.locator(".badge", { hasText: "READY" }).first()).toBeVisible();
   await page.getByText("Show something on the projector").click();

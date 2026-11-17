@@ -2,8 +2,8 @@ import { useQuery } from "../demo/ui/src/live";
 
 // demo/drasi/overdue-tasks.cypher, laid out for the projector. A UI test checks it matches the file.
 export const displayQuery = [
-  ["MATCH (t:ignite_tasks)-[:TASK_MODEL]-(m:ignite_model)", 1],
-  ["WHERE t.run_epoch = m.run_epoch", 0],
+  ["MATCH (t:ignite_tasks)-[:TASK_SCENARIO]-(s:ignite_scenario)", 1],
+  ["WHERE t.run_epoch = s.run_epoch", 0],
   ["  AND t.completed_ms IS NULL AND t.cancelled_ms IS NULL", 2],
   ["  AND drasi.trueLater(true, t.deadline_ms)", 3],
   ["RETURN t.id AS id, t.run_epoch AS run_epoch,", 4],

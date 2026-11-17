@@ -412,7 +412,7 @@ run:
 | `tile-running` | Routes ⨝ workloads ⨝ `PolicyDecision` of that route: `demand_tpm`, negated when `allowed = false` (held); shown positive while policy is unknown |
 | `tile-proposed` | `Assignment` where `Plan.state = 'feasible'`: `workload`, `deployment` (= bin), `demand_tpm` |
 | `tile-policy` | `PolicyDecision`: 1/0/-1 from `state` |
-| `tile-last-approval` | The approval with `latest = true`: `pending` 1, `applied` 2, `verified` 3, `rejected` 4 |
+| `tile-last-approval` | The approval with `latest = true`: `approval`, `value` (`pending` 1, `applied` 2, `verified` 3, `rejected` 4), and also `status` and `reason` (the desk shows Drasi's rejection reason; the exporter ignores them) |
 
 ## 10. Reaction contract
 
@@ -490,6 +490,36 @@ Demo controls stay demo controls: reset may delete the previous run's Grafana
 annotations (tag `ignite-decision`) as today; that is the demo driver, not
 Drasi. The Grafana contact point posts to the Drasi HTTP source at
 `http://host.containers.internal:$IGNITE_DRASI_ALERT_PORT/alerts/grafana`.
+
+### Demo controls (desk → AI service)
+
+Agreed between workstreams 1 and 6; the desk and its test fixture
+(`ui/tests/fixture-server.mjs`) use exactly these.
+
+| API | Request | Response |
+|---|---|---|
+| `GET /health` | | `{run_epoch, revision, pending, task_target_seconds, report_expiry_seconds, traffic: {running, submitted, ends_ms, error, interval_seconds}, deployments: [{id, region, model, capacity_tpm, mode, reporting}], workloads: [{id, data_class, region_requirement, model, demand_tpm, deployment}], destinations: {workload: [deployment]}}`. `mode`/`reporting` are the simulation (`ignite_simulation`); `deployment` is the current route. No Drasi answers and no readiness of Drasi |
+| `POST /control` | `{run_epoch, deployment, action}`, action `fail`, `throttle`, `restore`, `pause-reports`, `resume-reports` | `200 {run_epoch, revision}`; simulation only, the revision is unchanged |
+| `POST /configuration` | `{run_epoch, revision, capacity?: {deployment: tpm}, destinations?: {workload: [deployment]}}` | `200 {run_epoch, revision}` (unchanged revision when nothing changed); `409 {"error"}` when `run_epoch`/`revision` are stale. The desk's "EU-A to 50k/100k" buttons send `POST /control` `restore` for EU-A first when it isn't healthy and reporting |
+| `POST /approvals` | `{id, candidate_id, basis, revision}`; the desk always sends its own UUID `id` and the `Plan`'s `candidate_id`, `basis` and `revision` | `200 {id}` (above) |
+| `POST /reset`, `POST /traffic`, `POST /tasks`, `GET /tasks/{id}` | unchanged | unchanged |
+
+### What the desk and projector read from Drasi Server
+
+Through the web app's `/server` proxy (`/server/api/v1/instances/ignite/queries/{name}/…`):
+
+| Query | How | Used for |
+|---|---|---|
+| `overdue-tasks` | `attach` (snapshot, then diffs) | Support overdue, the oldest late request, the query slide. Rows keyed by `id` |
+| `plan-results` | `attach` | The proposed plan and what "Select proposed plan" takes to the approval tool. The `Plan` row has `id` = `plan` and the §5 properties; `assignments` may be JSON text or an object |
+| `tile-action`, `tile-recovery`, `tile-resilience`, `tile-running`, `tile-last-approval` | `GET …/results` once a second, all five together | The four answers (the same values Grafana shows) and the approval outcome |
+
+A browser allows six HTTP/1.1 connections per host, shared by the desk and the
+projector window, so only the two row sets that change with every event are
+attached; seven attachments starved `/api/health`. A query whose latest read
+failed or is over 3 s old makes the desk NOT READY and its answer Unknown.
+Diffs are applied by content for rows without `id` (tile queries), including
+`aggregation` and `noop` diffs.
 
 Known limits: Grafana's annotation API has no idempotency key, so a retried
 POST whose response was lost, or a Server restart within 30 s of an event,

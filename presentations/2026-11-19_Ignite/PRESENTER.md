@@ -165,7 +165,7 @@ Say it in your own words.
 ### 3. Drasi in one picture (1½ minutes)
 
 1. **Drasi in one picture.** Drasi is open-source change-driven computation. Sources bring in every change as it happens: here, from the AI service's database. Continuous queries keep a result up to date as changes arrive, and as time passes. Continuous models run your own logic on those results and re-run it whenever an input changes. Reactions deliver each change to where it's needed.
-2. **Drasi in one picture.** What's what. Drasi does the hard part: it keeps results up to date incrementally as changes arrive, re-checks them when time passes a deadline, and re-runs your models whenever their inputs change. You write the business logic: here, the policy, planner and what-if models, and the AI service that applies plans and exports the answers as metrics, were written for this demo. 'Without polling' is about computing the answers: nothing is recomputed on a schedule. Health checks still run every second, as in any system, and Grafana still refreshes to draw the screen; Drasi reacts to what they report.
+2. **Drasi in one picture.** What's what. Drasi does the hard part: it keeps results up to date incrementally as changes arrive, re-checks them when time passes a deadline, and re-runs your models whenever their inputs change. You write the business logic: here, the policy rules and the planner and what-if models were written for this demo, as Drasi plugins. The AI service, its change-approval tool and its gateway configuration are the systems Drasi works with. 'Without polling' is about computing the answers: nothing is recomputed on a schedule. Health checks still run every second, as in any system, and Grafana still refreshes to draw the screen; Drasi reacts to what they report.
 
 **If it breaks:** Carry on.
 
@@ -219,7 +219,7 @@ Say it in your own words.
 5. **Grafana · Recovery plan (optional).** Compliance allows the US for summaries again, and the plan comes straight back.
    - **Press:** Summaries: Europe + US
    - **Watch for:** Action needed: Approve proposed plan.
-6. **What Drasi just did (optional).** The policy change came in as a change like any other. Drasi re-ran the policy and the planner, and the AI service refused the out-of-date approval.
+6. **What Drasi just did (optional).** The policy change came in as a change like any other. Drasi re-ran the policy and the planner, saw that the approval no longer matched its current plan, and its reaction rejected it.
 7. **Grafana · Recovery plan.** Now I approve the current plan.
    - **Press:** Select proposed plan, then Approve selected plan
    - **Watch for:** Last approval: Applied, awaiting evidence. Running now changes. Action needed None. Recovery Awaiting evidence.
@@ -278,7 +278,7 @@ Say it in your own words.
 | Was the alert slow on purpose? | The alert is measured over a short window, as most are. The point isn't speed: Drasi has a plan that fits policy, not just a signal. |
 | Does it only work with PostgreSQL? | No. Drasi has sources for other databases, Kafka, Kubernetes, OpenTelemetry and HTTP. This demo uses PostgreSQL's change feed and an HTTP source for Grafana's alerts. |
 | Are the policy, planner and what-if part of Drasi? | No, they're this demo's own code (in the repository), with the policy written in Rego. Drasi runs them as continuous models and re-runs them when their inputs change. |
-| How do the answers reach Grafana? | Drasi streams every change to the AI service, which publishes them as OpenTelemetry metrics. Prometheus stores them and Grafana shows them. |
+| How do the answers reach Grafana? | A Drasi reaction keeps every answer as a Prometheus metric. Prometheus scrapes it and Grafana shows it. |
 | What happens when Drasi restarts? | It rebuilds its state from the database and resumes the change feed. Until then the tiles show Unknown. |
 | How does it scale? | This demo isn't a benchmark. Each query only keeps what it needs, here the unanswered requests. For performance work, see drasi.io. |
 | Anything else | "Good question. I'll follow up; the repository on screen has the details." |

@@ -11,7 +11,7 @@ const roles = [
   { name: "Sources", what: "Bring in every change as it happens", here: "the AI service's database change feed" },
   { name: "Continuous queries", what: "Keep a result current as data changes and as time passes", here: "overdue requests, deployment status, verified recovery" },
   { name: "Continuous models", what: "Run your own logic on query results, again on every change", here: "policy (Rego), planner, what-if" },
-  { name: "Reactions", what: "Deliver each change to where it's needed", here: "stream changes to the AI service, which exports them to Grafana and Langfuse" },
+  { name: "Reactions", what: "Deliver each change to where it's needed", here: "metrics for Grafana, approved plans applied through the gateway, annotations and Langfuse scores" },
 ] as const;
 
 function Flow({ compact = false }: { compact?: boolean }) {
@@ -88,7 +88,7 @@ export function Explanation({ slide, active = false }: { slide: SlideId; active?
     <Flow />
     <div className="ownership">
       <div><b>Built into Drasi</b><span>Sources, continuous queries kept current as data and time change, re-running your models when their inputs change, and reactions</span></div>
-      <div><b>Written for this demo</b><span>The policy, planner and what-if models, and the AI service that applies approved plans</span></div>
+      <div><b>Written for this demo</b><span>The policy, planner and what-if models, and the AI service whose routes Drasi's reaction updates</span></div>
     </div>
     <p className="polling"><b>"Without polling"</b> No answer is recomputed on a schedule: answers change when the facts or the time do. Health checks still run, and Grafana still refreshes to draw the screen.</p>
   </div>;

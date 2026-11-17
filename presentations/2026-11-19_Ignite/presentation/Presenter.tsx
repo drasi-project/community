@@ -4,9 +4,9 @@ import { scenes, slides, recaps, products, duration, viewLabel, type StageView }
 import "./desk.css";
 import { notes, actionLabels, glossary, questions, type ActionId, type Beat } from "./notes";
 import { replayClips } from "./replay";
-import { isCurrent, post, readDecision, errorText, rowSchema } from "../demo/ui/src/contracts";
+import { post, readPlan, tileValue, errorText, rowSchema, type Health, type Row } from "../demo/ui/src/contracts";
 import { ProductLink, Json } from "../demo/ui/src/views";
-import type { Live } from "../demo/ui/src/live";
+import type { Live, QueryState } from "../demo/ui/src/live";
 import type { StageControl } from "../demo/ui/src/stage";
 
 // Match questions in demo/workloads/src/content.rs so the simulated model gives a specific answer.
@@ -34,7 +34,29 @@ function Clock({ now }: { now: number }) {
     <button className="quiet" onClick={() => setStarted(Date.now())}>{started === null ? "Start timer" : "Restart timer"}</button></span>;
 }
 
-type Feedback = { action: string; tone: "ok" | "expected" | "error"; message: string; data?: unknown };
+// `approval` is set for an approval sent to the approval tool: its outcome comes from Drasi.
+type Feedback = { action: string; tone: "ok" | "expected" | "error"; message: string; data?: unknown; approval?: string; expectRejected?: boolean };
+type Request = { path: string; body: unknown };
+
+// The latest approval as Drasi reports it (tile-last-approval): 1 checking, 2 applied, 3 verified, 4 rejected.
+function lastApproval(query: QueryState): { id: string; state: number | null; reason: string } | null {
+  const row: Row | undefined = query.rows[0];
+  return row ? { id: String(row.approval ?? ""), state: tileValue([row]), reason: typeof row.reason === "string" && row.reason ? row.reason : "the plan was out of date" } : null;
+}
+
+// What Drasi has decided about an approval the presenter sent, in the desk's words.
+function approvalFeedback(feedback: Feedback, live: Live): Feedback {
+  const latest = lastApproval(live.queries["tile-last-approval"]);
+  const state = latest && latest.id === feedback.approval ? latest.state : null;
+  const reason = latest?.reason ?? "";
+  if (state === 4) return feedback.expectRejected
+    ? { ...feedback, tone: "expected", message: `Rejected by Drasi, as intended: ${reason}.` }
+    : { ...feedback, tone: "error", message: `Drasi rejected it: ${reason}. Select the proposed plan and approve again.` };
+  if (state === 2 || state === 3) return feedback.expectRejected
+    ? { ...feedback, tone: "error", message: "It was accepted, not rejected. Carry on: the plan is being applied." }
+    : { ...feedback, tone: "ok", message: "Done: Drasi checked it and the new routes are applied." };
+  return { ...feedback, tone: "ok", message: "Sent to the approval tool. Waiting for Drasi's check…" };
+}
 
 // The projector window opened from the desk, so the desk can show whether it's still open.
 let projector: Window | null = null;
@@ -42,10 +64,10 @@ let projector: Window | null = null;
 export default function Presenter({ live, now, control }: { live: Live; now: number; control: StageControl }) {
   const { stage } = control;
   const health = live.health;
-  const ready = !live.error && health?.continuous_context === "ready" && !!live.context?.streams_attached &&
-    live.received !== null && now - live.received < 6000;
+  const ready = !live.error && !live.drasiError && !!health && live.received !== null && now - live.received < 6000;
   const [busy, setBusy] = useState(false);
-  const [feedback, setFeedback] = useState<Feedback | null>(null);
+  const [sent, setFeedback] = useState<Feedback | null>(null);
+  const feedback = sent?.approval ? approvalFeedback(sent, live) : sent;
   const [awaiting, setAwaiting] = useState<{ run_epoch: string; revision: number } | null>(null);
   const [connected, setConnected] = useState(false);
   // Set when Next is pressed before the beat's buttons: a second Next moves on anyway.
@@ -55,13 +77,18 @@ export default function Presenter({ live, now, control }: { live: Live; now: num
   useEffect(() => { const t = setInterval(() => setConnected(!!projector && !projector.closed), 1000); return () => clearInterval(t); }, []);
   const canAct = ready && !busy && modelObserved && !stage.replay && !stage.fallback;
 
-  const candidate = readDecision(live.context, "allocation-results").data;
-  const proposalCurrent = !!candidate && isCurrent(candidate, health, now);
-  const running = Object.fromEntries((health?.model.workloads ?? []).map(w => [w.id, w.destination]));
-  const needsChange = proposalCurrent && candidate.valid && Object.entries(candidate.assignments).some(([id, to]) => running[id] !== to);
+  // Drasi's plan, current only once Drasi has seen the scenario revision the AI service reports.
+  const candidate = readPlan(live.queries["plan-results"].rows).plan;
+  const proposalCurrent = !!candidate && !!health && live.queries["plan-results"].attached && candidate.state !== "unknown" &&
+    candidate.run_epoch === health.run_epoch && candidate.revision === health.revision;
+  const feasible = proposalCurrent && candidate.state === "feasible";
+  const needsChange = feasible && candidate.moves > 0;
+  // What runs now, as Drasi sees it (tile-running): a negative value means policy holds that route.
+  const running = Object.fromEntries(live.queries["tile-running"].rows.map(row =>
+    [String(row.workload), `${String(row.deployment)}${typeof row.value === "number" && row.value < 0 ? " (held)" : ""}`]));
   const selection = stage.selection;
   const stale = !!selection && selection.basis !== candidate?.basis;
-  const overdue = Object.values(live.context?.queries["overdue-tasks"] ?? {})
+  const overdue = live.queries["overdue-tasks"].rows
     .filter(row => row.workload === "support" && typeof row.id === "string")
     .sort((a, b) => Number(a.deadline_ms) - Number(b.deadline_ms));
 
@@ -119,65 +146,67 @@ export default function Presenter({ live, now, control }: { live: Live; now: num
   }
   const show = (view: StageView) => control.show(view);
 
-  async function run(action: string, path: string, body: unknown, expectRejected = false) {
+  // Sends the requests in order; stops at the first that fails.
+  async function run(action: string, requests: Request[], expectRejected = false) {
     if (!canAct) return;
     setBusy(true); setFeedback(null);
     try {
-      const data = rowSchema.parse(await post(path, body));
+      let data: Row = {};
+      for (const { path, body } of requests) data = rowSchema.parse(await post(path, body));
       if (typeof data.run_epoch === "string" && typeof data.revision === "number") setAwaiting({ run_epoch: data.run_epoch, revision: data.revision });
-      if (path === "/reset") control.update({ selection: null });
-      setFeedback({ action, tone: expectRejected ? "error" : "ok", message: expectRejected ? "It was accepted, not rejected. Carry on: the plan is being applied." : "Done.", data });
+      if (requests[0].path === "/reset") control.update({ selection: null });
+      // The approval tool only records the approval; Drasi decides whether it is applied or rejected.
+      if (requests[0].path === "/approvals") setFeedback({ action, tone: "ok", message: "", data, approval: String(data.id), expectRejected });
+      else setFeedback({ action, tone: "ok", message: "Done.", data });
     } catch (error) {
       const text = errorText(error);
       const reason = /"error":"([^"]+)"/.exec(text)?.[1] ?? text;
-      setFeedback(expectRejected && text.startsWith("409")
-        ? { action, tone: "expected", message: `Rejected, as intended: ${reason}.` }
-        : { action, tone: "error", message: `Didn't work: ${reason}. Check the banner says READY, then try once more.` });
+      setFeedback({ action, tone: "error", message: `Didn't work: ${reason}. Check the banner says READY, then try once more.` });
     } finally {
-      if (path === "/approvals") control.select(null);
+      if (requests[0].path === "/approvals") control.select(null);
       setBusy(false);
     }
   }
-  const configure = (action: string, change: (model: NonNullable<typeof health>["model"]) => void) => {
+  const configure = (action: string, change: { capacity?: Record<string, number>; destinations?: Record<string, string[]> }, restore?: string) => {
     if (!health) return;
-    const model = structuredClone(health.model);
-    change(model);
-    void run(action, "/configuration", { run_epoch: health.run_epoch, revision: health.revision, model });
+    const target = health.deployments.find(d => d.id === restore);
+    const restoring: Request[] = target && (target.mode !== "ok" || !target.reporting)
+      ? [{ path: "/control", body: { run_epoch: health.run_epoch, deployment: restore, action: "restore" } }] : [];
+    void run(action, [...restoring, { path: "/configuration", body: { run_epoch: health.run_epoch, revision: health.revision, ...change } }]);
   };
+  const euA = health?.deployments.find(d => d.id === "EU-A");
+  const batch = health?.destinations.batch ?? [];
   const actions: Record<ActionId, { enabled: boolean; press: () => void; danger?: boolean; done?: boolean }> = {
     "start-traffic": { enabled: !health?.traffic?.running, done: !!health?.traffic?.running,
-      press: () => health && void run("start-traffic", "/traffic", { run_epoch: health.run_epoch, running: true }) },
+      press: () => health && void run("start-traffic", [{ path: "/traffic", body: { run_epoch: health.run_epoch, running: true } }]) },
     "stop-traffic": { enabled: !!health?.traffic?.running,
-      press: () => health && void run("stop-traffic", "/traffic", { run_epoch: health.run_epoch, running: false }) },
-    "fail-eu-a": { enabled: health?.model.endpoints.find(e => e.id === "EU-A")?.mode === "ok", danger: true,
-      press: () => health && void run("fail-eu-a", "/control", { run_epoch: health.run_epoch, revision: health.revision, endpoint: "EU-A", action: "fail" }) },
-    "select-plan": { enabled: proposalCurrent && !!candidate?.valid && needsChange, done: !!selection && !stale,
-      press: () => candidate && control.select({ command_id: crypto.randomUUID(), candidate_id: candidate.candidate_id, basis: candidate.basis,
+      press: () => health && void run("stop-traffic", [{ path: "/traffic", body: { run_epoch: health.run_epoch, running: false } }]) },
+    "fail-eu-a": { enabled: euA?.mode === "ok", danger: true,
+      press: () => health && void run("fail-eu-a", [{ path: "/control", body: { run_epoch: health.run_epoch, deployment: "EU-A", action: "fail" } }]) },
+    "select-plan": { enabled: needsChange, done: !!selection && !stale,
+      press: () => candidate && control.select({ approval_id: crypto.randomUUID(), candidate_id: candidate.candidate_id, basis: candidate.basis,
         run_epoch: candidate.run_epoch, revision: candidate.revision, assignments: candidate.assignments, selected_ms: Date.now() }) },
     "approve-plan": { enabled: !!selection,
-      press: () => selection && void run("approve-plan", "/approvals", { command_id: selection.command_id, candidate_id: selection.candidate_id, basis: selection.basis }, beat.expect === "rejected") },
-    "summaries-europe": { enabled: !!health?.model.policy?.destinations.batch.includes("US-C"),
-      press: () => configure("summaries-europe", model => { model.policy!.destinations.batch = ["EU-A", "EU-B"]; }) },
-    "summaries-anywhere": { enabled: !!health?.model.policy && !health.model.policy.destinations.batch.includes("US-C"),
-      press: () => configure("summaries-anywhere", model => { model.policy!.destinations.batch = ["EU-A", "EU-B", "US-C"]; }) },
-    "eu-a-half": { enabled: true,
-      press: () => configure("eu-a-half", model => { const e = model.endpoints.find(e => e.id === "EU-A")!; e.mode = "ok"; e.reporting = true; e.budget_tpm = 50000; }) },
-    "eu-a-full": { enabled: true,
-      press: () => configure("eu-a-full", model => { const e = model.endpoints.find(e => e.id === "EU-A")!; e.mode = "ok"; e.reporting = true; e.budget_tpm = 100000; }) },
+      press: () => selection && void run("approve-plan", [{ path: "/approvals", body: { id: selection.approval_id, candidate_id: selection.candidate_id, basis: selection.basis, revision: selection.revision } }], beat.expect === "rejected") },
+    "summaries-europe": { enabled: batch.includes("US-C"),
+      press: () => configure("summaries-europe", { destinations: { batch: ["EU-A", "EU-B"] } }) },
+    "summaries-anywhere": { enabled: !!health && !batch.includes("US-C"),
+      press: () => configure("summaries-anywhere", { destinations: { batch: ["EU-A", "EU-B", "US-C"] } }) },
+    "eu-a-half": { enabled: true, press: () => configure("eu-a-half", { capacity: { "EU-A": 50000 } }, "EU-A") },
+    "eu-a-full": { enabled: true, press: () => configure("eu-a-full", { capacity: { "EU-A": 100000 } }, "EU-A") },
   };
   function isDone(id: ActionId) {
-    const euA = health?.model.endpoints.find(e => e.id === "EU-A");
-    const batch = health?.model.policy?.destinations.batch ?? [];
     switch (id) {
       case "start-traffic": return !!health?.traffic?.running;
       case "stop-traffic": return !health?.traffic?.running;
       case "fail-eu-a": return euA?.mode === "failed";
       case "select-plan": return !!selection || !needsChange;
-      case "approve-plan": return beat.expect === "rejected" ? feedback?.action === "approve-plan" : !needsChange;
+      // A rejected approval is done once Drasi has answered it.
+      case "approve-plan": return beat.expect === "rejected" ? feedback?.action === "approve-plan" && feedback.tone !== "ok" : !needsChange;
       case "summaries-europe": return !batch.includes("US-C");
       case "summaries-anywhere": return batch.includes("US-C");
-      case "eu-a-half": return euA?.budget_tpm === 50000 && euA.mode === "ok";
-      case "eu-a-full": return euA?.budget_tpm === 100000 && euA.mode === "ok";
+      case "eu-a-half": return euA?.capacity_tpm === 50000 && euA.mode === "ok";
+      case "eu-a-full": return euA?.capacity_tpm === 100000 && euA.mode === "ok";
     }
   }
   // Plain functions, not components: a component defined in here would be a new type on every
@@ -238,26 +267,26 @@ export default function Presenter({ live, now, control }: { live: Live; now: num
 
       <aside className="live" aria-label="Live demo">
         <h2>Drasi's answers (as on the projector)</h2>
-        <Answers live={live} overdue={overdue.length} proposalCurrent={proposalCurrent} valid={!!candidate?.valid} needsChange={needsChange} />
+        <Answers live={live} />
         <h2>Live demo</h2>
-        <ul className="deployments-state">{(health?.model.endpoints ?? []).map(e => {
+        <ul className="deployments-state">{(health?.deployments ?? []).map(e => {
           const mode = e.reporting ? modeLabel[e.mode] ?? e.mode : "Not reporting";
-          return <li key={e.id} className={e.mode === "ok" && e.reporting ? "ok" : "bad"}><b>{e.id}</b> {mode}<small>{e.budget_tpm / 1000}k</small></li>;
+          return <li key={e.id} className={e.mode === "ok" && e.reporting ? "ok" : "bad"}><b>{e.id}</b> {mode}<small>{e.capacity_tpm / 1000}k</small></li>;
         })}</ul>
-        <p className="traffic">Traffic: {health?.traffic?.running ? "running" : "stopped"} · Summaries allowed in {health?.model.policy?.destinations.batch.includes("US-C") ? "Europe + US" : "Europe only"}</p>
+        <p className="traffic">Traffic: {health?.traffic?.running ? "running" : "stopped"} · Summaries allowed in {batch.includes("US-C") ? "Europe + US" : "Europe only"}</p>
         <h2>Recovery plan</h2>
         <table className="plan-table">
           <thead><tr><th /><th>Support</th><th>Summaries</th></tr></thead>
           <tbody>
             <tr><th>Running now</th><td>{running.support ?? "?"}</td><td>{running.batch ?? "?"}</td></tr>
-            <tr className={needsChange ? "proposed" : ""}><th>Proposed plan</th>{proposalCurrent && candidate.valid
+            <tr className={needsChange ? "proposed" : ""}><th>Proposed plan</th>{feasible
               ? <><td>{candidate.assignments.support}</td><td>{candidate.assignments.batch}</td></>
-              : <td colSpan={2} className={proposalCurrent ? "no-plan" : ""}>{proposalCurrent ? "No valid plan" : "Unknown"}</td>}</tr>
+              : <td colSpan={2} className={proposalCurrent ? "no-plan" : ""} title={candidate?.reason}>{proposalCurrent ? "No valid plan" : "Unknown"}</td>}</tr>
             {selection && <tr className={stale ? "stale" : "selected"}><th>You selected{stale ? " (out of date)" : ""}</th>
               <td>{selection.assignments?.support ?? "?"}</td><td>{selection.assignments?.batch ?? "?"}</td></tr>}
           </tbody>
         </table>
-        <p className="plan-status">{!proposalCurrent ? "The proposed plan is unavailable." : !candidate.valid ? "No plan fits policy and capacity right now."
+        <p className="plan-status">{!proposalCurrent ? "The proposed plan is unavailable." : !feasible ? "No plan fits policy and capacity right now."
           : needsChange ? "The proposed plan needs your approval." : "What's running is the proposed plan."}</p>
         <ApprovalStatus live={live} />
       </aside>
@@ -271,8 +300,8 @@ export default function Presenter({ live, now, control }: { live: Live; now: num
         <div className="controls">
           <div>{(["start-traffic", "stop-traffic", "fail-eu-a", "select-plan", "approve-plan", "summaries-europe", "summaries-anywhere", "eu-a-half", "eu-a-full"] as const).map(id => <span key={id}>{actionButton(id)}</span>)}</div>
           {result(Object.keys(actions))}
-          <div><button disabled={!canAct} onClick={() => health && void run("submit", "/tasks", { id: `${health.run_epoch}-support-${crypto.randomUUID()}`, run_epoch: health.run_epoch, workload: "support", content: pick(SUPPORT_QUESTIONS) })}>Submit one support request</button>
-            <button disabled={!canAct} onClick={() => health && void run("submit", "/tasks", { id: `${health.run_epoch}-batch-${crypto.randomUUID()}`, run_epoch: health.run_epoch, workload: "batch", content: pick(SUMMARY_REQUESTS) })}>Submit one summary request</button>
+          <div><button disabled={!canAct} onClick={() => health && void run("submit", [{ path: "/tasks", body: { id: `${health.run_epoch}-support-${crypto.randomUUID()}`, run_epoch: health.run_epoch, workload: "support", content: pick(SUPPORT_QUESTIONS) } }])}>Submit one support request</button>
+            <button disabled={!canAct} onClick={() => health && void run("submit", [{ path: "/tasks", body: { id: `${health.run_epoch}-batch-${crypto.randomUUID()}`, run_epoch: health.run_epoch, workload: "batch", content: pick(SUMMARY_REQUESTS) } }])}>Submit one summary request</button>
             {result(["submit"])}</div>
           <DeploymentControl canAct={canAct} run={run} health={health} />
         </div>
@@ -302,57 +331,53 @@ export default function Presenter({ live, now, control }: { live: Live; now: num
   </div>;
 }
 
-function Answers({ live, overdue, proposalCurrent, valid, needsChange }: { live: Live; overdue: number; proposalCurrent: boolean; valid: boolean; needsChange: boolean }) {
-  const resilience = readDecision(live.context, "resilience-results").data;
-  const down = (live.health?.model.endpoints ?? []).some(e => e.mode !== "ok" || !e.reporting);
-  const action = !proposalCurrent ? ["Unknown", ""] : !valid ? ["No valid plan", "bad"] : needsChange ? ["Approve proposed plan", "warn"]
-    : !down && resilience?.state === "infeasible" ? ["At risk", "warn"] : ["None", "ok"];
-  const safe = down ? ["Already one down", ""] : !resilience || resilience.state === "unknown" ? ["Unknown", ""]
-    : resilience.state === "feasible" ? ["Yes", "ok"] : [`No: not if ${resilience.failure ?? "one"} fails`, "warn"];
-  const command = live.decisions?.commands[0];
-  const recovery = command ? live.decisions?.recovery[command.id] : undefined;
-  const verified = recovery?.state === "confirmed" && typeof recovery.expires_ms === "number" && recovery.expires_ms > Date.now()
-    && recovery.applied_revision === live.health?.revision;
-  const recoveryText = !command || recovery?.applied_revision !== live.health?.revision ? ["Nothing to verify", ""] : verified ? ["Verified", "ok"] : ["Awaiting evidence", "warn"];
+// The same four answers as the projector's Drasi tiles, read from the same tile queries.
+function Answers({ live }: { live: Live }) {
+  const q = live.queries;
+  const late = q["overdue-tasks"].rows.filter(row => row.workload === "support").length;
+  const actionValue = tileValue(q["tile-action"].rows);
+  const action = [["None", "ok"], ["Approve proposed plan", "warn"], ["No valid plan", "bad"], ["At risk", "warn"]][actionValue ?? -1] ?? ["Unknown", ""];
+  const safeRow = q["tile-resilience"].rows[0];
+  const safeValue = tileValue(q["tile-resilience"].rows);
+  const safe = safeValue === 1 ? ["Yes", "ok"] : safeValue === 0 ? [`No: not if ${String(safeRow?.lost || "one")} fails`, "warn"]
+    : safeValue === 2 ? ["Already one down", ""] : ["Unknown", ""];
+  // No recovery row once attached means nothing to verify (contracts.md §9).
+  const recoveryValue = q["tile-recovery"].attached && !q["tile-recovery"].rows.length ? 2 : tileValue(q["tile-recovery"].rows);
+  const recovery = [["Awaiting evidence", "warn"], ["Verified", "ok"], ["Nothing to verify", ""]][recoveryValue ?? -1] ?? ["Unknown", ""];
   return <dl className="answers">
-    <div><dt>Support overdue</dt><dd className={overdue ? "bad" : "ok"}>{overdue}</dd></div>
+    <div><dt>Support overdue</dt><dd className={!q["overdue-tasks"].attached ? "" : late ? "bad" : "ok"}>{q["overdue-tasks"].attached ? late : "Unknown"}</dd></div>
     <div><dt>Action needed</dt><dd className={action[1]}>{action[0]}</dd></div>
-    <div><dt>Recovery</dt><dd className={recoveryText[1]}>{recoveryText[0]}</dd></div>
+    <div><dt>Recovery</dt><dd className={recovery[1]}>{recovery[0]}</dd></div>
     <div><dt>Safe if one fails?</dt><dd className={safe[1]}>{safe[0]}</dd></div>
   </dl>;
 }
 
+// The latest approval and its outcome, as Drasi reports it.
 function ApprovalStatus({ live }: { live: Live }) {
-  const command = live.decisions?.commands[0];
-  if (!live.decisions) return <p className="approval">Approval status unavailable.</p>;
-  // The audit list is newest first: a rejection newer than the last approved plan is the latest news.
-  const latest = live.decisions.audit.find(row => ["approved", "approval_rejected", "application_rejected"].includes(String(row.action)));
-  if (latest && latest.action !== "approved") {
-    const reason = (latest.detail as { error?: string } | undefined)?.error ?? "the plan was out of date";
-    return <p className="approval">Last approval rejected: {reason}.</p>;
-  }
-  if (!command) return <p className="approval">No plan approved yet.</p>;
-  const recovery = live.decisions.recovery[command.id];
-  const verifiedNow = live.decisions.streams_attached && recovery?.run_epoch === live.health?.run_epoch &&
-    recovery?.applied_revision === live.health?.revision && recovery?.state === "confirmed" &&
-    typeof recovery?.expires_ms === "number" && recovery.expires_ms > Date.now();
-  const message = command.status === "rejected" ? `Last approval rejected: ${command.error ?? "the plan was out of date"}`
-    : command.status === "committed" ? "Approved. Applying the new routes…"
+  const query = live.queries["tile-last-approval"];
+  if (!query.attached) return <p className="approval">Approval status unavailable.</p>;
+  const latest = lastApproval(query);
+  if (!latest) return <p className="approval">No plan approved yet.</p>;
+  const recovery = live.queries["tile-recovery"];
+  const verifiedNow = latest.state === 3 && tileValue(recovery.rows) === 1;
+  const message = latest.state === 1 ? "Approved. Drasi is checking it against the current plan…"
+    : latest.state === 2 ? "Applied. Waiting for evidence that recovery worked."
     : verifiedNow ? "Recovery verified ✓"
-    : command.status === "recovery_confirmed" ? "Recovery was verified; the evidence has since expired."
-    : "Applied. Waiting for evidence that recovery worked.";
+    : latest.state === 3 ? "Recovery was verified; the evidence has since expired."
+    : latest.state === 4 ? `Last approval rejected: ${latest.reason}.`
+    : "Approval status unknown.";
   return <p className={`approval ${verifiedNow ? "ok" : ""}`}>{message}</p>;
 }
 
-type Run = (action: string, path: string, body: unknown, expectRejected?: boolean) => Promise<void>;
-function DeploymentControl({ canAct, run, health }: { canAct: boolean; run: Run; health: Live["health"] }) {
-  const [endpoint, setEndpoint] = useState("EU-A");
+type Run = (action: string, requests: Request[], expectRejected?: boolean) => Promise<void>;
+function DeploymentControl({ canAct, run, health }: { canAct: boolean; run: Run; health: Health | null }) {
+  const [deployment, setDeployment] = useState("EU-A");
   const [action, setAction] = useState("restore");
   const labels: Record<string, string> = { restore: "Restore", fail: "Fail (HTTP 503)", throttle: "Over quota (HTTP 429)", "pause-reports": "Stop health reports", "resume-reports": "Resume health reports" };
   return <div className="deployment-control"><b>Any deployment</b>
-    <select aria-label="Deployment" value={endpoint} onChange={event => setEndpoint(event.target.value)}>{["EU-A", "EU-B", "US-C"].map(id => <option key={id}>{id}</option>)}</select>
+    <select aria-label="Deployment" value={deployment} onChange={event => setDeployment(event.target.value)}>{["EU-A", "EU-B", "US-C"].map(id => <option key={id}>{id}</option>)}</select>
     <select aria-label="Change" value={action} onChange={event => setAction(event.target.value)}>{Object.entries(labels).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select>
-    <button disabled={!canAct} onClick={() => health && void run("deployment", "/control", { run_epoch: health.run_epoch, revision: health.revision, endpoint, action })}>Apply to deployment</button>
+    <button disabled={!canAct} onClick={() => health && void run("deployment", [{ path: "/control", body: { run_epoch: health.run_epoch, deployment, action } }])}>Apply to deployment</button>
   </div>;
 }
 
@@ -360,18 +385,16 @@ function BeforeAfter({ live, canAct, run, feedback }: { live: Live; canAct: bool
   const [armed, setArmed] = useState(false);
   const health = live.health;
   if (!health) return <p>Waiting for the demo…</p>;
-  const model = health.model;
-  const route = (id: string) => model.workloads.find(w => w.id === id)?.destination ?? "?";
-  const batch = model.policy?.destinations.batch ?? [];
-  const starting = model.endpoints.every(e => e.mode === "ok" && e.reporting && e.budget_tpm === 100000)
+  const route = (id: string) => health.workloads.find(w => w.id === id)?.deployment ?? "?";
+  const batch = health.destinations.batch ?? [];
+  const starting = health.deployments.every(e => e.mode === "ok" && e.reporting && e.capacity_tpm === 100000)
     && route("support") === "EU-A" && route("batch") === "EU-B" && batch.includes("US-C");
   return <div className="before-after">
-    <p className={starting ? "ok" : "warning"}><b>{starting ? "✓ Starting state" : "Not the starting state"}</b> · {model.endpoints.map(e => `${e.id} ${modeLabel[e.mode] ?? e.mode} ${e.budget_tpm / 1000}k`).join(" · ")} · Support → {route("support")} · Summaries → {route("batch")}</p>
+    <p className={starting ? "ok" : "warning"}><b>{starting ? "✓ Starting state" : "Not the starting state"}</b> · {health.deployments.map(e => `${e.id} ${modeLabel[e.mode] ?? e.mode} ${e.capacity_tpm / 1000}k`).join(" · ")} · Support → {route("support")} · Summaries → {route("batch")}</p>
     <button disabled={!canAct} onClick={() => setArmed(!armed)}>Reset scenario…</button>
-    {armed && <span className="warning"> Restores the starting state and cancels waiting requests. Never during the talk. <button disabled={!canAct} onClick={() => { setArmed(false); void run("reset", "/reset", { run_epoch: health.run_epoch, revision: health.revision }); }}>Confirm reset</button></span>}
+    {armed && <span className="warning"> Restores the starting state and cancels waiting requests. Never during the talk. <button disabled={!canAct} onClick={() => { setArmed(false); void run("reset", [{ path: "/reset", body: { run_epoch: health.run_epoch, revision: health.revision } }]); }}>Confirm reset</button></span>}
     {feedback?.action === "reset" && <p className={`result ${feedback.tone}`}>{feedback.message}</p>}
-    <details><summary>Full settings</summary><Json value={model} /></details>
-    <p className="muted">Workloads: {model.workloads.map(w => `${workloadName[w.id] ?? w.id} ${w.reservation_tpm / 1000}k`).join(", ")}. Open the projector window from this desk, then move it to the projector and make it full screen.</p>
+    <details><summary>Full settings</summary><Json value={{ deployments: health.deployments, workloads: health.workloads, destinations: health.destinations }} /></details>
+    <p className="muted">Workloads: {health.workloads.map(w => `${workloadName[w.id] ?? w.id} ${w.demand_tpm / 1000}k`).join(", ")}. Open the projector window from this desk, then move it to the projector and make it full screen.</p>
   </div>;
 }
-

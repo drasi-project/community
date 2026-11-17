@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { settings } from "./settings";
 import { z } from "zod";
 import { products, type View } from "../../../presentation/scenes";
-import { isCurrent, readDecision, rows, text, request, errorText, type Row, type Selection } from "./contracts";
+import { readPlan, tileValue, text, request, errorText, taskSchema, type Row, type Selection } from "./contracts";
 import { useQuery, type Live } from "./live";
 import { queryText } from "./queryText";
 
@@ -29,197 +29,174 @@ export function Panel({ title, children, className = "" }: { title: string; chil
   return <section className={`panel ${className}`}><h2>{title}</h2>{children}</section>;
 }
 export function LiveBanner({ live, now }: { live: Live; now: number }) {
-  const ready = !live.error && live.health?.continuous_context === "ready" && live.context?.streams_attached &&
-    live.received !== null && now - live.received < 6000;
+  const ready = !live.error && !live.drasiError && live.received !== null && now - live.received < 6000;
   return <div className={`live-banner ${ready ? "" : "warning"}`} role="status">
-    <strong>{ready ? "LIVE · Context ready" : "UNKNOWN · Context unavailable or stale"}</strong>
-    <span>{live.health ? <>Epoch <Basis value={live.health.run_epoch} /> · input r{live.health.revision}</> : "No authoritative model"}
-      {live.received && <> · mirror received {Math.max(0, (now - live.received) / 1000).toFixed(1)}s ago</>}</span>
-    {live.error && <span className="error-detail">{live.error}</span>}
+    <strong>{ready ? "LIVE · Drasi attached" : "UNKNOWN · Drasi or the AI service unavailable"}</strong>
+    <span>{live.health ? <>Epoch <Basis value={live.health.run_epoch} /> · scenario r{live.health.revision}</> : "AI service unavailable"}
+      {live.received && <> · AI service polled {Math.max(0, (now - live.received) / 1000).toFixed(1)}s ago</>}</span>
+    {(live.error || live.drasiError) && <span className="error-detail">{[live.error, live.drasiError].filter(Boolean).join("; ")}</span>}
   </div>;
 }
 
+const statusLabel = ["Healthy", "Over quota", "Failed"];
+
 function Operations({ live, setView }: { live: Live; setView: (view: View) => void }) {
   const health = live.health;
+  const deployments = useQuery("tile-deployments");
+  const alerts = useQuery("grafana-alerts");
   return <div className="operations-grid">
     <Panel title="Grafana is the operational home" className="product-home">
       <p className="lead">Start with measured requests.<br />Return here to confirm outcomes.</p>
       <ProductLink href={products.grafana}>Open real Grafana dashboard</ProductLink>
       <div className="telemetry-path"><b>Application OTel</b><span>→ Collector → Prometheus →</span><b>Grafana</b></div>
-      <p>Request success and latency, endpoint errors, queues, throughput, allocations and alerts live in the real product tab. No synthetic charts or iframe authentication workarounds.</p>
+      <p>Request success and latency, endpoint errors, queues and throughput come from the application's telemetry. Every Drasi tile comes from Drasi's Prometheus reaction.</p>
       <p className="muted">Prometheus scraping and Grafana evaluation remain periodic. “Without polling” refers to Drasi's change-driven and time-aware computation.</p>
     </Panel>
-    <Panel title="Authoritative workload configuration">
+    <Panel title="Scenario in the AI service's database">
       {health ? <>
-        <table><thead><tr><th>Workload</th><th>Assigned</th><th>Commitment</th><th>Scope</th></tr></thead><tbody>
-          {health.model.workloads.map(workload => <tr key={workload.id}><td>{workload.id}</td><td>{workload.destination}</td><td>{workload.reservation_tpm.toLocaleString()} units/min</td><td>{workload.region}</td></tr>)}
+        <table><thead><tr><th>Workload</th><th>Route</th><th>Demand</th><th>Region</th></tr></thead><tbody>
+          {health.workloads.map(workload => <tr key={workload.id}><td>{workload.id}</td><td>{workload.deployment}</td><td>{workload.demand_tpm.toLocaleString()} tokens/min</td><td>{workload.region_requirement}</td></tr>)}
         </tbody></table>
         <div className="metrics"><div><strong>{health.pending}</strong><span>Pending tasks</span></div><div><strong>{health.task_target_seconds}s</strong><span>Demo task target</span></div><div><strong>{health.report_expiry_seconds}s</strong><span>Report expiry</span></div></div>
-        <p>Configured token units and regional labels are simulated. HTTP requests, telemetry and task outcomes are real.</p>
-      </> : <p className="warning">Configuration unknown. No replacement fixture is displayed.</p>}
+        <p>Capacities and regions are simulated. HTTP requests, telemetry and task outcomes are real.</p>
+      </> : <p className="warning">Scenario unknown. No replacement fixture is displayed.</p>}
       <div className="actions"><button onClick={() => setView("decisions")}>Explain decisions</button><button onClick={() => setView("trace")}>Inspect a task</button></div>
     </Panel>
-    <Panel title="Observed endpoint evidence">
-      <table><thead><tr><th>Endpoint</th><th>Query status</th><th>Observed</th><th>Sequence</th></tr></thead><tbody>
-        {rows(live.context, "endpoint-freshness").map(row => <tr key={text(row.id)}><td>{text(row.id)}</td><td>{text(row.status)}</td><td>{typeof row.observed_ms === "number" ? new Date(row.observed_ms).toLocaleTimeString() : "unknown"}</td><td>{text(row.sequence)}</td></tr>)}
+    <Panel title="Deployment status (Drasi · tile-deployments)">
+      <table><thead><tr><th>Deployment</th><th>Status</th><th>Capacity</th></tr></thead><tbody>
+        {deployments.rows.map(row => <tr key={text(row.deployment)}><td>{text(row.deployment)}</td>
+          <td>{typeof row.status === "number" && row.status >= 0 ? statusLabel[row.status] ?? text(row.status) : "Unknown"}</td><td>{text(row.capacity_tpm)}</td></tr>)}
       </tbody></table>
-      {!live.context?.streams_attached && <p className="warning">Disconnected mirror: rows are not proof of current health.</p>}
+      {!deployments.attached && <p className="warning">{deployments.error}</p>}
     </Panel>
-    <Panel title="Grafana alert transitions → Drasi">
-      {rows(live.context, "alert-context").length ? rows(live.context, "alert-context").slice(-3).map(row =>
+    <Panel title="Grafana alerts → Drasi (grafana-alerts)">
+      {alerts.rows.length ? alerts.rows.slice(-3).map(row =>
         <div className="alert-row" key={text(row.id)}><Status bad={row.status !== "resolved"}>{text(row.status)}</Status><span>{text(row.title)}</span></div>
-      ) : <p>No alert rows available. This is not a health assertion.</p>}
-      <p className="muted">Normalized product webhooks; independent of scenario navigation.</p>
+      ) : <p>{alerts.attached ? "No alert rows. This is not a health assertion." : alerts.error}</p>}
+      <p className="muted">Grafana's contact point posts to Drasi's HTTP source.</p>
     </Panel>
   </div>;
 }
 
-function Decisions({ live, now, selection }: { live: Live; now: number; selection: Selection | null }) {
-  const allocation = readDecision(live.context, "allocation-results");
-  const policy = readDecision(live.context, "policy-results");
-  const resilience = readDecision(live.context, "resilience-results");
-  const decision = allocation.data;
-  const current = isCurrent(decision, live.health, now) && !live.error && live.context?.streams_attached;
-  const policyCurrent = isCurrent(policy.data, live.health, now) && !live.error && live.context?.streams_attached;
-  const resilienceCurrent = isCurrent(resilience.data, live.health, now) && !live.error && live.context?.streams_attached;
+function Decisions({ live, selection }: { live: Live; selection: Selection | null }) {
+  const policy = useQuery("policy-results");
+  const resilience = useQuery("resilience-results");
+  const { plan, error } = readPlan(live.queries["plan-results"].rows);
+  const workloads = [...new Set(policy.rows.map(row => text(row.subject)))].sort();
+  const targets = [...new Set(policy.rows.map(row => text(row.target)))].sort();
+  const summary = resilience.rows.find(row => row.id === "resilience");
+  const losses = resilience.rows.filter(row => row.id !== "resilience");
+  const approval = live.queries["tile-last-approval"].rows[0];
   return <div className="decision-grid">
     <div className="decision-main">
-    <Panel title="Permission is not the same as availability" className="eligibility">
-      <div className="panel-line"><Status bad={!policyCurrent}>{policyCurrent ? `Current Rego policy r${policy.data?.policy_revision}` : "Unknown / historical policy evidence"}</Status><span>Only explicit allow is permission</span></div>
-      {policy.data ? <table><thead><tr><th>Workload</th>{policy.data.model.endpoints.map(endpoint => <th key={endpoint.id}>{endpoint.id}</th>)}</tr></thead><tbody>
-        {policy.data.model.workloads.map(workload => <tr key={workload.id}><td><b>{workload.id}</b><small>{workload.reservation_tpm.toLocaleString()} units/min</small></td>
-          {policy.data?.model.endpoints.map(endpoint => {
-            const eligibility = policy.data?.eligibility[workload.id]?.[endpoint.id];
-            return <td key={endpoint.id}><strong className={eligibility?.allowed && policyCurrent ? "positive" : "warning"}>{!policyCurrent ? "Unknown" : eligibility ? eligibility.allowed ? "Allowed" : "Denied" : "Unknown"}</strong>
-              <small>{eligibility?.reason ?? "No eligibility result"}</small><small>Observed: {policy.data?.evidence[endpoint.id]?.status ?? "unknown"}</small></td>;
+    <Panel title="Permission is not the same as availability (policy-results)" className="eligibility">
+      <div className="panel-line"><Status bad={!policy.attached}>{policy.attached ? "Drasi Rego policy plugin" : "Unknown / disconnected"}</Status><span>Only explicit allow is permission</span></div>
+      {policy.rows.length ? <table><thead><tr><th>Workload</th>{targets.map(id => <th key={id}>{id}</th>)}</tr></thead><tbody>
+        {workloads.map(workload => <tr key={workload}><td><b>{workload}</b></td>
+          {targets.map(target => {
+            const row = policy.rows.find(r => r.subject === workload && r.target === target);
+            return <td key={target}><strong className={row?.state === "allowed" ? "positive" : "warning"}>{row ? row.state === "allowed" ? "Allowed" : row.state === "denied" ? "Denied" : "Unknown" : "Unknown"}</strong>
+              <small>{text(row?.reason ?? "No policy result")}</small></td>;
           })}</tr>)}
-      </tbody></table> : <p className="warning">{policy.error}</p>}
+      </tbody></table> : <p className="warning">{policy.error ?? "No policy results"}</p>}
     </Panel>
-    <Panel title="Current versus proposed allocation" className="allocation">
-      {decision ? <div className="endpoint-cards">{decision.model.endpoints.map(endpoint =>
-        <article className="endpoint-card" key={endpoint.id}>
-          <h3>{endpoint.id} <small>{endpoint.region}</small></h3><p>{endpoint.budget_tpm.toLocaleString()} modeled units/min</p>
-          <div className="assignment"><span>Current</span>{decision.model.workloads.filter(w => w.destination === endpoint.id).map(w => <b key={w.id}>{w.id} · {w.reservation_tpm.toLocaleString()}</b>)}</div>
-          <div className="assignment proposed"><span>{current ? "Proposed" : "Historical proposal"}</span>{Object.entries(decision.assignments).filter(([, destination]) => destination === endpoint.id).map(([id]) => <b key={id}>{id} · {decision.model.workloads.find(w => w.id === id)?.reservation_tpm.toLocaleString()}</b>)}</div>
-        </article>)}</div> : <p className="warning">{allocation.error}</p>}
-      <p className="muted">Complete native-model assignments. Routing changes apply to new/queued requests, not in-flight work.</p>
+    <Panel title="Proposed plan (plan-results)" className="allocation">
+      {plan ? <>
+        <p><b>{plan.state}</b> · {plan.moves} move{plan.moves === 1 ? "" : "s"} · {plan.reason}</p>
+        <table><thead><tr><th>Workload</th><th>Deployment</th></tr></thead><tbody>
+          {Object.entries(plan.assignments).map(([item, bin]) => <tr key={item}><td>{item}</td><td>{bin}</td></tr>)}</tbody></table>
+      </> : <p className="warning">{error}</p>}
+      <p className="muted">Drasi's optimizer plugin. Routing changes apply to new and queued requests, not in-flight work.</p>
     </Panel>
-    <Panel title="Independent what-if: lose EU-A" className="resilience">
-      <div className="large-result">{resilienceCurrent ? resilience.data?.state : "Unknown"}</div>
-      <p>{resilience.data?.reason ?? resilience.error}</p>
-      <p>Failure: <b>{resilience.data?.failure ?? "unknown"}</b> · read-only, not a command.</p>
-      {resilience.data && <span>Basis <Basis value={resilience.data.basis} /></span>}
+    <Panel title="What if one fails (resilience-results)" className="resilience">
+      <div className="large-result">{text(summary?.state)}</div>
+      <p>First failure: <b>{text(summary?.first_failure || "none")}</b> · read-only, not a command.</p>
+      <ul>{losses.map(row => <li key={text(row.id)}>Lose {text(row.lost ?? row.id)}: {text(row.state)}</li>)}</ul>
+      {typeof summary?.basis === "string" && <span>Basis <Basis value={summary.basis} /></span>}
     </Panel>
     </div>
     <div className="decision-side">
-    <Panel title="Candidate → command → recovery" className="lifecycle">
-      <Status bad={!current}>{current ? `Candidate: ${decision?.state}` : "Candidate: unknown / stale"}</Status>
-      <p className="decision-reason">{decision?.reason ?? allocation.error}</p>
-      {decision && <p>Model r{decision.revision} · policy r{decision.policy_revision}<br />Basis <Basis value={decision.basis} /> · candidate <Basis value={decision.candidate_id} /><br />
-        Evidence lease: {Object.values(decision.evidence).length ? `${Math.max(0, (Math.min(...Object.values(decision.evidence).map(e => e.expires_ms)) - now) / 1000).toFixed(1)}s remaining` : "unknown"}</p>}
-      {selection && <div className="retained"><b>Selected proposal retained</b><p>Basis <Basis value={selection.basis} /> · model r{selection.revision}</p>
-        <Status bad={selection.basis !== decision?.basis}>{selection.basis === decision?.basis ? "Matches current basis" : "STALE SELECTION · server must recheck"}</Status></div>}
-      <CommandSummary live={live} />
+    <Panel title="Candidate → approval → recovery" className="lifecycle">
+      <Status bad={!plan || plan.state === "unknown"}>{plan ? `Plan: ${plan.state}` : "Plan: unknown"}</Status>
+      {plan && <p>Scenario r{plan.revision}<br />Basis <Basis value={plan.basis} /> · candidate <Basis value={plan.candidate_id || "none"} /></p>}
+      {selection && <div className="retained"><b>Selected proposal retained</b><p>Basis <Basis value={selection.basis} /> · scenario r{selection.revision}</p>
+        <Status bad={selection.basis !== plan?.basis}>{selection.basis === plan?.basis ? "Matches current basis" : "Differs from Drasi's current plan"}</Status></div>}
+      <p>Last approval (tile-last-approval): {approval ? <><Basis value={text(approval.approval)} /> · state {text(approval.value)}{approval.reason ? ` · ${text(approval.reason)}` : ""}</> : "none yet"}</p>
+      <p>Recovery (tile-recovery): {text(live.queries["tile-recovery"].rows[0]?.value ?? "nothing to verify")}</p>
     </Panel>
     </div>
   </div>;
 }
 
-export function CommandSummary({ live }: { live: Live }) {
-  if (live.decisionsError) return <p className="warning">Command/publication status unavailable: {live.decisionsError}</p>;
-  if (!live.decisions) return <p>Command status unknown.</p>;
-  const command = live.decisions.commands[0];
-  const recovery = command ? live.decisions.recovery[command.id] : null;
-  const recoveryCurrent = live.decisions.streams_attached && !live.error && recovery?.run_epoch === live.health?.run_epoch &&
-    recovery?.applied_revision === live.health?.revision && typeof recovery?.expires_ms === "number" && recovery.expires_ms > Date.now();
-  return <div className="command-summary">
-    {command ? <>
-      <p>Command <Basis value={command.id} /> · <strong className={command.status === "rejected" ? "warning" : ""}>{command.status}</strong></p>
-      <ol className="stages">
-        <li><b>Committed</b><span>{new Date(command.committed_ms).toLocaleTimeString()}</span></li>
-        <li><b>Gateway applied</b><span>{command.applied_ms ? `r${command.applied_revision} · ${new Date(command.applied_ms).toLocaleTimeString()}` : "Not acknowledged"}</span></li>
-        <li><b>Recovery confirmed (history)</b><span>{command.recovered_ms ? new Date(command.recovered_ms).toLocaleTimeString() : "Not confirmed"}</span></li>
-      </ol>
-      <Status bad={!recoveryCurrent || recovery?.state !== "confirmed"}>Current recovery: {recoveryCurrent ? text(recovery?.state) : "unknown"}</Status>
-      {command.error && <p className="warning">{command.error}</p>}
-      <p className="muted">{live.decisions.observation_window_ms / 1000}s observation window; recent success within {live.decisions.success_freshness_ms / 1000}s. Historical confirmation does not promise current recovery.</p>
-    </> : <p>No durable command in this epoch. Awaiting explicit approval.</p>}
-    {live.decisions.publications.length > 0 ? <p className="warning">Publication pending / failed: {live.decisions.publications.map(item => `${item.target} (${item.attempts} attempts): ${item.last_error ?? "awaiting delivery"}`).join("; ")}</p> : <p className="muted">No undelivered publications reported.</p>}
-    <details className="audit"><summary>Exact command, recovery & publication evidence</summary><Json value={live.decisions} /></details>
-  </div>;
-}
-
-function FollowChange({ live }: { live: Live }) {
-  const [query, setQuery] = useState("overdue-tasks");
+function FollowChange() {
+  const names = Object.keys(queryText);
+  const [query, setQuery] = useState(names.includes("overdue-tasks") ? "overdue-tasks" : names[0] ?? "overdue-tasks");
   const stream = useQuery(query);
   const [page, setPage] = useState(0);
   const [pinned, setPinned] = useState<{ at: number; query: string; rows: Row[] } | null>(null);
   const [inspect, setInspect] = useState<Row | null>(null);
-  const source = query === "overdue-tasks" ? rows(live.context, "task-context") : rows(live.context, "endpoint-freshness");
   const ordered = [...stream.rows].sort((a, b) => Number(b.created_ms ?? b.observed_ms ?? 0) - Number(a.created_ms ?? a.observed_ms ?? 0));
   const shown = ordered.slice(page * 3, page * 3 + 3);
   useEffect(() => { setPage(0); setInspect(null); }, [query]);
   return <div className="change-layout">
-    <div className="flow" aria-label="Actual computation path"><span>PostgreSQL CDC</span><span>→ Continuous queries</span><span>→ Native policy & models</span><span>→ Results / reactions</span><ProductLink href={products.server}>Server graph UI</ProductLink></div>
+    <div className="flow" aria-label="Actual computation path"><span>PostgreSQL CDC</span><span>→ Continuous queries</span><span>→ Policy and optimizer plugins</span><span>→ Results / reactions</span><ProductLink href={products.server}>Server graph UI</ProductLink></div>
     <div className="query-toolbar">
-      <label>Actual query <select value={query} onChange={event => setQuery(event.target.value)}>{Object.keys(queryText).map(name => <option key={name}>{name}</option>)}</select></label>
+      <label>Actual query <select value={query} onChange={event => setQuery(event.target.value)}>{names.map(name => <option key={name}>{name}</option>)}</select></label>
       <Status bad={!stream.attached}>{stream.attached ? `Attached · ${stream.events} snapshot / difference frames` : "Unknown / disconnected"}</Status>
-      <button onClick={() => setPinned({ at: Date.now(), query, rows: structuredClone(source) })}>Pin input evidence</button>
+      <button onClick={() => setPinned({ at: Date.now(), query, rows: structuredClone(stream.rows) })}>Pin current rows</button>
     </div>
     <div className="two-columns">
-      <Panel title="Continuous query · actual bundled source"><pre className="query-code">{queryText[query]}</pre><p className="muted">Source: demo/drasi. Server delivery is snapshot-first; reconnect replaces all rows. Result files are shared by the three model-result queries.</p></Panel>
+      <Panel title="Continuous query · actual bundled source"><pre className="query-code">{queryText[query] ?? ""}</pre><p className="muted">Source: demo/drasi. Server delivery is snapshot-first; reconnect replaces all rows.</p></Panel>
       <Panel title="Live maintained rows">
         {stream.error && <p className="warning" role="status">{stream.error}</p>}
         {stream.attached && !stream.rows.length && <p className="empty-state">Empty result set · no matching rows now</p>}
-        {shown.map(row => <button className="row-card" data-row-id={text(row.id)} key={text(row.id)} onClick={() => setInspect(row)}>
-          <b>{text(row.workload ?? row.id)}</b><span>{text(row.impact ?? row.state ?? row.status ?? row.completed_ms ?? row.revision)}</span>
+        {shown.map((row, i) => <button className="row-card" data-row-id={text(row.id)} key={text(row.id ?? i)} onClick={() => setInspect(row)}>
+          <b>{text(row.workload ?? row.id)}</b><span>{text(row.impact ?? row.state ?? row.status ?? row.value ?? row.revision)}</span>
           <small>{row.basis ? `basis ${text(row.basis).slice(0, 12)}` : `id ${text(row.id)}`}</small>
-          {row.observed_ms !== undefined && <small>observed_ms {text(row.observed_ms)} · sequence {text(row.sequence)}</small>}
           {row.deadline_ms !== undefined && <small>deadline_ms {text(row.deadline_ms)}</small>}
         </button>)}
         <div className="pagination"><button disabled={page === 0} onClick={() => setPage(page - 1)}>Previous rows</button><span>{stream.rows.length} actual rows</span><button disabled={(page + 1) * 3 >= stream.rows.length} onClick={() => setPage(page + 1)}>Next rows</button></div>
       </Panel>
     </div>
-    <div className="evidence-strip">{pinned ? <><b>PINNED SNAPSHOT · {new Date(pinned.at).toLocaleTimeString()} · {pinned.query}</b><span>{pinned.rows.length} input rows retained, not live</span><button onClick={() => setInspect({ captured_ms: pinned.at, rows: pinned.rows })}>Inspect pinned inputs</button></> : <><b>Demonstrate time without another source event</b><span>Pin the task/report input, then use an explicit desk control. Compare unchanged deadline, sequence and observation time with the new maintained result.</span></>}</div>
+    <div className="evidence-strip">{pinned ? <><b>PINNED SNAPSHOT · {new Date(pinned.at).toLocaleTimeString()} · {pinned.query}</b><span>{pinned.rows.length} rows retained, not live</span><button onClick={() => setInspect({ captured_ms: pinned.at, rows: pinned.rows })}>Inspect pinned rows</button></> : <><b>Demonstrate time without another source event</b><span>Pin the rows, wait for a deadline to pass, and compare with the maintained result.</span></>}</div>
     {inspect && <EvidenceDialog value={inspect} close={() => setInspect(null)} />}
   </div>;
 }
 
 function Trace({ live }: { live: Live }) {
-  const tasks = rows(live.context, "task-context").sort((a, b) => Number(b.created_ms) - Number(a.created_ms));
+  const tasks = [...live.queries["overdue-tasks"].rows].sort((a, b) => Number(a.deadline_ms) - Number(b.deadline_ms));
   const [selected, setSelected] = useState("");
   const task = tasks.find(row => row.id === selected) ?? tasks[0];
-  const [link, setLink] = useState<string | null>(null);
+  const [detail, setDetail] = useState<{ attempts: Row[]; link: string | null } | null>(null);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
-    setLink(null); setError(null);
+    setDetail(null); setError(null);
     if (!task) return;
     const controller = new AbortController();
     void request(`/api/tasks/${encodeURIComponent(text(task.id))}`, { signal: AbortSignal.any([controller.signal, AbortSignal.timeout(6000)]) })
       .then(data => {
-        const result = z.object({ trace_url: z.string().url().optional() }).passthrough().parse(data);
-        if (!result.trace_url) throw new Error("Task API has not returned a trace_url. Use the submitted task link on the desk or locate this exact trace ID in Langfuse.");
-        const url = new URL(result.trace_url);
-        if (url.origin !== settings.langfuse || !url.pathname.startsWith("/project/ignite-probe/traces/")) throw new Error("Unexpected trace destination");
-        setLink(result.trace_url);
+        const result = taskSchema.extend({ trace_url: z.string().url().optional() }).parse(data);
+        let link: string | null = null;
+        if (result.trace_url) {
+          const url = new URL(result.trace_url);
+          if (url.origin !== settings.langfuse || !url.pathname.startsWith("/project/ignite-probe/traces/")) throw new Error("Unexpected trace destination");
+          link = result.trace_url;
+        }
+        setDetail({ attempts: result.attempts, link });
       }).catch(error => { if (!controller.signal.aborted) setError(errorText(error)); });
     return () => controller.abort();
   }, [task?.id]);
-  const attempts = rows(live.context, "attempt-context").filter(row => row.task_id === task?.id);
   return <div className="two-columns">
-    <Panel title="Follow one actual AI task">
+    <Panel title="Follow one late request (overdue-tasks)">
       <label>Task <select value={task ? text(task.id) : ""} onChange={event => setSelected(event.target.value)}>{tasks.map(row => <option key={text(row.id)} value={text(row.id)}>{text(row.workload)} · {text(row.id).slice(-12)}</option>)}</select></label>
-      {task ? <><p className="identity">Task {text(task.id)}</p><p>Trace <code>{text(task.trace_id)}</code></p><div className="large-result">{task.cancelled_ms ? "Cancelled" : task.completed_ms ? "Completed" : "Pending"}</div><p>{attempts.length} recorded HTTP attempts · destination {text(task.endpoint)}</p>
-        {link ? <ProductLink href={link}>Open this real Langfuse trace</ProductLink> : <p className="warning">{error ?? "Loading returned trace link..."}</p>}</> : <p>No task evidence available.</p>}
+      {task ? <><p className="identity">Task {text(task.id)}</p><p>Trace <code>{text(task.trace_id)}</code></p>
+        {detail?.link ? <ProductLink href={detail.link}>Open this real Langfuse trace</ProductLink> : <p className="warning">{error ?? "Loading the trace link…"}</p>}</> : <p>{live.queries["overdue-tasks"].attached ? "No late requests right now." : "Overdue list unknown."}</p>}
       <ProductLink href={products.langfuse}>Open real Langfuse project</ProductLink>
-      <p className="muted">Use actual task/trace identity. Trace ingestion and independent Drasi publication can lag; task completion alone is not delivery proof.</p>
+      <p className="muted">Trace ingestion can lag; task completion alone is not delivery proof.</p>
     </Panel>
-    <Panel title="Query-maintained outcome evidence">
-      <table><thead><tr><th>Attempt endpoint</th><th>HTTP status</th><th>Finished</th></tr></thead><tbody>{attempts.slice(-5).map(row => <tr key={text(row.id)}><td>{text(row.endpoint)}</td><td>{text(row.status)}</td><td>{row.finished_ms ? new Date(Number(row.finished_ms)).toLocaleTimeString() : "Uncertain"}</td></tr>)}</tbody></table>
-      <p>Showing latest five attempts. Inspect the product trace for the full execution.</p>
-      <Status bad={rows(live.context, "overdue-tasks").some(row => row.id === task?.id)}>Current overdue result: {rows(live.context, "overdue-tasks").some(row => row.id === task?.id) ? "present" : live.context?.streams_attached ? "absent" : "unknown"}</Status>
-      <p>Historical deadline breach: {rows(live.context, "breach-history").some(row => row.id === task?.id) ? "retained" : live.context?.streams_attached ? "no row in current mirror" : "unknown"}</p>
-      <CommandSummary live={live} />
+    <Panel title="Attempts (AI service task record)">
+      <table><thead><tr><th>Deployment</th><th>HTTP status</th><th>Finished</th></tr></thead><tbody>{(detail?.attempts ?? []).slice(-5).map((row, i) => <tr key={text(row.id ?? i)}><td>{text(row.endpoint ?? row.deployment)}</td><td>{text(row.status)}</td><td>{row.finished_ms ? new Date(Number(row.finished_ms)).toLocaleTimeString() : "Uncertain"}</td></tr>)}</tbody></table>
+      <p>Showing the latest five attempts. Inspect the product trace for the full execution.</p>
     </Panel>
   </div>;
 }
@@ -232,9 +209,9 @@ export function Demo({ live, now, view, setView, selection }: { live: Live; now:
     </nav>
     <LiveBanner live={live} now={now} />
     <div className="view-body">
-      <div hidden={view !== "operations"}><Operations live={live} setView={setView} /></div>
-      <div hidden={view !== "decisions"}><Decisions live={live} now={now} selection={selection} /></div>
-      <div hidden={view !== "change"}><FollowChange live={live} /></div>
+      <div hidden={view !== "operations"}>{view === "operations" && <Operations live={live} setView={setView} />}</div>
+      <div hidden={view !== "decisions"}>{view === "decisions" && <Decisions live={live} selection={selection} />}</div>
+      <div hidden={view !== "change"}>{view === "change" && <FollowChange />}</div>
       <div hidden={view !== "trace"}><Trace live={live} /></div>
     </div>
   </div>;

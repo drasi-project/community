@@ -3,9 +3,8 @@ import { createRoot } from "react-dom/client";
 import { Audience } from "../../../presentation/Audience";
 import { useStage } from "./stage";
 import { useClock, useLive } from "./live";
-import { recapFromHistory, type View } from "../../../presentation/scenes";
-import { z } from "zod";
-import { request, rowSchema } from "./contracts";
+import { recapFromState, type View } from "../../../presentation/scenes";
+import { healthSchema, request } from "./contracts";
 import "./style.css";
 
 const Presenter = lazy(() => import("../../../presentation/Presenter"));
@@ -35,9 +34,8 @@ async function resolveDrasiSlide() {
   const params = new URLSearchParams(location.search);
   if (params.get("slide") !== "recap") return;
   try {
-    const { audit } = z.object({ audit: z.array(rowSchema) })
-      .parse(await request("/api/decisions", { signal: AbortSignal.timeout(2000) }));
-    params.set("slide", recapFromHistory(audit).id);
+    const health = healthSchema.parse(await request("/api/health", { signal: AbortSignal.timeout(2000) }));
+    params.set("slide", recapFromState(health).id);
     history.replaceState(null, "", `${location.pathname}?${params}`);
   } catch { /* fall back */ }
 }

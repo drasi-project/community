@@ -4,99 +4,54 @@ export const rowSchema = z.record(z.string(), z.unknown());
 export type Row = z.infer<typeof rowSchema>;
 export const taskSchema = z.object({ task: rowSchema, attempts: z.array(rowSchema) });
 export type TaskDetail = z.infer<typeof taskSchema>;
-export const endpointSchema = z.object({
-  id: z.string(), region: z.string(), model: z.string(), budget_tpm: z.number(),
-  mode: z.string(), reporting: z.boolean(),
-});
-export const modelSchema = z.object({
-  endpoints: z.array(endpointSchema),
-  workloads: z.array(z.object({
-    id: z.string(), destination: z.string(), reservation_tpm: z.number(),
-    model: z.string(), region: z.string(),
-  })),
-  policy: z.object({ revision: z.number(), destinations: z.record(z.string(), z.array(z.string())) }).optional(),
-});
+
+// The AI service's own view of the demo (contracts.md §10, demo controls). It is the application
+// and the demo driver: it never reports Drasi's answers.
 export const healthSchema = z.object({
-  run_epoch: z.string(), revision: z.number(), model: modelSchema, pending: z.number(),
-  continuous_context: z.enum(["ready", "unknown"]), streams_attached: z.boolean(),
+  run_epoch: z.string(), revision: z.number(), pending: z.number(),
   task_target_seconds: z.number(), report_expiry_seconds: z.number(),
   traffic: z.object({ running: z.boolean(), submitted: z.number(), ends_ms: z.number(), error: z.string().nullable(), interval_seconds: z.number() }).optional(),
+  deployments: z.array(z.object({
+    id: z.string(), region: z.string(), model: z.string(), capacity_tpm: z.number(),
+    mode: z.string(), reporting: z.boolean(),
+  })),
+  workloads: z.array(z.object({
+    id: z.string(), data_class: z.string(), region_requirement: z.string(), model: z.string(),
+    demand_tpm: z.number(), deployment: z.string(),
+  })),
+  destinations: z.record(z.string(), z.array(z.string())),
 });
 export type Health = z.infer<typeof healthSchema>;
-export const contextSchema = z.object({
-  streams_attached: z.boolean(),
-  queries: z.record(z.string(), z.record(z.string(), rowSchema)),
-});
-export type Context = z.infer<typeof contextSchema>;
-export const decisionSchema = z.object({
-  run_epoch: z.string(), revision: z.number(), policy_revision: z.number(),
-  basis: z.string(), state: z.string(), reason: z.string(), model: modelSchema,
-  evidence: z.record(z.string(), z.object({
-    id: z.string(), run_epoch: z.string(), status: z.string(),
-    expires_ms: z.number(), observed_ms: z.number(), sequence: z.number(),
-  })),
-  eligibility: z.record(z.string(), z.record(z.string(), z.object({ allowed: z.boolean(), reason: z.string() }))),
-  assignments: z.record(z.string(), z.string()), candidate_id: z.string(), valid: z.boolean(),
-  failure: z.string().nullable(),
-});
-export type Decision = z.infer<typeof decisionSchema>;
-export const decisionsSchema = z.object({
-  run_epoch: z.string(), revision: z.number(), streams_attached: z.boolean(),
-  candidate_current: z.boolean(), approval: z.enum(["awaiting_approval", "unavailable"]),
-  policy: decisionSchema.nullable(), allocation: decisionSchema.nullable(), resilience: decisionSchema.nullable(),
-  recovery: z.record(z.string(), rowSchema),
-  commands: z.array(z.object({
-    id: z.string(), run_epoch: z.string(), candidate_id: z.string(), basis: z.string(),
-    input_revision: z.number(), policy_revision: z.number(), decision: z.unknown(),
-    status: z.enum(["committed", "gateway_applied", "recovery_confirmed", "rejected"]),
-    committed_ms: z.number(), applied_ms: z.number().nullable(), applied_revision: z.number().nullable(),
-    support_endpoint: z.string().nullable(), recovered_ms: z.number().nullable(), error: z.string().nullable(),
-  })),
-  audit: z.array(rowSchema),
-  publications: z.array(z.object({
-    id: z.string(), target: z.string(), attempts: z.number(), last_error: z.string().nullable(),
-    next_attempt_ms: z.number(),
-  })),
-  observation_window_ms: z.number(), success_freshness_ms: z.number(),
-});
-export type Decisions = z.infer<typeof decisionsSchema>;
-export type Selection = Pick<Decision, "candidate_id" | "basis" | "run_epoch" | "revision"> & {
-  command_id: string; assignments?: Record<string, string>; selected_ms?: number;
-};
+
+// Drasi's `Plan` element, as the plan-results query returns it (contracts.md §5).
+export const planSchema = z.object({
+  id: z.string(), state: z.enum(["feasible", "infeasible", "unknown"]),
+  candidate_id: z.string(), basis: z.string(), revision: z.number(), run_epoch: z.string(),
+  assignments: z.union([z.string(), z.record(z.string(), z.string())])
+    .transform(value => z.record(z.string(), z.string()).parse(typeof value === "string" ? JSON.parse(value || "{}") : value)),
+  moves: z.number(), reason: z.string(),
+}).passthrough();
+export type Plan = z.infer<typeof planSchema>;
+export function readPlan(rows: Row[]): { plan: Plan | null; error: string | null } {
+  const row = rows.find(r => r.id === "plan");
+  if (!row) return { plan: null, error: "plan-results: no Plan row" };
+  const parsed = planSchema.safeParse(row);
+  return parsed.success ? { plan: parsed.data, error: null } : { plan: null, error: `plan-results: ${errorText(parsed.error)}` };
+}
+
+// A tile query's single value (contracts.md §9): a number, or null for Unknown.
+export function tileValue(rows: Row[], match: (row: Row) => boolean = () => true): number | null {
+  const value = rows.find(match)?.value;
+  return typeof value === "number" && value >= 0 ? value : null;
+}
+
+// The plan the presenter took to the approval tool. The ID is the approval's ID.
 export const selectionSchema = z.object({
-  candidate_id: z.string(), basis: z.string(), run_epoch: z.string(), revision: z.number(), command_id: z.string(),
+  approval_id: z.string(), candidate_id: z.string(), basis: z.string(), run_epoch: z.string(), revision: z.number(),
   assignments: z.record(z.string(), z.string()).optional(), selected_ms: z.number().optional(),
 });
+export type Selection = z.infer<typeof selectionSchema>;
 
-export function readDecision(context: Context | null, name: string): { data: Decision | null; error: string | null } {
-  const row = context?.queries[name]?.active;
-  if (!row) return { data: null, error: `${name}: no maintained result` };
-  try {
-    const data = decisionSchema.parse(typeof row.payload === "string" ? JSON.parse(row.payload) : row.payload);
-    if (row.run_epoch !== data.run_epoch || row.revision !== data.revision || row.basis !== data.basis) {
-      throw new Error("Result envelope and payload disagree");
-    }
-    return { data, error: null };
-  } catch (error) {
-    return { data: null, error: `${name}: invalid result: ${errorText(error)}` };
-  }
-}
-
-export function isCurrent(decision: Decision | null, health: Health | null, now: number): boolean {
-  return !!decision && !!health && health.continuous_context === "ready" &&
-    decision.run_epoch === health.run_epoch && decision.revision === health.revision &&
-    decision.state !== "unknown" &&
-    decision.model.endpoints.every(endpoint => {
-      const evidence = decision.evidence[endpoint.id];
-      return !!evidence && evidence.run_epoch === health.run_epoch &&
-        evidence.expires_ms > now && evidence.observed_ms <= now &&
-        ["ok", "failed", "throttled"].includes(evidence.status);
-    });
-}
-
-export function rows(context: Context | null, query: string): Row[] {
-  return Object.values(context?.queries[query] ?? {});
-}
 export function text(value: unknown): string {
   return value == null ? "unknown" : typeof value === "object" ? JSON.stringify(value) : String(value);
 }

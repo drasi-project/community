@@ -43,7 +43,7 @@ export const recaps = [
     sources: "Every change in the service's database: requests, deployment reports, capacity, policy",
     queries: "Overdue support requests · Deployment status",
     models: "Policy, plan and what-if: today's plan fits, and survives losing any one deployment",
-    reactions: "Stream each change to the AI service, which exports it to Grafana",
+    reactions: "Keep each answer as a Prometheus metric for Grafana",
     why: "No new tool to watch: Drasi's answers arrive in the dashboards you already use.",
   },
   {
@@ -64,7 +64,7 @@ export const recaps = [
     sources: "The policy change",
     queries: "Decision context: the current settings and each deployment's health, which the policy reads",
     models: "Policy re-evaluated, plan recomputed: no valid plan, so the earlier plan no longer matches the facts",
-    reactions: "Policy tiles and Action needed updated; the AI service refused the out-of-date approval",
+    reactions: "Policy tiles and Action needed updated; Drasi rejected the out-of-date approval",
     why: "Every plan carries the facts it was based on, so an out-of-date approval can't be applied.",
   },
   {
@@ -114,20 +114,20 @@ export const timeLabel = (minutes: number) => `${Math.floor(minutes)}:${Math.rou
 export const duration = (minutes: number) => minutes < 1 ? `${Math.round(minutes * 60)} seconds`
   : `${Math.floor(minutes)}${minutes % 1 ? "½" : ""} minute${minutes > 1 ? "s" : ""}`;
 
-// The recap for how far the live demo has got, worked out from its decision history since the
-// last reset. Used when the projected window is navigated by hand (?slide=drasi).
-type AuditRow = { action?: unknown; detail?: unknown };
-export function recapFromHistory(audit: readonly AuditRow[]) {
+// The recap for how far the live demo has got, worked out from the scenario's current state in the
+// AI service (failed deployments, the policy edit, applied routes, reduced capacity). Used when the
+// projected window is navigated by hand (?slide=recap).
+type ScenarioState = {
+  deployments: readonly { id: string; mode: string; capacity_tpm: number }[];
+  workloads: readonly { id: string; deployment: string }[];
+  destinations: Record<string, readonly string[]>;
+};
+export function recapFromState(state: ScenarioState) {
   const order = ["drasi-healthy", "drasi-failure", "drasi-policy", "drasi-recovery", "drasi-resilience"] as const;
   let step = 0;
-  for (const row of audit) {
-    const detail = (row.detail ?? {}) as { action?: string; model?: {
-      policy?: { destinations?: { batch?: string[] } }; endpoints?: { budget_tpm?: number }[] } };
-    if (row.action === "control" && (detail.action === "fail" || detail.action === "throttle")) step = Math.max(step, 1);
-    if (["approval_rejected", "application_rejected"].includes(String(row.action))) step = Math.max(step, 2);
-    if (row.action === "configuration" && detail.model?.policy?.destinations?.batch && !detail.model.policy.destinations.batch.includes("US-C")) step = Math.max(step, 2);
-    if (["gateway_applied", "recovery_confirmed"].includes(String(row.action))) step = Math.max(step, 3);
-    if (row.action === "configuration" && detail.model?.endpoints?.some(endpoint => (endpoint.budget_tpm ?? 100000) < 100000)) step = Math.max(step, 4);
-  }
+  if (state.deployments.some(d => d.mode !== "ok")) step = 1;
+  if (!(state.destinations.batch ?? []).includes("US-C")) step = 2;
+  if (state.workloads.some(w => w.id === "support" && w.deployment !== "EU-A")) step = 3;
+  if (state.deployments.some(d => d.capacity_tpm < 100000)) step = 4;
   return recaps.find(recap => recap.id === order[step])!;
 }

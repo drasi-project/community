@@ -1,7 +1,7 @@
 import { settings, url, port } from "../settings.mjs";
 import { test, expect, type Page } from "@playwright/test";
 import { applyFrame } from "../src/live";
-import { isCurrent, decisionSchema, healthSchema } from "../src/contracts";
+import { healthSchema, readPlan } from "../src/contracts";
 import { scenes, slides, recaps, allSlides, dashboards } from "../../../presentation/scenes";
 import { notes } from "../../../presentation/notes";
 import { presenterScript } from "../../../presentation/script";
@@ -89,6 +89,7 @@ test("keys pressed on the projector (a clicker) drive the desk", async ({ page }
 test("short on time skips the optional policy beats", async ({ page }) => {
   await desk(page, "recovery", 1);
   await page.getByLabel("Short on time").check();
+  await page.locator(".now").getByRole("button", { name: "Select proposed plan" }).click();
   await page.getByRole("button", { name: "Next ▶" }).click();
   await expect(page.locator(".say")).toContainText("Now I approve the current plan");
 });
@@ -97,7 +98,7 @@ test("the current beat's buttons sit beside its notes, and results appear there"
   await desk(page, "failure");
   await page.locator(".now").getByRole("button", { name: "Fail EU-A" }).click();
   await expect(page.locator(".now .result")).toHaveText("Done.");
-  expect(await mutations(request)).toEqual([{ path: "/control", input: { run_epoch: "TEST-FIXTURE-EPOCH", revision: 1, endpoint: "EU-A", action: "fail" } }]);
+  expect(await mutations(request)).toEqual([{ path: "/control", input: { run_epoch: "TEST-FIXTURE-EPOCH", deployment: "EU-A", action: "fail" } }]);
 });
 
 test("traffic starts only through an explicit action", async ({ page, request }) => {
@@ -115,12 +116,14 @@ test("a plan selected before a policy change is rejected, and the desk says that
   await page.getByRole("button", { name: "Next ▶" }).click();
   await page.locator(".now").getByRole("button", { name: "Summaries: Europe only" }).click();
   await expect(page.locator(".plan-table tr.stale")).toContainText("out of date");
+  await expect(page.locator(".now").getByRole("button", { name: /Summaries: Europe only/ })).toContainText("✓");
   await page.getByRole("button", { name: "Next ▶" }).click();
   await expect(page.locator(".now-actions .hint")).toContainText("meant to be rejected");
   await page.locator(".now").getByRole("button", { name: "Approve selected plan" }).click();
-  await expect(page.locator(".now .result.expected")).toContainText("Rejected, as intended");
+  await expect(page.locator(".now .result.expected")).toContainText("Rejected by Drasi, as intended: The plan changed since it was approved");
+  await expect(page.locator(".approval")).toHaveText("Last approval rejected: The plan changed since it was approved.");
   const state = await mutations(request);
-  expect(state.at(-1).input.basis).toBe("TEST-FIXTURE-BASIS-1");
+  expect(state.at(-1)).toMatchObject({ path: "/approvals", input: { candidate_id: "TEST-FIXTURE-CANDIDATE-1", basis: "TEST-FIXTURE-BASIS-1", revision: 1 } });
 });
 
 test("approving clears the selection, so it can't be approved twice by accident", async ({ page, request }) => {
@@ -128,9 +131,14 @@ test("approving clears the selection, so it can't be approved twice by accident"
   const now = page.locator(".now");
   await now.getByRole("button", { name: "Select proposed plan" }).click();
   await now.getByRole("button", { name: "Approve selected plan" }).click();
-  await expect(now.locator(".result")).toHaveText("Done.");
   await expect(now.getByRole("button", { name: "Approve selected plan" })).toBeDisabled();
-  await expect(page.locator(".approval")).toHaveText("Approved. Applying the new routes…");
+  // The approval tool only records it; Drasi checks it and its reaction applies the routes.
+  await expect(now.locator(".result")).toHaveText("Done: Drasi checked it and the new routes are applied.");
+  await expect(page.locator(".approval")).toHaveText("Applied. Waiting for evidence that recovery worked.");
+  await expect(page.locator(".plan-table tr").nth(1)).toContainText("EU-B");
+  await expect(page.locator(".answers")).toContainText("Awaiting evidence");
+  await request.post(`${fixture}/test/recover`);
+  await expect(page.locator(".approval")).toHaveText("Recovery verified ✓");
   expect((await mutations(request)).filter((m: { path: string }) => m.path === "/approvals")).toHaveLength(1);
 });
 
@@ -182,14 +190,50 @@ test("snapshot-first reducer preserves explicit delta semantics", () => {
   expect(snapshot).toEqual({ a: { id: "a" } });
   expect(applyFrame(snapshot, "change", { results: [{ type: "DELETE", data: { id: "a" } }] }, true)).toEqual({});
   expect(() => applyFrame({}, "change", { results: [] }, false)).toThrow("before initial");
+  // Tile queries have no id: rows are matched by content, and aggregates replace their "before".
+  let tile = applyFrame({}, "snapshot", [{ workload: "support", value: 1 }], false);
+  tile = applyFrame(tile, "change", { results: [{ type: "aggregation", before: { workload: "support", value: 1 }, after: { workload: "support", value: 2 } }, { type: "noop" }] }, true);
+  tile = applyFrame(tile, "change", { results: [{ type: "UPDATE", before: { workload: "support", value: 2 }, after: { workload: "support", value: 3 }, data: { workload: "support", value: 3 } }] }, true);
+  expect(Object.values(tile)).toEqual([{ workload: "support", value: 3 }]);
+  tile = applyFrame(tile, "change", { results: [{ type: "DELETE", data: { workload: "support", value: 3 } }] }, true);
+  expect(tile).toEqual({});
 });
 
-test("current-state guard rejects mixed epochs and expired reports", async ({ request }) => {
+test("the fixture speaks the agreed AI service and Drasi shapes", async ({ request }) => {
   const health = healthSchema.parse(await (await request.get(`${fixture}/health`)).json());
-  const d = decisionSchema.parse((await (await request.get(`${fixture}/decisions`)).json()).allocation);
-  expect(isCurrent(d, health, Date.now())).toBe(true);
-  expect(isCurrent({ ...d, run_epoch: "other" }, health, Date.now())).toBe(false);
-  expect(isCurrent(d, health, Date.now() + 7200000)).toBe(false);
+  expect(health.destinations.batch).toContain("US-C");
+  const { plan, error } = readPlan([{ id: "plan", state: "feasible", candidate_id: "c", basis: "b", revision: 1, run_epoch: "e", assignments: "{\"support\":\"EU-B\"}", moves: 1, reason: "r" }]);
+  expect(error).toBeNull();
+  expect(plan?.assignments).toEqual({ support: "EU-B" });
+  expect(readPlan([{ id: "plan", state: "maybe" }]).plan).toBeNull();
+});
+
+test("the desk shows Drasi's answers from Drasi Server and never asks the AI service for them", async ({ page, request }) => {
+  const asked: string[] = [];
+  page.on("request", r => asked.push(new URL(r.url()).pathname));
+  await desk(page, "failure");
+  const answers = page.locator(".answers");
+  await expect(answers).toContainText("Approve proposed plan");
+  await expect(answers).toContainText("No: not if EU-A fails");
+  await expect(answers).toContainText("Nothing to verify");
+  await page.locator(".now").getByRole("button", { name: "Fail EU-A" }).click();
+  await expect(answers).toContainText("Already one down");
+  await request.post(`${fixture}/test/expire`);
+  await expect(answers.locator("div", { hasText: "Action needed" })).toContainText("Unknown");
+  await expect(page.locator(".plan-table")).toContainText("Unknown");
+  for (const query of ["plan-results", "overdue-tasks"]) expect(asked).toContain(`/server/api/v1/instances/ignite/queries/${query}/attach`);
+  for (const query of ["tile-action", "tile-resilience", "tile-recovery", "tile-last-approval", "tile-running"])
+    expect(asked).toContain(`/server/api/v1/instances/ignite/queries/${query}/results`);
+  expect(asked.filter(path => /^\/api\/(decisions|context)/.test(path))).toEqual([]);
+  expect(asked.filter(path => path.startsWith("/api/")).every(path => path === "/api/health" || path.startsWith("/api/control"))).toBe(true);
+});
+
+test("Drasi Server unavailable means NOT READY", async ({ page }) => {
+  await page.route("**/server/**", route => route.fulfill({ status: 503, body: "down" }));
+  await desk(page, "recovery", 1);
+  await expect(page.locator(".badge", { hasText: "NOT READY" })).toBeVisible();
+  await expect(page.locator(".now").getByRole("button", { name: "Select proposed plan" })).toBeDisabled();
+  await expect(page.locator(".approval")).toHaveText("Approval status unavailable.");
 });
 
 test("the query slide lists late requests live from Drasi", async ({ page, request }) => {
