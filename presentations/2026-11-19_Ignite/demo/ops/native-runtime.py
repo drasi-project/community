@@ -79,6 +79,25 @@ def verify_bundle():
             raise RuntimeError(f"Native bundle changed; run ops/native-build.sh: {path}")
 
 
+def prune():
+    # Every query snapshots these tables on start but only reads the current
+    # run, so earlier runs' rows only slow startup. Delete them while Server is
+    # stopped, in batches below the source's per-transaction change limit.
+    for table in ["ignite_attempts", "ignite_breaches", "ignite_receipts", "ignite_tasks"]:
+        removed = 0
+        while True:
+            output = sql(f"""DELETE FROM {table} WHERE ctid IN (
+                SELECT ctid FROM {table}
+                WHERE run_epoch <> (SELECT run_epoch FROM ignite_scenario WHERE singleton)
+                LIMIT 2000);""")
+            count = int(output.split()[-1])
+            removed += count
+            if count == 0:
+                break
+        if removed:
+            print(f"pruned {removed} earlier-run rows from {table}", file=sys.stderr)
+
+
 def main():
     action = sys.argv[1] if len(sys.argv) > 1 else ""
     if action == "stamp":
@@ -97,6 +116,7 @@ def main():
         print(sql(sys.stdin.read()), end="")
     elif action == "run":
         verify_bundle()
+        prune()
         env = os.environ.copy()
         env["IGNITE_POSTGRES_PASSWORD"] = required("POSTGRES_PASSWORD")
         os.chdir(DEMO / ".native")

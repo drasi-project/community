@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use drasi_host_sdk::{computation::NativePlugin, management::NativeBootstrapConfig};
+use drasi_host_sdk::computation::{NativeBootstrapNodeFactory, NativePlugin};
 use drasi_lib::computation::v1::*;
 use serde_json::{json, Value};
 use std::{collections::BTreeMap, path::Path, sync::Arc};
@@ -23,7 +23,7 @@ const TABLES: [&str; 8] = [
     "ignite_alerts",
     "ignite_commands",
 ];
-// Shared by the live source and every bootstrap provider so they bind one slot.
+// Shared by the live source and its bootstrap provider so they bind one slot.
 // Database and user are fixed by compose.yaml and ops/observability-env.py.
 fn postgres_settings() -> Value {
     json!({
@@ -106,8 +106,9 @@ fn main() -> Result<()> {
         .find(|f| {
             f.metadata().implementation.name.as_ref() == "drasi.postgres/shared-row-bootstrap"
         })
-        .context("PostgreSQL shared-row bootstrap")?
-        .metadata();
+        .cloned()
+        .context("PostgreSQL shared-row bootstrap")?;
+    let bootstrap = Arc::new(NativeBootstrapNodeFactory::new(bootstrap));
     let query_factory = queries.query_factory()?;
     let context_queries = [
         (
@@ -157,6 +158,7 @@ fn main() -> Result<()> {
     ];
     let ids: BTreeMap<_, _> = [
         "postgres",
+        "postgres-bootstrap",
         "endpoint-context",
         "capacity",
         "capacity-results",
@@ -244,30 +246,8 @@ fn main() -> Result<()> {
         resource("context-progress")?,
         ResourceRole::Checkpoint,
     )?;
-    let bootstrap_config = NativeBootstrapConfig {
-        component: ids["endpoint-context"].clone(),
-        implementation: bootstrap.implementation.clone(),
-        configuration_version: bootstrap.configuration_version,
-        configuration: bootstrap_configuration(&ids["postgres"])?,
-        source_progress: Some(resource("context-progress")?),
-        source_bootstrap: None,
-    };
-    let mut recipe = serde_json::to_value(bootstrap_config)?;
-    recipe["kind"] = json!("nativeBootstrap");
-    builder = declare(builder, "pg-bootstrap", ResourceRole::Bootstrap, recipe)?
-        .resource_dependency(
-            resource("pg-bootstrap")?,
-            resource("configuration")?,
-            ResourceRole::SecretStore,
-        )?
-        .resource_dependency(
-            resource("pg-bootstrap")?,
-            resource("context-progress")?,
-            ResourceRole::Checkpoint,
-        )?;
     for (name, _) in &context_queries {
         let progress = format!("{name}-progress");
-        let bootstrap_name = format!("{name}-bootstrap");
         builder = declare(
             builder,
             &progress,
@@ -279,27 +259,6 @@ fn main() -> Result<()> {
             resource(&progress)?,
             ResourceRole::Checkpoint,
         )?;
-        let config = NativeBootstrapConfig {
-            component: ids[name].clone(),
-            implementation: bootstrap.implementation.clone(),
-            configuration_version: bootstrap.configuration_version,
-            configuration: bootstrap_configuration(&ids["postgres"])?,
-            source_progress: Some(resource(&progress)?),
-            source_bootstrap: None,
-        };
-        let mut recipe = serde_json::to_value(config)?;
-        recipe["kind"] = json!("nativeBootstrap");
-        builder = declare(builder, &bootstrap_name, ResourceRole::Bootstrap, recipe)?
-            .resource_dependency(
-                resource(&bootstrap_name)?,
-                resource("configuration")?,
-                ResourceRole::SecretStore,
-            )?
-            .resource_dependency(
-                resource(&bootstrap_name)?,
-                resource(&progress)?,
-                ResourceRole::Checkpoint,
-            )?;
     }
     let mut configuration = postgres_settings();
     configuration["stream"] = json!(stream("postgres")?);
@@ -310,6 +269,22 @@ fn main() -> Result<()> {
         .dependencies
         .insert("consumer_progress".into(), vec![resource("pg-consumers")?]);
     builder = builder.component(ComponentName::try_new("postgres")?, source, source_factory);
+    // The source's visible bootstrap provider. The source relays each query's
+    // bootstrap session to it; the provider records progress for every query.
+    let progress = std::iter::once("context-progress".to_string())
+        .chain(context_queries.iter().map(|(name, _)| format!("{name}-progress")))
+        .map(|name| resource(&name))
+        .collect::<Result<Vec<_>>>()?;
+    let provider = ComponentSpecification {
+        descriptor: NativeBootstrapNodeFactory::component_descriptor(ids["postgres-bootstrap"].clone())?,
+        role: ComponentRole::BootstrapProvider,
+        completion: None,
+        implementation: bootstrap.descriptor().implementation.clone(),
+        configuration_version: bootstrap.descriptor().configuration_version,
+        configuration: bootstrap_configuration(&ids["postgres"])?,
+        dependencies: BTreeMap::from([("source_progress".into(), progress)]),
+    };
+    builder = builder.component(ComponentName::try_new("postgres-bootstrap")?, provider, bootstrap);
 
     for (name, query) in [
         ("endpoint-context", include_str!("../../../drasi/endpoint-context.cypher")),
@@ -346,11 +321,9 @@ fn main() -> Result<()> {
         ]);
         if name == "endpoint-context" {
             specification.dependencies.insert("source_progress".into(), vec![resource("context-progress")?]);
-            specification.dependencies.insert("bootstrap".into(), vec![resource("pg-bootstrap")?]);
         }
         if context_queries.iter().any(|(context, _)| *context == name) {
             specification.dependencies.insert("source_progress".into(),vec![resource(&format!("{name}-progress"))?]);
-            specification.dependencies.insert("bootstrap".into(),vec![resource(&format!("{name}-bootstrap"))?]);
         }
         builder = builder.component(ComponentName::try_new(name)?, specification, query_factory.clone());
     }
@@ -458,7 +431,20 @@ fn main() -> Result<()> {
             Box::new(BoundedPipeConfig { capacity: 32 }),
         );
     }
-    for name in ids.keys().filter(|name| **name != "query-results") {
+    // Queries reading PostgreSQL bootstrap through the source, which relays to its provider.
+    for (from, to) in std::iter::once(("postgres-bootstrap", "postgres"))
+        .chain(std::iter::once(("postgres", "endpoint-context")))
+        .chain(context_queries.iter().map(|(name, _)| ("postgres", *name)))
+    {
+        builder = builder.connect(
+            EdgeDefinition::new(endpoint(from, "snapshot")?, endpoint(to, "bootstrap")?),
+            Box::new(BoundedPipeConfig { capacity: 8 }),
+        );
+    }
+    for name in ids
+        .keys()
+        .filter(|name| !matches!(**name, "query-results" | "postgres-bootstrap"))
+    {
         builder = builder.bind_stream(endpoint(name, "out")?, stream(name)?);
     }
     for (name, _) in context_queries {
@@ -500,7 +486,11 @@ fn main() -> Result<()> {
         serde_json::to_string_pretty(&json!({
             "apiVersion":"drasi.io/v1","host":"127.0.0.1","port":18421,
             "persistConfig":false,"enableUi":true,"verifyPlugins":false,"autoInstallPlugins":false,
-            "instances":[{"id":"ignite","computation":{"definition":graph.definition}}]
+            "instances":[{"id":"ignite",
+                // Each PostgreSQL query snapshots the tables in turn; with a
+                // long run's history a restart takes minutes.
+                "activationTimeoutSecs":1200,
+                "computation":{"definition":graph.definition}}]
         }))?
     );
     Ok(())

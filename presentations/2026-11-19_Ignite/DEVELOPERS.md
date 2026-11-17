@@ -100,9 +100,9 @@ beat, what's shown) and stores it in `localStorage`.
 | `observability-stack.sh` | Runs `podman compose` for this demo only. `env` creates `.env` |
 | `observability-build.sh` | Builds the test probe container image |
 | `native-build.sh` | Builds Drasi Server and its UI, the Core plugins, the demo plugins, the config generator and the workload service; writes and validates `server.json`; stamps the build |
-| `native-runtime.py` | `init` (create database), `migrate`, `reset`, `run` (start Server), `sql`, `stamp` |
+| `native-runtime.py` | `init` (create database), `migrate`, `reset`, `run` (delete earlier runs' rows, then start Server), `sql`, `stamp` |
 | `workload.py` | `run` (start the workload service), `status`, `context`, `decisions`, `control`, `client`, `reset` |
-| `macho-align.py` | Works around a macOS linker bug (see Known issues) |
+| `macho-align.py` | Works around a macOS linker bug (see Known issues). Like `native-build.sh`, it replaces plugin files rather than rewriting them in place, because macOS kills a process that loads a library changed in place |
 | `release.py` | Automated cycles, soak test, preflight, release stamp and verify |
 
 ### Ports
@@ -205,16 +205,30 @@ on `agentofreality-parallel-computation-graph-recovery`, not published packages.
 Problems in Drasi itself are fixed in those repositories, not worked around
 here, except where noted below.
 
+The demo needs two fixes in those checkouts, made after the graph-native
+bootstrap change:
+
+- `drasi-server/src/computation.rs`: the `memoryIndexes` resource declares itself
+  volatile (`QueryIndexProviderResource::handle`). Without it every query fails
+  at creation with "the constructed instance's description differs from its
+  factory's declaration".
+- `drasi-core/lib/src/computation/v1/query_construction.rs` and
+  `drasi-core/components/host-sdk/src/computation/query.rs`: a native query with
+  bootstrap edges is configured to bootstrap. Without it every query reading
+  PostgreSQL fails to start with "bootstrap configuration requires its actual
+  provider before initialization".
+
 ## Known issues
 
 | Issue | Effect | Status |
 |---|---|---|
-| `recovery-results` can't use the snapshot-bootstrapped query type, which can't yet publish results to Server | It runs as an ordinary query fed by its two upstream queries instead. It only rebuilds its state when the whole graph starts, so restart all of Server, never just this query | Waiting for a Drasi Core fix. Then switch `recovery-results` in `ops/config/src/main.rs` back to `drasi.experimental/volatile-query`, bootstrapped from its two upstream queries' snapshots, with a `catalog` dependency |
+| `recovery-results` can't bootstrap from its upstream queries' snapshots (the `drasi.experimental/volatile-query` type it was written for couldn't publish results, and Drasi Core has since removed it) | It runs as an ordinary query fed by its two upstream queries instead. It only rebuilds its state when the whole graph starts, so restart all of Server, never just this query | Open. Queries now have a `snapshot` output; try bootstrap edges from the two upstreams in `ops/config/src/main.rs` |
 | Drasi Server UI requests component details by ID, but the API now expects names | The UI shows no query text or configuration | Drasi Server issue, not yet filed |
 | Drasi Server's expanded query view uses 14 px text | Too small to read on a projector; use browser zoom | Drasi Server issue, not yet filed |
 | A macOS linker release leaves some plugin libraries unloadable ("mis-aligned LINKEDIT string pool") | `ops/macho-align.py` repairs them during the build | Apple toolchain bug |
 | The fallback recordings are long (failure about 2 minutes, recovery about 4) | The presenter talks over a lot of footage in recording mode | Open; trim with a video tool, or shorten the waits in `ui/scripts/walkthrough.mjs` and re-record |
-| Retries have no limit | A deployment left failed or throttled for hours creates tens of thousands of attempts. The workload service then can't read the attempt history (it shows Unknown), a reset can exceed Drasi's 64 MB message limit, and Server startup slows to minutes | Open; avoid leaving faults on |
+| Retries have no limit | A deployment left failed or throttled for hours creates tens of thousands of attempts. The workload service then can't read the attempt history (it shows Unknown), a reset can exceed Drasi's 64 MB message limit, and Server startup slows to minutes | Open; avoid leaving faults on. A reset followed by a restart clears it, because startup deletes earlier runs' rows |
+| Each query snapshots the PostgreSQL tables in turn at startup | Startup time grows with the current tables: about 20 seconds after a reset, about 12 minutes with 115,000 rows | `ops/native-runtime.py run` deletes earlier runs' rows first, and the instance's activation timeout is raised to 20 minutes |
 
 ## Data and safety
 

@@ -146,7 +146,8 @@ python3 ops/workload.py status
 ```
 
 Wait until it shows `"continuous_context": "ready"`. This usually takes under a
-minute, but can take a few minutes if a lot of history has built up.
+minute. Terminal 1 deletes rows from earlier scenario runs before starting Server,
+which keeps startup quick.
 
 ## Get ready to present
 
@@ -203,7 +204,7 @@ Only if the change notes say the database changed, also run
 | Grafana charts are empty | Start demo traffic on the presenter desk and wait a minute. |
 | Grafana tiles say **Unknown** | Run `python3 ops/workload.py status`. Right after a start, wait for `ready`. |
 | Everything stays Unknown for a long time | A deployment may have been left failed, so requests kept retrying and history grew very large. On the desk, open **All demo controls** and restore every deployment (**Any deployment** › Restore), then **Before and after the talk** › **Reset scenario…**, then restart terminals 1 and 2. |
-| Drasi Server takes minutes to start | It is reading accumulated history. Wait; it will finish. |
+| Drasi Server takes minutes to start | The current run has a lot of history. Wait; it will finish (it allows up to 20 minutes). Next time, reset the scenario before restarting. |
 | "Run ops/observability-stack.sh env first" | Do [step 3](#3-create-local-passwords). |
 | A port is already in use | Something is already running. Find it with `lsof -nP -iTCP:18421 -sTCP:LISTEN` (change the port) and stop it before starting another copy. |
 | Startup refuses because files changed | Rebuild: `./ops/native-build.sh`. |

@@ -9,6 +9,12 @@ export CARGO_PROFILE_DEV_DEBUG=0
 export CARGO_TARGET_DIR="$DEMO/.native/target"
 export JQ_LIB_DIR="${JQ_LIB_DIR:-/opt/homebrew/lib}"
 mkdir -p "$DEMO/.native/plugins"
+# Install as a new file: macOS kills a process that loads a library overwritten
+# in place, because the kernel keeps the old file's code signature.
+install_plugin() {
+    cp "$1" "$DEMO/.native/plugins/.$(basename "$1").tmp"
+    mv -f "$DEMO/.native/plugins/.$(basename "$1").tmp" "$DEMO/.native/plugins/$(basename "$1")"
+}
 case "$(uname -s)" in
     Darwin) extension=dylib ;;
     Linux) extension=so ;;
@@ -24,12 +30,12 @@ if [ ! -f "$CORE/Cargo.lock" ]; then
 fi
 for package in drasi-computation-source-postgres drasi-computation-bootstrap-postgres drasi-computation-transformer-query drasi-computation-source-http; do
     cargo build --locked --manifest-path "$CORE/Cargo.toml" -p "$package" --lib --features "$package/dynamic-plugin"
-    cp "$CARGO_TARGET_DIR/debug/lib${package//-/_}.$extension" "$DEMO/.native/plugins/"
+    install_plugin "$CARGO_TARGET_DIR/debug/lib${package//-/_}.$extension"
 done
 cargo build --locked -p ignite-capacity --lib --features dynamic-plugin
-cp "$CARGO_TARGET_DIR/debug/libdrasi_computation_ignite_capacity.$extension" "$DEMO/.native/plugins/"
+install_plugin "$CARGO_TARGET_DIR/debug/libdrasi_computation_ignite_capacity.$extension"
 cargo build --locked -p ignite-decisions --lib --features dynamic-plugin
-cp "$CARGO_TARGET_DIR/debug/libdrasi_computation_ignite_decisions.$extension" "$DEMO/.native/plugins/"
+install_plugin "$CARGO_TARGET_DIR/debug/libdrasi_computation_ignite_decisions.$extension"
 if [ "$extension" = dylib ]; then
     python3 "$DEMO/ops/macho-align.py" "$DEMO"/.native/plugins/*.dylib
 fi

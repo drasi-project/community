@@ -88,7 +88,7 @@
   <text x="1040" y="812" class="sub">Continuous queries and continuous models</text>
   <text x="1040" y="836" class="sub">(policy, planner, what-if) over the live data</text>
   <text x="1040" y="874" class="sub">Time-aware: missed deadlines, stale reports</text>
-  <text x="1040" y="898" class="sub">25 components · native plugins</text>
+  <text x="1040" y="898" class="sub">26 components · native plugins</text>
 
   <!-- Flows -->
   <path d="M330,310 H420" class="flow"/>

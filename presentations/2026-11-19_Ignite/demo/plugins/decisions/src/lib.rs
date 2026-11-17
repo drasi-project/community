@@ -19,6 +19,13 @@ use std::{collections::BTreeMap, sync::Arc};
 
 struct DecisionFactory(&'static str);
 impl Factory for DecisionFactory {
+    /// Stateless: outputs carry a new volatile producer identity on every construction.
+    fn describe(
+        &self,
+        request: &drasi_computation_plugin_sdk::wire::DescribeRequest,
+    ) -> anyhow::Result<drasi_computation_plugin_sdk::ComponentDescription> {
+        Ok(request.volatile_transformer())
+    }
     fn metadata(&self) -> FactoryMetadata {
         FactoryMetadata {
             implementation: ImplementationIdentity::try_new(format!("ignite/{}", self.0), "1")

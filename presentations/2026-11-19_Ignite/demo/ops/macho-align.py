@@ -7,6 +7,7 @@ to load the library ("mis-aligned LINKEDIT string pool"). When there is padding
 room before the next LINKEDIT item, this moves the string table to the next
 aligned offset and re-signs the library ad hoc. Aligned files are left untouched.
 """
+import os
 import struct
 import subprocess
 import sys
@@ -42,8 +43,12 @@ def repair(path):
     data[stroff + padding : stroff + padding + strsize] = data[stroff : stroff + strsize]
     data[stroff : stroff + padding] = bytes(padding)
     struct.pack_into("<I", data, symtab + 16, stroff + padding)
-    open(path, "wb").write(data)
-    subprocess.run(["codesign", "--force", "--sign", "-", path], check=True, capture_output=True)
+    # Replace the file rather than rewrite it: macOS kills a process that loads
+    # a library modified in place, because the kernel keeps its old signature.
+    temporary = f"{path}.align.tmp"
+    open(temporary, "wb").write(data)
+    subprocess.run(["codesign", "--force", "--sign", "-", temporary], check=True, capture_output=True)
+    os.replace(temporary, path)
     return True
 
 
