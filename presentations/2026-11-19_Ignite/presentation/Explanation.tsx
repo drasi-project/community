@@ -10,8 +10,8 @@ const nb = (text: string) => text.replace(/\b(EU|US)-([A-C])\b/g, "$1\u2011$2");
 const roles = [
   { name: "Sources", what: "Bring in every change as it happens", here: "the AI service's database change feed" },
   { name: "Continuous queries", what: "Keep a result current as data changes and as time passes", here: "overdue requests, deployment status, verified recovery" },
-  { name: "Continuous models", what: "Run your own logic on query results, again on every change", here: "policy (Rego), planner, what-if" },
-  { name: "Reactions", what: "Deliver each change to where it's needed", here: "metrics for Grafana, approved plans applied through the gateway, annotations and Langfuse scores" },
+  { name: "Continuous models", what: "Run logic on query results, again on every change", here: "policy (Rego), planner and what-if (an optimizer)" },
+  { name: "Reactions", what: "Deliver each change to other systems", here: "Prometheus metrics, approved plans to the gateway, Grafana annotations, Langfuse scores" },
 ] as const;
 
 function Flow({ compact = false }: { compact?: boolean }) {
@@ -87,10 +87,10 @@ export function Explanation({ slide, active = false }: { slide: SlideId; active?
     <h1>Change-driven computation</h1>
     <Flow />
     <div className="ownership">
-      <div><b>Built into Drasi</b><span>Sources, continuous queries kept current as data and time change, re-running your models when their inputs change, and reactions</span></div>
-      <div><b>Written for this demo</b><span>The policy, planner and what-if models, and the AI service whose routes Drasi's reaction updates</span></div>
+      <div><b>Built into Drasi</b><span>Sources, continuous queries kept current as data and time change, re-running models when their inputs change, and HTTP and streaming reactions</span></div>
+      <div><b>Written for this demo, as Drasi plugins</b><span>A Rego policy model, an optimizer (planner and what-if) and a Prometheus reaction. The rules and settings are configuration</span></div>
     </div>
-    <p className="polling"><b>"Without polling"</b> No answer is recomputed on a schedule: answers change when the facts or the time do. Health checks still run, and Grafana still refreshes to draw the screen.</p>
+    <p className="polling"><b>"Without polling"</b> No answer is recomputed on a schedule: answers change when the facts or the time do. Health checks still run, and Prometheus and Grafana still collect and draw on their own schedule.</p>
   </div>;
 
   return <div className="closing-slide">

@@ -11,167 +11,174 @@
     <style>
       .box { fill: #1a202b; stroke: #3a4351; stroke-width: 2; }
       .model { fill: #142a2b; stroke: #9ee8d7; stroke-width: 2.5; }
+      .group { fill: none; stroke: #9ee8d7; stroke-width: 2; stroke-dasharray: 7 6; }
       .out { fill: #1a202b; stroke: #9ee8d7; stroke-width: 2; }
       .name { fill: #eeeef2; font-size: 19px; font-weight: 700; }
       .desc { fill: #bdc5d3; font-size: 15px; }
       .title { fill: #eeeef2; font-size: 24px; font-weight: 700; }
       .sub { fill: #bdc5d3; font-size: 17px; }
-      .accent { fill: #9ee8d7; }
+      .accent { fill: #9ee8d7; font-size: 15px; }
+      .note { fill: #bdc5d3; font-size: 14px; font-style: italic; }
       .head { fill: #bdc5d3; font-size: 15px; font-weight: 700; letter-spacing: 2px; }
       .flow { fill: none; stroke: #bdc5d3; stroke-width: 2.2; marker-end: url(#arrow); }
       .line { fill: none; stroke: #bdc5d3; stroke-width: 2.2; }
     </style>
   </defs>
-
   <rect width="1920" height="1080" fill="#10141c"/>
   <text x="60" y="82" fill="#eeeef2" font-size="44" font-weight="700">Inside Drasi: the demo's computation graph</text>
-  <text x="60" y="122" class="sub" font-size="22">Changes flow left to right. Every result stays current as data changes and as time passes.</text>
-
+  <text x="60" y="122" class="sub" font-size="22">Changes flow left to right. Every answer stays current as data changes and as time passes, and reactions deliver it.</text>
   <text x="60" y="205" class="head">SOURCES</text>
-  <text x="420" y="205" class="head">CONTINUOUS QUERIES</text>
-  <text x="840" y="205" class="head">CONTINUOUS MODELS</text>
-  <text x="1200" y="205" class="head">CONTINUOUS QUERIES</text>
-  <text x="1580" y="205" class="head">RESULTS</text>
-
-  <!-- Sources -->
-  <rect x="60" y="230" width="280" height="680" rx="16" class="box"/>
-  <text x="84" y="274" class="title">PostgreSQL</text>
-  <text x="84" y="302" class="title">source</text>
-  <text x="84" y="342" class="sub">Change feed (CDC) from</text>
-  <text x="84" y="366" class="sub">one replication slot</text>
-  <text x="84" y="406" class="sub">Each query bootstraps</text>
-  <text x="84" y="430" class="sub">from a snapshot, then</text>
-  <text x="84" y="454" class="sub">follows live changes</text>
-  <text x="84" y="510" class="desc">Tasks · attempts · reports</text>
-  <text x="84" y="534" class="desc">deployments · model and policy</text>
-  <text x="84" y="558" class="desc">commands · alerts</text>
-  <rect x="60" y="946" width="280" height="56" rx="14" class="box"/>
-  <text x="84" y="981" class="name">HTTP source <tspan class="desc">· alert webhooks</tspan></text>
-
-  <!-- Context queries -->
-  <rect x="420" y="230" width="300" height="64" rx="12" class="box"/>
-  <text x="444" y="258" class="name">endpoint-context</text>
-  <text x="444" y="281" class="desc">Deployment state and capacity</text>
-  <rect x="420" y="314" width="300" height="64" rx="12" class="box"/>
-  <text x="444" y="342" class="name">decision-context</text>
-  <text x="444" y="365" class="desc">Fresh decision inputs</text>
-  <use href="#clock" x="680" y="324" width="22" height="22"/>
-  <rect x="420" y="580" width="300" height="64" rx="12" class="box"/>
-  <text x="444" y="608" class="name" font-size="17">recovery-task-context</text>
-  <text x="444" y="631" class="desc">Support task progress</text>
-  <rect x="420" y="664" width="300" height="64" rx="12" class="box"/>
-  <text x="444" y="692" class="name" font-size="17">recovery-observation-context</text>
-  <text x="444" y="715" class="desc">Applied commands, reports</text>
-  <rect x="420" y="760" width="700" height="160" rx="12" class="box"/>
-  <text x="444" y="792" class="name">More continuous queries <tspan class="desc">· published directly</tspan></text>
-  <text x="444" y="826" class="desc" font-size="17">task-context</text>
-  <text x="444" y="854" class="desc" font-size="17">overdue-tasks</text>
-  <use href="#clock" x="560" y="838" width="20" height="20"/>
-  <text x="444" y="882" class="desc" font-size="17">deadline-history</text>
-  <use href="#clock" x="583" y="866" width="20" height="20"/>
-  <text x="444" y="910" class="desc" font-size="17">endpoint-freshness</text>
-  <use href="#clock" x="600" y="894" width="20" height="20"/>
-  <text x="790" y="826" class="desc" font-size="17">attempt-context</text>
-  <text x="790" y="854" class="desc" font-size="17">breach-history</text>
-  <text x="790" y="882" class="desc" font-size="17">alert-context</text>
-  <text x="790" y="910" class="desc" font-size="17">model-context</text>
-  <rect x="420" y="946" width="300" height="56" rx="12" class="box"/>
-  <text x="444" y="981" class="name">grafana-alerts</text>
-
-  <!-- Continuous models -->
-  <rect x="840" y="230" width="280" height="64" rx="12" class="model"/>
-  <text x="864" y="258" class="name">capacity</text>
-  <text x="864" y="281" class="desc">Spare capacity per deployment</text>
-  <rect x="840" y="314" width="280" height="64" rx="12" class="model"/>
-  <text x="864" y="342" class="name">policy</text>
-  <text x="864" y="365" class="desc">Policy · Rego</text>
-  <rect x="840" y="398" width="280" height="64" rx="12" class="model"/>
-  <text x="864" y="426" class="name">allocation</text>
-  <text x="864" y="449" class="desc">Planner: best complete plan</text>
-  <rect x="840" y="482" width="280" height="64" rx="12" class="model"/>
-  <text x="864" y="510" class="name">resilience</text>
-  <text x="864" y="533" class="desc">What-if: lose any one deployment</text>
-
-  <!-- Result queries -->
-  <rect x="1200" y="230" width="300" height="64" rx="12" class="box"/>
-  <text x="1224" y="258" class="name">capacity-results</text>
-  <text x="1224" y="281" class="desc">Current capacity</text>
-  <rect x="1200" y="314" width="300" height="64" rx="12" class="box"/>
-  <text x="1224" y="342" class="name">policy-results</text>
-  <text x="1224" y="365" class="desc">Allowed destinations</text>
-  <rect x="1200" y="398" width="300" height="64" rx="12" class="box"/>
-  <text x="1224" y="426" class="name">allocation-results</text>
-  <text x="1224" y="449" class="desc">Proposed plan</text>
-  <rect x="1200" y="482" width="300" height="64" rx="12" class="box"/>
-  <text x="1224" y="510" class="name">resilience-results</text>
-  <text x="1224" y="533" class="desc">Safe if one fails?</text>
-  <rect x="1200" y="622" width="300" height="64" rx="12" class="box"/>
-  <text x="1224" y="650" class="name">recovery-results</text>
-  <text x="1224" y="673" class="desc">Verified recovery</text>
-  <use href="#clock" x="1460" y="632" width="22" height="22"/>
-
-  <!-- Results -->
-  <rect x="1580" y="230" width="280" height="170" rx="16" class="out"/>
-  <text x="1604" y="272" class="title">Results catalog</text>
-  <text x="1604" y="306" class="sub">Current results of</text>
-  <text x="1604" y="330" class="sub">every continuous query</text>
-  <rect x="1580" y="450" width="280" height="150" rx="16" class="out"/>
-  <text x="1604" y="492" class="title">Drasi Server API</text>
-  <text x="1604" y="526" class="sub">Snapshot first, then</text>
-  <text x="1604" y="550" class="sub">live result changes</text>
-  <rect x="1580" y="650" width="280" height="352" rx="16" class="model"/>
-  <text x="1604" y="692" class="title">Reactions</text>
-  <text x="1604" y="728" class="sub accent">Workload service</text>
-  <text x="1604" y="756" class="sub">· Grafana metrics</text>
-  <text x="1604" y="782" class="sub">· Grafana annotations</text>
-  <text x="1604" y="808" class="sub">· Langfuse scores</text>
-  <text x="1604" y="834" class="sub">· Gateway decisions</text>
-  <text x="1604" y="876" class="sub accent">Presenter desk</text>
-  <text x="1604" y="902" class="sub">Approval of the current</text>
-  <text x="1604" y="926" class="sub">proposal</text>
-  <text x="1604" y="968" class="sub accent">Drasi Server UI</text>
-
-  <!-- Source fan-out -->
-  <path d="M340,560 H380" class="line"/>
-  <path d="M380,262 V840" class="line"/>
-  <path d="M380,262 H420" class="flow"/>
-  <path d="M380,346 H420" class="flow"/>
-  <path d="M380,612 H420" class="flow"/>
-  <path d="M380,696 H420" class="flow"/>
-  <path d="M380,840 H420" class="flow"/>
-  <path d="M340,974 H420" class="flow"/>
-
-  <!-- Into and between models -->
-  <path d="M720,262 H840" class="flow"/>
-  <path d="M720,346 H840" class="flow"/>
-  <path d="M1120,262 H1200" class="flow"/>
-  <path d="M1120,346 H1200" class="flow"/>
-  <path d="M1120,430 H1200" class="flow"/>
-  <path d="M1120,514 H1200" class="flow"/>
-  <path d="M1350,378 V388 H800 V430 H840" class="flow"/>
-  <path d="M800,430 V514 H840" class="flow"/>
-  <path d="M720,612 H1160 V640 H1200" class="flow"/>
-  <path d="M720,696 H1160 V668 H1200" class="flow"/>
-
-  <!-- Into results -->
-  <path d="M1500,262 H1540" class="line"/>
-  <path d="M1500,346 H1540" class="line"/>
-  <path d="M1500,430 H1540" class="line"/>
-  <path d="M1500,514 H1540" class="line"/>
-  <path d="M1500,654 H1540" class="line"/>
-  <path d="M1120,840 H1540" class="line"/>
-  <path d="M720,974 H1540" class="line"/>
-  <path d="M1540,262 V974" class="line"/>
-  <path d="M1540,315 H1580" class="flow"/>
-  <path d="M1720,400 V450" class="flow"/>
-  <path d="M1720,600 V650" class="flow"/>
-
-  <!-- Legend -->
-  <rect x="60" y="1030" width="34" height="22" rx="6" class="box"/>
-  <text x="104" y="1048" class="sub">Continuous query (Cypher)</text>
-  <rect x="340" y="1030" width="34" height="22" rx="6" class="model"/>
-  <text x="384" y="1048" class="sub">Continuous model (native plugin)</text>
-  <use href="#clock" x="680" y="1030" width="22" height="22"/>
-  <text x="712" y="1048" class="sub">Time-aware: the result changes as time passes, with no new data</text>
-  <text x="1860" y="1048" class="sub" text-anchor="end">26 components in one Drasi Server</text>
+  <text x="330" y="205" class="head">CONTINUOUS QUERIES</text>
+  <text x="660" y="205" class="head">CONTINUOUS MODELS</text>
+  <text x="960" y="205" class="head">CONTINUOUS QUERIES</text>
+  <text x="1590" y="205" class="head">REACTIONS</text>
+  <rect x="60" y="230" width="220" height="670" rx="16" class="box"/>
+  <text x="82" y="272" class="title">PostgreSQL</text>
+  <text x="82" y="300" class="title">source</text>
+  <text x="82" y="340" class="sub">Change feed from one</text>
+  <text x="82" y="364" class="sub">replication slot</text>
+  <text x="82" y="412" class="sub">Each query starts</text>
+  <text x="82" y="436" class="sub">from its own snapshot,</text>
+  <text x="82" y="460" class="sub">then follows changes</text>
+  <text x="82" y="520" class="desc">Scenario · workloads</text>
+  <text x="82" y="544" class="desc">deployments · routes</text>
+  <text x="82" y="568" class="desc">allowed destinations</text>
+  <text x="82" y="592" class="desc">approvals · tasks</text>
+  <text x="82" y="616" class="desc">attempts · health reports</text>
+  <rect x="60" y="950" width="220" height="60" rx="12" class="box"/>
+  <text x="82" y="977" class="name">HTTP source</text>
+  <text x="82" y="998" class="desc">Grafana alert webhooks</text>
+  <path d="M280,565 H305" class="line"/>
+  <path d="M305,280 V930" class="line"/>
+  <path d="M305,280 H328" class="flow"/>
+  <path d="M305,475 H328" class="flow"/>
+  <path d="M305,725 H328" class="flow"/>
+  <path d="M305,845 H328" class="flow"/>
+  <rect x="330" y="230" width="280" height="100" rx="12" class="box"/>
+  <text x="352" y="260" class="name">Policy inputs</text>
+  <text x="352" y="284" class="desc">policy-workloads</text>
+  <text x="352" y="302" class="desc">policy-deployments</text>
+  <text x="352" y="320" class="desc">policy-destinations</text>
+  <rect x="330" y="430" width="280" height="90" rx="12" class="box"/>
+  <text x="352" y="462" class="name">Plan inputs</text>
+  <text x="352" y="486" class="desc">plan-items</text>
+  <text x="352" y="506" class="desc">plan-bins</text>
+  <use href="#clock" x="423.5" y="492" width="18" height="18"/>
+  <rect x="330" y="680" width="280" height="90" rx="12" class="box"/>
+  <text x="352" y="712" class="name">Recovery inputs</text>
+  <text x="352" y="736" class="desc">recovery-task-context</text>
+  <text x="352" y="756" class="desc">recovery-observation-context</text>
+  <rect x="330" y="795" width="280" height="100" rx="12" class="box"/>
+  <text x="352" y="826" class="name">Requests</text>
+  <text x="352" y="850" class="desc">overdue-tasks</text>
+  <use href="#clock" x="453.9" y="836" width="18" height="18"/>
+  <text x="352" y="870" class="desc">deadline-history</text>
+  <use href="#clock" x="466.8" y="856" width="18" height="18"/>
+  <text x="352" y="890" class="desc">task-context · attempt-context</text>
+  <rect x="330" y="950" width="280" height="60" rx="12" class="box"/>
+  <text x="352" y="977" class="name">grafana-alerts</text>
+  <text x="352" y="998" class="desc">Diagnostics page only</text>
+  <path d="M280,980 H328" class="flow"/>
+  <rect x="660" y="230" width="250" height="100" rx="12" class="model"/>
+  <text x="682" y="264" class="name">policy</text>
+  <text x="682" y="290" class="desc">Rego rules, given as</text>
+  <text x="682" y="309" class="desc">configuration</text>
+  <path d="M610,280 H658" class="flow"/>
+  <rect x="660" y="350" width="250" height="44" rx="10" class="box"/>
+  <text x="682" y="379" class="name">policy-results</text>
+  <path d="M785,330 V348" class="flow"/>
+  <path d="M785,394 V418" class="flow"/>
+  <rect x="660" y="420" width="250" height="180" rx="14" class="group"/>
+  <text x="676" y="446" class="accent">Optimizer · good_lp</text>
+  <rect x="676" y="458" width="218" height="62" rx="10" class="model"/>
+  <text x="694" y="484" class="name">plan</text>
+  <text x="694" y="506" class="desc">Best complete plan</text>
+  <rect x="676" y="528" width="218" height="62" rx="10" class="model"/>
+  <text x="694" y="554" class="name">resilience</text>
+  <text x="694" y="576" class="desc">What-if: lose any one</text>
+  <path d="M610,475 H658" class="flow"/>
+  <rect x="960" y="430" width="250" height="170" rx="12" class="box"/>
+  <text x="982" y="462" class="name">Model results</text>
+  <text x="982" y="488" class="desc">plan-results</text>
+  <text x="982" y="510" class="desc">assignment-results</text>
+  <text x="982" y="532" class="desc">resilience-results</text>
+  <text x="982" y="554" class="desc">loss-results</text>
+  <path d="M910,515 H958" class="flow"/>
+  <rect x="960" y="690" width="250" height="70" rx="12" class="box"/>
+  <text x="982" y="720" class="name">recovery-results</text>
+  <use href="#clock" x="1150" y="705" width="18" height="18"/>
+  <text x="982" y="744" class="desc">Verified recovery</text>
+  <path d="M610,725 H958" class="flow"/>
+  <path d="M910,372 H1235" class="line"/>
+  <path d="M1210,515 H1235" class="line"/>
+  <path d="M1210,725 H1235" class="line"/>
+  <path d="M305,930 H1235" class="line"/>
+  <path d="M1235,372 V930" class="line"/>
+  <text x="640" y="922" class="note">Most tiles and checks also read the tables directly</text>
+  <rect x="1260" y="230" width="280" height="312" rx="12" class="box"/>
+  <text x="1282" y="262" class="name">Tile queries</text>
+  <text x="1282" y="284" class="desc">One per Grafana tile</text>
+  <text x="1282" y="312.0" class="desc">tile-overdue</text>
+  <use href="#clock" x="1369.7" y="298.0" width="18" height="18"/>
+  <text x="1282" y="333.5" class="desc">tile-deployments</text>
+  <use href="#clock" x="1397.4" y="319.5" width="18" height="18"/>
+  <text x="1282" y="355.0" class="desc">tile-capacity</text>
+  <use href="#clock" x="1374.0" y="341.0" width="18" height="18"/>
+  <text x="1282" y="376.5" class="desc">tile-demand</text>
+  <text x="1282" y="398.0" class="desc">tile-recovery</text>
+  <text x="1282" y="419.5" class="desc">tile-action</text>
+  <text x="1282" y="441.0" class="desc">tile-resilience</text>
+  <text x="1282" y="462.5" class="desc">tile-running</text>
+  <text x="1282" y="484.0" class="desc">tile-proposed</text>
+  <text x="1282" y="505.5" class="desc">tile-policy</text>
+  <text x="1282" y="527.0" class="desc">tile-last-approval</text>
+  <rect x="1260" y="600" width="280" height="240" rx="12" class="box"/>
+  <text x="1282" y="632" class="name">Reaction checks</text>
+  <text x="1282" y="654" class="desc">What each reaction acts on</text>
+  <text x="1282" y="684" class="desc">approval-valid</text>
+  <text x="1282" y="708" class="desc">approval-stale</text>
+  <text x="1282" y="732" class="desc">recovery-verified</text>
+  <text x="1282" y="756" class="desc">approval-events</text>
+  <use href="#clock" x="1395.8" y="742" width="18" height="18"/>
+  <text x="1282" y="780" class="desc">plan-events</text>
+  <use href="#clock" x="1368.7" y="766" width="18" height="18"/>
+  <text x="1282" y="804" class="desc">recovery-scores</text>
+  <path d="M1235,400 H1258" class="flow"/>
+  <path d="M1235,735 H1258" class="flow"/>
+  <rect x="1590" y="950" width="270" height="60" rx="12" class="box"/>
+  <text x="1612" y="977" class="name">query-results</text>
+  <text x="1612" y="998" class="desc">Every query, for Server's API and UI</text>
+  <rect x="1590" y="230" width="270" height="96" rx="12" class="out"/>
+  <text x="1612" y="260" class="name">metrics</text>
+  <text x="1612" y="284" class="accent">Prometheus reaction</text>
+  <text x="1612" y="304" class="desc">Scraped for Grafana's tiles</text>
+  <rect x="1590" y="340" width="270" height="110" rx="12" class="out"/>
+  <text x="1612" y="370" class="name">desk-stream</text>
+  <text x="1612" y="394" class="accent">SSE reaction</text>
+  <text x="1612" y="414" class="desc">To the presenter desk; also</text>
+  <text x="1612" y="434" class="desc">overdue-tasks, plan-results</text>
+  <path d="M1540,278 H1588" class="flow"/>
+  <path d="M1540,392 H1588" class="flow"/>
+  <rect x="1590" y="600" width="270" height="96" rx="12" class="out"/>
+  <text x="1612" y="630" class="name">gateway-reaction</text>
+  <text x="1612" y="654" class="accent">HTTP reaction</text>
+  <text x="1612" y="674" class="desc">Gateway configuration API</text>
+  <rect x="1590" y="710" width="270" height="80" rx="12" class="out"/>
+  <text x="1612" y="740" class="name">grafana-annotations</text>
+  <text x="1612" y="764" class="accent">HTTP reaction → Grafana</text>
+  <rect x="1590" y="804" width="270" height="66" rx="12" class="out"/>
+  <text x="1612" y="834" class="name">langfuse-scores</text>
+  <text x="1612" y="858" class="accent">HTTP reaction → Langfuse</text>
+  <path d="M1540,648 H1588" class="flow"/>
+  <path d="M1540,750 H1588" class="flow"/>
+  <path d="M1540,837 H1588" class="flow"/>
+  <rect x="60" y="1036" width="32" height="22" rx="5" class="box"/>
+  <text x="104" y="1053" class="sub">Continuous query (Cypher)</text>
+  <rect x="330" y="1036" width="32" height="22" rx="5" class="model"/>
+  <text x="374" y="1053" class="sub">Continuous model (native plugin)</text>
+  <rect x="660" y="1036" width="32" height="22" rx="5" class="out"/>
+  <text x="704" y="1053" class="sub">Reaction</text>
+  <use href="#clock" x="812" y="1038" width="18" height="18"/>
+  <text x="840" y="1053" class="sub">Time-aware: the answer changes as time passes, with no new data</text>
+  <text x="1860" y="1053" class="sub" text-anchor="end">47 components in one Drasi Server</text>
 </svg>

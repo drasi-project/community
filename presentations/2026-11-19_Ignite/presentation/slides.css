@@ -47,7 +47,7 @@
 .slide-deck .reveal .questions ol { margin: .6vw 0 0; padding-left: 1.6em; display: grid; gap: .3vw; font-size: max(20px, 2vw); font-weight: 600; color: #fff; }
 
 /* Drasi in one picture */
-.slide-deck .reveal .drasi-slide .flow { margin-top: .4vw; }
+.slide-deck .reveal .drasi-slide .flow { margin-top: .4vw; align-items: stretch; }
 .slide-deck .reveal .drasi-slide .flow li { min-height: 15vw; }
 .slide-deck .reveal .ownership { margin-top: 2.2vw; display: grid; grid-template-columns: 1fr 1fr; gap: 2.4vw; }
 .slide-deck .reveal .ownership div { padding: 1.1vw 1.4vw; border: 1px solid var(--border); border-radius: .6vw; }

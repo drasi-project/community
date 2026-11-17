@@ -108,10 +108,10 @@ its answers current. It has four kinds of component, all working in this demo:
 
 | Component | What it does in this demo | Built into Drasi? |
 |---|---|---|
-| **Sources** | Read the service database's change feed: requests, attempts, deployment health reports (every second), capacity and policy settings, approvals and alerts | Yes: the PostgreSQL and HTTP sources |
-| **Continuous queries** | Cypher queries kept current as data changes and as time passes, for example *overdue support requests* (past 15 seconds), *deployment status* (Unknown after 8 silent seconds) and *verified recovery* | Yes |
-| **Continuous models** | Your own logic, re-run whenever its inputs change. Here: **policy** (where each workload may run, in Rego), **planner** (the best complete plan that fits policy and capacity) and **what-if** (if any one deployment failed, would every workload still fit?) | Drasi runs them; the models themselves were written for this demo |
-| **Reactions** | Stream every change in an answer to the AI service, which publishes it as metrics (Grafana), decision events and Langfuse scores, offers the plan for approval and applies an approved plan only if its facts still hold | Drasi delivers the changes; the AI service is the demo's own |
+| **Sources** | Read the service database's change feed: requests, attempts, deployment health reports (every second), capacity, allowed destinations and approvals | Yes: the PostgreSQL source |
+| **Continuous queries** | Cypher queries kept current as data changes and as time passes, for example *overdue support requests* (past 15 seconds), *deployment status* (Unknown after 8 silent seconds), *is this approval still valid?* and *verified recovery*, plus one query per Grafana tile | Yes |
+| **Continuous models** | Logic re-run whenever its inputs change. Here: **policy** (where each workload may run: Rego rules, given as configuration), **planner** (an optimizer that finds the best complete plan within policy and capacity) and **what-if** (if any one deployment failed, would every workload still fit?) | Drasi runs them; the Rego and optimizer plugins were written for this demo |
+| **Reactions** | Deliver every change in an answer: as Prometheus metrics for Grafana; to the gateway's configuration API, applying an approved plan only if it still matches Drasi's current plan and otherwise rejecting it; as Grafana annotations and Langfuse scores; and to the presenter desk | Yes: the HTTP and SSE reactions. The Prometheus reaction was written for this demo |
 
 During the talk, a short **What Drasi just did** visual follows each part of the
 live demo, highlighting which of these components produced what the audience
@@ -130,8 +130,8 @@ just saw.
    attempt.
 4. **Recovery.** Support may not run on US-C, but summaries may. The planner's plan
    moves summaries to US-C, freeing EU-B for support. Optionally, a policy
-   change while the plan awaits approval leaves no valid plan, and the earlier
-   approval is rejected because its facts changed. The presenter approves the
+   change while the plan awaits approval leaves no valid plan, and Drasi rejects
+   the earlier approval because its facts changed. The presenter approves the
    plan; **Verified** appears only once the queue is answered and support
    requests succeed on the new route.
 5. **Healthy but fragile.** EU-A comes back with only 50k of capacity. Everything
@@ -141,11 +141,13 @@ just saw.
 
 ## What is real and what is simulated
 
-- **Simulated:** model responses, the deployments and their capacity. No real
-  GPUs, paid model services or customer data.
+- **Simulated:** model responses, the three deployments, their capacity and
+  health checks, and the two systems Drasi calls: a change-approval tool and the
+  gateway's configuration API. No real GPUs, paid model services or customer data.
 - **Real:** the HTTP requests, the telemetry in OpenTelemetry, Prometheus,
-  Grafana and Langfuse, the database changes, the policy checks, Drasi's queries
-  and models, and the measured recovery.
+  Grafana and Langfuse, the database changes, and everything the talk says Drasi
+  does: its queries, the policy, the plans, checking and applying approvals, and
+  verifying recovery. See [DRASI.md](DRASI.md#3-what-is-simulated).
 
 ## Why people should care
 
@@ -166,8 +168,8 @@ just saw.
 
 - [System architecture](presentation/diagrams/architecture.svg): the AI service,
   the observability tools and Drasi Server
-- [Inside Drasi](presentation/diagrams/drasi-graph.svg): the demo's 26 components: sources,
-  continuous queries, continuous models and outputs
+- [Inside Drasi](presentation/diagrams/drasi-graph.svg): the demo's 47 components:
+  sources, continuous queries, continuous models and reactions
 
 ## What's in this folder
 

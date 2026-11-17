@@ -10,14 +10,17 @@ monitoring and Drasi processing are real.
 
 ## What you will run
 
+Addresses are this copy's defaults from `demo/ports.env` (see
+[Ports and settings](#ports-and-settings)).
+
 | Part | What it is | Address |
 |---|---|---|
-| Presenter desk and projector window | The desk you present from, and the window it drives on the projector (slides, dashboards, recordings) | http://127.0.0.1:18580/presenter, and `/present` |
-| Grafana | The two dashboards, shown inside the projector window | http://localhost:13000 |
-| Langfuse | Traces of individual AI requests (not projected) | http://localhost:13001 |
-| Drasi Server | Runs the continuous queries and models | http://127.0.0.1:18421 |
-| Workload service | The simulated AI service and its traffic | http://127.0.0.1:18500 |
-| Supporting containers | PostgreSQL, Prometheus, OpenTelemetry Collector, Langfuse storage | Run in Podman |
+| Presenter desk and projector window | The desk you present from, and the window it drives on the projector (slides, dashboards, recordings) | http://127.0.0.1:19580/presenter, and `/present` |
+| Grafana | The two dashboards, shown inside the projector window | http://localhost:14000 |
+| Langfuse | Traces of individual AI requests (not projected) | http://localhost:14001 |
+| Drasi Server | Runs the continuous queries, models and reactions | http://127.0.0.1:19421 |
+| AI service | The simulated AI service, its traffic and the demo controls | http://127.0.0.1:19500 |
+| Supporting containers | PostgreSQL, Prometheus, OpenTelemetry Collector, Grafana, Langfuse and its storage, and an integration-test probe | Run in Podman |
 
 ## First-time setup
 
@@ -46,15 +49,15 @@ podman machine start
 Put the three repositories side by side in one folder, on these branches:
 
 ```sh
-mkdir ignite && cd ignite
-git clone -b agentofreality-ignite https://github.com/drasi-project/community.git
-git clone -b agentofreality-ignite https://github.com/drasi-project/drasi-core.git
-git clone -b agentofreality-ignite https://github.com/drasi-project/drasi-server.git
+mkdir ignite-native && cd ignite-native
+git clone -b agentofreality-ignite-native https://github.com/drasi-project/community.git
+git clone -b agentofreality-ignite-native https://github.com/drasi-project/drasi-core.git
+git clone -b agentofreality-ignite-native https://github.com/drasi-project/drasi-server.git
 ```
 
-The drasi-core and drasi-server branches add two fixes the demo needs to
-`agentofreality-parallel-computation-graph-recovery` (see
-[DEVELOPERS.md](DEVELOPERS.md#dependencies-on-drasi-core-and-server)).
+The drasi-core and drasi-server branches carry fixes the demo needs (see
+[DEVELOPERS.md](DEVELOPERS.md#dependencies-on-drasi-core-and-server)). Builds
+go to `.cargo-target` in this top folder.
 
 All remaining commands run from the demo folder:
 
@@ -71,7 +74,7 @@ cd community/presentations/2026-11-19_Ignite/demo
 This writes random passwords to `demo/.env` once and keeps them on later runs.
 Keep `.env` private and never delete it while the containers' data exists.
 
-### 4. Start the supporting containers
+### 4. Build the test probe and start the containers
 
 ```sh
 ./ops/observability-stack.sh up -d --wait postgres
@@ -79,9 +82,17 @@ Keep `.env` private and never delete it while the containers' data exists.
 ./ops/observability-stack.sh up -d --wait
 ```
 
-The first run downloads the container images. Afterwards they work offline.
+`observability-build.sh` builds the integration-test probe image
+(`localhost/ignite-native-probe:phase1`, named after the project in
+`ports.env`). The first run downloads the container images; afterwards they
+work offline.
 
-### 5. Build Drasi Server, the plugins and the workload service
+Starting Grafana also creates the Grafana token that Drasi's annotation
+reaction uses: `up` runs `ops/observability-env.py grafana-token`, which creates
+the `drasi-annotations` service account and writes `IGNITE_GRAFANA_TOKEN` to
+`.env` (it keeps a token that still works). It prints only whether it wrote one.
+
+### 5. Build Drasi Server, the plugins and the AI service
 
 ```sh
 npm --prefix ../../../../drasi-server/ui ci
@@ -112,8 +123,7 @@ Setup is done. Continue with [Start the demo](#start-the-demo).
 
 ## Start the demo
 
-You need three terminal windows, all starting in the `demo` folder. Start them in
-this order.
+You need three terminal windows, all starting in the `demo` folder.
 
 **Before you start:** make sure Podman is running and the containers are up.
 
@@ -129,7 +139,7 @@ set -a; . ./.env; set +a
 python3 ops/native-runtime.py run
 ```
 
-**Terminal 2: workload service** (once terminal 1 says "Drasi Server started successfully")
+**Terminal 2: AI service**
 
 ```sh
 set -a; . ./.env; set +a
@@ -143,19 +153,19 @@ cd ui
 npm run preview
 ```
 
-**Check it is ready.** In any other terminal, from `demo`:
+**Check it is ready.** Open the presenter desk and wait until its header says
+**READY**: Drasi's answers are streaming to it. This usually takes under a
+minute; terminal 1 first deletes rows from earlier scenario runs, which keeps
+startup quick. To check Grafana's side from a terminal, every line of this
+should end in `1`:
 
 ```sh
-python3 ops/workload.py status
+curl -s http://127.0.0.1:19423/metrics | grep drasi_reaction_input_ready
 ```
-
-Wait until it shows `"continuous_context": "ready"`. This usually takes under a
-minute. Terminal 1 deletes rows from earlier scenario runs before starting Server,
-which keeps startup quick.
 
 ## Get ready to present
 
-Open the presenter desk at http://127.0.0.1:18580/presenter and follow
+Open the presenter desk at http://127.0.0.1:19580/presenter and follow
 [PRESENTER.md](PRESENTER.md#set-up-your-screens): it covers the screens, the
 checklist, the script, every control and what to do if something goes wrong.
 
@@ -185,8 +195,9 @@ On the presenter desk, open **Before and after the talk** and press **Reset scen
 python3 ops/workload.py reset
 ```
 
-This restores the starting state and cancels waiting requests. Grafana and
-Langfuse history is kept. Never reset in the middle of a talk.
+This restores the starting state and cancels waiting requests. It also deletes
+the previous run's decision events from Grafana; other Grafana and Langfuse
+history is kept. Never reset in the middle of a talk.
 
 ## After pulling new code
 
@@ -201,16 +212,44 @@ set -a; . ./.env; set +a
 Only if the change notes say the database changed, also run
 `python3 ops/native-runtime.py migrate` before starting.
 
+## Ports and settings
+
+Every port, the container project name, the PostgreSQL publication and slot,
+and the browser storage key come from one file, `demo/ports.env`. The scripts,
+Compose, Drasi Server's configuration, the AI service, the web app and the tests
+all read it. An exported variable of the same name overrides a line, and
+`IGNITE_SETTINGS=<file>` selects another file. The full list is in
+[DEVELOPERS.md › Ports](DEVELOPERS.md#ports).
+
+After changing a port, rebuild (`./ops/native-build.sh` and `npm run build` in
+`ui`), restart the containers, and regenerate Grafana's dashboards
+(`python3 observability/grafana/dashboards.py`) if the Langfuse port changed.
+
+### Running beside the original demo
+
+This copy can run on the same Mac as the original demo (the `ignite` folder,
+branch `agentofreality-ignite`) at the same time. `ports.env` gives it every
+port +1000, its own container project (`ignite-native`, so its own containers
+and volumes), its own replication publication and slot (`ignite_rework`) and its
+own browser storage key. The original's values are in `ports.default.env`;
+never use that file here while the original is running, because it would share
+the original's ports, containers and data.
+
+The two copies need separate `.env` files, probe images and builds, which the
+steps above already give them.
+
 ## Troubleshooting
 
 | Problem | What to do |
 |---|---|
 | Grafana charts are empty | Start demo traffic on the presenter desk and wait a minute. |
-| Grafana tiles say **Unknown** | Run `python3 ops/workload.py status`. Right after a start, wait for `ready`. |
+| Grafana tiles say **Unknown** | Drasi's answers haven't loaded. Right after a start, wait for the desk to say READY and run the `curl` check in [Start the demo](#start-the-demo). |
 | Everything stays Unknown for a long time | A deployment may have been left failed, so requests kept retrying and history grew very large. On the desk, open **All demo controls** and restore every deployment (**Any deployment** › Restore), then **Before and after the talk** › **Reset scenario…**, then restart terminals 1 and 2. |
 | Drasi Server takes minutes to start | The current run has a lot of history. Wait; it will finish (it allows up to 20 minutes). Next time, reset the scenario before restarting. |
+| Terminal 1 stops with "IGNITE_GRAFANA_TOKEN must be exported" | Start Grafana with `./ops/observability-stack.sh up -d --wait grafana`, which writes the token to `.env`, then load `.env` again and restart terminal 1. |
+| No decision events in Grafana | Check the token: `python3 ops/observability-env.py grafana-token` replaces it if it no longer works. Restart terminal 1 after it writes a new one. |
 | "Run ops/observability-stack.sh env first" | Do [step 3](#3-create-local-passwords). |
-| A port is already in use | Something is already running. Find it with `lsof -nP -iTCP:18421 -sTCP:LISTEN` (change the port) and stop it before starting another copy. |
+| A port is already in use | Something is already running. Find it with `lsof -nP -iTCP:19421 -sTCP:LISTEN` (change the port) and stop it before starting another copy. |
 | Startup refuses because files changed | Rebuild: `./ops/native-build.sh`. |
 | Containers fail to start | Check Podman is running: `podman machine start`, then `./ops/observability-stack.sh ps`. |
 | The projector window shows "Grafana · …" but no dashboard | Grafana isn't running or hasn't loaded yet: check `./ops/observability-stack.sh ps`, then press **Back** and **Next** on the desk. |

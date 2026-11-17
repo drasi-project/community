@@ -54,7 +54,7 @@ the demo changes. Open the desk to give the talk.
 1. Connect the projector and set the displays to **extend**, not mirror
    (macOS: System Settings › Displays › Use as: Extended display). If they mirror,
    the audience sees your desk.
-2. In Chrome, open the desk: http://127.0.0.1:18580/presenter
+2. In Chrome, open the desk: http://127.0.0.1:19580/presenter
 3. On the desk, press **Open projector window**. Drag that window onto the
    projector and make it full screen (Ctrl ⌘ F). The desk's header then says
    **Projector window connected**.
@@ -116,14 +116,15 @@ After pressing, the result appears right under the buttons: **Done.**, or in gre
 **Short on time:** tick it to skip the beats marked optional (the policy change
 and the late request view). Their buttons and notes disappear from the sequence.
 
-**The approval flow.** The planner proposes a plan (it's the demo's own code; Drasi
-re-runs it whenever anything changes); nothing changes until you approve
-it, which stands in for a change-approval tool. **Select proposed plan** takes a
-copy; **Approve selected plan** sends it. The AI service applies a plan only if
-the facts it was worked out from (policy, capacity, health) haven't changed, so
-an out-of-date copy is rejected. After an approval, your selection clears, so you
-can't approve twice by accident. That's also true after a rejected approval:
-select the plan again before approving.
+**The approval flow.** Drasi's planner proposes a plan and re-works it whenever
+anything changes; nothing changes until you approve it. **Select proposed plan**
+takes a copy; **Approve selected plan** sends it to the change-approval tool,
+which only records it. Drasi then checks it: if the plan and the facts it was
+worked out from (policy, capacity, health) are unchanged, Drasi's reaction
+applies the new routes through the gateway's configuration API; otherwise it
+rejects the approval with a reason, which the desk shows. After an approval,
+your selection clears, so you can't approve twice by accident. That's also true
+after a rejected approval: select the plan again before approving.
 
 <!-- generated from presentation/notes.ts: do not edit; run npm run sync-presenter in demo/ui -->
 
@@ -164,8 +165,8 @@ Say it in your own words.
 
 ### 3. Drasi in one picture (1½ minutes)
 
-1. **Drasi in one picture.** Drasi is open-source change-driven computation. Sources bring in every change as it happens: here, from the AI service's database. Continuous queries keep a result up to date as changes arrive, and as time passes. Continuous models run your own logic on those results and re-run it whenever an input changes. Reactions deliver each change to where it's needed.
-2. **Drasi in one picture.** What's what. Drasi does the hard part: it keeps results up to date incrementally as changes arrive, re-checks them when time passes a deadline, and re-runs your models whenever their inputs change. You write the business logic: here, the policy rules and the planner and what-if models were written for this demo, as Drasi plugins. The AI service, its change-approval tool and its gateway configuration are the systems Drasi works with. 'Without polling' is about computing the answers: nothing is recomputed on a schedule. Health checks still run every second, as in any system, and Grafana still refreshes to draw the screen; Drasi reacts to what they report.
+1. **Drasi in one picture.** Drasi is open-source change-driven computation. Sources bring in every change as it happens: here, from the AI service's database. Continuous queries keep a result up to date as changes arrive, and as time passes. Continuous models run logic such as policies and planners on those results and re-run it whenever an input changes. Reactions deliver each change to other systems.
+2. **Drasi in one picture.** What's what. Drasi does the hard part: it keeps results up to date incrementally as changes arrive, re-checks them when time passes a deadline, and re-runs the models whenever their inputs change. For this demo we wrote three plugins: a policy model that runs Rego rules, an optimizer for the planner and the what-if, and a reaction that publishes answers to Prometheus. The rules and settings are their configuration. The AI service, its change-approval tool and its gateway configuration API are the systems Drasi works with. 'Without polling' is about computing the answers: nothing is recomputed on a schedule. Health checks still run every second, as in any system, and Prometheus and Grafana still collect and draw on their own schedule; Drasi reacts to what changes.
 
 **If it breaks:** Carry on.
 
@@ -174,9 +175,9 @@ Say it in your own words.
 1. **Grafana · Operations.** This is the AI service's Grafana dashboard. The top half is ordinary monitoring, measured from real requests: calls, errors, answer time, the support queue and Grafana alerts. OpenTelemetry, Prometheus and Grafana; nothing new.
    - **Press:** Start demo traffic
    - **Watch for:** Charts moving. Support errors 0%, Support queue 0 to 2 (green). (Start demo traffic only if it isn't already running.)
-2. **Grafana · Operations.** The bottom half is Drasi's answers, worked out from changes in the AI service's database rather than from metrics. The service records every request and attempt, and checks each deployment's health every second. Drasi turns that into: overdue support requests, each deployment's status, recovery, what action is needed, and whether we'd survive losing any one deployment. They arrive as ordinary metrics, so you can alert on them like anything else.
+2. **Grafana · Operations.** The bottom half is Drasi's answers, worked out from changes in the AI service's database rather than from metrics. The service records every request and attempt, and checks each deployment's health every second. Drasi turns that into: overdue support requests, each deployment's status, recovery, what action is needed, and whether we'd survive losing any one deployment. A Drasi reaction publishes them as ordinary Prometheus metrics, so you can alert on them like anything else.
    - **Watch for:** Support overdue 0, all deployments Healthy, Recovery Nothing to verify, Action needed None, Safe if one fails? Yes.
-3. **What Drasi just did.** So far Drasi has read every change in the database, kept two queries current, run the policy, planner and what-if, and pushed the answers into Grafana. Nothing new to watch: the answers sit where you already look.
+3. **What Drasi just did.** So far Drasi has read every change in the database, kept its queries current, run the policy, planner and what-if, and its reaction has published the answers for Grafana. Nothing new to watch: the answers sit where you already look.
 
 **If it breaks:** If the charts are empty, traffic isn't running: press Start demo traffic and keep talking.
 
@@ -207,26 +208,26 @@ Say it in your own words.
 
 1. **Grafana · Recovery plan.** This dashboard is all Drasi. Capacity: 300k in total, 200k on healthy deployments, 140k needed. On paper there's plenty. But US-C has the free room, and customer support isn't allowed there.
    - **Watch for:** Customer support may run on: US-C Not allowed.
-2. **Grafana · Recovery plan.** The planner, our own code that Drasi re-runs on every change, respects that: move summaries to US-C, which frees EU-B for support. I'll take this plan to approve, on my laptop; in your world that's a change-approval tool.
+2. **Grafana · Recovery plan.** The planner, an optimizer Drasi re-runs on every change, respects that: move summaries to US-C, which frees EU-B for support. I'll take this plan to our change-approval tool, here on my laptop.
    - **Press:** Select proposed plan
    - **Watch for:** Proposed plan: support → EU-B, summaries → US-C. (Selecting changes nothing on the projector.)
 3. **Grafana · Recovery plan (optional).** While it waits for approval, compliance restricts summaries to Europe too. The answer changes at once: no valid plan. Plans keep both workloads running, and with EU-A down, support and summaries can't both fit in EU-B. Dropping work is a decision for a person, not the planner.
    - **Press:** Summaries: Europe only
    - **Watch for:** Document summaries may run on: US-C Not allowed. Action needed and Proposed plan: No valid plan.
-4. **Grafana · Recovery plan (optional).** If I approve the plan I selected a moment ago, it's rejected: every plan carries the facts it was based on, and those facts changed.
+4. **Grafana · Recovery plan (optional).** If I approve the plan I selected a moment ago, Drasi rejects it: every plan carries the facts it was based on, and those facts changed.
    - **Press:** Approve selected plan (it's meant to be rejected)
    - **Watch for:** Last approval: Rejected.
 5. **Grafana · Recovery plan (optional).** Compliance allows the US for summaries again, and the plan comes straight back.
    - **Press:** Summaries: Europe + US
    - **Watch for:** Action needed: Approve proposed plan.
-6. **What Drasi just did (optional).** The policy change came in as a change like any other. Drasi re-ran the policy and the planner, saw that the approval no longer matched its current plan, and its reaction rejected it.
-7. **Grafana · Recovery plan.** Now I approve the current plan.
+6. **What Drasi just did (optional).** The policy change came in as a change like any other. Drasi re-ran the policy and the planner, saw that the approval no longer matched its current plan, and its reaction rejected it in the approval tool, with the reason.
+7. **Grafana · Recovery plan.** Now I approve the current plan. Drasi checks it still matches its plan, and its reaction applies the new routes through the gateway's configuration API.
    - **Press:** Select proposed plan, then Approve selected plan
    - **Watch for:** Last approval: Applied, awaiting evidence. Running now changes. Action needed None. Recovery Awaiting evidence.
 8. **Grafana · Recovery plan.** Look at Recovery. Approving isn't enough to call it fixed: another Drasi query waits until the queue has cleared and at least three support requests have been answered on the new route. Only then does it say Verified.
    - **Watch for:** Recovery goes from Awaiting evidence to Verified, often within 30 seconds of approval. If it's already Verified, say so.
 9. **Grafana · Operations.** On Operations: the queue has drained, Support overdue is back to 0 and errors are falling. EU-A is still down: we routed around it, within policy.
-10. **What Drasi just did.** Drasi kept the policy and the plan current as health and capacity changed, and then checked the outcome. Approving a change isn't the same as fixing the problem.
+10. **What Drasi just did.** Drasi kept the policy and the plan current as health and capacity changed, applied the approved plan, and then checked the outcome before recording it as verified. Approving a change isn't the same as fixing the problem.
 
 **If it breaks:** If Recovery stays Awaiting evidence, say it's applied but not yet verified, and carry on. Never approve twice. If the plan or the policy change doesn't behave as described, press Use recordings from here on.
 
@@ -259,12 +260,12 @@ Say it in your own words.
 | Deployment | One place the AI model runs: EU-A, EU-B (Europe) or US-C (United States) |
 | Capacity | How much a deployment can handle, in tokens per minute (100k each) |
 | Customer support / document summaries | The two workloads: support needs 60k, summaries 80k |
-| Plan | Where each workload should run. The planner (demo code, re-run by Drasi on every change) proposes one; you approve it |
+| Plan | Where each workload should run. Drasi's planner proposes one; you approve it, and Drasi applies it if it's still current |
 | Policy | The rules: support only in Europe; summaries anywhere |
 | Source | How Drasi hears about changes; here, the database's live list of changes |
 | Continuous query | A question whose answer Drasi keeps up to date as data changes and time passes |
-| Continuous model | Your own logic (here: policy, planner, what-if) that Drasi re-runs when its inputs change |
-| Reaction | Delivers each change in an answer to where it's needed |
+| Continuous model | Logic that Drasi re-runs when its inputs change: here a Rego policy, and an optimizer for the planner and the what-if |
+| Reaction | Delivers each change in an answer to another system: here Prometheus, the gateway's configuration API, Grafana, Langfuse and the presenter desk |
 | Trace | One customer request, start to finish, in Langfuse |
 
 ## Questions to expect
@@ -274,10 +275,11 @@ Say it in your own words.
 | How is this different from a Prometheus alert? | Prometheus evaluates numbers on an interval. Drasi keeps the actual list of affected requests current as changes arrive, joins in business facts like policy and approvals, and re-checks an item at the moment a deadline passes. Its answers still go to Prometheus and alerts, as you saw. |
 | Couldn't I just export 'age of the oldest waiting request'? | That's one number. Drasi gives the exact set of late requests with their traces, updated request by request, without writing that logic yourself. |
 | Isn't trueLater just a timer? | It's a re-check of one item at one moment. The claim is no scheduled scans or recomputation, not no clock. |
-| Grafana refreshes every 5 seconds. Isn't that polling? | That's Grafana drawing the screen. Deciding who is late, what's allowed and which plan fits happens as changes and deadlines arrive. |
+| Grafana refreshes every 5 seconds. Isn't that polling? | That's Prometheus and Grafana collecting and drawing, as they always do. Deciding who is late, what's allowed and which plan fits happens in Drasi as changes and deadlines arrive. |
 | Was the alert slow on purpose? | The alert is measured over a short window, as most are. The point isn't speed: Drasi has a plan that fits policy, not just a signal. |
-| Does it only work with PostgreSQL? | No. Drasi has sources for other databases, Kafka, Kubernetes, OpenTelemetry and HTTP. This demo uses PostgreSQL's change feed and an HTTP source for Grafana's alerts. |
-| Are the policy, planner and what-if part of Drasi? | No, they're this demo's own code (in the repository), with the policy written in Rego. Drasi runs them as continuous models and re-runs them when their inputs change. |
+| Does it only work with PostgreSQL? | No. Drasi has sources for other databases, Kafka, Kubernetes, OpenTelemetry and HTTP. This demo uses PostgreSQL's change feed, and an HTTP source receives Grafana's alerts. |
+| Are the policy, planner and what-if part of Drasi? | Not yet built in: they're plugins written for this demo, in the repository. One runs Rego rules; the other is an optimizer on the open-source good_lp solver. Both are generic: the rules, workloads and capacities are configuration. Drasi runs them as continuous models and re-runs them when their inputs change. |
+| Who changes the routes? | Drasi's reaction calls the gateway's configuration API, only for an approval that still matches Drasi's current plan. The AI service just applies the call, and refuses it if the scenario changed in between. |
 | How do the answers reach Grafana? | A Drasi reaction keeps every answer as a Prometheus metric. Prometheus scrapes it and Grafana shows it. |
 | What happens when Drasi restarts? | It rebuilds its state from the database and resumes the change feed. Until then the tiles show Unknown. |
 | How does it scale? | This demo isn't a benchmark. Each query only keeps what it needs, here the unanswered requests. For performance work, see drasi.io. |
@@ -308,10 +310,10 @@ out of date or unavailable; it never means healthy.
 | | Action needed | None; Approve proposed plan; No valid plan; At risk (healthy, but losing one deployment would leave no valid plan) |
 | | Safe if one fails? | If any one deployment failed, would every workload still fit somewhere allowed? **No** names the deployment whose loss would hurt. **Already one down** while a deployment has failed: the question doesn't apply |
 
-Dashed green lines on the charts mark Drasi's decisions (plans, approvals,
-verified recovery).
+Dashed green lines on the charts mark Drasi's decision events (plans, approvals,
+verified recovery), which Drasi posts to Grafana.
 
-**AI service · Recovery plan** (everything is from Drasi, except capacity settings)
+**AI service · Recovery plan** (everything on it comes from Drasi)
 
 | Tile | Meaning |
 |---|---|
@@ -319,7 +321,7 @@ verified recovery).
 | Last approval | None yet; Approved, applying; Applied, awaiting evidence; Applied and verified; Rejected: out of date |
 | Running now | Where each workload runs and the capacity it needs. **held: not allowed** when policy no longer allows it there |
 | Proposed plan | The planner's plan, in orange when it differs from what's running. **Same as running now** or **No valid plan** otherwise |
-| Customer support / Document summaries may run on | The policy's answer for each deployment: Allowed or Not allowed |
+| Customer support / Document summaries may run on | Drasi's Rego policy answer for each deployment: Allowed or Not allowed |
 | Decision events | Newest first: plans, approvals, rejections with the reason, verified recovery |
 | Capacity | Total, on healthy deployments, and needed by the two workloads |
 | Deployments | Each deployment's capacity, orange when below its normal 100k; **Failed** while it is down |
@@ -338,8 +340,8 @@ The same request is a trace in Langfuse (its trace ID is at the bottom). If
 someone asks to see Langfuse, open it on your laptop from **Show something on the
 projector** › Langfuse, which opens privately; in Langfuse, a request shows its
 input, each **attempt · EU-A** (red when it failed) and **model · EU-B** when
-answered, and scores such as *drasi_recovery* for requests that were part of a
-verified recovery.
+answered, and the *drasi_recovery* score, which Drasi adds to requests answered
+on a route it verified.
 
 ## When something goes wrong
 
