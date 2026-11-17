@@ -67,8 +67,8 @@ impl Factory for OptimizerFactory {
                 .collect(),
             completion: None,
             capabilities: Capabilities {
-                continuations: true,
-                startup_continuation: true,
+                continuations: false,
+                startup_continuation: false,
                 wakeups: true,
                 input_binding_updates: true,
                 ..Capabilities::default()
