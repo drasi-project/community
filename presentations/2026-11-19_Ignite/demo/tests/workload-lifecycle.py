@@ -7,6 +7,9 @@ import socket
 import subprocess
 import time
 from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "ops"))
+import settings  # noqa: E402
 
 DEMO = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location("work", DEMO / "tests/workload-integration.py")
@@ -26,7 +29,7 @@ class Service:
 
     def start(self):
         self.log = (DEMO / ".native/evidence/lifecycle-workload.log").open("a")
-        self.process = subprocess.Popen([str(DEMO / ".native/target/debug/ignite-workloads"), "serve"],
+        self.process = subprocess.Popen([str(native.runtime.WORKLOADS), "serve"],
             cwd=DEMO, stdout=self.log, stderr=subprocess.STDOUT)
         def ready():
             assert self.process.poll() is None, "workload exited; inspect lifecycle-workload.log"
@@ -46,7 +49,7 @@ class Service:
 
 
 def main():
-    for port in (18421,18422,18500,18531,18532,18533):
+    for port in [settings.port(name) for name in ("DRASI_API","DRASI_ALERT","WORKLOAD","DEPLOYMENT_EU_A","DEPLOYMENT_EU_B","DEPLOYMENT_US_C")]:
         with socket.socket() as listener:
             listener.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
             listener.bind(("127.0.0.1",port))
@@ -120,7 +123,7 @@ def main():
         assert len(work.api("/tasks/"+uncertain["id"])["attempts"])==1
         checks.append("gateway restart reconciles a real unacknowledged receipt without repeated inference")
 
-        native.runtime.sql("SELECT pg_terminate_backend(active_pid) FROM pg_replication_slots WHERE slot_name='ignite_native' AND active_pid IS NOT NULL;")
+        native.runtime.sql(f"SELECT pg_terminate_backend(active_pid) FROM pg_replication_slots WHERE slot_name='{settings.SLOT}' AND active_pid IS NOT NULL;")
         work.control("pause-reports","EU-B")
         work.wait(lambda:work.api("/context")["queries"].get("endpoint-freshness",{}).get("EU-B",{}).get("status")=="unknown",timeout=20)
         work.control("resume-reports","EU-B")

@@ -1,3 +1,4 @@
+import { settings, url, port } from "../settings.mjs";
 import { test, expect, type Page } from "@playwright/test";
 import { applyFrame } from "../src/live";
 import { isCurrent, decisionSchema, healthSchema } from "../src/contracts";
@@ -8,8 +9,8 @@ import { replayClips } from "../../../presentation/replay";
 import { displayQuery } from "../../../presentation/QuerySlide";
 import fs from "node:fs";
 
-const fixture = "http://127.0.0.1:18582";
-const stageKey = "ignite-presentation-stage-v3";
+const fixture = url("UI_FIXTURE");
+const stageKey = settings.IGNITE_STORAGE_KEY;
 test.beforeEach(async ({ request }) => { await request.post(`${fixture}/test/reset`); });
 const mutations = async (request: import("@playwright/test").APIRequestContext) => (await (await request.get(`${fixture}/test/state`)).json()).mutations;
 // Open the desk on a given part and beat.
@@ -20,7 +21,7 @@ async function desk(page: Page, cue: string, beat = 0, extra: object = {}) {
   await page.goto("/presenter");
   await expect(page.getByRole("heading", { level: 1 })).toContainText(scenes[index].title);
 }
-const stubGrafana = (page: Page) => page.route("http://localhost:13000/**", route => route.fulfill({ contentType: "text/html", body: "<h1>TEST Grafana</h1>" }));
+const stubGrafana = (page: Page) => page.route(`http://localhost:${port("GRAFANA")}/**`, route => route.fulfill({ contentType: "text/html", body: "<h1>TEST Grafana</h1>" }));
 
 test("the talk is 22 minutes and every beat says something and shows something", () => {
   expect(scenes.reduce((sum, s) => sum + s.minutes, 0)).toBe(22);

@@ -3,6 +3,9 @@
 import importlib.util
 import json
 from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "ops"))
+import settings  # noqa: E402
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -14,7 +17,7 @@ spec.loader.exec_module(release)
 
 class ReleaseGuards(unittest.TestCase):
     def test_scoped_container_set_rejects_unrelated_or_missing_services(self):
-        names = [f"ignite-observability-service-{i}" for i in range(10)]
+        names = [f"{settings.PROJECT}-service-{i}" for i in range(10)]
         with patch.object(release, "command", return_value="\n".join(names)):
             self.assertEqual(release.containers(), names)
         for invalid in [names[:-1], [*names[:-1], "another-project-postgres-1"]]:

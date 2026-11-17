@@ -151,8 +151,9 @@ ALTER TABLE ignite_commands REPLICA IDENTITY FULL;
 UPDATE ignite_model SET revision=revision+1,
     payload=payload || '{"policy":{"revision":1,"destinations":{"support":["EU-A","EU-B"],"batch":["EU-A","EU-B","US-C"]}}}'::jsonb
 WHERE NOT payload ? 'policy';
-ALTER PUBLICATION ignite_native SET TABLE ignite_endpoints, ignite_model, ignite_tasks,
+-- :publication comes from ports.env (ops/native-runtime.py passes it to psql).
+ALTER PUBLICATION :"publication" SET TABLE ignite_endpoints, ignite_model, ignite_tasks,
     ignite_attempts, ignite_reports, ignite_breaches, ignite_alerts, ignite_commands;
 -- The native PostgreSQL source refuses publications that replicate TRUNCATE.
-ALTER PUBLICATION ignite_native SET (publish = 'insert, update, delete');
+ALTER PUBLICATION :"publication" SET (publish = 'insert, update, delete');
 COMMIT;

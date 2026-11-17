@@ -3,9 +3,7 @@ pub use ignite_domain::decision::Model;
 
 pub fn port(id: &str) -> Result<u16> {
     match id {
-        "EU-A" => Ok(18531),
-        "EU-B" => Ok(18532),
-        "US-C" => Ok(18533),
+        "EU-A" | "EU-B" | "US-C" => ignite_settings::get().deployment_port(id),
         _ => anyhow::bail!("unknown endpoint"),
     }
 }

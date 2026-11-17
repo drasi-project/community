@@ -1,0 +1,14 @@
+{
+  "items": {"key": "id", "demand": "demand_tpm", "current": "deployment", "revision": "revision"},
+  "bins": {
+    "key": "id",
+    "capacity": "capacity_tpm",
+    "health": {"property": "status", "healthy": ["ok"], "unhealthy": ["failed", "throttled"]}
+  },
+  "eligibility": {"itemKey": "subject", "binKey": "target", "state": "state", "allowed": "allowed"},
+  "constraints": ["assignEachItemOnce", "binCapacity"],
+  "objective": ["fewestMoves", "lowestPeakUtilisation"],
+  "epochProperty": "run_epoch",
+  "coalesceMs": 100,
+  "timeLimitMs": 2000
+}

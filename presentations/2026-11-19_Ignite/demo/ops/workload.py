@@ -5,6 +5,9 @@ import json
 import os
 from pathlib import Path
 import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import settings  # noqa: E402
 import urllib.request
 
 DEMO = Path(__file__).resolve().parents[1]
@@ -14,7 +17,7 @@ spec.loader.exec_module(runtime)
 
 
 def api(path, body=None):
-    request = urllib.request.Request("http://127.0.0.1:18500" + path,
+    request = urllib.request.Request(settings.url("WORKLOAD") + path,
         data=None if body is None else json.dumps(body).encode(), headers={"Content-Type":"application/json"})
     with urllib.request.urlopen(request,timeout=10) as response:
         return json.load(response)
@@ -24,7 +27,7 @@ def main():
     action = sys.argv[1] if len(sys.argv)>1 else ""
     if action in ("run","client"):
         runtime.verify_bundle()
-        binary = DEMO / ".native/target/debug/ignite-workloads"
+        binary = runtime.WORKLOADS
         args = ["serve"] if action=="run" else sys.argv[1:]
         os.execve(binary,[str(binary),*args],os.environ.copy())
     elif action in ("status","context","decisions"):

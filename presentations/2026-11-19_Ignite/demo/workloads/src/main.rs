@@ -174,7 +174,7 @@ async fn submit(State(app): State<App>, Json(input): Json<Submit>) -> Api {
     span.end();
     Ok(Json(
         json!({"id":input.id,"trace_id":trace,"root_span_id":root_span,"deadline_ms":deadline,
-        "trace_url":format!("http://localhost:13001/project/ignite-probe/traces/{trace}")}),
+        "trace_url":format!("http://localhost:{}/project/ignite-probe/traces/{trace}", ignite_settings::get().port("LANGFUSE")?)}),
     ))
 }
 
@@ -249,7 +249,7 @@ async fn task(Path(id): Path<String>) -> Api {
         .collect();
     Ok(Json(
         json!({"task":row.get::<_,Value>(0),"attempts":attempts,
-            "trace_url":format!("http://localhost:13001/project/ignite-probe/traces/{}",row.get::<_,Value>(0)["trace_id"].as_str().context("trace")?)}),
+            "trace_url":format!("http://localhost:{}/project/ignite-probe/traces/{}",ignite_settings::get().port("LANGFUSE")?,row.get::<_,Value>(0)["trace_id"].as_str().context("trace")?)}),
     ))
 }
 
@@ -720,7 +720,7 @@ async fn client_command(workload: &str, count: usize) -> Result<()> {
     );
     let http = reqwest::Client::new();
     let state: Value = http
-        .get("http://127.0.0.1:18500/health")
+        .get(format!("{}/health", ignite_settings::get().url("WORKLOAD")?))
         .send()
         .await?
         .error_for_status()?
@@ -729,7 +729,7 @@ async fn client_command(workload: &str, count: usize) -> Result<()> {
     let epoch = state["run_epoch"].as_str().context("epoch")?;
     for _ in 0..count {
         let value: Value = http
-            .post("http://127.0.0.1:18500/tasks")
+            .post(format!("{}/tasks", ignite_settings::get().url("WORKLOAD")?))
             .json(&Submit {
                 id: format!("{epoch}-{workload}-{}", identity()),
                 run_epoch: epoch.into(),
@@ -812,7 +812,8 @@ async fn main() -> Result<()> {
             Ok(())
         });
     }
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:18500").await?;
+    let settings = ignite_settings::get();
+    let listener = tokio::net::TcpListener::bind(("127.0.0.1", settings.port("WORKLOAD")?)).await?;
     let router = Router::new()
         .route("/health", get(health))
         .route("/context", get(context))
@@ -869,7 +870,13 @@ async fn main() -> Result<()> {
             tokio::time::sleep(Duration::from_secs(1)).await;
         }
     });
-    println!("Ignite workload gateway 127.0.0.1:18500; model simulators 18531/18532/18533");
+    println!(
+        "Ignite workload gateway 127.0.0.1:{}; model simulators {}/{}/{}",
+        settings.port("WORKLOAD")?,
+        settings.deployment_port("EU-A")?,
+        settings.deployment_port("EU-B")?,
+        settings.deployment_port("US-C")?
+    );
     let mut terminate = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())?;
     let result = tokio::select! {
         signal = tokio::signal::ctrl_c() => { signal?; Ok(()) },

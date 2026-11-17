@@ -4,6 +4,10 @@ import base64
 import os
 from pathlib import Path
 import secrets
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import settings  # noqa: E402
 
 path = Path(__file__).resolve().parents[1] / ".env"
 if path.exists():
@@ -17,7 +21,7 @@ else:
         "POSTGRES_USER": "ignite",
         "POSTGRES_DB": "ignite",
         "POSTGRES_PASSWORD": password,
-        "DATABASE_URL": f"postgresql://ignite:{password}@127.0.0.1:15432/ignite",
+        "DATABASE_URL": f"postgresql://ignite:{password}@127.0.0.1:{settings.port('POSTGRES')}/ignite",
         "LANGFUSE_DATABASE_URL": f"postgresql://ignite:{password}@postgres:5432/langfuse",
         "LANGFUSE_PUBLIC_KEY": public_key,
         "LANGFUSE_SECRET_KEY": secret_key,

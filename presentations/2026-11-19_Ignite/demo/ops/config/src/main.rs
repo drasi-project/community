@@ -24,16 +24,18 @@ const TABLES: [&str; 8] = [
     "ignite_commands",
 ];
 // Shared by the live source and its bootstrap provider so they bind one slot.
-// Database and user are fixed by compose.yaml and ops/observability-env.py.
-fn postgres_settings() -> Value {
-    json!({
-        "host":"127.0.0.1", "port":15432, "database":"ignite", "user":"ignite",
-        "sslMode":"disable", "publication":"ignite_native", "tables":TABLES,
-        "slotOwnership":"external", "slotName":"ignite_native",
+// Database and user are fixed by compose.yaml and ops/observability-env.py;
+// port, publication and slot come from ports.env.
+fn postgres_settings() -> Result<Value> {
+    let settings = ignite_settings::get();
+    Ok(json!({
+        "host":"127.0.0.1", "port":settings.port("POSTGRES")?, "database":"ignite", "user":"ignite",
+        "sslMode":"disable", "publication":settings.get("IGNITE_PG_PUBLICATION")?, "tables":TABLES,
+        "slotOwnership":"external", "slotName":settings.get("IGNITE_PG_SLOT")?,
         "maxTransactionChanges":4096, "maxTransactionBytes":8388608,
         "maxTransactionDurationMs":30000, "maxProtocolBytes":8388608,
         "ioTimeoutMs":10000, "feedbackIntervalMs":1000, "reconnectBudgetMs":60000,
-    })
+    }))
 }
 fn password() -> Result<ConfigurationValue> {
     Ok(ConfigurationValue::Reference {
@@ -48,7 +50,7 @@ fn bootstrap_configuration(source: &ComponentId) -> Result<BTreeMap<Arc<str>, Co
         ("stream".into(), literal(stream("postgres")?)?),
         ("password".into(), password()?),
     ]);
-    for (key, value) in postgres_settings().as_object().context("settings")? {
+    for (key, value) in postgres_settings()?.as_object().context("settings")? {
         configuration.insert(key.as_str().into(), literal(value)?);
     }
     Ok(configuration)
@@ -260,7 +262,7 @@ fn main() -> Result<()> {
             ResourceRole::Checkpoint,
         )?;
     }
-    let mut configuration = postgres_settings();
+    let mut configuration = postgres_settings()?;
     configuration["stream"] = json!(stream("postgres")?);
     configuration["persistent"] = json!(false);
     let mut source = source_factory.specification(ids["postgres"].clone(), configuration)?;
@@ -384,7 +386,7 @@ fn main() -> Result<()> {
             ids["grafana-input"].clone(),
             json!({
                 "stream":stream("grafana-input")?,
-                "host":"127.0.0.1", "port":18422,
+                "host":"127.0.0.1", "port":ignite_settings::get().port("DRASI_ALERT")?,
                 "webhooks":{"errorBehavior":"reject", "routes":[{
                     "path":"/alerts/grafana","methods":["POST"],
                     "mappings":[{"operation":"update", "elementType":"node", "template":{
@@ -484,7 +486,7 @@ fn main() -> Result<()> {
     println!(
         "{}",
         serde_json::to_string_pretty(&json!({
-            "apiVersion":"drasi.io/v1","host":"127.0.0.1","port":18421,
+            "apiVersion":"drasi.io/v1","host":"127.0.0.1","port":ignite_settings::get().port("DRASI_API")?,
             "persistConfig":false,"enableUi":true,"verifyPlugins":false,"autoInstallPlugins":false,
             "instances":[{"id":"ignite",
                 // Each PostgreSQL query snapshots the tables in turn; with a

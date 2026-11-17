@@ -3,11 +3,12 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { url } from "../settings.mjs";
 
 const ui = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const demo = path.dirname(ui);
 const out = path.join(demo, ".native/evidence/release");
-const origin = "http://127.0.0.1:18580";
+const origin = url("UI");
 const mode = process.argv[2];
 await fs.mkdir(out, { recursive: true });
 

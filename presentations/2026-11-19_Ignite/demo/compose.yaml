@@ -1,7 +1,8 @@
-name: ignite-observability
+# Ports and the project name come from ports.env via ops/observability-stack.sh.
+name: ${IGNITE_PROJECT:?Run through ops/observability-stack.sh}
 x-langfuse-environment: &langfuse-environment
   DATABASE_URL: ${LANGFUSE_DATABASE_URL:?}
-  NEXTAUTH_URL: http://localhost:13001
+  NEXTAUTH_URL: http://localhost:${IGNITE_LANGFUSE_PORT:?}
   SALT: ${LANGFUSE_SALT:?}
   ENCRYPTION_KEY: ${LANGFUSE_ENCRYPTION_KEY:?}
   TELEMETRY_ENABLED: "false"
@@ -44,7 +45,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:?Run ops/observability-stack.sh env}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
       POSTGRES_DB: ignite
-    ports: ["127.0.0.1:15432:5432"]
+    ports: ["127.0.0.1:${IGNITE_POSTGRES_PORT:?}:5432"]
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./observability/postgres/01-langfuse.sql:/docker-entrypoint-initdb.d/01-langfuse.sql:ro
@@ -100,7 +101,7 @@ services:
   langfuse-web:
     image: docker.langfuse.com/langfuse/langfuse:4.76.0@sha256:59abb54faacf45b63d09f4076d45683dae26a6661974d497836543d350b16575
     depends_on: *langfuse-dependencies
-    ports: ["127.0.0.1:13001:3000"]
+    ports: ["127.0.0.1:${IGNITE_LANGFUSE_PORT:?}:3000"]
     environment:
       <<: *langfuse-environment
       HOSTNAME: 0.0.0.0
@@ -126,19 +127,21 @@ services:
     command: ["--config=/etc/otelcol/config.yaml"]
     environment:
       LANGFUSE_AUTH_BASE64: ${LANGFUSE_AUTH_BASE64:?}
-    ports: ["127.0.0.1:14318:4318"]
+    ports: ["127.0.0.1:${IGNITE_OTLP_PORT:?}:4318"]
     volumes:
       - ./observability/collector.yaml:/etc/otelcol/config.yaml:ro
   prometheus:
     image: docker.io/prom/prometheus:v3.16.0@sha256:c523006440e714e0e53405b77e9f6ee668871d9855fc1c853fd43f5b990c34d2
     command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.retention.time=7d"]
-    ports: ["127.0.0.1:19090:9090"]
+    ports: ["127.0.0.1:${IGNITE_PROMETHEUS_PORT:?}:9090"]
     volumes:
       - ./observability/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
+      # Scrape targets on the host, written from ports.env by ops/observability-stack.sh.
+      - ./.native/prometheus-targets:/etc/prometheus/targets:ro
       - prometheus-data:/prometheus
   grafana:
     image: docker.io/grafana/grafana:13.3.0@sha256:488984b716c0862639f91a698adbe2862677a5a07bad42da5f03f3030883b205
-    ports: ["127.0.0.1:13000:3000"]
+    ports: ["127.0.0.1:${IGNITE_GRAFANA_PORT:?}:3000"]
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?}
@@ -148,7 +151,10 @@ services:
       GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES: "false"
       GF_NEWS_NEWS_FEED_ENABLED: "false"
       GF_PLUGINS_PREINSTALL_DISABLED: "true"
-      GF_SERVER_ROOT_URL: http://localhost:13000
+      GF_SERVER_ROOT_URL: http://localhost:${IGNITE_GRAFANA_PORT:?}
+      # Read by provisioning/alerting/workload.yaml.
+      IGNITE_WORKLOAD_PORT: ${IGNITE_WORKLOAD_PORT:?}
+      IGNITE_DRASI_ALERT_PORT: ${IGNITE_DRASI_ALERT_PORT:?}
       # The projected stage shows dashboards inside the slides page, read-only, without sign-in.
       GF_SECURITY_ALLOW_EMBEDDING: "true"
       GF_AUTH_ANONYMOUS_ENABLED: "true"
@@ -158,14 +164,15 @@ services:
       - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
   probe:
-    image: localhost/ignite-observability-probe:phase1
+    image: localhost/${IGNITE_PROJECT:?}-probe:phase1
     build:
       context: ./observability/probe
       dockerfile: Containerfile
-    ports: ["127.0.0.1:18888:8888"]
+    ports: ["127.0.0.1:${IGNITE_PROBE_PORT:?}:8888"]
     environment:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://collector:4318
       DRASI_ALERT_URL: ${DRASI_ALERT_URL:-}
+      LANGFUSE_PUBLIC_URL: http://localhost:${IGNITE_LANGFUSE_PORT:?}
     volumes:
       - probe-data:/data
 volumes:

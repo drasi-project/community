@@ -18,7 +18,7 @@ async fn persist(row: &Value) -> Result<()> {
 }
 
 async fn attach(app: &App, name: &str, bit: u64) -> Result<()> {
-    let root = "http://127.0.0.1:18421/api/v1/instances/ignite";
+    let root = format!("{}/api/v1/instances/ignite", ignite_settings::get().url("DRASI_API")?);
     let client = reqwest::Client::builder()
         .connect_timeout(Duration::from_secs(3))
         .build()?;

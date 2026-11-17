@@ -1,10 +1,11 @@
 import { defineConfig, mergeConfig } from "vite";
 import base from "./vite.config";
+import { url, port } from "./settings.mjs";
 
 // Isolated browser-test process only. Production never loads fixtures.
 export default mergeConfig(base, defineConfig({
-  preview: { proxy: {
-    "/api": { target: "http://127.0.0.1:18582", rewrite: (path: string) => path.replace(/^\/api/, "") },
-    "/server": { target: "http://127.0.0.1:18582", rewrite: (path: string) => path.replace(/^\/server/, "") },
+  preview: { port: port("UI_TEST"), proxy: {
+    "/api": { target: url("UI_FIXTURE"), rewrite: (path: string) => path.replace(/^\/api/, "") },
+    "/server": { target: url("UI_FIXTURE"), rewrite: (path: string) => path.replace(/^\/server/, "") },
   } },
 }));

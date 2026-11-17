@@ -2,6 +2,7 @@ import { chromium } from "playwright";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { port } from "../../ui/settings.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const env = Object.fromEntries((await fs.readFile(path.join(root, ".env"), "utf8"))
@@ -25,17 +26,17 @@ try {
       : route.abort("blockedbyclient");
   });
   const page = await context.newPage();
-  await page.goto("http://localhost:13000/login");
+  await page.goto(`http://localhost:${port("GRAFANA")}/login`);
   await page.getByLabel("Email or username").fill("admin");
   await page.getByLabel("Password", { exact: true }).fill(env.GRAFANA_ADMIN_PASSWORD);
   await page.getByRole("button", { name: "Log in", exact: true }).click();
   await page.waitForURL(url => !url.pathname.endsWith("/login"), { timeout: 30000 });
-  await page.goto("http://localhost:13000/d/ignite-integration-probe");
+  await page.goto(`http://localhost:${port("GRAFANA")}/d/ignite-integration-probe`);
   await page.getByText("Completed HTTP requests by status", { exact: true }).waitFor();
   await page.getByText("Last real request failed (1=yes, 0=no)", { exact: true }).waitFor();
   await page.screenshot({ path: path.join(root, "observability/evidence/grafana.png"), fullPage: true });
 
-  await page.goto("http://localhost:13001/auth/sign-in");
+  await page.goto(`http://localhost:${port("LANGFUSE")}/auth/sign-in`);
   await page.getByLabel("Email", { exact: true }).fill(env.LANGFUSE_ADMIN_EMAIL);
   await page.getByLabel(/^Password/).fill(env.LANGFUSE_ADMIN_PASSWORD);
   await page.getByRole("button", { name: /sign in/i }).click();

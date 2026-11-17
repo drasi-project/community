@@ -49,7 +49,7 @@ impl Telemetry {
             .build();
         let exporter = opentelemetry_otlp::SpanExporter::builder()
             .with_http()
-            .with_endpoint("http://127.0.0.1:14318/v1/traces")
+            .with_endpoint(format!("{}/v1/traces", ignite_settings::get().url("OTLP")?))
             .build()?;
         let traces = SdkTracerProvider::builder()
             .with_resource(resource.clone())
@@ -57,7 +57,7 @@ impl Telemetry {
             .build();
         let exporter = opentelemetry_otlp::MetricExporter::builder()
             .with_http()
-            .with_endpoint("http://127.0.0.1:14318/v1/metrics")
+            .with_endpoint(format!("{}/v1/metrics", ignite_settings::get().url("OTLP")?))
             .build()?;
         let reader = PeriodicReader::builder(exporter)
             .with_interval(Duration::from_secs(1))

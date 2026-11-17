@@ -6,6 +6,9 @@ import socket
 import subprocess
 import uuid
 from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "ops"))
+import settings  # noqa: E402
 
 DEMO=Path(__file__).resolve().parents[1]
 def load(name,file):
@@ -47,7 +50,7 @@ def committed_crash(service):
 
 
 def main():
-    for port in (18421,18422,18500,18531,18532,18533):
+    for port in [settings.port(name) for name in ("DRASI_API","DRASI_ALERT","WORKLOAD","DEPLOYMENT_EU_A","DEPLOYMENT_EU_B","DEPLOYMENT_US_C")]:
         with socket.socket() as s:
             s.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
             s.bind(("127.0.0.1",port))
@@ -88,7 +91,7 @@ def main():
         checks.append("disconnected Server rejects approval; populated restart snapshots restore current candidate without fake input updates")
 
         # Stop only this demo's known publication destinations, not PostgreSQL or unrelated containers.
-        subprocess.run(["podman","stop","ignite-observability-grafana-1","ignite-observability-langfuse-web-1"],check=True,capture_output=True)
+        subprocess.run(["podman","stop",*[settings.container("grafana"),settings.container("langfuse-web")]],check=True,capture_output=True)
         task,trace=work.submit()
         id=str(uuid.uuid4())
         recovery.approve(d,id)
@@ -100,16 +103,16 @@ def main():
         service.stop()
         service.start()
         assert work.api("/decisions")["publications"]
-        subprocess.run(["podman","start","ignite-observability-grafana-1","ignite-observability-langfuse-web-1"],check=True,capture_output=True)
+        subprocess.run(["podman","start",*[settings.container("grafana"),settings.container("langfuse-web")]],check=True,capture_output=True)
         work.wait(lambda:not work.api("/decisions")["publications"],timeout=120)
         count=int(native.runtime.sql(f"SELECT attempts FROM ignite_publications WHERE id='{id}-recovered'",tuples=True))
         assert count>1
         env=recovery.obs.environment()
         auth=recovery.base64.b64encode(f"admin:{env['GRAFANA_ADMIN_PASSWORD']}".encode()).decode()
-        annotations=recovery.obs.get("http://127.0.0.1:13000/api/annotations?"+
+        annotations=recovery.obs.get(settings.url("GRAFANA")+"/api/annotations?"+
             recovery.urllib.parse.urlencode({"tags":f"{id}-recovered"}),auth)
         assert len(annotations)==1
-        score_url="http://127.0.0.1:13001/api/public/v3/scores?"+recovery.urllib.parse.urlencode({
+        score_url=settings.url("LANGFUSE")+"/api/public/v3/scores?"+recovery.urllib.parse.urlencode({
             "traceId":trace["trace_id"],"name":"drasi_recovery","fields":"subject"})
         scores,_=recovery.obs.wait_for("redelivered exact recovery score",lambda:
             recovery.obs.get(score_url,env["LANGFUSE_AUTH_BASE64"])["data"])
@@ -121,7 +124,7 @@ def main():
             "last_task":task,"trace":trace,"redelivered_annotations":annotations,"redelivered_scores":scores},indent=2))
         print(json.dumps({"passed":checks,"evidence":str(path)},indent=2))
     finally:
-        subprocess.run(["podman","start","ignite-observability-grafana-1","ignite-observability-langfuse-web-1"],check=True,capture_output=True)
+        subprocess.run(["podman","start",*[settings.container("grafana"),settings.container("langfuse-web")]],check=True,capture_output=True)
         service.stop()
         server.stop()
 

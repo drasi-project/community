@@ -5,6 +5,9 @@ import base64
 from datetime import datetime, timezone
 import json
 from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "ops"))
+import settings  # noqa: E402
 import shlex
 import subprocess
 import threading
@@ -64,7 +67,7 @@ class AlertSubscription:
         self.process = None
 
     def start(self):
-        url = "http://127.0.0.1:18421/api/v1/instances/ignite/queries/grafana-alerts/attach"
+        url = settings.url("DRASI_API")+"/api/v1/instances/ignite/queries/grafana-alerts/attach"
         self.process = subprocess.Popen(
             ["curl", "--silent", "--show-error", "--fail", "--no-buffer", "--max-time", "600", url],
             stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1,
@@ -156,18 +159,18 @@ def main():
     env = environment()
     grafana_auth = base64.b64encode(f"admin:{env['GRAFANA_ADMIN_PASSWORD']}".encode()).decode()
     lf_auth = env["LANGFUSE_AUTH_BASE64"]
-    probe = "http://127.0.0.1:18888"
+    probe = settings.url("PROBE")
     evidence = {"started_at": datetime.now(timezone.utc).isoformat(), "probe": True}
     for label, url in [
         ("probe", f"{probe}/health"),
-        ("Grafana", "http://127.0.0.1:13000/api/health"),
-        ("Langfuse", "http://127.0.0.1:13001/api/public/health"),
+        ("Grafana", settings.url("GRAFANA")+"/api/health"),
+        ("Langfuse", settings.url("LANGFUSE")+"/api/public/health"),
     ]:
         wait_for(label, lambda url=url: get(url), timeout=240)
-    dashboard = get("http://127.0.0.1:13000/api/dashboards/uid/ignite-integration-probe", grafana_auth)
+    dashboard = get(settings.url("GRAFANA")+"/api/dashboards/uid/ignite-integration-probe", grafana_auth)
     assert dashboard["dashboard"]["uid"] == "ignite-integration-probe"
     query = urllib.parse.urlencode({"query": "ignite_probe_http_requests_total"})
-    metric_url = f"http://127.0.0.1:13000/api/datasources/proxy/uid/ignite-prometheus/api/v1/query?{query}"
+    metric_url = settings.url("GRAFANA")+f"/api/datasources/proxy/uid/ignite-prometheus/api/v1/query?{query}"
     # A probe restart resets its counters; wait out old collector/scrape samples.
     warmup = get(f"{probe}/probe?outcome=ok")
     previous_count = warmup["status_request_count"]
@@ -188,7 +191,7 @@ def main():
     evidence["grafana_metric"], evidence["grafana_metric_wait_seconds"] = wait_for("Grafana real request count", metric_seen)
     evidence["request_to_grafana_observed_seconds"] = round(time.monotonic() - request_started, 3)
     trace_query = urllib.parse.urlencode({"traceId": success["trace_id"], "fields": "core,basic,metadata", "limit": 10})
-    trace_url = f"http://127.0.0.1:13001/api/public/v2/observations?{trace_query}"
+    trace_url = settings.url("LANGFUSE")+f"/api/public/v2/observations?{trace_query}"
 
     def trace_seen():
         response = get(trace_url, lf_auth)

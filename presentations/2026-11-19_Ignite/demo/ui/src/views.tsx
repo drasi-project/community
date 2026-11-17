@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { settings } from "./settings";
 import { z } from "zod";
 import { products, type View } from "../../../presentation/scenes";
 import { isCurrent, readDecision, rows, text, request, errorText, type Row, type Selection } from "./contracts";
@@ -199,7 +200,7 @@ function Trace({ live }: { live: Live }) {
         const result = z.object({ trace_url: z.string().url().optional() }).passthrough().parse(data);
         if (!result.trace_url) throw new Error("Task API has not returned a trace_url. Use the submitted task link on the desk or locate this exact trace ID in Langfuse.");
         const url = new URL(result.trace_url);
-        if (url.origin !== "http://localhost:13001" || !url.pathname.startsWith("/project/ignite-probe/traces/")) throw new Error("Unexpected trace destination");
+        if (url.origin !== settings.langfuse || !url.pathname.startsWith("/project/ignite-probe/traces/")) throw new Error("Unexpected trace destination");
         setLink(result.trace_url);
       }).catch(error => { if (!controller.signal.aborted) setError(errorText(error)); });
     return () => controller.abort();

@@ -1,0 +1,6 @@
+# One Cargo build folder for this whole copy (demo, drasi-core plugins, Server),
+# outside the checkouts: ignite-native/.cargo-target. At most 4 parallel jobs.
+# Build and test single crates only (cargo build -p <crate>, cargo test -p <crate> --lib).
+[build]
+target-dir = "../../../../.cargo-target"
+jobs = 4

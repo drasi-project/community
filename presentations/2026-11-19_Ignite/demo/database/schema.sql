@@ -14,7 +14,8 @@ CREATE TABLE IF NOT EXISTS ignite_endpoints (
     run_epoch text NOT NULL
 );
 ALTER TABLE ignite_endpoints REPLICA IDENTITY FULL;
-SELECT 'CREATE PUBLICATION ignite_native FOR TABLE ignite_endpoints WITH (publish = ''insert, update, delete'')'
-WHERE NOT EXISTS (SELECT FROM pg_publication WHERE pubname = 'ignite_native') \gexec
-SELECT pg_create_logical_replication_slot('ignite_native', 'pgoutput')
-WHERE NOT EXISTS (SELECT FROM pg_replication_slots WHERE slot_name = 'ignite_native');
+-- :publication and :slot come from ports.env (ops/native-runtime.py passes them to psql).
+SELECT format('CREATE PUBLICATION %I FOR TABLE ignite_endpoints WITH (publish = ''insert, update, delete'')', :'publication')
+WHERE NOT EXISTS (SELECT FROM pg_publication WHERE pubname = :'publication') \gexec
+SELECT pg_create_logical_replication_slot(:'slot', 'pgoutput')
+WHERE NOT EXISTS (SELECT FROM pg_replication_slots WHERE slot_name = :'slot');

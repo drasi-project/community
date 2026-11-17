@@ -1,14 +1,15 @@
 import { defineConfig, type Plugin, type ViteDevServer, type PreviewServer } from "vite";
 import react from "@vitejs/plugin-react";
 import { fileURLToPath } from "node:url";
+import { settings, url, port } from "./settings.mjs";
 
 const proxy = {
   "/api": {
-    target: "http://127.0.0.1:18500",
+    target: url("WORKLOAD"),
     rewrite: (path: string) => path.replace(/^\/api/, ""),
   },
   "/server": {
-    target: "http://127.0.0.1:18421",
+    target: url("DRASI_API"),
     rewrite: (path: string) => path.replace(/^\/server/, ""),
   },
 };
@@ -34,14 +35,17 @@ function localActions(): Plugin {
 
 export default defineConfig({
   plugins: [localActions(), react()],
+  // ports.env, read by src/settings.ts. It holds no secrets.
+  define: { "globalThis.__IGNITE_SETTINGS__": JSON.stringify(settings) },
   resolve: { dedupe: ["react", "react-dom", "reveal.js", "qrcode"] },
   server: {
+    host: "127.0.0.1", port: port("UI"), strictPort: true,
     proxy,
     fs: {
       allow: [fileURLToPath(new URL("../", import.meta.url)), fileURLToPath(new URL("../../presentation", import.meta.url))],
       deny: ["**/.env", "**/.env.*", "**/*.pem", "**/*.key", "**/.native/**", "**/node_modules/**/.cache/**"],
     },
   },
-  preview: { proxy },
+  preview: { host: "127.0.0.1", port: port("UI"), strictPort: true, proxy },
   build: { sourcemap: false },
 });

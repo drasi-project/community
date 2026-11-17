@@ -4,9 +4,9 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --host 127.0.0.1 --port 18580 --strictPort",
+    "dev": "vite",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview --host 127.0.0.1 --port 18580 --strictPort",
+    "preview": "vite preview",
     "test": "playwright test",
     "test:live": "playwright test --config playwright.live.config.ts",
     "sync-presenter": "UPDATE_PRESENTER_DOC=1 playwright test -g \"PRESENTER.md matches\""

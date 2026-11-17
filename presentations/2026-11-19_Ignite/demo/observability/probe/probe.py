@@ -146,7 +146,8 @@ class Handler(BaseHTTPRequestHandler):
             "role": "integration-probe", "request_id": request_id, "trace_id": trace_id,
             "status": status, "duration_seconds": duration, "work_digest": digest,
             "status_request_count": status_request_count,
-            "trace_url": f"http://localhost:13001/project/ignite-probe/traces/{trace_id}",
+            # LANGFUSE_PUBLIC_URL is set by compose.yaml from ports.env.
+            "trace_url": f"{os.environ.get('LANGFUSE_PUBLIC_URL', '')}/project/ignite-probe/traces/{trace_id}",
         })
 
     def do_POST(self):

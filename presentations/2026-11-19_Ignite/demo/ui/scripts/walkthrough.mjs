@@ -13,13 +13,14 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
+import { settings, url } from "../settings.mjs";
 
 const mode = process.argv[2] ?? "capture";
 const ui = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const output = path.resolve(process.argv[3] ?? path.join(ui, "evidence", "walkthrough"));
-const base = "http://127.0.0.1:18580";
+const base = url("UI");
 const api = async (route, body) => {
-  const response = await fetch(`http://127.0.0.1:18500${route}`, body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : undefined);
+  const response = await fetch(`${url("WORKLOAD")}${route}`, body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : undefined);
   return response.json();
 };
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -28,7 +29,7 @@ async function until(label, check, seconds = 120) {
   throw new Error(`Timed out waiting for: ${label}`);
 }
 const metric = async (query) => {
-  const r = await (await fetch(`http://localhost:19090/api/v1/query?query=${encodeURIComponent(query)}`)).json();
+  const r = await (await fetch(`${url("PROMETHEUS", "localhost")}/api/v1/query?query=${encodeURIComponent(query)}`)).json();
   return r.data.result.map(x => ({ labels: x.metric, value: Number(x.value[1]) }));
 };
 const view = (name, workload) => metric(`ignite_drasi_dashboard{view="${name}"${workload ? `,workload="${workload}"` : ""}} and on(view) (ignite_drasi_valid_until_seconds > time())`);
@@ -71,7 +72,7 @@ const health = await api("/health");
 if (health.traffic?.running) await api("/traffic", { run_epoch: health.run_epoch, running: false });
 const before = await api("/health");
 await api("/reset", { run_epoch: before.run_epoch, revision: before.revision });
-await desk.addInitScript(() => { if (!sessionStorage.getItem("seeded")) { localStorage.removeItem("ignite-presentation-stage-v3"); sessionStorage.setItem("seeded", "1"); } });
+await desk.addInitScript(key => { if (!sessionStorage.getItem("seeded")) { localStorage.removeItem(key); sessionStorage.setItem("seeded", "1"); } }, settings.IGNITE_STORAGE_KEY);
 await desk.goto(`${base}/presenter`);
 await until("desk READY", async () => (await desk.locator(".badge", { hasText: /^READY$/ }).count()) > 0, 60);
 // The projector is its own window; the desk drives it through the browser's channel.
@@ -85,7 +86,7 @@ const evidence = { started: new Date().toISOString(), mode, beats: [], clips: []
 let index = 0, clip = null;
 for (;;) {
   const title = (await desk.locator(".now-head h1").innerText()).replace(/\s+\d.*$/, "");
-  const part = (await desk.evaluate(() => JSON.parse(localStorage.getItem("ignite-presentation-stage-v3"))));
+  const part = (await desk.evaluate(key => JSON.parse(localStorage.getItem(key)), settings.IGNITE_STORAGE_KEY));
   const sceneId = ["title", "concepts", "drasi", "normal", "failure", "who", "recovery", "resilience", "closing"][part.cue];
   const key = `${sceneId}/${part.beat}`;
   if (index === 0) await projector.goto(`${base}/present`);

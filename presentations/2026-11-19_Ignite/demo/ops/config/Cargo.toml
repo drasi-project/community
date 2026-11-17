@@ -8,5 +8,6 @@ publish = false
 anyhow.workspace = true
 serde_json.workspace = true
 serde.workspace = true
+ignite-settings = { path = "../../settings" }
 drasi-lib = { path = "../../../../../../drasi-core/lib" }
 drasi-host-sdk = { path = "../../../../../../drasi-core/components/host-sdk" }

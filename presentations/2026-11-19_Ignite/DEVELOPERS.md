@@ -107,16 +107,31 @@ beat, what's shown) and stores it in `localStorage`.
 
 ### Ports
 
-| Port | Service |
-|---|---|
-| 18421 | Drasi Server API and UI (`/ui/`) |
-| 18422 | Drasi HTTP webhook source (used by the test probe) |
-| 18500 | Workload service: gateway, controls, alert webhook |
-| 18531–18533 | Simulated deployments EU-A, EU-B, US-C |
-| 18580 | Slides and presenter desk |
-| 13000 / 13001 | Grafana / Langfuse |
-| 19090 / 14318 | Prometheus / OpenTelemetry Collector |
-| 15432 | PostgreSQL (database and user `ignite`) |
+Every port, the container project name, the PostgreSQL publication and slot,
+and the browser storage key come from `demo/ports.env`. Compose (through
+`ops/observability-stack.sh`), the `ops/` scripts, the Server config generator,
+the AI service, the web app and the tests all read it; an exported variable of
+the same name overrides a line, and `IGNITE_SETTINGS=<file>` selects another
+file. `ports.env` holds this copy's values (each original port +1000, project
+`ignite-native`), so it runs beside the original demo, whose values are in
+`ports.default.env`. Grafana's dashboard links carry the Langfuse port:
+regenerate them with `observability/grafana/dashboards.py` after changing it.
+
+| Setting | This copy | Original | Service |
+|---|---|---|---|
+| `IGNITE_DRASI_API_PORT` | 19421 | 18421 | Drasi Server API and UI (`/ui/`) |
+| `IGNITE_DRASI_ALERT_PORT` | 19422 | 18422 | Drasi HTTP source (Grafana alert webhooks) |
+| `IGNITE_DRASI_METRICS_PORT` | 19423 | 18423 | Drasi Prometheus reaction (`/metrics`) |
+| `IGNITE_WORKLOAD_PORT` | 19500 | 18500 | AI service: gateway, controls, approval tool, gateway configuration |
+| `IGNITE_DEPLOYMENT_{EU_A,EU_B,US_C}_PORT` | 19531–19533 | 18531–18533 | Simulated deployments |
+| `IGNITE_UI_PORT` | 19580 | 18580 | Slides and presenter desk (browser tests: `UI_TEST`, `UI_FIXTURE`) |
+| `IGNITE_GRAFANA_PORT` / `IGNITE_LANGFUSE_PORT` | 14000 / 14001 | 13000 / 13001 | Grafana / Langfuse |
+| `IGNITE_PROMETHEUS_PORT` / `IGNITE_OTLP_PORT` | 20090 / 15318 | 19090 / 14318 | Prometheus / OpenTelemetry Collector |
+| `IGNITE_POSTGRES_PORT` | 16432 | 15432 | PostgreSQL (database and user `ignite`) |
+| `IGNITE_PROBE_PORT` | 19888 | 18888 | Integration test probe |
+| `IGNITE_PROJECT` | `ignite-native` | `ignite-observability` | Podman compose project and probe image name |
+| `IGNITE_PG_PUBLICATION`, `IGNITE_PG_SLOT` | `ignite_rework` | `ignite_native` | Logical replication read by Drasi |
+| `IGNITE_STORAGE_KEY` | `ignite-native-stage-v1` | `ignite-presentation-stage-v3` | Presenter stage in browser storage |
 
 Everything listens on loopback only and has no authentication. Don't expose it.
 
@@ -163,7 +178,7 @@ Run from `demo/` with `.env` loaded (`set -a; . ./.env; set +a`).
 
 | Command | Checks |
 |---|---|
-| `CARGO_TARGET_DIR=.native/target cargo test --locked --workspace` | Domain logic, plugins, workload service, config generator |
+| `cargo test --locked -p <crate> --lib`, one crate at a time (see `plan/contracts.md` for each crate's command) | Domain logic, plugins, workload service, config generator. Builds go to the shared `ignite-native/.cargo-target` (`demo/.cargo/config.toml`, at most 4 jobs) |
 | `cd ui && npm test` | Slides and desk against a test fixture, at 1280×720 and 1920×1080; and that `PRESENTER.md`'s script matches `notes.ts` |
 | `python3 tests/release-test.py`, `python3 tests/native-runtime-test.py` | Release and bundle guards |
 

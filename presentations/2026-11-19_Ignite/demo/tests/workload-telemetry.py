@@ -6,6 +6,9 @@ import json
 import time
 import urllib.parse
 from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "ops"))
+import settings  # noqa: E402
 
 DEMO = Path(__file__).resolve().parents[1]
 
@@ -24,10 +27,10 @@ obs = load("observability", "observability-smoke.py")
 def main():
     env = obs.environment()
     auth = base64.b64encode(f"admin:{env['GRAFANA_ADMIN_PASSWORD']}".encode()).decode()
-    dashboard = obs.get("http://127.0.0.1:13000/api/dashboards/uid/ignite-workload", auth)
+    dashboard = obs.get(settings.url("GRAFANA")+"/api/dashboards/uid/ignite-workload", auth)
     assert {"Support errors", "Support queue", "Support overdue",
             "Recovery"} <= {panel["title"] for panel in dashboard["dashboard"]["panels"]}
-    metric_url = "http://127.0.0.1:13000/api/datasources/proxy/uid/ignite-prometheus/api/v1/query?" + urllib.parse.urlencode({
+    metric_url = settings.url("GRAFANA")+"/api/datasources/proxy/uid/ignite-prometheus/api/v1/query?" + urllib.parse.urlencode({
         "query": 'sum(ignite_workload_requests_total{workload="support",endpoint="EU-A",status="503"})'})
 
     def metric():
@@ -57,7 +60,7 @@ def main():
             f"SELECT payload FROM ignite_alerts WHERE id='{row['id']}';",tuples=True))
         evidence["firing_wait_seconds"] = round((time.time()*1000-started)/1000,3)
         query = urllib.parse.urlencode({"traceId":trace["trace_id"],"fields":"core,basic,metadata","limit":100})
-        url = "http://127.0.0.1:13001/api/public/v2/observations?" + query
+        url = settings.url("LANGFUSE")+"/api/public/v2/observations?" + query
 
         def correlated():
             return [r for r in obs.get(url,env["LANGFUSE_AUTH_BASE64"]).get("data",[])

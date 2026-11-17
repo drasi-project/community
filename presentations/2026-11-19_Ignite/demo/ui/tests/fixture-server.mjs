@@ -1,4 +1,5 @@
 import { createServer } from "node:http";
+import { port } from "../settings.mjs";
 
 // Explicit TEST FIXTURES. This process is used only by playwright.config.ts.
 const epoch = "TEST-FIXTURE-EPOCH";
@@ -80,7 +81,7 @@ const server = createServer(async (request, response) => {
     response.on("close", () => { clearInterval(timer); streams.delete(response); });
     return;
   }
-  if (url.pathname.startsWith("/tasks/")) return json(response, { trace_url: "http://localhost:13001/project/ignite-probe/traces/TEST-TRACE", task: { id: "TEST-TASK" }, attempts: [] });
+  if (url.pathname.startsWith("/tasks/")) return json(response, { trace_url: `http://localhost:${port("LANGFUSE")}/project/ignite-probe/traces/TEST-TRACE`, task: { id: "TEST-TASK" }, attempts: [] });
   if (request.method === "POST") {
     const input = await body(request); mutations.push({ path: url.pathname, input: structuredClone(input) });
     if (url.pathname === "/traffic") {
@@ -103,8 +104,8 @@ const server = createServer(async (request, response) => {
       });
       return json(response, { duplicate: false, command: commands[0] });
     }
-    return json(response, { test_fixture: true, run_epoch: epoch, revision, trace_url: "http://localhost:13001/project/ignite-probe/traces/TEST-TRACE" });
+    return json(response, { test_fixture: true, run_epoch: epoch, revision, trace_url: `http://localhost:${port("LANGFUSE")}/project/ignite-probe/traces/TEST-TRACE` });
   }
   json(response, { error: "No TEST FIXTURE route" }, 404);
 });
-server.listen(18582, "127.0.0.1");
+server.listen(port("UI_FIXTURE"), "127.0.0.1");

@@ -1,14 +1,16 @@
+import { settings } from "../demo/ui/src/settings";
+
 // Diagnostics views (demo/ui/src/views.tsx), not part of the talk.
 export type View = "operations" | "decisions" | "change" | "trace";
 
 // Kiosk mode hides Grafana's menus; the _dash options hide the time picker and links too.
 const grafana = (uid: string, kiosk = false) =>
-  `http://localhost:13000/d/${uid}?from=now-5m&to=now&refresh=5s${kiosk ? "&kiosk&_dash.hideTimePicker&_dash.hideLinks&_dash.hideVariables" : ""}`;
+  `${settings.grafana}/d/${uid}?from=now-5m&to=now&refresh=5s${kiosk ? "&kiosk&_dash.hideTimePicker&_dash.hideLinks&_dash.hideVariables" : ""}`;
 export const products = {
   grafana: grafana("ignite-workload"),
   decisions: grafana("ignite-decisions"),
-  langfuse: "http://localhost:13001/project/ignite-probe/traces?filter=isRootObservation%3Bboolean%3B%3B%3D%3Btrue",
-  server: "http://127.0.0.1:18421/ui/?instance=ignite",
+  langfuse: `${settings.langfuse}/project/ignite-probe/traces?filter=isRootObservation%3Bboolean%3B%3B%3D%3Btrue`,
+  server: `${settings.server}/ui/?instance=ignite`,
   repository: "https://github.com/drasi-project/community/tree/agentofreality-ignite/presentations/2026-11-19_Ignite",
   repositoryLabel: "github.com/drasi-project/community",
   drasi: "https://drasi.io",

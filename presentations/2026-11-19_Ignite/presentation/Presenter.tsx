@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { settings } from "../demo/ui/src/settings";
 import { scenes, slides, recaps, products, duration, viewLabel, type StageView } from "./scenes";
 import "./desk.css";
 import { notes, actionLabels, glossary, questions, type ActionId, type Beat } from "./notes";
@@ -19,7 +20,7 @@ const pick = (items: string[]) => items[Math.floor(Math.random() * items.length)
 const workloadName: Record<string, string> = { support: "Support", batch: "Summaries" };
 const modeLabel: Record<string, string> = { ok: "Healthy", failed: "Failed", throttled: "Throttled" };
 
-const timerKey = "ignite-timer";
+const timerKey = `${settings.storageKey}-timer`;
 const startTimer = () => sessionStorage.setItem(timerKey, String(Date.now()));
 // The talk timer starts by itself on the first Next.
 function Clock({ now }: { now: number }) {

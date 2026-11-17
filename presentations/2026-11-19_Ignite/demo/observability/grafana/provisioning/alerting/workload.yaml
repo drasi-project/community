@@ -7,7 +7,8 @@ contactPoints:
         type: webhook
         disableResolveMessage: false
         settings:
-          url: http://host.containers.internal:18500/alerts/grafana
+          # Grafana expands $IGNITE_WORKLOAD_PORT from its environment (compose.yaml, from ports.env).
+          url: http://host.containers.internal:$IGNITE_WORKLOAD_PORT/alerts/grafana
           httpMethod: POST
 groups:
   - orgId: 1

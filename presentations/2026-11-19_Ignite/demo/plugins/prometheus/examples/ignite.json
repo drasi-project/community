@@ -1,0 +1,36 @@
+{
+  "listen": "127.0.0.1:19423",
+  "path": "/metrics",
+  "outputs": {
+    "overdue": {"component": "tile-overdue", "port": "out"},
+    "deployments": {"component": "tile-deployments", "port": "out"},
+    "capacity": {"component": "tile-capacity", "port": "out"},
+    "demand": {"component": "tile-demand", "port": "out"},
+    "recovery": {"component": "tile-recovery", "port": "out"},
+    "action": {"component": "tile-action", "port": "out"},
+    "resilience": {"component": "tile-resilience", "port": "out"},
+    "running": {"component": "tile-running", "port": "out"},
+    "proposed": {"component": "tile-proposed", "port": "out"},
+    "policy": {"component": "tile-policy", "port": "out"},
+    "last-approval": {"component": "tile-last-approval", "port": "out"}
+  },
+  "metrics": {
+    "overdue": [{"metric": "ignite_drasi_overdue_requests", "help": "Requests past their deadline and still unanswered, per workload.", "value": "value", "labels": {"workload": "workload"}}],
+    "deployments": [
+      {"metric": "ignite_drasi_deployment_status", "help": "Latest health report: 0 healthy, 1 throttled, 2 failed, -1 unknown.", "value": "status", "labels": {"deployment": "deployment"}},
+      {"metric": "ignite_drasi_deployment_capacity_tpm", "help": "Configured capacity of each deployment, tokens per minute.", "value": "capacity_tpm", "labels": {"deployment": "deployment"}}
+    ],
+    "capacity": [
+      {"metric": "ignite_drasi_capacity_tpm", "help": "Capacity in tokens per minute: total, on healthy deployments, and needed.", "value": "total_tpm", "constLabels": {"kind": "total"}},
+      {"metric": "ignite_drasi_capacity_tpm", "help": "Capacity in tokens per minute: total, on healthy deployments, and needed.", "value": "healthy_tpm", "constLabels": {"kind": "healthy"}}
+    ],
+    "demand": [{"metric": "ignite_drasi_capacity_tpm", "help": "Capacity in tokens per minute: total, on healthy deployments, and needed.", "value": "needed_tpm", "constLabels": {"kind": "needed"}}],
+    "recovery": [{"metric": "ignite_drasi_recovery_state", "help": "Recovery after an applied plan: 0 awaiting evidence, 1 verified, 2 nothing to verify, -1 unknown.", "value": "value"}],
+    "action": [{"metric": "ignite_drasi_action_needed", "help": "0 none, 1 approve proposed plan, 2 no valid plan, 3 at risk, -1 unknown.", "value": "value"}],
+    "resilience": [{"metric": "ignite_drasi_safe_if_one_fails", "help": "1 yes, 0 no (lost names the first deployment whose loss leaves no plan), 2 already one down, -1 unknown.", "value": "value", "labels": {"lost": "lost"}}],
+    "running": [{"metric": "ignite_drasi_running_tpm", "help": "Demand of each workload on its configured deployment; negative when policy no longer allows it (held).", "value": "value", "labels": {"workload": "workload", "deployment": "deployment"}}],
+    "proposed": [{"metric": "ignite_drasi_proposed_tpm", "help": "Demand of each workload on the deployment Drasi's feasible plan assigns.", "value": "demand_tpm", "labels": {"workload": "workload", "deployment": "deployment"}}],
+    "policy": [{"metric": "ignite_drasi_policy_allowed", "help": "Placement policy: 1 allowed, 0 not allowed, -1 unknown.", "value": "value", "labels": {"workload": "workload", "deployment": "deployment"}}],
+    "last-approval": [{"metric": "ignite_drasi_last_approval_state", "help": "Latest approval: 1 applying, 2 applied awaiting evidence, 3 verified, 4 rejected, -1 unknown.", "value": "value", "labels": {"approval": "approval"}}]
+  }
+}

@@ -28,7 +28,7 @@
     },
     {
       "title": "Langfuse traces",
-      "url": "http://localhost:13001/project/ignite-probe/traces?filter=isRootObservation%3Bboolean%3B%3B%3D%3Btrue",
+      "url": "http://localhost:14001/project/ignite-probe/traces?filter=isRootObservation%3Bboolean%3B%3B%3D%3Btrue",
       "type": "link",
       "icon": "external link",
       "targetBlank": false,

@@ -7,11 +7,15 @@ from pathlib import Path
 import subprocess
 import sys
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import settings  # noqa: E402
+
 DEMO = Path(__file__).resolve().parents[1]
 ROOT = DEMO.parents[3]
 SERVER = ROOT / "drasi-server"
 CORE = ROOT / "drasi-core"
-BINARY = SERVER / "target/debug/drasi-server"
+BINARY = settings.TARGET / "debug/drasi-server"
+WORKLOADS = settings.TARGET / "debug/ignite-workloads"
 
 
 def required(name):
@@ -22,10 +26,11 @@ def required(name):
 
 
 def sql(text, tuples=False):
-    # psql runs in this demo's known container; no host DB client is required.
+    # psql runs in this demo copy's container; no host DB client is required.
     command = [
-        "podman", "exec", "-i", "ignite-observability-postgres-1",
+        "podman", "exec", "-i", settings.container("postgres"),
         "psql", "-X", "-v", "ON_ERROR_STOP=1",
+        "-v", f"publication={settings.PUBLICATION}", "-v", f"slot={settings.SLOT}",
         "-U", required("POSTGRES_USER"), "-d", required("POSTGRES_DB"),
     ]
     if tuples:
@@ -42,7 +47,7 @@ def stamp():
     ui = DEMO / ".native/ui/dist"
     if not (ui / "index.html").is_file():
         raise RuntimeError("Server UI assets missing; run ops/native-build.sh")
-    files = [BINARY, DEMO / ".native/target/debug/ignite-workloads", DEMO / ".native/server.json",
+    files = [BINARY, WORKLOADS, DEMO / ".native/server.json",
              *sorted((DEMO / ".native/plugins").glob("*")),
              *sorted(path for path in ui.rglob("*") if path.is_file())]
     value = {

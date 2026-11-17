@@ -5,3 +5,10 @@ scrape_configs:
   - job_name: ignite-otel-probe
     static_configs:
       - targets: ["collector:8889"]
+  # Drasi's Prometheus reaction (ignite/prometheus-exporter) on the host. The
+  # target comes from IGNITE_DRASI_METRICS_PORT in ports.env; see
+  # ops/observability-stack.sh, which writes targets/drasi.json.
+  - job_name: drasi
+    file_sd_configs:
+      - files: ["/etc/prometheus/targets/drasi.json"]
+        refresh_interval: 5s

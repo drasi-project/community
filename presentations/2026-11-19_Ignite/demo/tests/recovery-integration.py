@@ -8,6 +8,9 @@ import time
 import urllib.parse
 import uuid
 from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "ops"))
+import settings  # noqa: E402
 
 DEMO = Path(__file__).resolve().parents[1]
 def load(name, file):
@@ -106,16 +109,16 @@ def main():
         env = obs.environment()
         grafana_auth = base64.b64encode(f"admin:{env['GRAFANA_ADMIN_PASSWORD']}".encode()).decode()
         def annotation():
-            return obs.get("http://127.0.0.1:13000/api/annotations?"+urllib.parse.urlencode({"tags":f"{id}-recovered"}),grafana_auth)
+            return obs.get(settings.url("GRAFANA")+"/api/annotations?"+urllib.parse.urlencode({"tags":f"{id}-recovered"}),grafana_auth)
         annotations,_ = obs.wait_for("real recovered Grafana annotation",annotation)
         def scores(trace_id):
-            return obs.get("http://127.0.0.1:13001/api/public/v3/scores?"+urllib.parse.urlencode({"traceId":trace_id,"fields":"subject,details"}),
+            return obs.get(settings.url("LANGFUSE")+"/api/public/v3/scores?"+urllib.parse.urlencode({"traceId":trace_id,"fields":"subject,details"}),
                            env["LANGFUSE_AUTH_BASE64"])["data"]
         actual_scores,_=obs.wait_for("correlated Langfuse recovery score",lambda:[s for s in scores(trace["trace_id"]) if s["name"]=="drasi_recovery"])
         blocked_scores,_=obs.wait_for("correlated Langfuse current-policy denial",lambda:[s for s in scores(blocked_trace["trace_id"]) if s["name"]=="drasi_policy_allowed" and s["value"]==0])
         assert all(s["subject"] == {"kind":"trace","id":trace["trace_id"]} for s in actual_scores)
         assert all(s["subject"] == {"kind":"trace","id":blocked_trace["trace_id"]} for s in blocked_scores)
-        metric_url="http://127.0.0.1:19090/api/v1/query?"+urllib.parse.urlencode({"query":'ignite_drasi_assessment{kind="allocation",state="feasible"}'})
+        metric_url=settings.url("PROMETHEUS")+"/api/v1/query?"+urllib.parse.urlencode({"query":'ignite_drasi_assessment{kind="allocation",state="feasible"}'})
         metrics,_=obs.wait_for("real derived Prometheus summary",lambda:obs.get(metric_url)["data"]["result"])
         assert all(not any(key in r["metric"] for key in ["task","task_id","trace_id"]) for r in metrics)
         checks.append("actual Grafana annotation, low-cardinality Prometheus assessment and exact Langfuse trace scores")

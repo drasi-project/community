@@ -40,7 +40,7 @@ class WebhookTests(unittest.TestCase):
         self.assertEqual(json.loads(self.row()[0]), self.payload)
         self.assertIsNone(self.row()[1])
 
-    @patch.dict(os.environ, {"DRASI_ALERT_URL": "http://127.0.0.1:18422/alerts/grafana"})
+    @patch.dict(os.environ, {"DRASI_ALERT_URL": "http://drasi.invalid/alerts/grafana"})
     @patch("probe.urllib.request.urlopen")
     def test_success_forwards_unchanged_once(self, urlopen):
         urlopen.return_value = MagicMock()
@@ -51,7 +51,7 @@ class WebhookTests(unittest.TestCase):
         self.assertIsNotNone(self.row()[1])
         self.assertIsNone(self.row()[2])
 
-    @patch.dict(os.environ, {"DRASI_ALERT_URL": "http://127.0.0.1:18422/alerts/grafana"})
+    @patch.dict(os.environ, {"DRASI_ALERT_URL": "http://drasi.invalid/alerts/grafana"})
     @patch("probe.urllib.request.urlopen")
     def test_concurrent_duplicate_waits_for_first_delivery(self, urlopen):
         entered = threading.Event()
@@ -73,7 +73,7 @@ class WebhookTests(unittest.TestCase):
         self.assertFalse(second.is_alive())
         self.assertEqual(urlopen.call_count, 1)
 
-    @patch.dict(os.environ, {"DRASI_ALERT_URL": "http://127.0.0.1:18422/alerts/grafana"})
+    @patch.dict(os.environ, {"DRASI_ALERT_URL": "http://drasi.invalid/alerts/grafana"})
     @patch("probe.urllib.request.urlopen")
     def test_delivery_error_remains_visible_and_can_retry(self, urlopen):
         urlopen.side_effect = urllib.error.URLError("native route unavailable")

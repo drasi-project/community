@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { settings } from "./settings";
 import { z } from "zod";
 import { scenes, allSlides, type SlideId, type StageView } from "../../../presentation/scenes";
 import { selectionSchema, type Selection } from "./contracts";
@@ -19,7 +20,7 @@ const keySchema = z.object({ type: z.literal("key"), key: z.string(), id: z.stri
 const ackSchema = z.object({ type: z.literal("key-ack"), id: z.string() });
 export type Stage = z.infer<typeof schema>;
 const initial: Stage = { cue: 0, beat: 0, view: "title", trace: null, replay: null, selection: null, short: false, fallback: false };
-const key = "ignite-presentation-stage-v3";
+const key = settings.storageKey;
 
 // The view requested in the address (?view=… or ?slide=…), if any.
 function requestedView() {

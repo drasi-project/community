@@ -1,0 +1,24 @@
+[package]
+name = "ignite-policy"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+name = "drasi_computation_ignite_policy"
+crate-type = ["lib", "cdylib"]
+
+[features]
+dynamic-plugin = []
+
+[dependencies]
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+async-trait = "0.1"
+futures-util = "0.3"
+sha2 = "0.10"
+drasi-core-types = { path = "../../../../../../drasi-core/core-types" }
+drasi-computation-contracts = { path = "../../../../../../drasi-core/components/computation-contracts" }
+drasi-computation-plugin-sdk = { path = "../../../../../../drasi-core/components/computation-plugin-sdk" }
+regorus = { version = "=0.12.0", default-features = false, features = ["std", "arc"] }

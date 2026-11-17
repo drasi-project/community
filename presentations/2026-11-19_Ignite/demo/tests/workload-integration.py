@@ -8,6 +8,9 @@ import urllib.error
 import urllib.request
 import uuid
 from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "ops"))
+import settings  # noqa: E402
 
 DEMO = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location("native", DEMO / "tests/native-integration.py")
@@ -17,7 +20,7 @@ EVIDENCE = DEMO / ".native/evidence/workload.json"
 
 
 def api(path, body=None, expected=200):
-    request = urllib.request.Request("http://127.0.0.1:18500" + path,
+    request = urllib.request.Request(settings.url("WORKLOAD") + path,
         data=None if body is None else json.dumps(body).encode(),
         headers={"Content-Type": "application/json"})
     try:

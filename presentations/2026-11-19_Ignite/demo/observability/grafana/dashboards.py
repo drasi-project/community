@@ -10,6 +10,8 @@ red = broken, orange = needs action or waiting, green = OK, grey = not allowed o
 nothing to show.
 """
 import json, sys, copy, os
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../ops"))
+import settings  # noqa: E402  ports.env: the Langfuse links carry its port
 D = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(os.path.abspath(__file__)), "dashboards")
 DS = {"uid": "ignite-prometheus", "type": "prometheus"}
 VALID = ' and on(view) (ignite_drasi_valid_until_seconds > time())'
@@ -208,7 +210,7 @@ panels.append(stat(13, "Deployments", [deployment(e) for e in ("EU-A", "EU-B", "
 dec["panels"] = panels
 
 # Links for use outside the stage (the stage hides them).
-LANGFUSE = "http://localhost:13001/project/ignite-probe/traces?filter=isRootObservation%3Bboolean%3B%3B%3D%3Btrue"
+LANGFUSE = f"http://localhost:{settings.port('LANGFUSE')}/project/ignite-probe/traces?filter=isRootObservation%3Bboolean%3B%3B%3D%3Btrue"
 link = lambda title, url: {"title": title, "url": url, "type": "link", "icon": "external link", "targetBlank": False,
                            "asDropdown": False, "includeVars": False, "keepTime": False, "tags": [], "tooltip": ""}
 ops["links"] = [link("Recovery plan", "/d/ignite-decisions?from=now-5m&to=now&refresh=5s"), link("Langfuse traces", LANGFUSE)]

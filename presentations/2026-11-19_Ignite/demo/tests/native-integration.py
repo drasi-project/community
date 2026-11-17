@@ -5,6 +5,9 @@ import http.client
 import json
 import os
 from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "ops"))
+import settings  # noqa: E402
 import queue
 import socket
 import subprocess
@@ -18,7 +21,7 @@ DEMO = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location("runtime", DEMO / "ops/native-runtime.py")
 runtime = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(runtime)
-BASE = "http://127.0.0.1:18421/api/v1/instances/ignite"
+BASE = settings.url("DRASI_API")+"/api/v1/instances/ignite"
 EVIDENCE = DEMO / ".native/evidence"
 
 
@@ -29,7 +32,7 @@ def api(path):
 
 class Attachment:
     def __init__(self, name):
-        self.connection = http.client.HTTPConnection("127.0.0.1", 18421, timeout=35)
+        self.connection = http.client.HTTPConnection("127.0.0.1", settings.port("DRASI_API"), timeout=35)
         self.connection.request("GET", "/api/v1/instances/ignite/queries/" + name + "/attach")
         self.response = self.connection.getresponse()
         assert self.response.status == 200, self.response.read()
@@ -140,7 +143,7 @@ class Server:
 
 def main():
     # Do not stop or borrow another session's running Server.
-    for port in (18421, 18422):
+    for port in (settings.port("DRASI_API"), settings.port("DRASI_ALERT")):
         with socket.socket() as listener:
             listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             listener.bind(("127.0.0.1", port))
@@ -198,7 +201,7 @@ def main():
         passed.append("Server restart preserves authoritative data and bootstraps downtime changes")
 
         # Terminate only this demo's actual replication backend, then update while reconnecting.
-        runtime.sql("SELECT pg_terminate_backend(active_pid) FROM pg_replication_slots WHERE slot_name='ignite_native' AND active_pid IS NOT NULL;")
+        runtime.sql(f"SELECT pg_terminate_backend(active_pid) FROM pg_replication_slots WHERE slot_name='{settings.SLOT}' AND active_pid IS NOT NULL;")
         runtime.sql("UPDATE ignite_endpoints SET budget_tpm=95000, revision=revision+1 WHERE id='EU-B';")
         restarted.until(lambda rows: rows["EU-B"]["spare_tpm"] == 15000)
         passed.append("PostgreSQL replication reconnect resumes CDC")
@@ -208,7 +211,7 @@ def main():
         for status in ("firing", "resolved"):
             payload = {"groupKey": "native-check", "status": status, "title": "AI capacity", "message": status}
             request = urllib.request.Request(
-                "http://127.0.0.1:18422/alerts/grafana",
+                settings.url("DRASI_ALERT")+"/alerts/grafana",
                 data=json.dumps(payload).encode(), headers={"Content-Type": "application/json"},
             )
             with urllib.request.urlopen(request, timeout=5) as response:

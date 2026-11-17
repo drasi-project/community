@@ -5,6 +5,9 @@ import base64
 from datetime import datetime
 import json
 from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "ops"))
+import settings  # noqa: E402
 import runpy
 import subprocess
 import sys
@@ -33,17 +36,17 @@ def main():
     subprocess.run([helper, "stop", *services], check=True)
     subprocess.run([helper, "up", "-d", "--no-deps", *services], check=True)
     get, wait_for = smoke["get"], smoke["wait_for"]
-    wait_for("restarted Langfuse", lambda: get("http://127.0.0.1:13001/api/public/health"), timeout=240)
-    wait_for("restarted Grafana", lambda: get("http://127.0.0.1:13000/api/health"))
-    wait_for("restarted probe", lambda: get("http://127.0.0.1:18888/health"))
+    wait_for("restarted Langfuse", lambda: get(settings.url("LANGFUSE")+"/api/public/health"), timeout=240)
+    wait_for("restarted Grafana", lambda: get(settings.url("GRAFANA")+"/api/health"))
+    wait_for("restarted probe", lambda: get(settings.url("PROBE")+"/health"))
     startup_seconds = round(time.monotonic() - started, 3)
     trace_id = old["success_request"]["trace_id"]
     observations = get(
-        "http://127.0.0.1:13001/api/public/v2/observations?" + urllib.parse.urlencode({"traceId": trace_id}),
+        settings.url("LANGFUSE")+"/api/public/v2/observations?" + urllib.parse.urlencode({"traceId": trace_id}),
         env["LANGFUSE_AUTH_BASE64"],
     )["data"]
     assert any(row["traceId"] == trace_id for row in observations), "Historical trace lost"
-    events = get("http://127.0.0.1:18888/events")
+    events = get(settings.url("PROBE")+"/events")
     assert any(event["id"] == old["firing"]["id"] for event in events), "Historical webhook lost"
     auth = base64.b64encode(f"admin:{env['GRAFANA_ADMIN_PASSWORD']}".encode()).decode()
     params = urllib.parse.urlencode({
@@ -52,7 +55,7 @@ def main():
         "end": datetime.fromisoformat(old["finished_at"]).timestamp(),
         "step": "2",
     })
-    history = get("http://127.0.0.1:13000/api/datasources/proxy/uid/ignite-prometheus/api/v1/query_range?" + params, auth)
+    history = get(settings.url("GRAFANA")+"/api/datasources/proxy/uid/ignite-prometheus/api/v1/query_range?" + params, auth)
     assert history["data"]["result"], "Historical metric samples lost"
     if not args.history_only:
         command = [sys.executable, str(ROOT / "tests/observability-smoke.py")]

@@ -6,6 +6,9 @@ import hashlib
 import importlib.util
 import json
 from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "ops"))
+import settings  # noqa: E402
 import platform
 import shutil
 import subprocess
@@ -115,21 +118,21 @@ def cycles():
 
 def containers():
     names = command(["podman", "ps", "--filter",
-                     "label=com.docker.compose.project=ignite-observability",
+                     f"label=com.docker.compose.project={settings.PROJECT}",
                      "--format", "{{.Names}}"]).splitlines()
-    assert len(names) == 10 and all(n.startswith("ignite-observability-") for n in names)
+    assert len(names) == 10 and all(n.startswith(f"{settings.PROJECT}-") for n in names)
     return names
 
 
 def listeners():
     found = {}
-    for port in [18421, 18500, 18580]:
+    for port in [settings.port(name) for name in ("DRASI_API", "WORKLOAD", "UI")]:
         pid = command(["lsof", "-t", f"-iTCP:{port}", "-sTCP:LISTEN"])
         assert pid.isdecimal(), f"Expected exactly one listener on {port}"
         found[str(port)] = {"pid": int(pid), "process": command(["ps", "-p", pid, "-o", "command="])}
-    assert "drasi-server" in found["18421"]["process"]
-    assert "ignite-workloads" in found["18500"]["process"]
-    assert "vite" in found["18580"]["process"]
+    assert "drasi-server" in found[str(settings.port("DRASI_API"))]["process"]
+    assert "ignite-workloads" in found[str(settings.port("WORKLOAD"))]["process"]
+    assert "vite" in found[str(settings.port("UI"))]["process"]
     return found
 
 
@@ -268,7 +271,7 @@ def offline_images():
         images.append({"container": name, "id": ident, "digests": image.get("RepoDigests", [])})
     result = command(["podman", "run", "--rm", "--pull=never", "--network=none",
                       "--name", "ignite-release-offline-probe", "--entrypoint", "python",
-                      "localhost/ignite-observability-probe:phase1",
+                      f"localhost/{settings.PROJECT}-probe:phase1",
                       "-c", "import opentelemetry.sdk,requests; print('cached probe dependencies loaded offline')"])
     save("offline-images.json", {"passed": True, "at": utc(), "images": images,
          "isolated_probe": result,

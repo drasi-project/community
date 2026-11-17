@@ -9,5 +9,6 @@ python3 -m pip download --only-binary=:all: --platform manylinux2014_aarch64 \
   --implementation cp --python-version 3.12 --abi cp312 \
   -r "$ROOT/observability/probe/requirements.txt" \
   --dest "$ROOT/observability/probe/wheels" --quiet
-podman build -q -t localhost/ignite-observability-probe:phase1 \
+eval "$(python3 "$ROOT/ops/settings.py")"
+podman build -q -t "localhost/$IGNITE_PROJECT-probe:phase1" \
   -f "$ROOT/observability/probe/Containerfile" "$ROOT/observability/probe"

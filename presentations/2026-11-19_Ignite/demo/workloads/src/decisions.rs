@@ -520,7 +520,7 @@ pub async fn publish_once(app: &App) -> Result<()> {
                 let password = std::env::var("GRAFANA_ADMIN_PASSWORD")?;
                 let existing: Value = app
                     .http
-                    .get("http://127.0.0.1:13000/api/annotations")
+                    .get(format!("{}/api/annotations", ignite_settings::get().url("GRAFANA")?))
                     .query(&[("tags", "ignite-decision"), ("limit", "5000")])
                     .basic_auth("admin", Some(&password))
                     .send()
@@ -532,7 +532,7 @@ pub async fn publish_once(app: &App) -> Result<()> {
                     if annotation["time"].as_i64().is_some_and(|t| t <= before) {
                         let id = annotation["id"].as_i64().context("annotation id")?;
                         app.http
-                            .delete(format!("http://127.0.0.1:13000/api/annotations/{id}"))
+                            .delete(format!("{}/api/annotations/{id}", ignite_settings::get().url("GRAFANA")?))
                             .basic_auth("admin", Some(&password))
                             .send()
                             .await?
@@ -543,7 +543,7 @@ pub async fn publish_once(app: &App) -> Result<()> {
                 let password = std::env::var("GRAFANA_ADMIN_PASSWORD")?;
                 let existing: Value = app
                     .http
-                    .get("http://127.0.0.1:13000/api/annotations")
+                    .get(format!("{}/api/annotations", ignite_settings::get().url("GRAFANA")?))
                     .query(&[("tags", &id)])
                     .basic_auth("admin", Some(&password))
                     .send()
@@ -557,7 +557,7 @@ pub async fn publish_once(app: &App) -> Result<()> {
                     .is_empty()
                 {
                     app.http
-                        .post("http://127.0.0.1:13000/api/annotations")
+                        .post(format!("{}/api/annotations", ignite_settings::get().url("GRAFANA")?))
                         .basic_auth("admin", Some(password))
                         .json(&payload)
                         .send()
@@ -566,7 +566,7 @@ pub async fn publish_once(app: &App) -> Result<()> {
                 }
             } else {
                 app.http
-                    .post("http://127.0.0.1:13001/api/public/scores")
+                    .post(format!("{}/api/public/scores", ignite_settings::get().url("LANGFUSE")?))
                     .header(
                         "Authorization",
                         format!("Basic {}", std::env::var("LANGFUSE_AUTH_BASE64")?),

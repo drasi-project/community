@@ -4,9 +4,10 @@ DEMO="$(cd "$(dirname "$0")/.." && pwd)"
 ROOT="$(cd "$DEMO/../../../.." && pwd)"
 SERVER="$ROOT/drasi-server"
 CORE="$ROOT/drasi-core"
-export CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-2}"
+# At most 4 parallel jobs; one shared build folder for the copy (see demo/.cargo/config.toml).
+export CARGO_BUILD_JOBS="$(( ${CARGO_BUILD_JOBS:-4} > 4 ? 4 : ${CARGO_BUILD_JOBS:-4} ))"
 export CARGO_PROFILE_DEV_DEBUG=0
-export CARGO_TARGET_DIR="$DEMO/.native/target"
+export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$ROOT/.cargo-target}"
 export JQ_LIB_DIR="${JQ_LIB_DIR:-/opt/homebrew/lib}"
 mkdir -p "$DEMO/.native/plugins"
 # Install as a new file: macOS kills a process that loads a library overwritten
@@ -24,7 +25,7 @@ cd "$DEMO"
 npm --prefix "$SERVER/ui" run build
 mkdir -p "$DEMO/.native/ui/dist"
 rsync -a --delete "$SERVER/ui/dist/" "$DEMO/.native/ui/dist/"
-CARGO_TARGET_DIR="$SERVER/target" cargo build --locked --manifest-path "$SERVER/Cargo.toml" --bin drasi-server
+cargo build --locked --manifest-path "$SERVER/Cargo.toml" --bin drasi-server
 if [ ! -f "$CORE/Cargo.lock" ]; then
     cargo generate-lockfile --manifest-path "$CORE/Cargo.toml"
 fi
@@ -42,5 +43,5 @@ fi
 cargo build --locked -p ignite-config -p ignite-workloads
 "$CARGO_TARGET_DIR/debug/ignite-config" "$DEMO/.native/plugins" > "$DEMO/.native/server.json.tmp"
 mv "$DEMO/.native/server.json.tmp" "$DEMO/.native/server.json"
-"$SERVER/target/debug/drasi-server" validate --config "$DEMO/.native/server.json" --plugins-dir "$DEMO/.native/plugins"
+"$CARGO_TARGET_DIR/debug/drasi-server" validate --config "$DEMO/.native/server.json" --plugins-dir "$DEMO/.native/plugins"
 python3 "$DEMO/ops/native-runtime.py" stamp

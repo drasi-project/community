@@ -21,7 +21,7 @@ class ServerUiBundleTests(unittest.TestCase):
             core, server, demo = root / "drasi-core", root / "drasi-server", root / "demo"
             binary = server / "target/debug/drasi-server"
             for path in [
-                binary, demo / ".native/target/debug/ignite-workloads",
+                binary, root / ".cargo-target/debug/ignite-workloads",
                 demo / ".native/server.json", core / "Cargo.lock",
                 server / "Cargo.lock", server / "ui/package-lock.json", demo / "Cargo.lock",
             ]:
@@ -34,7 +34,7 @@ class ServerUiBundleTests(unittest.TestCase):
                 return "test\n" if kwargs.get("text") else b""
 
             with patch.multiple(runtime, ROOT=root, CORE=core, SERVER=server,
-                                DEMO=demo, BINARY=binary), \
+                                DEMO=demo, BINARY=binary, WORKLOADS=root / ".cargo-target/debug/ignite-workloads"), \
                     patch.object(runtime.subprocess, "check_output", side_effect=output):
                 with self.assertRaisesRegex(RuntimeError, "Server UI assets missing"):
                     runtime.stamp()
