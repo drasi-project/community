@@ -3,14 +3,14 @@
 Open items for the rework (`agentofreality-ignite-native`), most important first.
 Remove an item when it is done.
 
-## Before the go/no-go decision (Nov 18)
+## Before the talk
 
-- **Phase 8a verification.** Integration tests are ported and passing; still to
-  do: lifecycle tests, the full walkthrough, new fallback recordings, release
-  cycles and a go/no-go assessment.
-- **Timings in the script are unverified.** "Within about 8 seconds", "plan before
-  the alert", "Verified within about 30 seconds" and "about 20 seconds to start
-  after a reset" must be measured on the rework and the script corrected.
+- **Human rehearsal on Nov 18** on the presentation laptop, with only this stack
+  running (Podman's 7.45 GiB VM can't hold both stacks). Phase 8a recommends GO
+  for this version after that rehearsal.
+- **Reset at least 5 minutes before the talk:** the Model calls chart shows the
+  previous run for 5 minutes after a reset.
+- **Not yet run:** `ops/release.py soak` (1 hour) and `ops/release.py stamp`.
 
 ## Speaker material
 
@@ -25,8 +25,16 @@ Remove an item when it is done.
   another query's result.
 - **Drasi Server lists no reactions** (`/instances/ignite/reactions` returns an
   empty list), so its UI shows none, although the graph has five.
-- **Grafana annotations** can be duplicated if a response is lost or Server
-  restarts within 30 seconds.
+- **Grafana annotations and Langfuse scores** are best effort: their reactions
+  skip after 3 retries, so an outage loses those events, and annotations can be
+  duplicated on a retry or restart.
+- **"Grafana alerts firing" tile** recomputes the two alert rules in PromQL, so it
+  flips within seconds; Grafana's real alert fires about 20 seconds after the
+  failure. The script doesn't point at the tile for the "plan before the alert"
+  comparison.
+- **Restarting a single query** isn't supported (queries fed by other queries get
+  only their changes); restart the whole of Drasi Server.
+- **The HTTP sink option `unroutedChanges`** exists only on this drasi-core branch.
 
 ## After the talk
 
