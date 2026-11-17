@@ -131,6 +131,10 @@ def main():
         prune()
         env = os.environ.copy()
         env["IGNITE_POSTGRES_PASSWORD"] = required("POSTGRES_PASSWORD")
+        # Secrets for Drasi's HTTP reactions (env references in server.json); never printed.
+        env["IGNITE_GRAFANA_TOKEN"] = required("IGNITE_GRAFANA_TOKEN")
+        env["IGNITE_LANGFUSE_HEADERS"] = json.dumps(
+            {"authorization": f"Basic {required('LANGFUSE_AUTH_BASE64')}"})
         os.chdir(DEMO / ".native")
         os.execve(BINARY, [
             str(BINARY), "--config", str(DEMO / ".native/server.json"),
