@@ -1,307 +1,384 @@
 # Presenter guide
 
-Everything you need to give this talk or run the demo, without needing to know
-how it's built. To install and start the demo, see [SETUP.md](SETUP.md). To
-understand what the demo is about, see [README.md](README.md).
+Everything you need to give this talk, without needing to know how the demo is
+built. To install and start the demo, see [SETUP.md](SETUP.md). For what the demo
+is about, see [README.md](README.md).
 
-**The talk in one line:** three short slides, then about 18 minutes live in
-Grafana showing a real AI service fail, Drasi working out a valid recovery, you
-approving it, and Drasi confirming it worked.
+**The talk in one line:** a few slides, then about 17 minutes of live demo in
+which an AI service fails, Drasi shows who is affected and works out a fix within
+the rules, you approve it, and Drasi confirms it worked.
 
 - Session: THR1029, *Monitoring without polling*, 25 minutes
-- Aim for 22 minutes of content and 3 minutes of questions
-- During the talk, the presenter desk shows the same notes as this guide, one cue
-  at a time
+- About 22 minutes of content and 3 minutes of questions
 
 ## Contents
 
-1. [Your screens](#your-screens)
-2. [Before you present](#before-you-present)
-3. [Run of show](#run-of-show)
-4. [The script](#the-script)
-5. [Reading the dashboards](#reading-the-dashboards)
-6. [The presenter desk](#the-presenter-desk)
-7. [When something goes wrong](#when-something-goes-wrong)
-8. [After the talk](#after-the-talk)
+1. [How it works on stage](#how-it-works-on-stage)
+2. [Set up your screens](#set-up-your-screens)
+3. [Before you present](#before-you-present)
+4. [The presenter desk](#the-presenter-desk)
+5. [Run of show](#run-of-show) and [the script](#the-script)
+6. [Glossary](#glossary) and [questions to expect](#questions-to-expect)
+7. [Reading the dashboards](#reading-the-dashboards) and [the late request view](#the-late-request-view)
+8. [When something goes wrong](#when-something-goes-wrong)
+9. [After the talk](#after-the-talk)
 
-## Your screens
+## How it works on stage
 
-You use two screens. **Never project the presenter desk.**
+There are two windows:
 
-| Projected for the audience | Private, on your laptop |
-|---|---|
-| Slides: http://127.0.0.1:18580/present | Presenter desk: http://127.0.0.1:18580/presenter |
-| Then Grafana, Langfuse and Drasi Server, in the same window | |
+- **The projector window** is what the audience sees: slides, Grafana dashboards
+  and one late customer request. You never click in it.
+- **The presenter desk** is on your laptop screen. It shows what to say, the one
+  or two buttons for this moment, and what to watch for.
 
-The projected window starts on the slides. Advancing past slide 2 opens Grafana
-in the same window. From there, the links along the top of each Grafana dashboard
-take you to the other dashboard, Langfuse, Drasi Server, and back to the closing
-slide. You never need to switch windows on the projector.
+The talk is a sequence of **beats**. Press **Next** on the desk (or your clicker,
+→, Space or Page Down) and the projector moves to whatever the next beat needs:
+the next slide, a dashboard, or a "What Drasi just did" visual. Your clicker works
+whichever window is in front.
 
-The presenter desk is where you make things happen: start traffic, fail an
-deployment, approve recovery, change policy. It also shows your notes for the
-current cue. Moving between cues on the desk only changes your notes; it never
-changes what the audience sees or the demo.
+Some beats have buttons, such as **Fail EU-A** or **Approve selected plan**. They
+appear in the beat itself: press them when you reach the beat, while you say its
+words. Nothing in the demo changes unless you press a button; **Back** and
+**Next** never change the demo. If you forget a button, Next reminds you once.
+
+Your clicker moves Back and Next. Buttons need a click on the desk with the
+trackpad or mouse.
+
+If the desk isn't open, → / Space / Page Down (or the clicker) on the projector
+window still steps through the slides and dashboards on its own, but nothing in
+the demo changes. Open the desk to give the talk.
+
+## Set up your screens
+
+1. Connect the projector and set the displays to **extend**, not mirror
+   (macOS: System Settings › Displays › Use as: Extended display). If they mirror,
+   the audience sees your desk.
+2. In Chrome, open the desk: http://127.0.0.1:18580/presenter
+3. On the desk, press **Open projector window**. Drag that window onto the
+   projector and make it full screen (Ctrl ⌘ F). The desk's header then says
+   **Projector window connected**.
+4. Keep the desk on your laptop screen. Turn on Do Not Disturb, quit chat apps,
+   and plug in power.
 
 ## Before you present
 
 **The day before:** rehearse the whole talk at least once with the live demo, and
 once using only the recordings (see [When something goes wrong](#when-something-goes-wrong)).
-Printing this guide gives you a paper copy of the script.
 
 **30 minutes before:**
 
 1. Start the demo ([SETUP.md › Start the demo](SETUP.md#start-the-demo)).
-2. Sign in to Grafana and Langfuse **privately**, before projecting either
-   ([SETUP.md › Get ready to present](SETUP.md#get-ready-to-present) shows the passwords).
-3. Open the slides on the projector and the presenter desk on your laptop.
-4. Check the banner at the top of the desk says **READY**.
-5. On the desk, check the starting state: all three deployments Healthy, support on
-   EU-A, summaries on EU-B. If anything is different, use **Reset scenario…**.
-6. In Grafana, close the left navigation menu so the dashboard fills the screen,
-   and check the dashboard links are visible along the top.
-7. Check text is readable from the back of the room; zoom the browser (Cmd +) if needed.
-8. Test your clicker on the slides.
+2. Optional: sign in to Langfuse **privately** on the laptop, in case someone asks
+   to see it ([SETUP.md › Get ready to present](SETUP.md#get-ready-to-present)).
+   Nothing on the projector needs a sign-in.
+3. [Set up your screens](#set-up-your-screens).
+4. On the desk, open **Before and after the talk** and check it says
+   **✓ Starting state**. If not, press **Reset scenario…** then **Confirm reset**.
+5. Check the header says **READY**.
+6. Step through a few beats with your clicker to check it moves the projector,
+   then go back to the first beat (**Jump to a part** › 1. Title).
 
-**2 minutes before:** click **Start demo traffic** on the desk so Grafana's charts
-have data when you arrive. Traffic stops by itself after 30 minutes.
+**5 minutes before:** press **Start demo traffic** (All demo controls), so the
+charts have history when you get to them. Traffic stops by itself after 90
+minutes. If the desk ever shows **Traffic: stopped** during the talk, press
+**Start demo traffic** again.
+
+**If the demo won't start or the header stays NOT READY:** give the talk in
+recording mode. Press **Use recordings for the rest of the talk** in the warning
+at the top of the desk. Everything else works the same.
+
+## The presenter desk
+
+Top to bottom:
+
+| Part | What it's for |
+|---|---|
+| Header | **READY** or **NOT READY**, whether the projector window is connected, and the talk timer. It starts by itself on your first **Next** and turns amber at 22 minutes; tick **Short on time** if you're past about 11:30 when Recovery starts |
+| **The current beat** (left) | Part number and name, dots for the beats in this part, **◀ Back / Next ▶** and **what the projector shows** (always in the same place), the beat's buttons and their result, what to say, what to watch for, a preview of the next beat, what to do if it breaks (with **Use recordings from here on**), and how to undo a wrong button |
+| **Drasi's answers** (right) | The same answers the audience sees: Support overdue, Action needed, Recovery, Safe if one fails? |
+| **Live demo** (right) | Each deployment's health and capacity; whether traffic is running; where the summaries may run |
+| **Recovery plan** (right) | Where support and summaries run now, the proposed plan, and the plan you selected for approval, with a line saying whether it needs your approval, and the latest approval status |
+| Jump to a part | Go straight to any part of the talk (also moves the projector) |
+| All demo controls | Every button, if you need one out of order, plus single requests and changes to any deployment |
+| Show something on the projector | Put any slide, dashboard or visual on the projector without changing your place |
+| Recordings (fallback) | Show one recording on the projector, or switch to recording mode for the rest of the talk |
+| Questions to expect, and glossary | The same as in this guide |
+| Before and after the talk | Starting-state check, reset, full settings |
+
+**Buttons:** the button for the current beat is bright. A ✓ means it's already
+done (traffic running, plan selected, EU-A failed). Grey dashed means it can't be
+pressed yet (for example, Approve before you've selected a plan). **Fail EU-A**
+is red.
+After pressing, the result appears right under the buttons: **Done.**, or in green
+**Rejected, as intended** for the approval that's meant to be rejected.
+
+**Short on time:** tick it to skip the beats marked optional (the policy change
+and the late request view). Their buttons and notes disappear from the sequence.
+
+**The approval flow.** The planner proposes a plan (it's the demo's own code; Drasi
+re-runs it whenever anything changes); nothing changes until you approve
+it, which stands in for a change-approval tool. **Select proposed plan** takes a
+copy; **Approve selected plan** sends it. The AI service applies a plan only if
+the facts it was worked out from (policy, capacity, health) haven't changed, so
+an out-of-date copy is rejected. After an approval, your selection clears, so you
+can't approve twice by accident. That's also true after a rejected approval:
+select the plan again before approving.
 
 <!-- generated from presentation/notes.ts: do not edit; run npm run sync-presenter in demo/ui -->
 
 ## Run of show
 
-| Time | Cue | Audience sees | You |
+| Time | Part | Projector shows | You |
 |---|---|---|---|
-| 0:00 | Title | Title slide | Introduce yourself and the session |
-| 0:30 | The scenario | Scenario slide | Set up the scenario, then Drasi's role |
-| 2:30 | Healthy service | Grafana · Operations | Walk through the healthy dashboard |
-| 5:00 | Failure and customer impact | Grafana · Operations | Fail EU-A |
-| 8:00 | Recovery | Grafana · Policy and recovery | Approve Drasi's proposed plan |
-| 13:00 | The continuous query | Drasi Server | Show the query behind "overdue" |
-| 15:00 | Policy changes the answer | Grafana · Policy and recovery | Restrict summaries to Europe (optional) |
-| 17:00 | Healthy but fragile | Grafana · Policy and recovery | Cut EU-B's budget, then restore it |
-| 20:30 | Close | Closing slide | Three takeaways |
-| 22:00 | Questions | Closing slide | Take questions |
+| 0:00 | Title | Title | Introduce yourself and the talk |
+| 0:30 | The scenario | The scenario | Set up the scenario and the three questions |
+| 2:00 | Drasi in one picture | Drasi in one picture | Explain Drasi's parts and what is built in |
+| 3:30 | Healthy service | Grafana · Operations, What Drasi just did | Walk through the healthy dashboard |
+| 6:00 | Failure | Grafana · Operations, What Drasi just did | Fail EU-A |
+| 9:00 | Who is affected | Who is affected: the continuous query, One late request | Show who is affected: the query and its live list |
+| 11:30 | Recovery | Grafana · Recovery plan, What Drasi just did, Grafana · Operations | Approve the proposed plan; optionally show a stale approval rejected |
+| 17:00 | Healthy but fragile | Grafana · Recovery plan, Grafana · Operations, What Drasi just did | Healthy but fragile: EU-A returns with half its capacity |
+| 20:30 | Close | Close | Four takeaways, then questions |
+| 22:00 | Questions | Close | Take questions |
 
 ## The script
 
-The same notes appear cue by cue on the presenter desk, under **What to do**. The wording is a guide, not a script to read aloud.
+The desk shows one beat at a time. Press **Next** (or your clicker, or →) to move on: the
+projector follows. Beats marked optional are skipped when **Short on time** is ticked.
+Say it in your own words.
 
-### 1. Title (30 seconds) · Title slide
+### 1. Title (30 seconds)
 
-- **Say:** This talk is about adding change-driven computation alongside the observability tools you already use.
-- **Do:** Introduce yourself, then advance to the next slide.
-- **Point at:** The session title.
-- **What happens:** Nothing changes in the demo.
-- **If it breaks:** The slides don't depend on the demo. Carry on.
-- **Next:** "First, what does Drasi add?"
+1. **Title.** Introduce yourself. Your monitoring tells you something is wrong. This talk is about getting the next answers too: who is affected, what to do, and whether it worked, worked out the moment things change, in the tools you already use.
 
-### 2. The scenario (2 minutes) · Scenario slide
+**If it breaks:** The slides don't depend on the demo. Carry on.
 
-- **Say:** Here's a situation many teams running AI will recognise. A company's AI assistant answers customer-support questions, and a background job summarizes documents. Both draw on the same limited AI model capacity, deployed in three regions, each with a budget of tokens per minute. Support data is restricted, so it must stay in Europe; the summaries use public data and can run anywhere. Customers expect an answer within 15 seconds, and moving work between regions needs someone's approval. Right now EU-A serves support, EU-B runs the summaries, and US-C in the United States is spare. When EU-A fails, customers stop getting answers, and the business needs to know three things: who is affected right now, what's the fastest fix that stays within company policy, and how do we know it's really fixed? Your monitoring tools will tell you something is wrong; answering those three questions is where Drasi comes in. Drasi is change-driven computation: sources bring in changes, continuous models keep results current as data changes and as time passes, and reactions publish results or take action. The AI models and capacity are simulated; the requests, monitoring and Drasi computation are real.
-- **Do:** When you've explained the slide, advance (or click Live demo · Grafana) to open Grafana.
-- **Point at:** The capacity in each region and what is using it, the rules on the right, then the three questions. Finish on the Drasi section at the bottom: sources, continuous models, reactions.
-- **What happens:** Advancing opens Grafana's Operations dashboard in the same window.
-- **If it breaks:** If Grafana doesn't open, open http://localhost:13000/d/ignite-workload in the projected window.
-- **Next:** "Let's run this service in Grafana."
+### 2. The scenario (1½ minutes)
 
-### 3. Healthy service (2½ minutes) · Grafana · Operations
+1. **The scenario.** A company runs two AI workloads on the same limited AI model capacity: an assistant that answers customer-support questions, and a background job that writes document summaries. The capacity is split across three deployments, EU-A and EU-B in Europe and US-C in the United States, each with 100k tokens a minute.
+2. **The scenario.** Two rules. Customer support handles restricted data, so it may only run in Europe; summaries use public data and can run anywhere. Customers expect an answer within 15 seconds, and moving work between deployments needs a person's approval.
+3. **The scenario.** When EU-A fails, the business needs three answers: who is affected right now, what's the fastest fix that stays within policy, and how do we know it's really fixed? You're about to see Drasi answer all three.
 
-- **Say:** The top half is a normal service dashboard measured from real requests: call rate, errors, latency, the support queue and a Grafana alert. OpenTelemetry collects the measurements, Prometheus stores them and Grafana shows them. The bottom half is what Drasi adds: customer impact, kept current continuously.
-- **Do:** Nothing to click. If traffic isn't running, click Start demo traffic on the desk.
-- **Point at:** Support errors 0%, Support queue 0, Support overdue 0, all three deployments Healthy, Recovery None in progress, Action needed None.
-- **What happens:** The charts update every 5 seconds.
-- **If it breaks:** If the charts are empty, traffic isn't running: start it and keep talking. Never wait on stage for a chart to fill.
-- **Next:** "Now the deployment serving customer support fails."
+**If it breaks:** Carry on; the demo doesn't depend on the slides.
 
-### 4. Failure and customer impact (3 minutes) · Grafana · Operations
+### 3. Drasi in one picture (1½ minutes)
 
-- **Say:** The monitoring stack sees failed calls and a growing queue, as it should. Drasi answers a different question: which customer requests have now missed their deadline? That answer changes just because time passes, with no new event on the request.
-- **Do:** On the desk, choose Deployment EU-A and Action fail, then click Apply to deployment. Stay on the Grafana page. Optional: click Submit support request, then Open returned task trace to show that request in Langfuse.
-- **Point at:** Model calls by outcome, Support errors, Support queue, Deployment status, Support overdue and Action needed.
-- **What happens:** In order: support → EU-A shows HTTP 503 in red; Support errors and Support queue rise; Deployment status shows EU-A Failed; after about 15 seconds Support overdue starts counting; after about 30 seconds the Grafana alert fires; Action needed changes to Approve proposed plan.
-- **If it breaks:** If nothing happens within 30 seconds, play the failure recording.
-- **Next:** "US-C has spare capacity. Can we use it?"
+1. **Drasi in one picture.** Drasi is open-source change-driven computation. Sources bring in every change as it happens: here, from the AI service's database. Continuous queries keep a result up to date as changes arrive, and as time passes. Continuous models run your own logic on those results and re-run it whenever an input changes. Reactions deliver each change to where it's needed.
+2. **Drasi in one picture.** What's what. Drasi does the hard part: it keeps results up to date incrementally as changes arrive, re-checks them when time passes a deadline, and re-runs your models whenever their inputs change. You write the business logic: here, the policy, planner and what-if models, and the AI service that applies plans and exports the answers as metrics, were written for this demo. 'Without polling' is about computing the answers: nothing is recomputed on a schedule. Health checks still run every second, as in any system, and Grafana still refreshes to draw the screen; Drasi reacts to what they report.
 
-### 5. Recovery (5 minutes) · Grafana · Policy and recovery
+**If it breaks:** Carry on.
 
-- **Say:** On paper we have plenty: 200k of healthy capacity for 140k of work. But US-C has the room, and policy denies it for support. Drasi's answer moves the summaries to US-C, which frees EU-B for support. Drasi keeps that complete plan current as things change. But approving a plan isn't the same as proving it worked.
-- **Do:** Click Policy and recovery in Grafana's links. On the desk, click Select proposed plan, then Approve selected plan, once.
-- **Point at:** Capacity: Healthy 200k, Needed 140k. Customer support may run on: US-C Denied. Document summaries may run on: US-C Allowed. Proposed routes: support → EU-B and summaries → US-C.
-- **What happens:** Decision events records the approval; Current routes change; Recovery shows Awaiting evidence, then Verified once real support requests succeed for 5 seconds. Back on Operations, the queue drains and successful calls return.
-- **If it breaks:** If Recovery stays at Awaiting evidence, say it's applied but not yet verified, and keep traffic running. Never approve a second time. If needed, play the recovery recording.
-- **Next:** "Here's the continuous query behind one of those answers."
+### 4. Healthy service (2½ minutes)
 
-### 6. The continuous query (2 minutes) · Drasi Server
+1. **Grafana · Operations.** This is the AI service's Grafana dashboard. The top half is ordinary monitoring, measured from real requests: calls, errors, answer time, the support queue and Grafana alerts. OpenTelemetry, Prometheus and Grafana; nothing new.
+   - **Press:** Start demo traffic
+   - **Watch for:** Charts moving. Support errors 0%, Support queue 0 to 2 (green). (Start demo traffic only if it isn't already running.)
+2. **Grafana · Operations.** The bottom half is Drasi's answers, worked out from changes in the AI service's database rather than from metrics. The service records every request and attempt, and checks each deployment's health every second. Drasi turns that into: overdue support requests, each deployment's status, recovery, what action is needed, and whether we'd survive losing any one deployment. They arrive as ordinary metrics, so you can alert on them like anything else.
+   - **Watch for:** Support overdue 0, all deployments Healthy, Recovery Nothing to verify, Action needed None, Safe if one fails? Yes.
+3. **What Drasi just did.** So far Drasi has read every change in the database, kept two queries current, run the policy, planner and what-if, and pushed the answers into Grafana. Nothing new to watch: the answers sit where you already look.
 
-- **Say:** This is a continuous query, not a scheduled check. Drasi keeps its result current as changes arrive, and re-evaluates it when time alone changes the answer. These results feed the models and dashboards you've just seen.
-- **Do:** Click Drasi queries in Grafana's links. Select the overdue-tasks query, click Expand query, and zoom the browser (Cmd +) so it's readable. Keep this to two minutes.
-- **Point at:** The deadline condition in the query.
-- **What happens:** Nothing changes in the demo.
-- **If it breaks:** If the query text doesn't appear (a known Drasi Server UI issue), describe the query in one sentence and go back to Grafana.
-- **Next:** "Policy is another input to the same computation."
+**If it breaks:** If the charts are empty, traffic isn't running: press Start demo traffic and keep talking.
 
-### 7. Policy changes the answer (2 minutes) · Grafana · Policy and recovery
+### 5. Failure (3 minutes)
 
-- **Say:** A proposal belongs to the facts that produced it. Change the policy and the answer changes, even though nothing has failed. An old approval can't silently apply a different plan.
-- **Do:** On the desk, click Select proposed plan. Then click Batch policy: Europe only. When US-C turns Denied for summaries, click Approve selected plan. Afterwards, click Batch policy: Europe + US to restore the policy.
-- **Point at:** Document summaries may run on: US-C, and Decision events.
-- **What happens:** US-C changes to Denied for summaries, and the approval is rejected; the rejection appears in Decision events.
-- **If it breaks:** Restore the policy (Batch policy: Europe + US) and describe what happened in words. Play the policy recording if needed.
-- **Next:** "Finally: can a healthy service survive the next failure?"
+1. **Grafana · Operations.** Now I'll make EU-A, the deployment serving customer support, fail.
+   - **Press:** Fail EU-A
+   - **Watch for:** Within about 8 seconds: Deployment status EU-A Failed, and Action needed Approve proposed plan.
+2. **Grafana · Operations.** Look at the bottom row first: EU-A Failed, and Action needed already says Approve proposed plan. Drasi has worked out a fix that fits the rules. We'll come back to it.
+3. **Grafana · Operations.** The top half does its job: calls fail, errors and the queue climb, and Grafana's alert fires. Something is wrong.
+   - **Watch for:** Support errors red, Support queue rising, Grafana alerts firing 1 or 2 (the second is an alert on Drasi's overdue answer).
+4. **Grafana · Operations.** And Support overdue is climbing. Each request has a 15-second deadline. When a request passes it, nothing happens to that request: no new row, no new metric. Drasi counts it at that exact moment anyway, because its query re-checks each request at its deadline. On the chart, the red overdue line follows the orange waiting line 15 seconds later. I'll show you how in a moment.
+   - **Watch for:** Support overdue above 0; on the right-hand chart, the red line trails the orange one.
+5. **What Drasi just did.** Drasi saw the failed attempts and EU-A's health turn to Failed, worked out which requests were late as each deadline passed, and re-ran the planner. It didn't re-scan the database; it reacted to each change and each deadline. And notice the order: Drasi had a plan ready before Grafana's alert fired.
 
-### 8. Healthy but fragile (3½ minutes) · Grafana · Policy and recovery
+**If it breaks:** If nothing changes within 30 seconds, press Use recordings from here on and say it's a recording.
 
-- **Say:** Everything is healthy: support on EU-A, summaries on US-C. But EU-B now has only 50k of capacity, and support needs 60k. If EU-A failed, support would have nowhere it's allowed to go. A dashboard of current health can't tell you that.
-- **Do:** On the desk, click Healthy-fragile inputs · EU-B 50k. After explaining, click Restore EU-B capacity · 100k.
-- **Point at:** Safe if EU-A fails? and Deployment budgets. Optionally show Operations: everything is green.
-- **What happens:** Safe if EU-A fails? changes to No. After restoring EU-B it changes back to Yes, with no outage.
-- **If it breaks:** Play the resilience recording.
-- **Next:** "That's the idea: change-driven computation alongside the tools you already use."
+### 6. Who is affected (2½ minutes)
 
-### 9. Close (1½ minutes) · Closing slide
+1. **Who is affected: the continuous query.** Which customers are affected? This is the actual query behind Support overdue. 1: every request, as it arrives from the database. 2: not answered yet. 3: this condition becomes true at the deadline, and Drasi re-checks just that request then. 4: the result is the list itself, not just a count, and here it is, live. With Prometheus you'd get a number from a gauge or a rule evaluated every so often; here it's the exact set of late requests, kept current request by request, from one query.
+   - **Watch for:** Under the query: how many support requests are late, and the oldest few with their traces.
+2. **One late request (optional).** Here's one of those customers: their question, every attempt to send it to EU-A failing, and the moment its deadline passed and Drasi listed it. The same request is a trace in Langfuse, so whoever picks it up has the detail.
+   - **Watch for:** The oldest late request, with its attempts and the moment Drasi listed it.
 
-- **Say:** Keep your observability tools. Add change-driven computation to connect changing context, keep decisions valid, and verify what actually happened.
-- **Do:** Click Closing slide in Grafana's links. Take questions. When you've finished, click Stop demo traffic on the desk.
-- **Point at:** The three takeaways and the repository link.
-- **What happens:** The projected window returns to the slides.
-- **If it breaks:** Summarize in words. Never project the desk.
-- **Next:** "Questions."
+**If it breaks:** If the list is empty, traffic has stopped: say what it would show. The request beat is skipped automatically when nothing is late.
+
+### 7. Recovery (5½ minutes)
+
+1. **Grafana · Recovery plan.** This dashboard is all Drasi. Capacity: 300k in total, 200k on healthy deployments, 140k needed. On paper there's plenty. But US-C has the free room, and customer support isn't allowed there.
+   - **Watch for:** Customer support may run on: US-C Not allowed.
+2. **Grafana · Recovery plan.** The planner, our own code that Drasi re-runs on every change, respects that: move summaries to US-C, which frees EU-B for support. I'll take this plan to approve, on my laptop; in your world that's a change-approval tool.
+   - **Press:** Select proposed plan
+   - **Watch for:** Proposed plan: support → EU-B, summaries → US-C. (Selecting changes nothing on the projector.)
+3. **Grafana · Recovery plan (optional).** While it waits for approval, compliance restricts summaries to Europe too. The answer changes at once: no valid plan. Plans keep both workloads running, and with EU-A down, support and summaries can't both fit in EU-B. Dropping work is a decision for a person, not the planner.
+   - **Press:** Summaries: Europe only
+   - **Watch for:** Document summaries may run on: US-C Not allowed. Action needed and Proposed plan: No valid plan.
+4. **Grafana · Recovery plan (optional).** If I approve the plan I selected a moment ago, it's rejected: every plan carries the facts it was based on, and those facts changed.
+   - **Press:** Approve selected plan (it's meant to be rejected)
+   - **Watch for:** Last approval: Rejected.
+5. **Grafana · Recovery plan (optional).** Compliance allows the US for summaries again, and the plan comes straight back.
+   - **Press:** Summaries: Europe + US
+   - **Watch for:** Action needed: Approve proposed plan.
+6. **What Drasi just did (optional).** The policy change came in as a change like any other. Drasi re-ran the policy and the planner, and the AI service refused the out-of-date approval.
+7. **Grafana · Recovery plan.** Now I approve the current plan.
+   - **Press:** Select proposed plan, then Approve selected plan
+   - **Watch for:** Last approval: Applied, awaiting evidence. Running now changes. Action needed None. Recovery Awaiting evidence.
+8. **Grafana · Recovery plan.** Look at Recovery. Approving isn't enough to call it fixed: another Drasi query waits until the queue has cleared and at least three support requests have been answered on the new route. Only then does it say Verified.
+   - **Watch for:** Recovery goes from Awaiting evidence to Verified, often within 30 seconds of approval. If it's already Verified, say so.
+9. **Grafana · Operations.** On Operations: the queue has drained, Support overdue is back to 0 and errors are falling. EU-A is still down: we routed around it, within policy.
+10. **What Drasi just did.** Drasi kept the policy and the plan current as health and capacity changed, and then checked the outcome. Approving a change isn't the same as fixing the problem.
+
+**If it breaks:** If Recovery stays Awaiting evidence, say it's applied but not yet verified, and carry on. Never approve twice. If the plan or the policy change doesn't behave as described, press Use recordings from here on.
+
+### 8. Healthy but fragile (3½ minutes)
+
+1. **Grafana · Recovery plan.** Later that day EU-A is fixed, but it comes back with only 50k of capacity. Nothing is broken.
+   - **Press:** EU-A back at 50k
+   - **Watch for:** Deployment capacity EU-A 50k. Safe if one fails? No: not if EU-B fails. Action needed: At risk.
+2. **Grafana · Operations.** Every service-health signal is green. But Drasi says we're not safe. Support now runs on EU-B. If EU-B failed, support would need 60k in Europe, and EU-A has only 50k.
+3. **Grafana · Recovery plan.** That's the what-if model: for each deployment, would every workload still fit somewhere allowed if that one failed? It re-asks whenever anything changes. A game-day question, answered all the time. And it's a metric, so you can alert on it.
+4. **Grafana · Recovery plan.** Give EU-A its full capacity back, and the answer is Yes again, without any outage.
+   - **Press:** EU-A back to 100k
+   - **Watch for:** Safe if one fails? Yes. Action needed None.
+5. **What Drasi just did.** One capacity change, and Drasi re-checked every what-if. Are we safe from the next failure? Answered before it happens.
+
+**If it breaks:** If Safe if one fails? doesn't change, press Use recordings from here on.
+
+### 9. Close (1½ minutes)
+
+1. **Close.** Keep your monitoring tools, and add change-driven computation next to them. Drasi turned changing facts (requests, health, capacity, policy, approvals and time) into live answers: who is late, what fits the rules, whether the fix worked, and whether we're safe from the next failure. Everything you saw is in the repository on screen. Thank you. Questions?
+2. **Close.** After questions, stop the demo traffic.
+   - **Press:** Stop demo traffic
+
+**If it breaks:** Summarize in words. Never project the desk.
+
+## Glossary
+
+| Term | Meaning |
+|---|---|
+| Deployment | One place the AI model runs: EU-A, EU-B (Europe) or US-C (United States) |
+| Capacity | How much a deployment can handle, in tokens per minute (100k each) |
+| Customer support / document summaries | The two workloads: support needs 60k, summaries 80k |
+| Plan | Where each workload should run. The planner (demo code, re-run by Drasi on every change) proposes one; you approve it |
+| Policy | The rules: support only in Europe; summaries anywhere |
+| Source | How Drasi hears about changes; here, the database's live list of changes |
+| Continuous query | A question whose answer Drasi keeps up to date as data changes and time passes |
+| Continuous model | Your own logic (here: policy, planner, what-if) that Drasi re-runs when its inputs change |
+| Reaction | Delivers each change in an answer to where it's needed |
+| Trace | One customer request, start to finish, in Langfuse |
+
+## Questions to expect
+
+| Question | Answer |
+|---|---|
+| How is this different from a Prometheus alert? | Prometheus evaluates numbers on an interval. Drasi keeps the actual list of affected requests current as changes arrive, joins in business facts like policy and approvals, and re-checks an item at the moment a deadline passes. Its answers still go to Prometheus and alerts, as you saw. |
+| Couldn't I just export 'age of the oldest waiting request'? | That's one number. Drasi gives the exact set of late requests with their traces, updated request by request, without writing that logic yourself. |
+| Isn't trueLater just a timer? | It's a re-check of one item at one moment. The claim is no scheduled scans or recomputation, not no clock. |
+| Grafana refreshes every 5 seconds. Isn't that polling? | That's Grafana drawing the screen. Deciding who is late, what's allowed and which plan fits happens as changes and deadlines arrive. |
+| Was the alert slow on purpose? | The alert is measured over a short window, as most are. The point isn't speed: Drasi has a plan that fits policy, not just a signal. |
+| Does it only work with PostgreSQL? | No. Drasi has sources for other databases, Kafka, Kubernetes, OpenTelemetry and HTTP. This demo uses PostgreSQL's change feed and an HTTP source for Grafana's alerts. |
+| Are the policy, planner and what-if part of Drasi? | No, they're this demo's own code (in the repository), with the policy written in Rego. Drasi runs them as continuous models and re-runs them when their inputs change. |
+| How do the answers reach Grafana? | Drasi streams every change to the AI service, which publishes them as OpenTelemetry metrics. Prometheus stores them and Grafana shows them. |
+| What happens when Drasi restarts? | It rebuilds its state from the database and resumes the change feed. Until then the tiles show Unknown. |
+| How does it scale? | This demo isn't a benchmark. Each query only keeps what it needs, here the unanswered requests. For performance work, see drasi.io. |
+| Anything else | "Good question. I'll follow up; the repository on screen has the details." |
 
 <!-- end generated -->
 
-**Running late?** Tick **Short on time** on the desk and skip the policy change.
-If you're still behind, keep the Drasi Server cue to one sentence.
-
 ## Reading the dashboards
+
+Colours mean the same everywhere: **red** broken, **orange** needs action or
+waiting, **green** OK, **grey** nothing to show. **Unknown** means Drasi's answer is
+out of date or unavailable; it never means healthy.
 
 **AI service · Operations**
 
-| Area | Panel | Meaning |
+| Area | Tile | Meaning |
 |---|---|---|
-| Service health (measured) | Model calls | Calls per second, both workloads |
-| | Support errors | Share of support calls failing in the last minute |
-| | Support p95 | 95th-percentile support call time |
-| | Support queue | Support requests waiting for an answer |
-| | Service alerts | Grafana's HTTP-failure alert |
-| | Model calls by outcome | Calls per second by route and HTTP status: 200 ok, 503 failed, 429 over quota, 409 refused because the route changed |
-| | Requests answered | Completed requests per second |
-| Customer impact (Drasi) | Support overdue | Support requests past their 15-second target |
-| | Deployment status | Each deployment's latest report; Unknown if none for 8 seconds |
-| | Recovery | None in progress, Awaiting evidence, or Verified |
-| | Action needed | None, Approve proposed plan, or No valid plan |
+| Monitoring (top) | Model calls | Calls to the AI model per second, last 30 seconds |
+| | Support errors | Share of support calls failing, last 30 seconds |
+| | Answer time p95 | 95th-percentile time from a customer's question to its answer. **No answers** during the outage |
+| | Support queue | Support requests waiting for an answer. One or two in flight is normal (green) |
+| | Grafana alerts firing | Grafana alert rules firing: "Model calls failing", and "Support requests overdue", an alert on Drasi's answer |
+| | Model calls (chart) | Answered and failed calls for each workload |
+| | Support requests waiting (chart) | Orange: waiting. Red: overdue, from Drasi. The red line trails the orange one by the 15-second deadline |
+| Drasi's answers (bottom) | Support overdue | Support requests past their 15-second deadline |
+| | Deployment status | Each deployment's latest health report: Healthy, Over quota or Failed; Unknown if it has been silent for 8 seconds |
+| | Recovery | Nothing to verify, Awaiting evidence, or Verified |
+| | Action needed | None; Approve proposed plan; No valid plan; At risk (healthy, but losing one deployment would leave no valid plan) |
+| | Safe if one fails? | If any one deployment failed, would every workload still fit somewhere allowed? **No** names the deployment whose loss would hurt. **Already one down** while a deployment has failed: the question doesn't apply |
 
-**AI service · Policy and recovery** (all from Drasi)
+Dashed green lines on the charts mark Drasi's decisions (plans, approvals,
+verified recovery).
 
-| Panel | Meaning |
+**AI service · Recovery plan** (everything is from Drasi, except capacity settings)
+
+| Tile | Meaning |
 |---|---|
-| Action needed, Recovery | As above |
-| Safe if EU-A fails? | Would every workload still fit somewhere allowed without EU-A? |
-| Current routes / Proposed routes | Where each workload runs now, and Drasi's best plan |
-| Customer support / Document summaries may run on | Policy decision for each deployment |
-| Decision events | Approvals, rejections, route changes, verified recovery |
-| Capacity | Total capacity, the part on healthy deployments, and what the workloads need |
-| Deployment budgets | Simulated capacity of each deployment |
+| Action needed, Recovery, Safe if one fails? | As above |
+| Last approval | None yet; Approved, applying; Applied, awaiting evidence; Applied and verified; Rejected: out of date |
+| Running now | Where each workload runs and the capacity it needs. **held: not allowed** when policy no longer allows it there |
+| Proposed plan | The planner's plan, in orange when it differs from what's running. **Same as running now** or **No valid plan** otherwise |
+| Customer support / Document summaries may run on | The policy's answer for each deployment: Allowed or Not allowed |
+| Decision events | Newest first: plans, approvals, rejections with the reason, verified recovery |
+| Capacity | Total, on healthy deployments, and needed by the two workloads |
+| Deployments | Each deployment's capacity, orange when below its normal 100k; **Failed** while it is down |
 
-**Show Drasi decisions on charts** (switch at the top left of Operations, off by
-default) draws a dashed marker on both charts at each Drasi decision: approval,
-rejection, routes adopted, recovery verified. Hover over a marker to read it.
-Turning it on during the recovery cue shows the approval, then errors falling and
-successful calls returning just after it.
+The deadlines (15-second target, 8-second silence) are shortened for the demo.
 
-**Unknown** means Drasi's answer is stale or unavailable. It never means healthy.
-The deadlines (15-second target, 8-second report expiry) are shortened for the
-demo.
+## The late request view
 
-## The presenter desk
+In **Who is affected**, the projector shows the oldest late support request from
+Drasi's list: the customer's question, each attempt to send it (for example
+"Sent to EU-A: failed (HTTP 503) × 12"), and the moment its 15-second deadline
+passed and Drasi added it to the overdue list. The beat is skipped automatically
+if nothing is late.
 
-The desk only changes the demo's inputs. Everything on the dashboards is then
-worked out from real requests and Drasi. Grafana refreshes every 5 seconds.
-
-**Banner:** **READY** means the live demo is working and the controls are
-available. **NOT READY** means Drasi's answers are unavailable or out of date:
-the controls are disabled. Use a recording, or see Troubleshooting in SETUP.md.
-
-**Cue panel**
-
-| Control | What it does |
-|---|---|
-| Start timer | Starts the talk clock; it turns amber at 22 minutes |
-| Previous cue / Next cue / Cue list | Changes your notes only |
-| Short on time | Skips the policy change |
-| Grafana, Langfuse and Drasi Server links | Open the tools in a new tab on your laptop |
-| Show a slide in the projected window | Switches the projected window to the title, concepts or closing slide |
-
-**What to do:** your notes for the current cue: what to say, what to do, what to
-point at, what happens, what to do if it breaks, and the line into the next cue.
-
-**Traffic and faults**
-
-| Control | What it does |
-|---|---|
-| Start demo traffic / Stop demo traffic | One support and one summary request every 5 seconds, for up to 30 minutes |
-| Submit support request / Submit batch request | Sends one request, then offers **Open returned task trace** to show it in Langfuse |
-| Deployment, Action, **Apply to deployment** | Changes one deployment (below) |
-
-| Action | Effect |
-|---|---|
-| fail | Every request to the deployment fails (HTTP 503) |
-| throttle | Every request is rejected as over quota (HTTP 429). Not a slowdown |
-| restore | Back to normal |
-| pause-reports | The deployment keeps working but stops reporting; it shows Unknown after 8 seconds |
-| resume-reports | Reporting resumes |
-
-**Approving a plan**
-
-| Control | What it does |
-|---|---|
-| Select proposed plan | Keeps a copy of Drasi's current proposal. If the proposal changes afterwards, the desk shows **STALE** |
-| Approve selected plan | Applies the selected plan, after checking it's still valid. A stale plan is rejected. Clicking again retries the same approval |
-
-**Scenario settings**
-
-| Control | What it does |
-|---|---|
-| Batch policy: Europe only / Europe + US | Forbids or allows summaries on US-C |
-| Healthy-fragile inputs · EU-B 50k | Everything healthy; support on EU-A, summaries on US-C; EU-B cut to 50k |
-| Restore EU-B capacity · 100k | Restores EU-B |
-| Show current settings | Shows the current configuration |
-| Reset scenario… then Confirm reset | Restores the starting state and cancels waiting requests. History is kept |
-
-**Recordings (fallback):** see below.
-
-**Approval status:** the latest approval in plain words: approved and applying,
-applied and waiting for evidence, recovery verified, or rejected with the reason.
+The same request is a trace in Langfuse (its trace ID is at the bottom). If
+someone asks to see Langfuse, open it on your laptop from **Show something on the
+projector** › Langfuse, which opens privately; in Langfuse, a request shows its
+input, each **attempt · EU-A** (red when it failed) and **model · EU-B** when
+answered, and scores such as *drasi_recovery* for requests that were part of a
+verified recovery.
 
 ## When something goes wrong
 
-**Play a recording.** The desk's **Recordings (fallback)** panel has recordings of
-the failure, recovery, policy and resilience parts.
+**The live demo stops behaving as the script says.** Press **Use recordings from
+here on** (in **If it breaks**), or **Use recordings for the rest of the talk**
+when the header says NOT READY. The projector shows this part's recording,
+labelled **REPLAY · NOT LIVE**, and plays it silently: talk over it, and say it's
+a recording. Keep pressing **Next** as usual: each remaining live part shows its
+recording (failure, recovery, policy change, healthy but fragile), and the slides
+still appear. The buttons are hidden. Stay in recording mode for the rest of the
+talk.
 
-1. On the desk, click the recording. Live controls are disabled while it's selected.
-2. In the projected window, go back to the slides: click **Closing slide** in
-   Grafana's links (or open http://127.0.0.1:18580/present). Instead of the
-   slide, it shows the recording, labelled **REPLAY · NOT LIVE**. Press play.
-3. Say clearly that it's a recording.
-4. To go back to live: tick **I've checked the live demo is ready** on the desk,
-   click **Return to verified live state**, then return to Grafana.
+**You pressed the wrong button.** Back and Next never undo anything. Use the
+opposite button in **All demo controls**: **Summaries: Europe + US** undoes
+**Europe only**; **EU-A back to 100k** undoes **EU-A back at 50k**; to undo **Fail
+EU-A**, use **Any deployment** › EU-A › Restore › **Apply to deployment**. If
+you're not sure what state the demo is in, switch to recordings.
+
+**You pressed Next before the beat's button.** The desk stops you once: "You
+haven't pressed Fail EU-A yet". Press the button, or press Next again to move on
+without it.
 
 | On stage | Do this |
 |---|---|
-| Charts are empty | Start traffic and keep talking |
-| Tiles show Unknown | Drasi's answer is out of date. Say so; never call it healthy. Move on or play a recording |
-| The failure isn't showing after 30 seconds | Play the failure recording |
-| Recovery stays at Awaiting evidence | Say it's applied but not yet verified; keep traffic running; play the recovery recording if needed |
-| Approve selected plan is disabled | Click **Select proposed plan** first |
-| The desk banner says NOT READY | Use recordings for the rest of the demo |
-| You lost your place | Use the Cue list on the desk; it doesn't change the projected screen |
+| Charts are empty, or Traffic: stopped | Press **Start demo traffic** (All demo controls) and keep talking |
+| Tiles show Unknown | Drasi's answer is out of date. Say so; never call it healthy. Press **Use recordings from here on** |
+| Nothing happens 30 seconds after Fail EU-A | Press **Use recordings from here on** |
+| Recovery stays Awaiting evidence | Say it's applied but not yet verified; keep going. Never approve twice |
+| Approve is grey | Press **Select proposed plan** first |
+| The projector shows the wrong thing | Press **Back**, then **Next**, or use **Jump to a part** |
+| The projector window closed | Press **Open projector window** in the header and put it back on the projector |
+| You lost your place | **Jump to a part** |
 
 Golden rules: never project the desk, never call Unknown healthy, approve once,
 and never reset during the talk.
 
 ## After the talk
 
-1. Stop demo traffic.
-2. Restore any deployment you changed, and the batch policy if you changed it.
-3. Use **Reset scenario…** so the next presenter starts clean.
-4. If you're finished for the day, [stop the demo](SETUP.md#stop-the-demo).
+1. Press **Stop demo traffic**.
+2. Open **Before and after the talk**, press **Reset scenario…** then **Confirm
+   reset**, so the next presenter starts clean.
+3. If you're finished for the day, [stop the demo](SETUP.md#stop-the-demo).

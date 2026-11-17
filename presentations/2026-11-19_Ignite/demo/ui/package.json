@@ -12,6 +12,8 @@
     "sync-presenter": "UPDATE_PRESENTER_DOC=1 playwright test -g \"PRESENTER.md matches\""
   },
   "dependencies": {
+    "@types/qrcode": "^1.5.5",
+    "qrcode": "^1.5.4",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "reveal.js": "5.2.1",

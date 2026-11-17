@@ -92,7 +92,7 @@ const server = createServer(async (request, response) => {
       model = input.model; revision++; model.policy.revision++; selectedBasis = `TEST-FIXTURE-BASIS-${revision}`;
     }
     if (url.pathname === "/approvals") {
-      if (input.basis !== selectedBasis) return json(response, { error: "stale candidate basis" }, 409);
+      if (input.basis !== selectedBasis) return json(response, { error: "the plan you selected is out of date" }, 409);
       const duplicate = commands.find(command => command.id === input.command_id);
       if (duplicate) return json(response, { duplicate: true, command: duplicate });
       commands.unshift({

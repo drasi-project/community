@@ -40,7 +40,7 @@ pub async fn control(State(app): State<App>, Json(input): Json<Input>) -> Api {
         if traffic.epoch.as_ref() != Some(&epoch) || traffic.until_ms <= now() {
             *traffic = Traffic {
                 epoch: Some(epoch),
-                until_ms: now() + 30 * 60 * 1000,
+                until_ms: now() + 90 * 60 * 1000,
                 submitted: 0,
                 error: None,
             };
@@ -60,27 +60,28 @@ pub async fn tick(app: &App) {
         traffic.stop(None);
         return;
     }
-    let result =
-        async {
-            let (current, _, _) = model(&db().await?).await?;
-            anyhow::ensure!(current == epoch, "Scenario changed; start traffic again");
-            for workload in ["support", "batch"] {
-                let _response = submit(State(app.clone()), Json(Submit {
-                id: format!("{epoch}-traffic-{workload}-{}", identity()),
-                run_epoch: epoch.clone(),
-                workload: workload.into(),
-                content: if workload == "support" {
-                    "Synthetic customer support case: explain the next troubleshooting step."
-                } else {
-                    "Synthetic public document: summarize change-driven computation."
-                }.into(),
-                destination: None,
-            })).await.map_err(|e| e.0)?;
-                traffic.submitted += 1;
-            }
-            Ok::<(), anyhow::Error>(())
+    let result = async {
+        let (current, _, _) = model(&db().await?).await?;
+        anyhow::ensure!(current == epoch, "Scenario changed; start traffic again");
+        for workload in ["support", "batch"] {
+            let _response = submit(
+                State(app.clone()),
+                Json(Submit {
+                    id: format!("{epoch}-traffic-{workload}-{}", identity()),
+                    run_epoch: epoch.clone(),
+                    workload: workload.into(),
+                    content: crate::content::question(workload, traffic.submitted as usize / 2)
+                        .into(),
+                    destination: None,
+                }),
+            )
+            .await
+            .map_err(|e| e.0)?;
+            traffic.submitted += 1;
         }
-        .await;
+        Ok::<(), anyhow::Error>(())
+    }
+    .await;
     if let Err(error) = result {
         eprintln!("Demo traffic stopped: {error:#}");
         traffic.stop(Some(error.to_string()));

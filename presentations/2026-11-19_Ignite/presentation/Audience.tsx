@@ -1,18 +1,34 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Reveal from "reveal.js";
 import "reveal.js/dist/reveal.css";
-import { products, slides } from "./scenes";
+import { allSlides, dashboards, scenes, type StageView } from "./scenes";
+import { notes } from "./notes";
+import { RequestView } from "./RequestView";
 import { replayClips } from "./replay";
 import { Explanation } from "./Explanation";
 import type { StageControl } from "../demo/ui/src/stage";
 
+// Dashboards are drawn at 1/zoom of the window and scaled up, so they read from the back of the room.
+const zoom = Number(new URLSearchParams(location.search).get("zoom")) || 1.5;
+const forwarded = [" ", "PageDown", "PageUp", "ArrowRight", "ArrowLeft", "ArrowDown", "ArrowUp", "Home", "End", "Enter", "Backspace", "b", "."];
+// Without a desk, keys step through what the talk shows, in order (the late request needs the desk).
+const sequence = scenes.flatMap(scene => notes[scene.id].beats.map(beat => beat.show))
+  .filter((view, i, all): view is StageView => view !== "request" && view !== all[i - 1]);
+
+// The projected stage. The presenter desk decides what it shows; keys pressed here
+// (a clicker, or arrows) are passed to the desk.
 export function Audience({ control, preview }: { control: StageControl; preview: boolean }) {
   const element = useRef<HTMLDivElement>(null);
   const deck = useRef<Reveal.Api | null>(null);
   const current = useRef(control);
   current.current = control;
-  const index = slides.findIndex(slide => slide.id === control.stage.slide);
-  const replay = replayClips.find(clip => clip.scene === control.stage.replay);
+  const { view, replay: replayId, trace } = control.stage;
+  const index = allSlides.findIndex(slide => slide.id === view);
+  const dashboard = view === "ops" || view === "plan" ? view : null;
+  const replay = replayClips.find(clip => clip.scene === replayId);
+  // Dashboards stay loaded once shown, so switching back is instant.
+  const [loaded, setLoaded] = useState<Set<string>>(new Set());
+  useEffect(() => { if (dashboard && !loaded.has(dashboard)) setLoaded(new Set([...loaded, dashboard])); }, [dashboard, loaded]);
   useEffect(() => {
     if (!element.current) return;
     const reveal = new Reveal(element.current, {
@@ -24,40 +40,35 @@ export function Audience({ control, preview }: { control: StageControl; preview:
     void reveal.initialize().then(() => {
       if (!active) return;
       deck.current = reveal;
-      reveal.slide(slides.findIndex(s => s.id === current.current.stage.slide));
+      reveal.slide(Math.max(0, allSlides.findIndex(s => s.id === current.current.stage.view)));
     });
     const keyboard = (event: KeyboardEvent) => {
-      if (current.current.stage.replay) return;
-      if (event.target instanceof HTMLElement &&
-          (event.target.closest("button,a,input,textarea,select") || event.target.isContentEditable)) return;
-      if ([" ", "PageDown", "ArrowRight"].includes(event.key)) {
-        event.preventDefault();
-        if (current.current.stage.slide === "title") current.current.showSlide("concepts");
-        else if (current.current.stage.slide === "concepts") window.location.assign(products.grafana);
-      }
-      if (["PageUp", "ArrowLeft"].includes(event.key)) {
-        event.preventDefault();
-        current.current.showSlide(current.current.stage.slide === "closing" ? "concepts" : "title");
-      }
+      if (!forwarded.includes(event.key)) return;
+      event.preventDefault();
+      current.current.sendKey(event.key, () => {
+        const here = sequence.indexOf(current.current.stage.view);
+        const back = ["PageUp", "ArrowLeft", "ArrowUp", "Backspace"].includes(event.key);
+        const next = event.key === "Home" ? sequence[0] : sequence[Math.max(0, Math.min(sequence.length - 1, here + (back ? -1 : 1)))];
+        if (next) current.current.show(next);
+      });
     };
     window.addEventListener("keydown", keyboard);
     return () => { active = false; window.removeEventListener("keydown", keyboard); reveal.destroy(); deck.current = null; };
   }, []);
-  useEffect(() => { deck.current?.slide(index); }, [index]);
+  useEffect(() => { if (index >= 0) deck.current?.slide(index); }, [index]);
   return <main className="slide-deck">
     {preview && <span className="slide-preview">Read-only preview</span>}
-    <div className="reveal" ref={element} hidden={!!replay}>
-      <div className="slides">{slides.map(slide => <section key={slide.id} data-slide={slide.id}><Explanation slide={slide.id} /></section>)}</div>
+    <div className="reveal" ref={element} hidden={!!replay || index < 0}>
+      <div className="slides">{allSlides.map(slide => <section key={slide.id} data-slide={slide.id}><Explanation slide={slide.id} active={slide.id === view} /></section>)}</div>
     </div>
-    {!replay && <nav className="slide-navigation" aria-label="Slide navigation">
-      {index > 0 && <button aria-label="Previous slide" onClick={() => control.showSlide(index === 2 ? "concepts" : "title")}>←</button>}
-      {index === 0 && <button aria-label="Next slide" onClick={() => control.showSlide("concepts")}>→</button>}
-      {index === 1 && <a className="button" href={products.grafana}>Live demo · Grafana ↗</a>}
-      {index === 2 && <a href={products.grafana}>Grafana ↗</a>}
-    </nav>}
+    {(["ops", "plan"] as const).filter(id => loaded.has(id)).map(id =>
+      <iframe key={id} className="stage-dashboard" title={id === "ops" ? "Grafana · Operations" : "Grafana · Recovery plan"} scrolling="no"
+        src={dashboards[id]} hidden={!!replay || dashboard !== id}
+        style={{ width: `${100 / zoom}vw`, height: `${100 / zoom}vh`, transform: `scale(${zoom})` }} />)}
+    {view === "request" && !replay && <section className="stage-request"><RequestView taskId={trace} /></section>}
     {replay && <section className="replay-screen">
       <strong className="replay-label">REPLAY · NOT LIVE</strong><h1>{replay.title}</h1>
-      {replay.src ? <video controls src={replay.src} /> : <p>No current recording is available.</p>}
+      {replay.src ? <video controls autoPlay src={replay.src} /> : <p>No current recording is available.</p>}
       <p>{replay.provenance}</p>
     </section>}
   </main>;

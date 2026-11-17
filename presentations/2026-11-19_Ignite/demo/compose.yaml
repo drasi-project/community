@@ -109,7 +109,7 @@ services:
       LANGFUSE_INIT_ORG_ID: ignite
       LANGFUSE_INIT_ORG_NAME: Ignite local demo
       LANGFUSE_INIT_PROJECT_ID: ignite-probe
-      LANGFUSE_INIT_PROJECT_NAME: Ignite integration probe
+      LANGFUSE_INIT_PROJECT_NAME: Ignite AI service
       LANGFUSE_INIT_PROJECT_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:?}
       LANGFUSE_INIT_PROJECT_SECRET_KEY: ${LANGFUSE_SECRET_KEY:?}
       LANGFUSE_INIT_USER_EMAIL: ${LANGFUSE_ADMIN_EMAIL:?}
@@ -149,6 +149,10 @@ services:
       GF_NEWS_NEWS_FEED_ENABLED: "false"
       GF_PLUGINS_PREINSTALL_DISABLED: "true"
       GF_SERVER_ROOT_URL: http://localhost:13000
+      # The projected stage shows dashboards inside the slides page, read-only, without sign-in.
+      GF_SECURITY_ALLOW_EMBEDDING: "true"
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
     volumes:
       - grafana-data:/var/lib/grafana
       - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro

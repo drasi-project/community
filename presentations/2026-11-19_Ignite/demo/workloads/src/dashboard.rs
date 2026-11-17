@@ -94,11 +94,17 @@ pub fn samples(
         });
     };
     for (view, decision) in [("candidate", allocation), ("resilience", resilience)] {
+        let state = decision.map(|d| d.state.as_str());
+        // An infeasible resilience result names the deployment whose loss leaves no plan.
+        let failure = decision
+            .filter(|d| view == "resilience" && d.state == "infeasible")
+            .and_then(|d| d.failure.as_deref())
+            .unwrap_or("");
         push(
             view,
             "",
-            "",
-            match decision.map(|d| d.state.as_str()) {
+            failure,
+            match state {
                 Some("feasible") => 1,
                 Some("infeasible") => 0,
                 _ => -1,
@@ -106,6 +112,8 @@ pub fn samples(
         );
     }
     push("context", "", "", if coherent { 1 } else { -1 });
+    // -1 unknown, 0 nothing to approve, 1 approve the proposed plan, 2 no valid plan,
+    // 3 at risk: current routes are the plan, but losing one deployment would leave no plan.
     push(
         "approval",
         "",
@@ -113,13 +121,16 @@ pub fn samples(
         allocation.map_or(-1, |d| {
             if !d.valid {
                 2
+            } else if model
+                .workloads
+                .iter()
+                .any(|w| d.assignments.get(&w.id) != Some(&w.destination))
+            {
+                1
+            } else if resilience.is_some_and(|r| r.state == "infeasible") {
+                3
             } else {
-                i64::from(
-                    model
-                        .workloads
-                        .iter()
-                        .any(|w| d.assignments.get(&w.id) != Some(&w.destination)),
-                )
+                0
             }
         }),
     );
@@ -146,14 +157,21 @@ pub fn samples(
                     .and_then(|value| value["allowed"].as_bool())
                     .map_or(-1, i64::from),
             );
+            // Negative: the route is held because the current policy denies it.
+            let denied = policy
+                .and_then(|d| d.eligibility.get(&workload.id))
+                .and_then(|destinations| destinations.get(&endpoint.id))
+                .is_some_and(|value| value["allowed"] == false);
             push(
                 "configured",
                 &workload.id,
                 &endpoint.id,
-                if workload.destination == endpoint.id {
-                    workload.reservation_tpm
-                } else {
+                if workload.destination != endpoint.id {
                     0
+                } else if denied {
+                    -workload.reservation_tpm
+                } else {
+                    workload.reservation_tpm
                 },
             );
             push(
@@ -218,10 +236,52 @@ pub fn samples(
     Ok(result)
 }
 
+/// The latest approval in this scenario, from the command and audit records.
+pub struct Approval<'a> {
+    pub id: &'a str,
+    pub status: &'a str,
+    pub committed_ms: i64,
+}
+
+/// 0 none, 1 approved and applying, 2 applied awaiting evidence, 3 verified (once), 4 rejected.
+pub fn last_approval(
+    rows: &BTreeMap<String, BTreeMap<String, Value>>,
+    latest: Option<Approval>,
+    rejected_ms: Option<i64>,
+    epoch: &str,
+    now: i64,
+) -> Sample {
+    let verified = latest.as_ref().and_then(|c| {
+        rows.get("recovery-results")
+            .and_then(|r| r.get(c.id))
+            .filter(|r| r["run_epoch"] == epoch && r["state"] == "confirmed")
+            .and_then(|r| r["expires_ms"].as_i64())
+            .filter(|t| *t > now)
+    });
+    let value = match &latest {
+        _ if rejected_ms.is_some_and(|t| latest.as_ref().is_none_or(|c| t > c.committed_ms)) => 4,
+        None => 0,
+        Some(c) => match c.status {
+            "committed" => 1,
+            "rejected" => 4,
+            // Once verified, the approval stays verified; Recovery shows whether it still holds.
+            "recovery_confirmed" => 3,
+            _ => 2,
+        },
+    };
+    Sample {
+        view: "last_approval",
+        workload: String::new(),
+        endpoint: String::new(),
+        value,
+        valid_until_ms: verified.map_or(now + 8000, |t| t.min(now + 8000)),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ignite_domain::decision::{allocate, policy};
+    use ignite_domain::decision::{allocate, policy, resilience};
     use serde_json::json;
 
     fn fixture() -> (Model, BTreeMap<String, BTreeMap<String, Value>>) {
@@ -252,7 +312,7 @@ mod tests {
             .collect();
         let p = policy(&reports).unwrap().unwrap();
         let a = allocate(p.clone(), None).unwrap();
-        let r = allocate(p.clone(), Some("EU-A")).unwrap();
+        let r = resilience(p.clone()).unwrap();
         let mut rows = BTreeMap::from([
             (
                 "model-context".into(),
@@ -285,6 +345,16 @@ mod tests {
         (model, rows)
     }
 
+    fn replace(rows: &mut BTreeMap<String, BTreeMap<String, Value>>, name: &str, d: &Decision) {
+        rows.insert(
+            name.into(),
+            BTreeMap::from([(
+                "active".into(),
+                json!({"run_epoch":"test","revision":1,"payload":serde_json::to_string(d).unwrap()}),
+            )]),
+        );
+    }
+
     fn value(samples: &[Sample], view: &str, workload: &str, endpoint: &str) -> i64 {
         samples
             .iter()
@@ -306,6 +376,79 @@ mod tests {
         assert_eq!(value(&s, "endpoint", "", "EU-A"), 2);
         assert_eq!(value(&s, "approval", "", ""), 1);
         assert_eq!(value(&s, "recovery", "", ""), 2);
+        assert_eq!(value(&s, "resilience", "", "EU-B"), 0);
+    }
+
+    #[test]
+    fn approval_flags_current_routes_at_risk_and_held_routes_are_negative() {
+        let (mut model, mut rows) = fixture();
+        model.workloads[0].destination = "EU-B".into();
+        model.workloads[1].destination = "US-C".into();
+        let p: Decision = serde_json::from_str(
+            rows["policy-results"]["active"]["payload"].as_str().unwrap(),
+        )
+        .unwrap();
+        let mut p = p;
+        p.model = model.clone();
+        replace(&mut rows, "allocation-results", &allocate(p.clone(), None).unwrap());
+        replace(&mut rows, "resilience-results", &resilience(p.clone()).unwrap());
+        let s = samples(&rows, "test", 1, &model, true, 2000).unwrap();
+        assert_eq!(value(&s, "approval", "", ""), 3);
+        assert_eq!(value(&s, "resilience", "", "EU-B"), 0);
+        let mut safe = resilience(p.clone()).unwrap();
+        safe.state = "feasible".into();
+        safe.failure = None;
+        replace(&mut rows, "resilience-results", &safe);
+        let s = samples(&rows, "test", 1, &model, true, 2000).unwrap();
+        assert_eq!(value(&s, "approval", "", ""), 0);
+        assert_eq!(value(&s, "resilience", "", ""), 1);
+        assert_eq!(value(&s, "configured", "support", "EU-B"), 60000);
+        p.eligibility
+            .get_mut("support")
+            .unwrap()
+            .insert("EU-B".into(), json!({"allowed":false}));
+        replace(&mut rows, "policy-results", &p);
+        let s = samples(&rows, "test", 1, &model, true, 2000).unwrap();
+        assert_eq!(value(&s, "configured", "support", "EU-B"), -60000);
+        assert_eq!(value(&s, "configured", "support", "EU-A"), 0);
+    }
+
+    #[test]
+    fn last_approval_tracks_the_latest_command_and_rejection() {
+        let (_, mut rows) = fixture();
+        let command = |status| {
+            Some(Approval {
+                id: "cmd",
+                status,
+                committed_ms: 1000,
+            })
+        };
+        let at = |latest, rejected, rows: &BTreeMap<_, _>| {
+            last_approval(rows, latest, rejected, "test", 2000).value
+        };
+        assert_eq!(at(None, None, &rows), 0);
+        assert_eq!(at(None, Some(500), &rows), 4);
+        assert_eq!(at(command("committed"), None, &rows), 1);
+        assert_eq!(at(command("committed"), Some(500), &rows), 1);
+        assert_eq!(at(command("committed"), Some(1500), &rows), 4);
+        assert_eq!(at(command("gateway_applied"), None, &rows), 2);
+        assert_eq!(at(command("rejected"), None, &rows), 4);
+        assert_eq!(at(command("recovery_confirmed"), None, &rows), 3);
+        rows.insert(
+            "recovery-results".into(),
+            BTreeMap::from([(
+                "cmd".into(),
+                json!({"run_epoch":"test","applied_revision":2,"state":"confirmed","expires_ms":9000}),
+            )]),
+        );
+        assert_eq!(at(command("recovery_confirmed"), None, &rows), 3);
+        let sample = last_approval(&rows, command("recovery_confirmed"), None, "test", 2000);
+        assert_eq!((sample.view, sample.valid_until_ms), ("last_approval", 9000));
+        assert_eq!(at(command("recovery_confirmed"), None, &rows), 3);
+        assert_eq!(
+            last_approval(&rows, command("recovery_confirmed"), None, "test", 9500).value,
+            3
+        );
     }
 
     #[test]

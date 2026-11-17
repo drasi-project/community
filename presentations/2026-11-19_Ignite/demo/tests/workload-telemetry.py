@@ -49,9 +49,9 @@ def main():
         evidence.update({"task_id": body["id"], "trace": trace, "started_ms": started})
         _, evidence["metric_wait_seconds"] = obs.wait_for("new measured workload HTTP503", lambda: metric() > baseline)
         firing = alerts.until(lambda rows: any(
-            r["status"] == "firing" and r["event_ms"] >= started and "Ignite workload HTTP failure" in r["title"]
+            r["status"] == "firing" and r["event_ms"] >= started and "Model calls failing" in r["title"]
             for r in rows.values()), timeout=100)
-        row = next(r for r in firing.values() if r["status"]=="firing" and r["event_ms"]>=started and "Ignite workload HTTP failure" in r["title"])
+        row = next(r for r in firing.values() if r["status"]=="firing" and r["event_ms"]>=started and "Model calls failing" in r["title"])
         evidence["firing"] = row
         firing_payload = json.loads(work.native.runtime.sql(
             f"SELECT payload FROM ignite_alerts WHERE id='{row['id']}';",tuples=True))
@@ -64,8 +64,8 @@ def main():
                     if r.get("traceId")==trace["trace_id"] and r.get("metadata",{}).get("task_id")==body["id"]]
 
         evidence["observations"], evidence["trace_wait_seconds"] = obs.wait_for("exact Langfuse task/trace correlation",correlated)
-        assert any(r["name"]=="gateway.attempt" for r in evidence["observations"])
-        assert any(r["name"]=="task.queued" and r["id"]==trace["root_span_id"] and r["isRootObservation"] for r in evidence["observations"])
+        assert any(r["name"].startswith("attempt · ") for r in evidence["observations"])
+        assert any(r["name"]=="request received" and r["id"]==trace["root_span_id"] and r["isRootObservation"] for r in evidence["observations"])
         work.control("restore")
         work.wait(lambda: work.api("/tasks/" + body["id"])["task"]["completed_ms"])
         alerts.until(lambda rows: rows.get(row["id"],{}).get("status")=="resolved"

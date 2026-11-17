@@ -2,6 +2,8 @@ import { z } from "zod";
 
 export const rowSchema = z.record(z.string(), z.unknown());
 export type Row = z.infer<typeof rowSchema>;
+export const taskSchema = z.object({ task: rowSchema, attempts: z.array(rowSchema) });
+export type TaskDetail = z.infer<typeof taskSchema>;
 export const endpointSchema = z.object({
   id: z.string(), region: z.string(), model: z.string(), budget_tpm: z.number(),
   mode: z.string(), reporting: z.boolean(),
@@ -58,9 +60,12 @@ export const decisionsSchema = z.object({
   observation_window_ms: z.number(), success_freshness_ms: z.number(),
 });
 export type Decisions = z.infer<typeof decisionsSchema>;
-export type Selection = Pick<Decision, "candidate_id" | "basis" | "run_epoch" | "revision"> & { command_id: string };
+export type Selection = Pick<Decision, "candidate_id" | "basis" | "run_epoch" | "revision"> & {
+  command_id: string; assignments?: Record<string, string>; selected_ms?: number;
+};
 export const selectionSchema = z.object({
   candidate_id: z.string(), basis: z.string(), run_epoch: z.string(), revision: z.number(), command_id: z.string(),
+  assignments: z.record(z.string(), z.string()).optional(), selected_ms: z.number().optional(),
 });
 
 export function readDecision(context: Context | null, name: string): { data: Decision | null; error: string | null } {

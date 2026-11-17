@@ -12,10 +12,10 @@ monitoring and Drasi processing are real.
 
 | Part | What it is | Address |
 |---|---|---|
-| Slides and presenter desk | The three slides plus a private control panel | http://127.0.0.1:18580/present and `/presenter` |
-| Grafana | The dashboards you present from | http://localhost:13000 |
-| Langfuse | Traces of individual AI requests | http://localhost:13001 |
-| Drasi Server | Runs the continuous queries and models | http://127.0.0.1:18421/ui/?instance=ignite |
+| Presenter desk and projector window | The desk you present from, and the window it drives on the projector (slides, dashboards, recordings) | http://127.0.0.1:18580/presenter, and `/present` |
+| Grafana | The two dashboards, shown inside the projector window | http://localhost:13000 |
+| Langfuse | Traces of individual AI requests (not projected) | http://localhost:13001 |
+| Drasi Server | Runs the continuous queries and models | http://127.0.0.1:18421 |
 | Workload service | The simulated AI service and its traffic | http://127.0.0.1:18500 |
 | Supporting containers | PostgreSQL, Prometheus, OpenTelemetry Collector, Langfuse storage | Run in Podman |
 
@@ -132,7 +132,7 @@ set -a; . ./.env; set +a
 python3 ops/workload.py run
 ```
 
-**Terminal 3: slides and presenter desk**
+**Terminal 3: presenter desk and projector window**
 
 ```sh
 cd ui
@@ -150,24 +150,23 @@ minute, but can take a few minutes if a lot of history has built up.
 
 ## Get ready to present
 
-Sign in to the tools in your browser before projecting anything:
+Open the presenter desk at http://127.0.0.1:18580/presenter and follow
+[PRESENTER.md](PRESENTER.md#set-up-your-screens): it covers the screens, the
+checklist, the script, every control and what to do if something goes wrong.
 
-- Grafana: user `admin`, password `GRAFANA_ADMIN_PASSWORD`
-- Langfuse: `LANGFUSE_ADMIN_EMAIL` and `LANGFUSE_ADMIN_PASSWORD`
-
-To see these values, from `demo`:
+The projector shows Grafana read-only, without signing in. To use Grafana or
+Langfuse yourself (for example to answer a question), sign in privately on the
+laptop: Grafana as `admin` with `GRAFANA_ADMIN_PASSWORD`, Langfuse with
+`LANGFUSE_ADMIN_EMAIL` and `LANGFUSE_ADMIN_PASSWORD`. To see these values, from
+`demo`:
 
 ```sh
 grep -E '^(GRAFANA_ADMIN_PASSWORD|LANGFUSE_ADMIN_EMAIL|LANGFUSE_ADMIN_PASSWORD)=' .env
 ```
 
-Then follow [PRESENTER.md](PRESENTER.md#before-you-present): it covers the
-screens, the checklist, the script, every control and what to do if something
-goes wrong.
-
 ## Stop the demo
 
-1. Stop demo traffic on the presenter desk.
+1. On the presenter desk, press **Stop demo traffic** (All demo controls).
 2. Press Ctrl-C in terminal 3, then terminal 2, then terminal 1.
 3. Stop the containers: `./ops/observability-stack.sh stop`
 
@@ -175,7 +174,7 @@ Your data is kept. Next time, go to [Start the demo](#start-the-demo).
 
 ## Reset the scenario
 
-Use **Reset scenario…** on the presenter desk, or from `demo`:
+On the presenter desk, open **Before and after the talk** and press **Reset scenario…** then **Confirm reset**, or from `demo`:
 
 ```sh
 python3 ops/workload.py reset
@@ -203,14 +202,14 @@ Only if the change notes say the database changed, also run
 |---|---|
 | Grafana charts are empty | Start demo traffic on the presenter desk and wait a minute. |
 | Grafana tiles say **Unknown** | Run `python3 ops/workload.py status`. Right after a start, wait for `ready`. |
-| Everything stays Unknown for a long time | A deployment may have been left failed or throttled, so requests kept retrying and history grew very large. On the desk, **restore** every deployment, use **Reset scenario…**, then restart terminals 1 and 2. |
+| Everything stays Unknown for a long time | A deployment may have been left failed, so requests kept retrying and history grew very large. On the desk, open **All demo controls** and restore every deployment (**Any deployment** › Restore), then **Before and after the talk** › **Reset scenario…**, then restart terminals 1 and 2. |
 | Drasi Server takes minutes to start | It is reading accumulated history. Wait; it will finish. |
 | "Run ops/observability-stack.sh env first" | Do [step 3](#3-create-local-passwords). |
 | A port is already in use | Something is already running. Find it with `lsof -nP -iTCP:18421 -sTCP:LISTEN` (change the port) and stop it before starting another copy. |
 | Startup refuses because files changed | Rebuild: `./ops/native-build.sh`. |
 | Containers fail to start | Check Podman is running: `podman machine start`, then `./ops/observability-stack.sh ps`. |
-| Drasi Server UI shows no query text | Known Drasi Server UI issue: it looks up queries in a way the current API no longer accepts. Until it is fixed, skip that drill-down or open the query file in `demo/drasi/`. |
-| The query text in Drasi Server is too small to read | Zoom the browser (Cmd +). |
+| The projector window shows "Grafana · …" but no dashboard | Grafana isn't running or hasn't loaded yet: check `./ops/observability-stack.sh ps`, then press **Back** and **Next** on the desk. |
+| Desk header says "Projector window not opened from this desk" | Press **Open projector window** in the header, and use that window on the projector. |
 
 ## For developers
 

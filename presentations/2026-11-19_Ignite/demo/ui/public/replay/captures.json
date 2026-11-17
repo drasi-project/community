@@ -1,46 +1,46 @@
 [
   {
     "scene": "failure",
-    "capturedAt": "2026-11-16T16:16:39.348Z",
-    "runEpoch": "525fac42-af8a-458e-8b60-6e73715cc943",
+    "capturedAt": "2026-11-17T06:39:56.323Z",
+    "runEpoch": "1868d079-3fc3-41dd-8464-8f6a7cfbb8a3",
     "surface": "grafana",
-    "duration_seconds": 22.581,
+    "duration_seconds": 136.586,
     "src": "/replay/failure.webm",
-    "sha256": "508643b3937e7d76d23cc1fcb4fea0ecf9861cfd00174f48a399abfe955d7c38",
-    "bytes": 1154288,
-    "provenance": "Actual Grafana recording 2026-11-16T16:16:39.348Z; epoch 525fac42-af8a-458e-8b60-6e73715cc943; native build bab08c5e0a63521968048013a9d074dbb47c40283f4c92be5fa44e20c75a86dd. Synthetic endpoints; real requests, telemetry and change-driven computation."
-  },
-  {
-    "scene": "recovery",
-    "capturedAt": "2026-11-16T16:17:02.153Z",
-    "runEpoch": "525fac42-af8a-458e-8b60-6e73715cc943",
-    "surface": "grafana",
-    "duration_seconds": 18.296,
-    "src": "/replay/recovery.webm",
-    "sha256": "e37a73cff7a6c0632d565e8b110d47816a95bee1d719363f1e3a8ba8fdaac62d",
-    "bytes": 851991,
-    "provenance": "Actual Grafana recording 2026-11-16T16:17:02.153Z; epoch 525fac42-af8a-458e-8b60-6e73715cc943; native build bab08c5e0a63521968048013a9d074dbb47c40283f4c92be5fa44e20c75a86dd. Synthetic endpoints; real requests, telemetry and change-driven computation."
+    "sha256": "b50f5e46435f61efa5a5ea6e7a18e128609c5f75b0369708de759ad7088f1b22",
+    "bytes": 5785485,
+    "provenance": "Recorded from the live demo 2026-11-17T06:39:56.323Z. Simulated deployments; real requests, monitoring and Drasi."
   },
   {
     "scene": "policy",
-    "capturedAt": "2026-11-16T16:17:49.042Z",
-    "runEpoch": "525fac42-af8a-458e-8b60-6e73715cc943",
+    "capturedAt": "2026-11-17T06:39:56.358Z",
+    "runEpoch": "1868d079-3fc3-41dd-8464-8f6a7cfbb8a3",
     "surface": "grafana",
-    "duration_seconds": 14.251,
+    "duration_seconds": 49.664,
     "src": "/replay/policy.webm",
-    "sha256": "befeab1edad57b90926e376e32d211b971460de499f3f36cfb5a88bcff428409",
-    "bytes": 633204,
-    "provenance": "Actual Grafana recording 2026-11-16T16:17:49.042Z; epoch 525fac42-af8a-458e-8b60-6e73715cc943; native build bab08c5e0a63521968048013a9d074dbb47c40283f4c92be5fa44e20c75a86dd. Synthetic endpoints; real requests, telemetry and change-driven computation."
+    "sha256": "7ef6dc175dd2495ea6e1d1bb7381cf9dffdea3391423b4dfb0f4504de887cd81",
+    "bytes": 2093674,
+    "provenance": "Recorded from the live demo 2026-11-17T06:39:56.358Z. Simulated deployments; real requests, monitoring and Drasi."
+  },
+  {
+    "scene": "recovery",
+    "capturedAt": "2026-11-17T06:39:56.382Z",
+    "runEpoch": "1868d079-3fc3-41dd-8464-8f6a7cfbb8a3",
+    "surface": "grafana",
+    "duration_seconds": 232.737,
+    "src": "/replay/recovery.webm",
+    "sha256": "d41b4bb44b91cc76bf7e3b14779ac9a95246babcca412d69e582598eed6ecc72",
+    "bytes": 9971462,
+    "provenance": "Recorded from the live demo 2026-11-17T06:39:56.382Z. Simulated deployments; real requests, monitoring and Drasi."
   },
   {
     "scene": "resilience",
-    "capturedAt": "2026-11-16T16:18:14.364Z",
-    "runEpoch": "525fac42-af8a-458e-8b60-6e73715cc943",
+    "capturedAt": "2026-11-17T06:39:56.395Z",
+    "runEpoch": "1868d079-3fc3-41dd-8464-8f6a7cfbb8a3",
     "surface": "grafana",
-    "duration_seconds": 13.016,
+    "duration_seconds": 105.873,
     "src": "/replay/resilience.webm",
-    "sha256": "edc467bf55f566380989e606cf16740bf8456b3d19b4f09b1c3510b1a9a8ee59",
-    "bytes": 589871,
-    "provenance": "Actual Grafana recording 2026-11-16T16:18:14.364Z; epoch 525fac42-af8a-458e-8b60-6e73715cc943; native build bab08c5e0a63521968048013a9d074dbb47c40283f4c92be5fa44e20c75a86dd. Synthetic endpoints; real requests, telemetry and change-driven computation."
+    "sha256": "f76b29ec62c11cf3fdcb52bc03447be894ef850d65447083dc6434ee1721cb3f",
+    "bytes": 4467298,
+    "provenance": "Recorded from the live demo 2026-11-17T06:39:56.395Z. Simulated deployments; real requests, monitoring and Drasi."
   }
 ]

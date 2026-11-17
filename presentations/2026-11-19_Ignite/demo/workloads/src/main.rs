@@ -1,3 +1,4 @@
+mod content;
 mod dashboard;
 mod decisions;
 mod model;
@@ -165,7 +166,11 @@ async fn submit(State(app): State<App>, Json(input): Json<Submit>) -> Api {
     tx.execute("INSERT INTO ignite_tasks(id,run_epoch,workload,content,trace_id,created_ms,deadline_ms,root_span_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8)",
         &[&input.id,&epoch,&input.workload,&input.content,&trace,&created,&deadline,&root_span]).await?;
     tx.commit().await?;
-    span.set_attribute(KeyValue::new("run.epoch", epoch));
+    span.set_attributes([
+        KeyValue::new("run.epoch", epoch),
+        KeyValue::new("langfuse.observation.input", input.content.clone()),
+        KeyValue::new("langfuse.trace.input", input.content.clone()),
+    ]);
     span.end();
     Ok(Json(
         json!({"id":input.id,"trace_id":trace,"root_span_id":root_span,"deadline_ms":deadline,
@@ -387,13 +392,20 @@ async fn infer(
     )
     .await?;
     let mut span = state.app.telemetry.span(
-        "model.inference",
+        format!("model · {}", state.id),
         &input.trace_id,
         &input.root_span_id,
         &input.task_id,
         &input.workload,
     )?;
-    span.set_attribute(KeyValue::new("endpoint.id", state.id.clone()));
+    span.set_attributes([
+        KeyValue::new("endpoint.id", state.id.clone()),
+        KeyValue::new("langfuse.observation.type", "generation"),
+        KeyValue::new("gen_ai.request.model", e.model.clone()),
+        KeyValue::new("langfuse.observation.input", input.content.clone()),
+        KeyValue::new("langfuse.observation.metadata.deployment", state.id.clone()),
+        KeyValue::new("langfuse.observation.metadata.region", e.region.clone()),
+    ]);
     if let Some(row) = tx
         .query_opt(
             "SELECT response,tokens FROM ignite_receipts WHERE id=$1",
@@ -403,14 +415,7 @@ async fn infer(
     {
         return Ok(Json(json!({"response":row.get::<_,String>(0),"tokens":row.get::<_,i64>(1),"duplicate":true})).into_response());
     }
-    let response = if input.workload == "support" {
-        format!("Synthetic support answer: {} words reviewed; follow the documented account recovery steps.", input.content.split_whitespace().count())
-    } else {
-        format!(
-            "Public document summary: {} words indexed for search.",
-            input.content.split_whitespace().count()
-        )
-    };
+    let response = content::answer(&input.workload, &input.content);
     // Whitespace token units and fixed responses are explicitly simulated, never GPU measurements.
     let tokens =
         (input.content.split_whitespace().count() + response.split_whitespace().count()) as i64;
@@ -425,9 +430,17 @@ async fn infer(
     };
     span.set_attribute(KeyValue::new("http.response.status_code", status as i64));
     if status != 200 {
-        span.set_status(Status::error(
-            "Injected endpoint failure or actual modeled budget exhaustion",
-        ));
+        let reason = if status == 503 {
+            format!("Deployment {} failed (HTTP 503)", state.id)
+        } else {
+            format!("Deployment {} is over its token quota (HTTP 429)", state.id)
+        };
+        span.set_attributes([
+            KeyValue::new("langfuse.observation.level", "ERROR"),
+            KeyValue::new("langfuse.observation.status_message", reason.clone()),
+            KeyValue::new("langfuse.observation.output", reason.clone()),
+        ]);
+        span.set_status(Status::error(reason));
         return Ok((
             StatusCode::from_u16(status)?,
             Json(json!({"error":e.mode,"endpoint":e.id})),
@@ -445,6 +458,10 @@ async fn infer(
         "gen_ai.usage.output_tokens",
         response.split_whitespace().count() as i64,
     ));
+    span.set_attribute(KeyValue::new(
+        "langfuse.observation.output",
+        response.clone(),
+    ));
     Ok(Json(json!({"response":response,"tokens":tokens})).into_response())
 }
 
@@ -459,14 +476,16 @@ async fn dispatch_once(app: &App, workload: &str) -> Result<()> {
         pending as u64,
         &[KeyValue::new("workload", workload.to_owned())],
     );
-    let Some(row) = tx.query_opt("SELECT id,content,trace_id,root_span_id FROM ignite_tasks WHERE run_epoch=$1 AND workload=$2 AND completed_ms IS NULL AND cancelled_ms IS NULL ORDER BY created_ms,id LIMIT 1", &[&epoch,&workload]).await? else { return Ok(()) };
+    // Untried requests first, then the least recently tried, so a failing deployment doesn't
+    // leave every request behind the oldest one with no attempt in its trace.
+    let Some(row) = tx.query_opt("SELECT t.id,t.content,t.trace_id,t.root_span_id FROM ignite_tasks t WHERE t.run_epoch=$1 AND t.workload=$2 AND t.completed_ms IS NULL AND t.cancelled_ms IS NULL ORDER BY (SELECT max(a.started_ms) FROM ignite_attempts a WHERE a.task_id=t.id) NULLS FIRST,t.created_ms,t.id LIMIT 1", &[&epoch,&workload]).await? else { return Ok(()) };
     let id: String = row.get(0);
     let trace: String = row.get(2);
     let root_span: String = row.get(3);
     // Durable receipts reconcile an HTTP success whose gateway acknowledgement was lost.
     if let Some(receipt) = tx
         .query_opt(
-            "SELECT endpoint,response,received_ms,model_revision FROM ignite_receipts WHERE task_id=$1",
+            "SELECT r.endpoint,r.response,r.received_ms,r.model_revision,t.created_ms FROM ignite_receipts r JOIN ignite_tasks t ON t.id=r.task_id WHERE r.task_id=$1",
             &[&id],
         )
         .await?
@@ -479,9 +498,21 @@ async fn dispatch_once(app: &App, workload: &str) -> Result<()> {
         app.telemetry
             .completed
             .add(1, &[KeyValue::new("workload", workload.to_owned())]);
-        app.telemetry
-            .span("task.completed", &trace, &root_span, &id, workload)?
-            .end();
+        app.telemetry.answer.record(
+            (receipt.get::<_, i64>(2) - receipt.get::<_, i64>(4)).max(0) as f64 / 1000.,
+            &[KeyValue::new("workload", workload.to_owned())],
+        );
+        let mut done = app
+            .telemetry
+            .span("task.completed", &trace, &root_span, &id, workload)?;
+        let answer: String = receipt.get(1);
+        let deployment: String = receipt.get(0);
+        done.set_attributes([
+            KeyValue::new("langfuse.observation.output", answer.clone()),
+            KeyValue::new("langfuse.trace.output", answer),
+            KeyValue::new("langfuse.observation.metadata.answered_by", deployment),
+        ]);
+        done.end();
         return Ok(());
     }
     let w = m
@@ -508,6 +539,10 @@ async fn dispatch_once(app: &App, workload: &str) -> Result<()> {
             let mut span =
                 app.telemetry
                     .span("gateway.policy_rejected", &trace, &root_span, &id, workload)?;
+            span.set_attributes([
+                KeyValue::new("langfuse.observation.level", "WARNING"),
+                KeyValue::new("langfuse.observation.status_message", detail.clone()),
+            ]);
             span.set_status(Status::error(detail));
             span.end();
             return Ok(());
@@ -548,12 +583,25 @@ async fn dispatch_once(app: &App, workload: &str) -> Result<()> {
         ),
     )
     .await?;
-    let mut span = app
-        .telemetry
-        .span("gateway.attempt", &trace, &root_span, &id, workload)?;
+    let mut span = app.telemetry.span(
+        format!("attempt · {}", e.id),
+        &trace,
+        &root_span,
+        &id,
+        workload,
+    )?;
     span.set_attributes([
+        KeyValue::new(
+            "langfuse.observation.input",
+            format!("Send to {}, attempt {}", e.id, count + 1),
+        ),
         KeyValue::new("endpoint.id", e.id.clone()),
         KeyValue::new("attempt.id", attempt.clone()),
+        KeyValue::new("langfuse.observation.metadata.deployment", e.id.clone()),
+        KeyValue::new(
+            "langfuse.observation.metadata.attempt",
+            (count + 1).to_string(),
+        ),
     ]);
     let response = app
         .http
@@ -606,7 +654,23 @@ async fn dispatch_once(app: &App, workload: &str) -> Result<()> {
     app.telemetry.tokens.add(tokens as u64, &labels);
     span.set_attribute(KeyValue::new("http.response.status_code", status as i64));
     if status != 200 {
+        let message = match status {
+            503 => format!("Deployment {} failed (HTTP 503); will retry", e.id),
+            429 => format!(
+                "Deployment {} is over its token quota (HTTP 429); will retry",
+                e.id
+            ),
+            0 => format!("No response from deployment {}; will retry", e.id),
+            other => format!("Deployment {} returned HTTP {other}", e.id),
+        };
+        span.set_attributes([
+            KeyValue::new("langfuse.observation.level", "ERROR"),
+            KeyValue::new("langfuse.observation.status_message", message.clone()),
+            KeyValue::new("langfuse.observation.output", message),
+        ]);
         span.set_status(Status::error(detail));
+    } else {
+        span.set_attribute(KeyValue::new("langfuse.observation.output", "Answered"));
     }
     Ok(())
 }
@@ -617,7 +681,7 @@ async fn report_once(app: &App) -> Result<()> {
     tx.batch_execute("SELECT pg_advisory_xact_lock_shared(190619)")
         .await?;
     let (epoch, revision, m) = model(&tx).await?;
-    decisions::metrics(app, &epoch, revision, &m).await?;
+    decisions::metrics(app, &tx, &epoch, revision, &m).await?;
     for e in &m.endpoints {
         app.telemetry.capacity.record(
             e.budget_tpm as u64,

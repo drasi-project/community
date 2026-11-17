@@ -13,6 +13,8 @@ processors:
 exporters:
   prometheus:
     endpoint: 0.0.0.0:8889
+    # Drop a series soon after it stops being sent, so a changed answer doesn't linger.
+    metric_expiration: 10s
   otlp_http/langfuse:
     endpoint: http://langfuse-web:3000/api/public/otel
     headers:

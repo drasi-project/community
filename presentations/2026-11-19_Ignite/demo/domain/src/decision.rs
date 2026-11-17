@@ -310,6 +310,34 @@ pub fn allocate(mut decision: Decision, failure: Option<&str>) -> Result<Decisio
     Ok(decision)
 }
 
+/// N-1 check: remove each observed-available deployment in turn (sorted by id) and report the
+/// first loss that leaves no complete assignment. Read-only: the result is never a valid plan.
+pub fn resilience(decision: Decision) -> Result<Decision> {
+    if decision.state == "unknown" {
+        return allocate(decision, None);
+    }
+    let mut ok = decision
+        .evidence
+        .values()
+        .filter(|e| e.status == "ok")
+        .map(|e| e.id.clone())
+        .collect::<Vec<_>>();
+    ok.sort();
+    for id in &ok {
+        let d = allocate(decision.clone(), Some(id))?;
+        if d.state == "infeasible" {
+            return Ok(d);
+        }
+    }
+    let mut d = allocate(decision, None)?;
+    d.valid = false;
+    if d.state == "feasible" {
+        d.reason = "every single-deployment loss still leaves a complete assignment under current Rego policy and capacity".into();
+        d.candidate_id = hash(&(&d.basis, &d.assignments, "resilience"))?;
+    }
+    Ok(d)
+}
+
 pub fn fresh(decision: &Decision, now: i64) -> bool {
     decision.state != "unknown"
         && decision.evidence.len() == 3
@@ -401,6 +429,50 @@ mod tests {
         let resilience = allocate(healthy, Some("EU-A")).unwrap();
         assert_eq!(resilience.state, "feasible");
         assert!(!resilience.valid);
+    }
+    #[test]
+    fn resilience_checks_every_single_available_deployment_loss() {
+        let p = policy(&fixture()).unwrap().unwrap();
+        let safe = resilience(p.clone()).unwrap();
+        assert_eq!(safe.state, "feasible");
+        assert_eq!(safe.failure, None);
+        assert!(!safe.valid);
+        assert_ne!(
+            safe.candidate_id,
+            allocate(p.clone(), None).unwrap().candidate_id
+        );
+        assert_eq!(
+            resilience(p.clone()).unwrap().candidate_id,
+            safe.candidate_id
+        );
+        let mut tight = p.clone();
+        tight
+            .model
+            .workloads
+            .iter_mut()
+            .find(|w| w.id == "batch")
+            .unwrap()
+            .destination = "US-C".into();
+        tight
+            .model
+            .endpoints
+            .iter_mut()
+            .find(|e| e.id == "EU-B")
+            .unwrap()
+            .budget_tpm = 50_000;
+        let d = resilience(tight).unwrap();
+        assert_eq!(d.state, "infeasible");
+        assert_eq!(d.failure.as_deref(), Some("EU-A"));
+        let mut rows = fixture();
+        rows.get_mut("EU-A").unwrap()["status"] = json!("failed");
+        let d = resilience(policy(&rows).unwrap().unwrap()).unwrap();
+        assert_eq!(d.state, "infeasible");
+        assert_eq!(d.failure.as_deref(), Some("EU-B"));
+        let mut rows = fixture();
+        rows.get_mut("US-C").unwrap()["status"] = json!("failed");
+        let d = resilience(policy(&rows).unwrap().unwrap()).unwrap();
+        assert_eq!(d.state, "infeasible");
+        assert_eq!(d.failure.as_deref(), Some("EU-A"));
     }
     #[test]
     fn evidence_and_policy_changes_are_not_heartbeat_revisions() {

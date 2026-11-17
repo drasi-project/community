@@ -13,7 +13,7 @@ use drasi_core_types::models::{
     Element, ElementMetadata, ElementPropertyMap, ElementReference, SourceChange,
 };
 use futures_util::StreamExt;
-use ignite_domain::decision::{allocate, policy};
+use ignite_domain::decision::{allocate, policy, resilience};
 use serde_json::{json, Value};
 use std::{collections::BTreeMap, sync::Arc};
 
@@ -230,14 +230,11 @@ impl Transformer {
                 .map(|row| -> Result<_> {
                     let p =
                         serde_json::from_str(row["payload"].as_str().context("policy payload")?)?;
-                    allocate(
-                        p,
-                        if self.kind == "resilience" {
-                            Some("EU-A")
-                        } else {
-                            None
-                        },
-                    )
+                    if self.kind == "resilience" {
+                        resilience(p)
+                    } else {
+                        allocate(p, None)
+                    }
                 })
                 .transpose()?
         };

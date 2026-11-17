@@ -9,13 +9,14 @@ change-driven monitoring** (session THR1029, Microsoft Ignite, November 19, 2026
 | Understand what the talk and demo are about | This page |
 | Set up and run the demo | [SETUP.md](SETUP.md) |
 | Give the talk or run the demo | [PRESENTER.md](PRESENTER.md) |
+| Understand exactly what Drasi does in the demo | [DRASI.md](DRASI.md) |
 | Change or test the demo | [DEVELOPERS.md](DEVELOPERS.md) |
 
 ## In one paragraph
 
 A company runs a customer-support AI assistant and a background
-document-summary job. Both draw on the same limited AI model capacity, deployed
-in a few regions, and support data may only be processed in Europe. When the
+document-summary job. Both draw on the same limited AI model capacity, split
+across a few deployments, and support data may only be processed in Europe. When the
 capacity serving support fails, Grafana shows the errors and the growing queue, as it
 should. But the operator still has to work out which customers are now waiting
 too long, where the work is allowed to go, whether the move will fit, and
@@ -25,17 +26,22 @@ and as time passes, and puts them in the tools the team already uses.
 
 ## The talk
 
-Three short slides frame about 18 minutes of live demo in Grafana:
+A few slides frame about 17 minutes of live demo:
 
 1. **Title:** Monitoring without polling.
-2. **The scenario:** two AI workloads sharing limited AI capacity across three regions, the rules
-   they must follow, and three business questions for when EU-A fails: who is
-   affected, what's the fastest fix within company policy, and how do we know
-   it's really fixed? It finishes with how Drasi answers them: sources,
-   continuous models and reactions.
-3. **Live demo** in Grafana, with brief looks at Langfuse and Drasi Server.
-4. **Closing:** keep your observability tools, add change-driven computation,
-   verify the outcome.
+2. **The scenario:** two AI workloads sharing limited AI capacity across three
+   deployments, the rules they must follow, and three business questions for when
+   EU-A fails: who is affected, what's the fastest fix within policy, and how do
+   we know it's really fixed?
+3. **Drasi in one picture:** sources, continuous queries, continuous models and
+   reactions; what is built into Drasi and what was written for the demo; and
+   what "without polling" means.
+4. **Live demo** in Grafana, with the continuous query behind "who is affected"
+   and one late customer request on the way.
+5. **Close:** keep your monitoring tools, add change-driven computation.
+
+The presenter drives everything from a private presenter desk; the projector
+follows. See [PRESENTER.md](PRESENTER.md).
 
 ## The situation it mirrors
 
@@ -50,15 +56,15 @@ Most teams adding AI features hit the same constraints:
 - **Fixes need human approval.** Moving workloads changes cost, compliance and
   risk, so someone signs off.
 
-The demo models this with two workloads and AI model capacity deployed in three
-regions (EU-A, EU-B, US-C):
+The demo models this with two workloads and AI model capacity split across three
+deployments, two in Europe and one in the United States (EU-A, EU-B, US-C):
 
 | | Data | Allowed locations | Normally runs on |
 |---|---|---|---|
 | Customer support | Restricted | Europe only | EU-A (needs 60k tokens/min) |
 | Document summaries | Public | Anywhere | EU-B (needs 80k tokens/min) |
 
-EU-A, EU-B and US-C each have a 100k tokens/min budget. US-C starts idle.
+EU-A, EU-B and US-C each have a capacity of 100k tokens/min. US-C starts idle.
 
 ## What the familiar tools do
 
@@ -96,50 +102,46 @@ it gets harder as deployments, workloads and rules grow.
 
 ## What Drasi adds
 
-Drasi reacts to changes instead of re-running checks. In Drasi terms:
+Drasi is **change-driven computation**. Instead of re-running checks on a
+schedule, it reacts to each change as it happens, and to time passing, and keeps
+its answers current. It has four kinds of component, all working in this demo:
 
-- **Sources** bring in changes: requests, deployment reports, configuration and
-  alerts, from the service's PostgreSQL database.
-- **Continuous models** keep answers current as data changes and as time
-  passes. Drasi has several kinds: continuous queries, continuous policy and
-  continuous monitors. This demo uses:
-  - **Continuous queries** over requests and deployments. Some change just because
-    time passes: a request becomes overdue at its deadline, and a deployment
-    report becomes stale eight seconds after it arrived, with no further update
-    to either.
-  - **Continuous policy** for which deployments each workload may use.
-  - **Continuous models** for the best complete allocation, and for whether
-    recovery would still be possible if EU-A failed.
-- **Reactions** publish the results: Grafana panels and annotations, scores on
-  Langfuse traces, and the current proposal shown to the operator for approval.
+| Component | What it does in this demo | Built into Drasi? |
+|---|---|---|
+| **Sources** | Read the service database's change feed: requests, attempts, deployment health reports (every second), capacity and policy settings, approvals and alerts | Yes: the PostgreSQL and HTTP sources |
+| **Continuous queries** | Cypher queries kept current as data changes and as time passes, for example *overdue support requests* (past 15 seconds), *deployment status* (Unknown after 8 silent seconds) and *verified recovery* | Yes |
+| **Continuous models** | Your own logic, re-run whenever its inputs change. Here: **policy** (where each workload may run, in Rego), **planner** (the best complete plan that fits policy and capacity) and **what-if** (if any one deployment failed, would every workload still fit?) | Drasi runs them; the models themselves were written for this demo |
+| **Reactions** | Stream every change in an answer to the AI service, which publishes it as metrics (Grafana), decision events and Langfuse scores, offers the plan for approval and applies an approved plan only if its facts still hold | Drasi delivers the changes; the AI service is the demo's own |
 
-The answers are continuously maintained, not recomputed on request. When an
-input changes, only the affected answers update.
+During the talk, a short **What Drasi just did** visual follows each part of the
+live demo, highlighting which of these components produced what the audience
+just saw.
 
 ## How the story unfolds on stage
 
-1. **Healthy service (Grafana).** Real traffic flows. Support runs on EU-A,
-   summaries on EU-B, and the queue is empty.
-2. **Failure (Grafana).** EU-A fails. Errors and the queue rise, and Grafana
-   alerts. Drasi's overdue count climbs as support requests pass their deadline,
-   with no new events needed. A Langfuse trace shows one affected request.
-3. **Recovery (Grafana).** Drasi's policy shows support is denied on US-C but
-   summaries are allowed there. Its proposal moves summaries to US-C and support
-   to EU-B. The presenter approves it. Grafana then shows the route change, the
-   queue draining, and recovery **Verified**, which appears only after real
-   support requests succeed on the new route.
-4. **Under the hood (Drasi Server).** A brief look at the actual continuous query
-   behind "overdue".
-5. **Policy change (Grafana).** Restricting summaries to Europe changes the
-   answer immediately. An approval of the old plan is rejected because its facts
-   are out of date.
-6. **Healthy but fragile (Grafana).** Everything works, but EU-B's budget is cut.
-   Drasi shows that losing EU-A would leave support nowhere allowed to go.
-   Restoring EU-B's budget flips the answer back, without any real outage.
+1. **Healthy service.** Real traffic flows. Support runs on EU-A, summaries on
+   EU-B. Grafana's top half is ordinary monitoring; its bottom half is Drasi's
+   answers, including "Safe if one fails? Yes".
+2. **Failure.** EU-A fails. Within seconds Drasi shows EU-A Failed and has a plan
+   ready; errors and the queue rise and Grafana alerts. Support requests count as
+   overdue the moment each passes its 15-second deadline, with no new event.
+3. **Who is affected.** The actual continuous query behind "overdue", with Drasi's
+   live list of late requests, then one of those customers' requests, attempt by
+   attempt.
+4. **Recovery.** Support may not run on US-C, but summaries may. The planner's plan
+   moves summaries to US-C, freeing EU-B for support. Optionally, a policy
+   change while the plan awaits approval leaves no valid plan, and the earlier
+   approval is rejected because its facts changed. The presenter approves the
+   plan; **Verified** appears only once the queue is answered and support
+   requests succeed on the new route.
+5. **Healthy but fragile.** EU-A comes back with only 50k of capacity. Everything
+   is green, but Drasi says we're not safe: if EU-B failed, support would have
+   nowhere allowed to go. Restoring EU-A to 100k flips the answer back, with no
+   outage.
 
 ## What is real and what is simulated
 
-- **Simulated:** model responses, deployment regions and capacity budgets. No real
+- **Simulated:** model responses, the deployments and their capacity. No real
   GPUs, paid model services or customer data.
 - **Real:** the HTTP requests, the telemetry in OpenTelemetry, Prometheus,
   Grafana and Langfuse, the database changes, the policy checks, Drasi's queries

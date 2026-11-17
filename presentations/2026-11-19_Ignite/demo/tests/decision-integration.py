@@ -28,7 +28,8 @@ def main():
         work.control("fail")
         d = result("allocation-results", lambda d: d["assignments"] == {"batch":"US-C","support":"EU-B"})
         assert d["valid"] and not d["eligibility"]["support"]["US-C"]["allowed"]
-        checks.append("observed EU-A failure derives complete batch->US-C and support->EU-B")
+        result("resilience-results", lambda r: r["basis"] == d["basis"] and r["state"] == "infeasible" and r["failure"] == "EU-B")
+        checks.append("observed EU-A failure derives complete batch->US-C and support->EU-B; then losing EU-B too would leave no plan")
         edit("jsonb_set(jsonb_set(payload,'{policy,destinations,support}','[\"EU-A\"]'),'{policy,revision}',to_jsonb((payload#>>'{policy,revision}')::bigint+1))")
         denied = result("allocation-results", lambda d: d["state"] == "infeasible")
         assert denied["basis"] != d["basis"]
@@ -37,11 +38,11 @@ def main():
         epoch = work.api("/health")["run_epoch"]
         edit("jsonb_set(jsonb_set(payload,'{workloads,1,destination}','\"US-C\"'),'{endpoints,1,budget_tpm}','50000')")
         current = result("allocation-results", lambda d: d["run_epoch"] == epoch and d["model"]["endpoints"][1]["budget_tpm"] == 50000 and d["state"] == "feasible")
-        result("resilience-results", lambda d: d["basis"] == current["basis"] and d["state"] == "infeasible")
-        checks.append("healthy complete current allocation fits while named EU-A loss is infeasible")
+        result("resilience-results", lambda d: d["basis"] == current["basis"] and d["state"] == "infeasible" and d["failure"] == "EU-A")
+        checks.append("healthy complete current allocation fits while losing EU-A (first infeasible single loss) is infeasible")
         edit("jsonb_set(payload,'{endpoints,1,budget_tpm}','100000')")
-        result("resilience-results", lambda d: d["run_epoch"] == epoch and d["model"]["endpoints"][1]["budget_tpm"] == 100000 and d["state"] == "feasible" and not d["valid"])
-        checks.append("capacity input restores read-only resilience without fault injection")
+        result("resilience-results", lambda d: d["run_epoch"] == epoch and d["model"]["endpoints"][1]["budget_tpm"] == 100000 and d["state"] == "feasible" and d["failure"] is None and not d["valid"])
+        checks.append("capacity input restores read-only N-1 resilience without fault injection")
         work.control("pause-reports", "EU-B")
         result("allocation-results", lambda d: d["state"] == "unknown")
         checks.append("actual native timer expiration makes candidate unknown")

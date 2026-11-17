@@ -51,7 +51,7 @@
   <!-- Context queries -->
   <rect x="420" y="230" width="300" height="64" rx="12" class="box"/>
   <text x="444" y="258" class="name">endpoint-context</text>
-  <text x="444" y="281" class="desc">Deployment state and budgets</text>
+  <text x="444" y="281" class="desc">Deployment state and capacity</text>
   <rect x="420" y="314" width="300" height="64" rx="12" class="box"/>
   <text x="444" y="342" class="name">decision-context</text>
   <text x="444" y="365" class="desc">Fresh decision inputs</text>
@@ -84,13 +84,13 @@
   <text x="864" y="281" class="desc">Spare capacity per deployment</text>
   <rect x="840" y="314" width="280" height="64" rx="12" class="model"/>
   <text x="864" y="342" class="name">policy</text>
-  <text x="864" y="365" class="desc">Continuous policy · Rego</text>
+  <text x="864" y="365" class="desc">Policy · Rego</text>
   <rect x="840" y="398" width="280" height="64" rx="12" class="model"/>
   <text x="864" y="426" class="name">allocation</text>
-  <text x="864" y="449" class="desc">Best complete allocation</text>
+  <text x="864" y="449" class="desc">Planner: best complete plan</text>
   <rect x="840" y="482" width="280" height="64" rx="12" class="model"/>
   <text x="864" y="510" class="name">resilience</text>
-  <text x="864" y="533" class="desc">"If EU-A fails" feasibility</text>
+  <text x="864" y="533" class="desc">What-if: lose any one deployment</text>
 
   <!-- Result queries -->
   <rect x="1200" y="230" width="300" height="64" rx="12" class="box"/>
@@ -101,10 +101,10 @@
   <text x="1224" y="365" class="desc">Allowed destinations</text>
   <rect x="1200" y="398" width="300" height="64" rx="12" class="box"/>
   <text x="1224" y="426" class="name">allocation-results</text>
-  <text x="1224" y="449" class="desc">Proposed allocation</text>
+  <text x="1224" y="449" class="desc">Proposed plan</text>
   <rect x="1200" y="482" width="300" height="64" rx="12" class="box"/>
   <text x="1224" y="510" class="name">resilience-results</text>
-  <text x="1224" y="533" class="desc">Recovery feasibility</text>
+  <text x="1224" y="533" class="desc">Safe if one fails?</text>
   <rect x="1200" y="622" width="300" height="64" rx="12" class="box"/>
   <text x="1224" y="650" class="name">recovery-results</text>
   <text x="1224" y="673" class="desc">Verified recovery</text>

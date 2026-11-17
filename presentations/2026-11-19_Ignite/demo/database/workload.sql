@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS ignite_attempts (
     trace_id text NOT NULL,
     tokens bigint NOT NULL DEFAULT 0
 );
+CREATE INDEX IF NOT EXISTS ignite_attempts_task ON ignite_attempts(task_id, started_ms);
 CREATE TABLE IF NOT EXISTS ignite_receipts (
     id text PRIMARY KEY,
     task_id text NOT NULL REFERENCES ignite_tasks(id),

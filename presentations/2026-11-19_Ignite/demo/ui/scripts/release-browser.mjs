@@ -12,8 +12,9 @@ const mode = process.argv[2];
 await fs.mkdir(out, { recursive: true });
 
 if (mode === "record") {
-  execFileSync(process.execPath, [path.join(ui, "scripts/audience-review.mjs"), "record"], { stdio: "inherit", env: process.env });
-  const acceptance = JSON.parse(await fs.readFile(path.join(ui, "evidence/audience-review/acceptance.json")));
+  const evidence = path.join(ui, "evidence/walkthrough");
+  execFileSync(process.execPath, [path.join(ui, "scripts/walkthrough.mjs"), "record", evidence], { stdio: "inherit", env: process.env });
+  const acceptance = JSON.parse(await fs.readFile(path.join(evidence, "walkthrough.json")));
   const crypto = await import("node:crypto");
   acceptance.native_build_sha256 = crypto.createHash("sha256").update(await fs.readFile(path.join(demo, ".native/build.json"))).digest("hex");
   await fs.writeFile(path.join(out, "recordings.json"), JSON.stringify(acceptance, null, 2) + "\n");
@@ -59,19 +60,24 @@ if (mode === "record") {
       for (const clip of captures) {
         expect(clip.surface).toBe("grafana");
         const start = Date.now();
-        await desk.getByRole("button", { name: `${clip.scene}: recorded replay`, exact: true }).click();
+        await desk.getByText("Recordings (fallback)").click();
+        await desk.getByRole("button", { name: clip.scene, exact: true }).click();
         const video = page.locator("video");
         await expect(page.getByText("REPLAY · NOT LIVE", { exact: true })).toBeVisible();
         await video.evaluate(async element => { element.muted = true; await element.play(); });
         await expect.poll(() => video.evaluate(element => element.currentTime)).toBeGreaterThan(.5);
         const switchToPlayMs = Date.now() - start;
         expect(switchToPlayMs).toBeLessThan(15000);
-        for (const name of ["Start demo traffic", "Stop demo traffic", "Submit support request", "Apply to deployment", "Approve selected plan", "Reset scenario..."]) {
-          await expect(desk.getByRole("button", { name, exact: true })).toBeDisabled();
+        await desk.getByText("All demo controls").click();
+        for (const name of ["Start demo traffic", "Stop demo traffic", "Fail EU-A", "Submit one support request", "Apply to deployment", "Approve selected plan"]) {
+          await expect(desk.locator(".controls").getByRole("button", { name, exact: true })).toBeDisabled();
         }
+        await desk.getByText("All demo controls").click();
         await expect.poll(() => video.evaluate(element => element.ended), { timeout: 150000 }).toBe(true);
         expect(await video.evaluate(element => element.error)).toBeNull();
         clips.push({ scene: clip.scene, switch_to_play_ms: switchToPlayMs, surface: clip.surface });
+        await desk.locator(".desk-alert").getByRole("button", { name: "Back to live" }).click();
+        await desk.getByText("Recordings (fallback)").click();
       }
       const external = await page.evaluate(async () => {
         try { await fetch("https://offline-boundary.invalid/probe"); return "unexpected success"; }

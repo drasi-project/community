@@ -34,7 +34,7 @@
   <rect x="60" y="520" width="270" height="120" rx="14" class="box"/>
   <text x="84" y="565" class="title">Presenter desk</text>
   <text x="84" y="598" class="sub">Faults, approvals,</text>
-  <text x="84" y="622" class="sub">policy edits</text>
+  <text x="84" y="622" class="sub">policy and capacity edits</text>
 
   <!-- AI service -->
   <rect x="390" y="200" width="520" height="460" rx="18" class="group"/>
@@ -85,8 +85,8 @@
   <rect x="1010" y="690" width="560" height="230" rx="18" class="drasi"/>
   <text x="1040" y="740" fill="#eeeef2" font-size="32" font-weight="700">Drasi Server</text>
   <text x="1040" y="774" fill="#9ee8d7" font-size="20" font-weight="700">Change-driven computation</text>
-  <text x="1040" y="812" class="sub">Continuous queries, continuous policy and</text>
-  <text x="1040" y="836" class="sub">continuous models over the live data</text>
+  <text x="1040" y="812" class="sub">Continuous queries and continuous models</text>
+  <text x="1040" y="836" class="sub">(policy, planner, what-if) over the live data</text>
   <text x="1040" y="874" class="sub">Time-aware: missed deadlines, stale reports</text>
   <text x="1040" y="898" class="sub">25 components · native plugins</text>
 

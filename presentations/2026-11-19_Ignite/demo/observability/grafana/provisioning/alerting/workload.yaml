@@ -16,7 +16,7 @@ groups:
     interval: 10s
     rules:
       - uid: ignite-workload-http-failure
-        title: Ignite workload HTTP failure
+        title: Model calls failing
         condition: B
         for: 0s
         noDataState: NoData
@@ -34,6 +34,38 @@ groups:
                 (sum by(workload,endpoint) (increase(ignite_workload_requests_total{status!="200"}[30s]))
                 or on(workload,endpoint) (0 * sum by(workload,endpoint) (increase(ignite_workload_requests_total[30s]))))
                 and on() (time() - max(ignite_drasi_projection_timestamp_seconds) < 8)
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            relativeTimeRange: {from: 60, to: 0}
+            model:
+              type: threshold
+              expression: A
+              refId: B
+              conditions:
+                - type: query
+                  evaluator: {type: gt, params: [0]}
+                  operator: {type: and}
+                  reducer: {type: last}
+      - uid: ignite-support-overdue
+        title: Support requests overdue (Drasi)
+        condition: B
+        for: 0s
+        noDataState: OK
+        execErrState: Error
+        annotations:
+          summary: Drasi reports customer-support requests past their 15-second target.
+        labels:
+          component: workload
+        data:
+          - refId: A
+            datasourceUid: ignite-prometheus
+            relativeTimeRange: {from: 60, to: 0}
+            model:
+              expr: >-
+                max(ignite_drasi_dashboard{view="overdue",workload="support"}
+                and on(view) (ignite_drasi_valid_until_seconds > time()))
               instant: true
               refId: A
           - refId: B

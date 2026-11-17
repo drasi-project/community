@@ -34,7 +34,7 @@ function localActions(): Plugin {
 
 export default defineConfig({
   plugins: [localActions(), react()],
-  resolve: { dedupe: ["react", "react-dom", "reveal.js"] },
+  resolve: { dedupe: ["react", "react-dom", "reveal.js", "qrcode"] },
   server: {
     proxy,
     fs: {

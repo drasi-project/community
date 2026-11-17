@@ -214,59 +214,29 @@ dd { margin: 0; line-height: 1.45; }
   .intro-story { padding: 1rem 0; }
 }
 
-.slide-deck { height: 100dvh; overflow: hidden; position: relative; background: radial-gradient(ellipse at 95% 0, #24484275, transparent 60%), #10141c; }
-.slide-deck .reveal { height: 100%; background: transparent; overflow: hidden; }
-.slide-deck .reveal .slides > section { height: 100%; padding: clamp(28px, 4.5vw, 82px); }
-.title-slide, .closing-slide, .concepts-slide { height: 100%; display: flex; flex-direction: column; text-align: left; }
-.slide-brand { color: var(--accent); font-size: clamp(30px, 2.8vw, 50px); font-weight: 700; letter-spacing: -.05em; }
-.slide-brand span { margin-left: 1.4rem; color: var(--muted); font-size: clamp(16px, 1.3vw, 24px); font-weight: 400; letter-spacing: normal; }
-.title-copy { margin: auto 0; }
-.slide-deck .reveal .title-copy h1 { margin: 0; font-size: clamp(56px, 7.5vw, 140px); letter-spacing: -.045em; line-height: 1.02; }
-.slide-deck .reveal .title-copy p { margin: 1.6rem 0 0; color: #cbd6e1; font-size: clamp(22px, 2.2vw, 42px); }
-.slide-deck .slide-meta { font-size: clamp(12px, 1vw, 18px); color: var(--muted); margin: 1rem 12rem 0 0; }
-.slide-deck .reveal .concepts-slide h1 { font-size: clamp(32px, 3.4vw, 62px); line-height: 1.1; margin: .4rem 0 .9rem; }
-.slide-deck .reveal .closing-copy h1 { font-size: clamp(36px, 4vw, 74px); line-height: 1.1; margin: .5rem 0 1.6rem; }
-.slide-deck .reveal .scenario-lead { font-size: clamp(16px, 1.45vw, 27px); line-height: 1.4; color: var(--muted); margin: 0 0 1.4rem; max-width: 70rem; }
-.scenario-body { display: grid; grid-template-columns: 3fr 2fr; gap: 2rem; align-items: start; }
-.slide-deck .reveal .scenario-caption { margin: 0 0 .5rem; font-size: clamp(12px, 1vw, 18px); color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
-.slide-deck .reveal .scenario-caption b { color: var(--text, #eeeef2); text-transform: none; letter-spacing: 0; font-size: 1.1em; }
-.scenario-endpoints { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
-.scenario-endpoints > div { padding: .9rem 1rem; border: 1px solid var(--border); border-radius: .4rem; }
-.scenario-endpoints b, .scenario-endpoints span, .scenario-endpoints em { display: block; }
-.scenario-endpoints b { font-size: clamp(16px, 1.4vw, 28px); color: var(--accent); white-space: nowrap; }
-.slide-deck .reveal .scenario-endpoints span small { display: inline; font-size: .75em; font-weight: 400; color: var(--muted); margin-left: .3em; }
-.scenario-endpoints span { margin-top: .45rem; font-size: clamp(14px, 1.3vw, 24px); font-weight: 600; }
-.scenario-endpoints em { font-style: normal; color: var(--muted); margin-top: .3rem; font-size: clamp(12px, 1vw, 18px); }
-.slide-deck .reveal ul.scenario-rules { margin: 0; padding-left: 1.2em; font-size: clamp(14px, 1.25vw, 23px); line-height: 1.45; }
-.slide-deck .reveal .scenario-question { font-size: clamp(16px, 1.5vw, 28px); margin: 1.5rem 0 0; padding: .7rem 1rem; border-left: 3px solid var(--warning); background: #ffd48a14; }
-.slide-deck .reveal .scenario-question p { margin: 0 0 .3rem; }
-.slide-deck .reveal .scenario-question ol { margin: 0; padding-left: 1.4em; display: flex; flex-wrap: wrap; gap: .2rem 2.4rem; }
-.slide-deck .reveal .scenario-question li { padding-left: .2rem; }
-.scenario-question b { color: var(--warning); }
-.drasi-strip { margin-top: auto; padding-top: 1rem; border-top: 1px solid var(--border); }
-.slide-deck .concepts-slide .slide-meta { margin-top: clamp(22px, 2.2vw, 42px); }
-.slide-deck .reveal .drasi-strip-name { margin: 0 0 .8rem; font-size: clamp(16px, 1.5vw, 28px); color: var(--muted); }
-.drasi-strip-name b { color: var(--accent); }
-.drasi-roles { display: grid; grid-template-columns: 1fr auto 1.25fr auto 1fr; gap: 1rem; align-items: stretch; }
-.drasi-roles > i { font-style: normal; align-self: center; color: var(--accent); font-size: clamp(20px, 2vw, 36px); }
-.drasi-roles > div { padding: .8rem 1rem; border: 1px solid #9ee8d755; border-radius: .4rem; background: #9ee8d70d; }
-.drasi-roles b, .drasi-roles span, .drasi-roles small { display: block; }
-.drasi-roles b { font-size: clamp(18px, 1.7vw, 31px); color: var(--accent); }
-.drasi-roles span { margin-top: .35rem; font-size: clamp(14px, 1.25vw, 23px); line-height: 1.35; }
-.drasi-roles small { margin-top: .35rem; font-size: clamp(12px, 1vw, 18px); color: var(--muted); }
-.closing-copy { margin: auto 0; }
-.slide-deck .reveal .closing-lead { font-size: clamp(25px, 2.5vw, 44px); line-height: 1.35; margin: 0 0 1.5rem; }
-.closing-copy ul { padding-left: 1.3em; font-size: clamp(20px, 1.8vw, 32px); line-height: 1.8; color: var(--accent); }
-.slide-deck .reveal .slide-resource { font-size: clamp(15px, 1.2vw, 23px); color: var(--muted); }
-.slide-navigation { position: absolute; right: clamp(28px, 4.5vw, 82px); bottom: clamp(28px, 4.5vw, 82px); z-index: 3; display: flex; align-items: center; gap: .8rem; font-size: clamp(14px, 1vw, 19px); }
-.slide-navigation button, .slide-navigation .button { border-color: #9ee8d755; color: var(--accent); background: transparent; }
 .slide-preview { position: absolute; right: 1rem; top: .5rem; z-index: 3; color: var(--muted); font-size: .75rem; }
 .private-inspector { display: flex; flex-direction: column; height: 100dvh; }
 .private-inspector > .demo { flex: 1; min-height: 0; }
-@media (max-width: 800px) {
-  .scenario-body { grid-template-columns: 1fr; gap: 1rem; }
-  .scenario-endpoints { gap: .5rem; }
-  .scenario-endpoints > div { padding: .6rem; }
-  .drasi-roles { grid-template-columns: 1fr; gap: .4rem; }
-  .drasi-roles > i { display: none; }
-}
+.demo-state { margin: .4rem 0 .8rem; padding: .5rem .7rem; border: 1px solid var(--border); border-radius: .4rem; font-size: .9rem; }
+.demo-state p { margin: .15rem 0; }
+.demo-state .ok { color: var(--accent); font-weight: 700; }
+.demo-state .changed { color: var(--warning); font-weight: 700; }
+.scenario-step { margin: .6rem 0; padding: .6rem .8rem; border: 1px solid var(--border); border-radius: .4rem; }
+.scenario-step.current { border-color: var(--accent); background: #9ee8d70d; }
+.scenario-step h3 { margin: 0 0 .5rem; font-size: 1rem; }
+.scenario-step h3 small { font-weight: 400; color: var(--muted); }
+.scenario-step > button { min-width: 16rem; }
+.scenario-step > p { margin: .3rem 0 .7rem; font-size: .88rem; color: var(--muted); }
+.scenario-step > p b { color: inherit; }
+.controls-column { display: flex; flex-direction: column; gap: .8rem; }
+.plan-table { width: 100%; border-collapse: collapse; margin: .4rem 0; font-size: .92rem; }
+.plan-table th, .plan-table td { text-align: left; padding: .35rem .5rem; border-bottom: 1px solid var(--border); }
+.plan-table thead th { color: var(--muted); font-weight: 600; font-size: .8rem; }
+.plan-table tbody th { color: var(--muted); font-weight: 600; width: 9rem; }
+.plan-table tr.proposed td { color: var(--accent); font-weight: 700; }
+.plan-table tr.stale td { color: var(--warning); text-decoration: line-through; }
+.plan-status { margin: .3rem 0 .7rem; font-weight: 600; }
+.plan-step { display: flex; gap: .8rem; align-items: center; margin: .4rem 0; }
+.plan-step > button { min-width: 14rem; }
+.plan-step > p { margin: 0; font-size: .85rem; color: var(--muted); }
+.plan-heading { margin: .9rem 0 .3rem; font-size: .95rem; }

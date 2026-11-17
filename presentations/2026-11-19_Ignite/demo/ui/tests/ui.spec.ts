@@ -1,110 +1,41 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import { applyFrame } from "../src/live";
 import { isCurrent, decisionSchema, healthSchema } from "../src/contracts";
-import { scenes, slides, products, duration, timeLabel } from "../../../presentation/scenes";
-import fs from "node:fs";
+import { scenes, slides, recaps, allSlides, dashboards } from "../../../presentation/scenes";
 import { notes } from "../../../presentation/notes";
+import { presenterScript } from "../../../presentation/script";
 import { replayClips } from "../../../presentation/replay";
+import { displayQuery } from "../../../presentation/QuerySlide";
+import fs from "node:fs";
 
 const fixture = "http://127.0.0.1:18582";
+const stageKey = "ignite-presentation-stage-v3";
 test.beforeEach(async ({ request }) => { await request.post(`${fixture}/test/reset`); });
+const mutations = async (request: import("@playwright/test").APIRequestContext) => (await (await request.get(`${fixture}/test/state`)).json()).mutations;
+// Open the desk on a given part and beat.
+async function desk(page: Page, cue: string, beat = 0, extra: object = {}) {
+  const index = scenes.findIndex(scene => scene.id === cue);
+  await page.addInitScript(([key, value]) => { if (!sessionStorage.getItem("seeded")) { localStorage.setItem(key, value); sessionStorage.setItem("seeded", "1"); } },
+    [stageKey, JSON.stringify({ cue: index, beat, view: notes[cue as keyof typeof notes].beats[beat].show, trace: null, replay: null, selection: null, short: false, ...extra })]);
+  await page.goto("/presenter");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText(scenes[index].title);
+}
+const stubGrafana = (page: Page) => page.route("http://localhost:13000/**", route => route.fulfill({ contentType: "text/html", body: "<h1>TEST Grafana</h1>" }));
 
-test("three audience slides frame a 22-minute private cue list", () => {
-  expect(slides.map(s => s.id)).toEqual(["title", "concepts", "closing"]);
+test("the talk is 22 minutes and every beat says something and shows something", () => {
   expect(scenes.reduce((sum, s) => sum + s.minutes, 0)).toBe(22);
   for (const scene of scenes) {
-    for (const value of Object.values(notes[scene.id])) expect(value.trim()).not.toBe("");
+    const cue = notes[scene.id];
+    expect(cue.beats.length).toBeGreaterThan(0);
+    for (const beat of cue.beats) {
+      expect(beat.say.trim()).not.toBe("");
+      expect(["ops", "plan", "request", ...allSlides.map(s => s.id)]).toContain(beat.show);
+    }
+    expect(cue.ifBroken.trim()).not.toBe("");
   }
-  const toolMinutes = scenes.filter(s => s.url.startsWith("http://localhost:13000")).reduce((n, s) => n + s.minutes, 0);
-  expect(toolMinutes).toBeGreaterThanOrEqual(15);
+  for (const recap of recaps) expect(Object.values(notes).some(cue => cue.beats.some(beat => beat.show === recap.id))).toBe(true);
+  expect(slides.map(s => s.id)).toEqual(["title", "concepts", "drasi", "query", "closing"]);
 });
-
-test("title contains no concepts, dashboards, instructions or backend requests", async ({ page, request }) => {
-  const loaded: string[] = [];
-  page.on("request", r => loaded.push(r.url()));
-  await page.addInitScript(() => localStorage.setItem("ignite-presentation-stage-v1", JSON.stringify({
-    index: 5, vertical: 0, view: "operations", display: "demo", replay: null, selection: null, short: false,
-  })));
-  await page.goto("/present");
-  await expect(page.locator(".title-slide")).toBeVisible();
-  await expect(page.locator(".title-slide h1")).toContainText("Monitoring");
-  const visible = await page.locator("body").innerText();
-  for (const text of ["Sources", "Continuous queries", "Start with measured", "Open real", "Candidate", "Context ready", "Full demo"]) {
-    expect(visible).not.toContain(text);
-  }
-  expect(loaded.some(url => /\/api\/|\/server\/|\/(notes|Presenter|Runbook)-/.test(url))).toBe(false);
-  expect((await (await request.get(`${fixture}/test/state`)).json()).mutations).toEqual([]);
-});
-
-test("second slide leads with the scenario, then Drasi, and navigates directly to actual Grafana", async ({ page, request }) => {
-  await page.route("http://localhost:13000/**", route => route.fulfill({ contentType: "text/html", body: "<h1>TEST Grafana navigation target</h1>" }));
-  await page.goto("/present");
-  await page.keyboard.press("ArrowRight");
-  await expect(page.getByRole("heading", { name: "Keep customer support running", exact: true })).toBeVisible();
-  await expect(page.getByText("When EU-A fails, customers stop getting answers.", { exact: true })).toBeVisible();
-  await expect(page.locator(".scenario-question li")).toHaveText(["Who is affected right now?", "What's the fastest fix that stays within company policy?", "How do we know it's really fixed?"]);
-  for (const role of ["Sources", "Continuous models", "Reactions"]) await expect(page.locator(".drasi-roles b", { hasText: role })).toBeVisible();
-  const link = page.getByRole("link", { name: "Live demo · Grafana", exact: false });
-  await expect(link).toHaveAttribute("href", products.grafana);
-  await link.click();
-  await expect(page).toHaveURL(products.grafana);
-  expect((await (await request.get(`${fixture}/test/state`)).json()).mutations).toEqual([]);
-});
-
-test("closing deep link shows only the outro and useful resource", async ({ page }) => {
-  await page.goto("/present?slide=closing");
-  await expect(page.getByRole("heading", { name: "From change to action", exact: true })).toBeVisible();
-  await expect(page.locator(".closing-copy li")).toHaveCount(3);
-  await expect(page.locator(".closing-lead")).toContainText("Keep your observability tools.");
-  await expect(page.locator(".live-banner,.view-tabs,.controls-grid")).toHaveCount(0);
-});
-
-test("private cues do not change projected slides; explicit slide selection does", async ({ page: desk, request }) => {
-  await desk.goto("/presenter");
-  const audience = await desk.context().newPage();
-  await audience.goto("/present");
-  await expect(audience.locator(".title-slide")).toBeVisible();
-  await desk.getByRole("button", { name: "Next cue", exact: true }).click();
-  await expect(desk.getByText(notes.concepts.say, { exact: true })).toBeVisible();
-  await expect(audience.locator(".title-slide")).toBeVisible();
-  await desk.getByText("Show a slide in the projected window", { exact: true }).click();
-  await desk.getByRole("button", { name: "The scenario", exact: true }).click();
-  await expect(audience.locator(".concepts-slide")).toBeVisible();
-  expect((await (await request.get(`${fixture}/test/state`)).json()).mutations).toEqual([]);
-});
-
-test("preview cannot load private notes or controls", async ({ page, request }) => {
-  await page.goto("/presenter?preview=1");
-  await expect(page.getByText("Read-only preview", { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Start demo traffic" })).toHaveCount(0);
-  await page.keyboard.press("ArrowRight");
-  expect((await (await request.get(`${fixture}/test/state`)).json()).mutations).toEqual([]);
-});
-
-test("presenter desk shows each cue's plain notes and there is no runbook page", async ({ page }) => {
-  await page.goto("/presenter");
-  await expect(page.getByText(notes.title.say, { exact: true })).toBeVisible();
-  await expect(page.getByText("Audience sees: Title slide", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Next cue", exact: true }).click();
-  await page.getByRole("button", { name: "Next cue", exact: true }).click();
-  await expect(page.getByText(notes.normal.happens, { exact: true })).toBeVisible();
-  await page.goto("/runbook");
-  await expect(page.locator(".runbook-scene")).toHaveCount(0);
-});
-
-// PRESENTER.md's run of show and script are generated from notes.ts.
-// Regenerate with: npm run sync-presenter
-function presenterScript() {
-  const rows = scenes.map(scene => `| ${timeLabel(scene.start)} | ${scene.title} | ${scene.tool} | ${notes[scene.id].summary} |`);
-  const run = ["| Time | Cue | Audience sees | You |", "|---|---|---|---|", ...rows, "| 22:00 | Questions | Closing slide | Take questions |"].join("\n");
-  const cues = scenes.map((scene, index) => {
-    const note = notes[scene.id];
-    return [`### ${index + 1}. ${scene.title} (${duration(scene.minutes)}) · ${scene.tool}`, "",
-      `- **Say:** ${note.say}`, `- **Do:** ${note.do}`, `- **Point at:** ${note.point}`,
-      `- **What happens:** ${note.happens}`, `- **If it breaks:** ${note.ifBroken}`, `- **Next:** "${note.next}"`].join("\n");
-  }).join("\n\n");
-  return `<!-- generated from presentation/notes.ts: do not edit; run npm run sync-presenter in demo/ui -->\n\n## Run of show\n\n${run}\n\n## The script\n\nThe same notes appear cue by cue on the presenter desk, under **What to do**. The wording is a guide, not a script to read aloud.\n\n${cues}\n\n<!-- end generated -->`;
-}
 
 test("PRESENTER.md matches the presenter desk notes", () => {
   const file = new URL("../../../PRESENTER.md", import.meta.url);
@@ -119,79 +50,125 @@ test("PRESENTER.md matches the presenter desk notes", () => {
   else expect(current).toBe(presenterScript());
 });
 
-test("traffic starts only through an explicit private action", async ({ page, request }) => {
-  await page.goto("/presenter");
-  expect((await (await request.get(`${fixture}/test/state`)).json()).mutations).toEqual([]);
-  await page.getByRole("button", { name: "Start demo traffic", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Stop demo traffic", exact: true })).toBeEnabled();
-  await page.getByRole("button", { name: "Stop demo traffic", exact: true }).click();
-  const mutations = (await (await request.get(`${fixture}/test/state`)).json()).mutations;
-  expect(mutations.map((m: { path: string }) => m.path)).toEqual(["/traffic", "/traffic"]);
-  expect(mutations.map((m: { input: { running: boolean } }) => m.input.running)).toEqual([true, false]);
+test("the query slide shows exactly the query Drasi runs", () => {
+  const file = fs.readFileSync(new URL("../../drasi/overdue-tasks.cypher", import.meta.url), "utf8");
+  const words = (text: string) => text.replace(/\s+/g, " ").trim();
+  expect(words(displayQuery.map(([line]) => line).join(" "))).toBe(words(file));
 });
 
-test("stale candidate retains original approval basis", async ({ page, request }) => {
-  await page.goto("/presenter");
-  await page.getByRole("button", { name: "Select proposed plan" }).click();
-  await page.getByRole("button", { name: "Batch policy: Europe only", exact: true }).click();
-  await expect(page.getByText("proposal has changed since you selected it", { exact: false })).toBeVisible();
-  await page.getByRole("button", { name: "Approve selected plan", exact: true }).click();
-  await expect(page.locator(".action-feedback > strong")).toContainText("409");
-  const state = await (await request.get(`${fixture}/test/state`)).json();
-  expect(state.mutations[1].input.basis).toBe("TEST-FIXTURE-BASIS-1");
+test("Next on the desk moves through beats and changes what the projector shows", async ({ page, request }) => {
+  await stubGrafana(page);
+  await desk(page, "title");
+  const projector = await page.context().newPage();
+  await stubGrafana(projector);
+  await projector.goto("/present");
+  await expect(projector.locator(".title-slide")).toBeVisible();
+  await page.getByRole("button", { name: "Next ▶" }).click();
+  await expect(projector.locator('[data-slide="concepts"]')).toBeVisible();
+  for (let i = 0; i < 5; i++) await page.getByRole("button", { name: "Next ▶" }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Healthy service");
+  await expect(projector.locator("iframe.stage-dashboard").first()).toBeVisible();
+  await expect(projector.locator("iframe.stage-dashboard").first()).toHaveAttribute("src", dashboards.ops);
+  await page.getByRole("button", { name: "◀ Back" }).click();
+  await expect(projector.locator('[data-slide="drasi"]')).toBeVisible();
+  expect(await mutations(request)).toEqual([]);
 });
 
-test("approval retries retain command identity and do not imply recovery", async ({ page, request }) => {
-  await page.goto("/presenter");
-  await page.getByRole("button", { name: "Select proposed plan" }).click();
-  await page.getByRole("button", { name: "Approve selected plan", exact: true }).click();
-  await expect(page.getByText("Approve selected plan: done.", { exact: true })).toBeVisible();
-  const retry = page.waitForResponse(response => response.url().endsWith("/api/approvals") && response.request().method() === "POST");
-  await page.getByRole("button", { name: "Approve selected plan", exact: true }).click();
-  expect((await (await retry).json()).duplicate).toBe(true);
-  const state = await (await request.get(`${fixture}/test/state`)).json();
-  expect(state.mutations[0].input.command_id).toBe(state.mutations[1].input.command_id);
-  await expect(page.getByText("Approved. Applying the new routes…", { exact: true })).toBeVisible();
-  await expect(page.getByText("Recovery verified", { exact: false })).toHaveCount(0);
+test("keys pressed on the projector (a clicker) drive the desk", async ({ page }) => {
+  await desk(page, "title");
+  const projector = await page.context().newPage();
+  await projector.goto("/present");
+  await projector.keyboard.press("PageDown");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("The scenario");
+  await expect(projector.locator('[data-slide="concepts"]')).toBeVisible();
+  await projector.keyboard.press("PageUp");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Title");
 });
 
-test("replay is labeled and private actions stay disabled until live state is checked", async ({ page: desk, request }) => {
-  await desk.goto("/presenter");
-  const clip = replayClips.find(c => c.scene === "failure")!;
-  await desk.getByRole("button", { name: `failure: ${clip.src ? "recorded replay" : "media unavailable"}`, exact: true }).click();
-  await expect(desk.getByRole("button", { name: "Start demo traffic" })).toBeDisabled();
-  await expect(desk.getByRole("button", { name: "Submit support request" })).toBeDisabled();
-  const audience = await desk.context().newPage();
-  await audience.goto("/present");
-  await expect(audience.getByText("REPLAY · NOT LIVE", { exact: true })).toBeVisible();
-  if (clip.src) await expect(audience.locator("video")).toHaveAttribute("src", clip.src);
-  else await expect(audience.getByText("No current recording is available.", { exact: true })).toBeVisible();
-  await expect(desk.getByRole("button", { name: "Return to verified live state" })).toBeDisabled();
-  await desk.getByLabel("I've checked the live demo is ready", { exact: false }).check();
-  await desk.getByRole("button", { name: "Return to verified live state" }).click();
-  await expect(audience.locator(".title-slide")).toBeVisible();
-  expect((await (await request.get(`${fixture}/test/state`)).json()).mutations).toEqual([]);
+test("short on time skips the optional policy beats", async ({ page }) => {
+  await desk(page, "recovery", 1);
+  await page.getByLabel("Short on time").check();
+  await page.getByRole("button", { name: "Next ▶" }).click();
+  await expect(page.locator(".say")).toContainText("Now I approve the current plan");
 });
 
-test("expired/disconnected evidence disables current candidate selection", async ({ page, request }) => {
-  await page.goto("/presenter");
-  await expect(page.getByRole("button", { name: "Select proposed plan" })).toBeEnabled();
+test("the current beat's buttons sit beside its notes, and results appear there", async ({ page, request }) => {
+  await desk(page, "failure");
+  await page.locator(".now").getByRole("button", { name: "Fail EU-A" }).click();
+  await expect(page.locator(".now .result")).toHaveText("Done.");
+  expect(await mutations(request)).toEqual([{ path: "/control", input: { run_epoch: "TEST-FIXTURE-EPOCH", revision: 1, endpoint: "EU-A", action: "fail" } }]);
+});
+
+test("traffic starts only through an explicit action", async ({ page, request }) => {
+  await desk(page, "normal");
+  expect(await mutations(request)).toEqual([]);
+  await page.locator(".now").getByRole("button", { name: "Start demo traffic" }).click();
+  await expect(page.locator(".now").getByRole("button", { name: /Start demo traffic/ })).toBeDisabled();
+  expect((await mutations(request)).map((m: { path: string }) => m.path)).toEqual(["/traffic"]);
+});
+
+test("a plan selected before a policy change is rejected, and the desk says that's expected", async ({ page, request }) => {
+  await desk(page, "recovery", 1);
+  await page.locator(".now").getByRole("button", { name: "Select proposed plan" }).click();
+  await expect(page.locator(".plan-table tr.selected")).toContainText("EU-B");
+  await page.getByRole("button", { name: "Next ▶" }).click();
+  await page.locator(".now").getByRole("button", { name: "Summaries: Europe only" }).click();
+  await expect(page.locator(".plan-table tr.stale")).toContainText("out of date");
+  await page.getByRole("button", { name: "Next ▶" }).click();
+  await expect(page.locator(".now-actions .hint")).toContainText("meant to be rejected");
+  await page.locator(".now").getByRole("button", { name: "Approve selected plan" }).click();
+  await expect(page.locator(".now .result.expected")).toContainText("Rejected, as intended");
+  const state = await mutations(request);
+  expect(state.at(-1).input.basis).toBe("TEST-FIXTURE-BASIS-1");
+});
+
+test("approving clears the selection, so it can't be approved twice by accident", async ({ page, request }) => {
+  await desk(page, "recovery", 6);
+  const now = page.locator(".now");
+  await now.getByRole("button", { name: "Select proposed plan" }).click();
+  await now.getByRole("button", { name: "Approve selected plan" }).click();
+  await expect(now.locator(".result")).toHaveText("Done.");
+  await expect(now.getByRole("button", { name: "Approve selected plan" })).toBeDisabled();
+  await expect(page.locator(".approval")).toHaveText("Approved. Applying the new routes…");
+  expect((await mutations(request)).filter((m: { path: string }) => m.path === "/approvals")).toHaveLength(1);
+});
+
+test("switching to recordings puts the part's recording on the projector and hides live buttons", async ({ page, request }) => {
+  await desk(page, "failure");
+  const projector = await page.context().newPage();
+  await projector.goto("/present");
+  await page.locator(".if-broken").getByRole("button", { name: "Use recordings from here on" }).click();
+  await expect(projector.getByText("REPLAY · NOT LIVE", { exact: true })).toBeVisible();
+  await expect(page.locator(".now").getByRole("button", { name: "Fail EU-A" })).toHaveCount(0);
+  await page.locator(".desk-alert").getByRole("button", { name: "Back to the live demo" }).click();
+  await expect(projector.getByText("REPLAY · NOT LIVE", { exact: true })).toHaveCount(0);
+  expect(await mutations(request)).toEqual([]);
+});
+
+test("out-of-date evidence disables plan selection and live buttons", async ({ page, request }) => {
+  await desk(page, "recovery", 1);
+  await expect(page.locator(".now").getByRole("button", { name: "Select proposed plan" })).toBeEnabled();
   await request.post(`${fixture}/test/expire`);
-  await expect(page.getByRole("button", { name: "Select proposed plan" })).toBeDisabled();
+  await expect(page.locator(".now").getByRole("button", { name: "Select proposed plan" })).toBeDisabled();
   await request.post(`${fixture}/test/offline`, { data: { value: true } });
-  await expect(page.getByRole("button", { name: "Start demo traffic" })).toBeDisabled();
-  await expect(page.getByText("NOT READY · Drasi's answers are unavailable or out of date", { exact: true })).toBeVisible();
+  await expect(page.locator(".badge", { hasText: "NOT READY" })).toBeVisible();
 });
 
-test("reset remains explicit and cue navigation sends no writes", async ({ page, request }) => {
-  await page.goto("/presenter");
-  await page.getByRole("button", { name: "Reset scenario...", exact: true }).click();
-  await page.getByRole("button", { name: "Cancel reset" }).click();
-  await page.getByRole("button", { name: "Next cue", exact: true }).click();
-  expect((await (await request.get(`${fixture}/test/state`)).json()).mutations).toEqual([]);
-  await page.getByRole("button", { name: "Reset scenario...", exact: true }).click();
+test("reset needs a confirmation, and moving between beats sends no writes", async ({ page, request }) => {
+  await desk(page, "title");
+  for (let i = 0; i < 6; i++) await page.getByRole("button", { name: "Next ▶" }).click();
+  expect(await mutations(request)).toEqual([]);
+  await page.getByText("Before and after the talk").click();
+  await page.getByRole("button", { name: "Reset scenario…" }).click();
   await page.getByRole("button", { name: "Confirm reset" }).click();
-  expect((await (await request.get(`${fixture}/test/state`)).json()).mutations).toEqual([{ path: "/reset", input: { run_epoch: "TEST-FIXTURE-EPOCH", revision: 1 } }]);
+  await expect.poll(() => mutations(request)).toEqual([{ path: "/reset", input: { run_epoch: "TEST-FIXTURE-EPOCH", revision: 1 } }]);
+});
+
+test("the projector preview can't reach private notes or controls", async ({ page, request }) => {
+  await page.goto("/presenter?preview=1");
+  await expect(page.getByText("PRESENTER DESK", { exact: false })).toHaveCount(0);
+  await expect(page.locator(".title-slide")).toBeVisible();
+  expect(await mutations(request)).toEqual([]);
 });
 
 test("local proxy rejects cross-origin commands and Server admin writes", async ({ request }) => {
@@ -214,19 +191,115 @@ test("current-state guard rejects mixed epochs and expired reports", async ({ re
   expect(isCurrent(d, health, Date.now() + 7200000)).toBe(false);
 });
 
+test("the query slide lists late requests live from Drasi", async ({ page, request }) => {
+  await request.post(`${fixture}/test/query`, { data: { query: "overdue-tasks", rows: {
+    a: { id: "a", run_epoch: "TEST-FIXTURE-EPOCH", workload: "support", trace_id: "abcdef1234567890", deadline_ms: Date.now() - 4000 },
+    b: { id: "b", run_epoch: "TEST-FIXTURE-EPOCH", workload: "batch", trace_id: "ffff", deadline_ms: Date.now() - 4000 } } } });
+  await page.goto("/present?view=query");
+  await expect(page.locator(".query-live")).toContainText("1 support request is late right now");
+  await expect(page.locator(".query-live")).toContainText("trace abcdef12");
+});
+
 for (const size of [{ width: 1280, height: 720 }, { width: 1920, height: 1080 }]) {
-  test(`all three audience slides fit ${size.width}x${size.height}`, async ({ page }) => {
+  test(`every slide and visual fits ${size.width}x${size.height}`, async ({ page }) => {
     await page.setViewportSize(size);
-    for (const slide of slides) {
-      await page.goto(`/present?slide=${slide.id}`);
-      const content = page.locator(`[data-slide="${slide.id}"]`);
+    for (const slide of allSlides) {
+      await page.goto(`/present?view=${slide.id}&preview=1`);
+      const content = page.locator(`[data-slide="${slide.id}"] > div`);
       await expect(content).toBeVisible();
-      const bounds = await content.evaluate(element => ({
-        w: element.clientWidth, sw: element.scrollWidth, h: element.clientHeight, sh: element.scrollHeight,
-      }));
-      expect(bounds.sw).toBeLessThanOrEqual(bounds.w + 2);
-      expect(bounds.sh).toBeLessThanOrEqual(bounds.h + 2);
+      const fits = await content.evaluate(element => element.scrollHeight <= element.clientHeight + 2 && element.scrollWidth <= element.clientWidth + 2);
+      expect(fits, slide.id).toBe(true);
       await page.screenshot({ path: `evidence/audience-${size.width}-${slide.id}.png` });
     }
   });
 }
+
+test("the desk fits a laptop screen without scrolling", async ({ browser }) => {
+  for (const cue of ["failure", "recovery"] as const) {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+    await desk(page, cue, cue === "recovery" ? 7 : 0);
+    const main = await page.locator(".desk-main").boundingBox();
+    expect(main!.y + main!.height).toBeLessThanOrEqual(900);
+    await page.close();
+  }
+});
+
+test("the oldest late request is shown on the projector with its attempts", async ({ page, request }) => {
+  await request.post(`${fixture}/test/query`, { data: { query: "overdue-tasks", rows: {
+    "TEST-TASK": { id: "TEST-TASK", run_epoch: "TEST-FIXTURE-EPOCH", workload: "support", trace_id: "TEST-TRACE", deadline_ms: Date.now() - 4000 } } } });
+  await page.route("**/api/tasks/TEST-TASK", route => route.fulfill({ json: {
+    task: { id: "TEST-TASK", content: "My order hasn't arrived.", created_ms: Date.now() - 20000, deadline_ms: Date.now() - 5000, completed_ms: null, trace_id: "abcdef123456" },
+    attempts: [503, 503, 503].map((status, i) => ({ endpoint: "EU-A", status, started_ms: Date.now() - 18000 + i * 3000 })) } }));
+  await desk(page, "who", 0);
+  const projector = await page.context().newPage();
+  await projector.route("**/api/tasks/TEST-TASK", route => route.fulfill({ json: {
+    task: { id: "TEST-TASK", content: "My order hasn't arrived.", created_ms: Date.now() - 20000, deadline_ms: Date.now() - 5000, completed_ms: null, trace_id: "abcdef123456" },
+    attempts: [503, 503, 503].map((status, i) => ({ endpoint: "EU-A", status, started_ms: Date.now() - 18000 + i * 3000 })) } }));
+  await projector.goto("/present");
+  await page.getByRole("button", { name: "Next ▶" }).click();
+  await expect(projector.locator(".request-slide h1")).toContainText("A customer has been waiting");
+  await expect(projector.locator(".timeline")).toContainText("Sent to EU-A: failed (HTTP 503) × 3");
+  await expect(projector.locator(".timeline")).toContainText("Drasi added it to the overdue list");
+});
+
+test("Next warns once when the beat's button hasn't been pressed", async ({ page, request }) => {
+  await desk(page, "failure");
+  await page.getByRole("button", { name: "Next ▶" }).click();
+  await expect(page.getByRole("alert")).toContainText("You haven't pressed Fail EU-A yet");
+  await expect(page.locator(".say")).toContainText("make EU-A");
+  await page.getByRole("button", { name: "Next ▶" }).click();
+  await expect(page.locator(".say")).toContainText("Look at the bottom row");
+  expect(await mutations(request)).toEqual([]);
+});
+
+test("recording mode shows each live part's recording as the presenter presses Next", async ({ page, request }) => {
+  await desk(page, "normal", 2);
+  const projector = await page.context().newPage();
+  await projector.goto("/present");
+  await page.getByRole("button", { name: "Use recordings from here on" }).click();
+  await expect(page.getByText("Recording mode: the projector shows recordings")).toBeVisible();
+  await page.getByRole("button", { name: "Next ▶" }).click();
+  await expect(page.locator(".now-actions")).toHaveCount(0);
+  await expect(projector.getByText("REPLAY · NOT LIVE", { exact: true })).toBeVisible();
+  await expect(projector.locator(".replay-screen h1")).toHaveText(replayClips.find(c => c.scene === "failure")!.title);
+  await page.locator(".desk-alert").getByRole("button", { name: "Back to the live demo" }).click();
+  await expect(projector.getByText("REPLAY · NOT LIVE", { exact: true })).toHaveCount(0);
+  expect(await mutations(request)).toEqual([]);
+});
+
+test("a rejected approval clears the selection, and the first Next starts the talk timer", async ({ page }) => {
+  await desk(page, "recovery", 1);
+  const now = page.locator(".now");
+  await now.getByRole("button", { name: "Select proposed plan" }).click();
+  await page.getByRole("button", { name: "Next ▶" }).click();
+  await now.getByRole("button", { name: "Summaries: Europe only" }).click();
+  await expect(now.getByRole("button", { name: /Summaries: Europe only/ })).toContainText("✓");
+  await page.getByRole("button", { name: "Next ▶" }).click();
+  await now.getByRole("button", { name: "Approve selected plan" }).click();
+  await expect(now.locator(".result.expected")).toBeVisible();
+  await expect(page.locator(".plan-table tr.stale, .plan-table tr.selected")).toHaveCount(0);
+  await expect(page.locator(".clock strong")).not.toHaveText("00:00", { timeout: 5000 });
+});
+
+test("with no desk open, the clicker still steps through the slides", async ({ page }) => {
+  await stubGrafana(page);
+  await page.goto("/present");
+  await expect(page.locator(".title-slide")).toBeVisible();
+  await page.keyboard.press("ArrowRight");
+  await expect(page.locator('[data-slide="concepts"]')).toBeVisible();
+  await page.keyboard.press("PageDown");
+  await expect(page.locator('[data-slide="drasi"]')).toBeVisible();
+  await page.keyboard.press("PageUp");
+  await expect(page.locator('[data-slide="concepts"]')).toBeVisible();
+});
+
+test("a slow click on a desk button still works while the desk refreshes", async ({ page, request }) => {
+  await desk(page, "failure");
+  const button = page.locator(".now").getByRole("button", { name: "Fail EU-A" });
+  const box = (await button.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(2500); // the desk re-renders at least twice in this time
+  await page.mouse.up();
+  await expect.poll(async () => (await mutations(request)).map((m: { path: string }) => m.path)).toEqual(["/control"]);
+});

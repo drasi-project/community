@@ -83,12 +83,14 @@ def main():
         assert command(id)["applied_revision"] == completed["completed_revision"]
         assert work.api("/health")["model"]["workloads"][1]["destination"] == "US-C"
         checks.append("concurrent duplicate command applies once; complete assignment adopted for queued request")
+        for _ in range(3):
+            work.submit()
         recovery.until(lambda rows:rows.get(id,{}).get("state")=="confirmed")
         work.wait(lambda:command(id)["status"]=="recovery_confirmed")
         c = command(id)
         assert c["recovered_ms"] >= c["applied_ms"]+5000
         assert int(work.native.runtime.sql(f"SELECT count(*) FROM ignite_breaches WHERE id='{body['id']}';",tuples=True)) == 1
-        checks.append("actual support completion at applied revision + native five-second window confirms recovery, preserving overdue history")
+        checks.append("three actual support completions at applied revision + native five-second window confirm recovery, preserving overdue history")
         recovery.until(lambda rows:rows.get(id,{}).get("state")=="unconfirmed",timeout=22)
         assert command(id)["status"]=="recovery_confirmed"
         checks.append("native success-evidence expiry retracts current recovery without erasing historical confirmation")

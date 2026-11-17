@@ -1,43 +1,63 @@
 import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
-import { scenes, shortRoute, type SlideId } from "../../../presentation/scenes";
+import { scenes, allSlides, type SlideId, type StageView } from "../../../presentation/scenes";
 import { selectionSchema, type Selection } from "./contracts";
 
-const slideSchema = z.enum(["title", "concepts", "closing"]);
+const slideIds = allSlides.map(slide => slide.id) as [SlideId, ...SlideId[]];
+export const viewSchema = z.enum([...slideIds, "ops", "plan", "request"] as [StageView, ...StageView[]]);
 const schema = z.object({
-  index: z.number().int().min(0).max(scenes.length - 1),
-  slide: slideSchema, replay: z.string().nullable(),
+  cue: z.number().int().min(0).max(scenes.length - 1),
+  beat: z.number().int().min(0),
+  view: viewSchema, trace: z.string().nullable(), replay: z.string().nullable(),
   selection: selectionSchema.nullable(), short: z.boolean(),
+  // Recording mode: the rest of the talk uses recordings instead of the live demo.
+  fallback: z.boolean().default(false),
 });
-const sharedSchema = z.object({ type: z.literal("stage"), slide: slideSchema, replay: z.string().nullable() });
+// What the desk tells the projector, and what the projector tells the desk.
+const showSchema = z.object({ type: z.literal("stage"), view: viewSchema, trace: z.string().nullable(), replay: z.string().nullable() });
+const keySchema = z.object({ type: z.literal("key"), key: z.string(), id: z.string() });
+const ackSchema = z.object({ type: z.literal("key-ack"), id: z.string() });
 export type Stage = z.infer<typeof schema>;
-const initial: Stage = { index: 0, slide: "title", replay: null, selection: null, short: false };
-const key = "ignite-presentation-stage-v2";
+const initial: Stage = { cue: 0, beat: 0, view: "title", trace: null, replay: null, selection: null, short: false, fallback: false };
+const key = "ignite-presentation-stage-v3";
+
+// The view requested in the address (?view=… or ?slide=…), if any.
+function requestedView() {
+  const params = new URLSearchParams(location.search);
+  return viewSchema.safeParse(params.get("view") ?? params.get("slide"));
+}
 
 export function useStage(preview: boolean, presenter = false) {
-  const requested = slideSchema.safeParse(new URLSearchParams(location.search).get("slide"));
+  const requested = requestedView();
   const [stage, setStage] = useState<Stage>(() => {
-    if (!presenter || preview) return { ...initial, slide: requested.success ? requested.data : "title" };
+    if (!presenter || preview) return { ...initial, view: requested.success ? requested.data : "title" };
     try { return schema.parse(JSON.parse(localStorage.getItem(key) ?? "{}")); }
     catch { return initial; }
   });
   const channel = useRef<BroadcastChannel | null>(null);
+  // Keys sent to the desk and not yet acknowledged.
+  const pending = useRef(new Set<string>());
   const current = useRef(stage);
   current.current = stage;
+  // The desk sets this to handle keys forwarded from the projector.
+  const keyHandler = useRef<((pressed: string) => void) | undefined>(undefined);
   useEffect(() => {
     if (preview) return;
     const bus = new BroadcastChannel(key);
-    const publish = () => bus.postMessage({ type: "stage", slide: current.current.slide, replay: current.current.replay });
+    const publish = () => bus.postMessage({ type: "stage", view: current.current.view, trace: current.current.trace, replay: current.current.replay });
     channel.current = bus;
     bus.onmessage = event => {
-      if (event.data?.type === "request-stage") {
-        if (presenter) publish();
+      if (event.data?.type === "request-stage") { if (presenter) publish(); return; }
+      const pressed = keySchema.safeParse(event.data);
+      if (pressed.success) {
+        if (presenter && keyHandler.current) { keyHandler.current(pressed.data.key); bus.postMessage({ type: "key-ack", id: pressed.data.id }); }
         return;
       }
-      const parsed = sharedSchema.safeParse(event.data);
-      if (parsed.success) {
-        const { slide, replay } = parsed.data;
-        const next = { ...current.current, slide, replay };
+      const ack = ackSchema.safeParse(event.data);
+      if (ack.success) { pending.current.delete(ack.data.id); return; }
+      const shown = showSchema.safeParse(event.data);
+      if (shown.success && !presenter) {
+        const next = { ...current.current, ...shown.data };
         current.current = next;
         setStage(next);
       }
@@ -54,19 +74,22 @@ export function useStage(preview: boolean, presenter = false) {
     setStage(next);
     if (!preview) {
       if (presenter) localStorage.setItem(key, JSON.stringify(next));
-      if ("slide" in patch || "replay" in patch) channel.current?.postMessage({ type: "stage", slide: next.slide, replay: next.replay });
+      if ("view" in patch || "replay" in patch || "trace" in patch)
+        channel.current?.postMessage({ type: "stage", view: next.view, trace: next.trace, replay: next.replay });
     }
   }
-  function go(index: number) { update({ index: Math.max(0, Math.min(scenes.length - 1, index)) }); }
-  function advance(direction: number) {
-    const route = scenes.map((scene, index) => ({ scene, index })).filter(({ scene }) => !current.current.short || shortRoute.includes(scene.id));
-    const candidates = route.filter(item => direction > 0 ? item.index > current.current.index : item.index < current.current.index);
-    go((direction > 0 ? candidates[0] : candidates.at(-1))?.index ?? current.current.index);
-  }
   return {
-    stage, update, go, advance,
-    showSlide: (slide: SlideId) => update({ slide }),
-    select: (selection: Selection) => update({ selection }),
+    stage, update, keyHandler,
+    show: (view: StageView, trace: string | null = null) => update({ view, trace }),
+    select: (selection: Selection | null) => update({ selection }),
+    // The projector forwards the presenter's keys (clicker, arrows) to the desk. If no desk answers
+    // within half a second, onUnanswered runs, so the slides still work with no desk open.
+    sendKey: (pressed: string, onUnanswered: () => void) => {
+      const id = crypto.randomUUID();
+      pending.current.add(id);
+      channel.current?.postMessage({ type: "key", key: pressed, id });
+      setTimeout(() => { if (pending.current.delete(id)) onUnanswered(); }, 500);
+    },
   };
 }
 export type StageControl = ReturnType<typeof useStage>;

@@ -1,59 +1,116 @@
-import { products, type SlideId } from "./scenes";
+import { useEffect, useState } from "react";
+import QRCode from "qrcode";
+import { products, recaps, speaker, type SlideId } from "./scenes";
+import { QuerySlide } from "./QuerySlide";
+import "./slides.css";
 
-export function Explanation({ slide }: { slide: SlideId }) {
+// Keep deployment names such as EU-A on one line.
+const nb = (text: string) => text.replace(/\b(EU|US)-([A-C])\b/g, "$1\u2011$2");
+
+const roles = [
+  { name: "Sources", what: "Bring in every change as it happens", here: "the AI service's database change feed" },
+  { name: "Continuous queries", what: "Keep a result current as data changes and as time passes", here: "overdue requests, deployment status, verified recovery" },
+  { name: "Continuous models", what: "Run your own logic on query results, again on every change", here: "policy (Rego), planner, what-if" },
+  { name: "Reactions", what: "Deliver each change to where it's needed", here: "stream changes to the AI service, which exports them to Grafana and Langfuse" },
+] as const;
+
+function Flow({ compact = false }: { compact?: boolean }) {
+  return <ol className={`flow ${compact ? "compact" : ""}`}>
+    {roles.map(role => <li key={role.name}><b>{role.name}</b>{!compact && <><span>{role.what}</span><small>Here: {role.here}</small></>}</li>)}
+  </ol>;
+}
+
+function RepositoryCode() {
+  const [svg, setSvg] = useState("");
+  useEffect(() => { void QRCode.toString(products.repository, { type: "svg", margin: 0, color: { dark: "#e8eef5", light: "#0000" } }).then(setSvg); }, []);
+  return <div className="qr" role="img" aria-label="QR code for the repository" dangerouslySetInnerHTML={{ __html: svg }} />;
+}
+
+export function Explanation({ slide, active = false }: { slide: SlideId; active?: boolean }) {
   if (slide === "title") return <div className="title-slide">
-    <div className="slide-brand">drasi <span>Microsoft Ignite 2026</span></div>
-    <div className="title-copy">
-      <h1>Monitoring<br />without polling</h1>
-      <p>Real-time, change-driven monitoring</p>
+    <div className="slide-brand">drasi <span>Microsoft Ignite 2026 · THR1029</span></div>
+    <div className="title-body">
+      <div className="title-copy">
+        <h1>Monitoring<br />without polling</h1>
+        <p>Answers that update the moment things change, beside the monitoring you already use</p>
+        {speaker.name && <p className="speaker"><b>{speaker.name}</b>{speaker.role && <> · {speaker.role}</>}</p>}
+      </div>
+      <Flow compact />
     </div>
-    <p className="slide-meta">THR1029 · November 19, 2026</p>
   </div>;
+
+  if (slide === "query") return <QuerySlide live={active} />;
+
+  const recap = recaps.find(r => r.id === slide);
+  if (recap) {
+    const parts = [
+      ["Sources", recap.sources], ["Continuous queries", "queries" in recap ? recap.queries : undefined],
+      ["Continuous models", recap.models], ["Reactions", recap.reactions],
+    ] as const;
+    return <div className="recap-slide">
+      <span className="eyebrow">What Drasi just did</span>
+      <h1>{nb(recap.title)}</h1>
+      <ul className="recap-saw">{recap.saw.map(item => <li key={item}>{nb(item)}</li>)}</ul>
+      <ol className="recap-roles">
+        {parts.map(([name, what]) => <li key={name} className={what ? "active" : "idle"}>
+          <b>{name}</b><span>{what ? nb(what) : "Not involved in this step"}</span>
+        </li>)}
+      </ol>
+      <p className="why"><b>Why it matters</b> {nb(recap.why)}</p>
+    </div>;
+  }
 
   if (slide === "concepts") return <div className="concepts-slide">
     <span className="eyebrow">The scenario</span>
     <h1>Keep customer support running</h1>
-    <p className="scenario-lead">An AI assistant answers customer-support questions. A background job summarizes documents. Both draw on the same limited AI model capacity, deployed in three regions, and support data must stay in Europe.</p>
-    <div className="scenario-body">
-      <div className="scenario-capacity">
-      <p className="scenario-caption">AI model capacity by region · <b>300k tokens/min total · 140k in use</b></p>
-      <div className="scenario-endpoints">
-        <div><b>Customer support</b><span>EU-A <small>Europe</small></span><em>60k of 100k tokens/min</em></div>
-        <div><b>Document summaries</b><span>EU-B <small>Europe</small></span><em>80k of 100k tokens/min</em></div>
-        <div><b>Spare capacity</b><span>US-C <small>United States</small></span><em>0 of 100k tokens/min</em></div>
-      </div>
-      </div>
-      <ul className="scenario-rules">
-        <li><b>Customer support</b> uses restricted data: Europe only</li>
-        <li><b>Document summaries</b> use public data: run anywhere</li>
-        <li>Customers expect an answer within 15 seconds</li>
-        <li>Moving work needs a human's approval</li>
-      </ul>
+    <p className="lead">Two AI workloads share the same limited model capacity, split across three deployments.</p>
+    <ul className="deployments">
+      <li><b>{nb("EU-A")}</b><small>Europe</small><span>Customer support</span><em>60k of 100k tokens/min</em></li>
+      <li><b>{nb("EU-B")}</b><small>Europe</small><span>Document summaries</span><em>80k of 100k tokens/min</em></li>
+      <li><b>{nb("US-C")}</b><small>United States</small><span>Spare</span><em>0 of 100k tokens/min</em></li>
+    </ul>
+    <ul className="rules">
+      <li><b>Customer support</b> uses restricted data: Europe only</li>
+      <li><b>Document summaries</b> use public data: anywhere</li>
+      <li>Customers expect an answer within <b>15 seconds</b></li>
+      <li>Moving work needs a <b>person's approval</b></li>
+    </ul>
+    <div className="questions">
+      <p>When {nb("EU-A")} fails, the business needs three answers:</p>
+      <ol><li>Who is affected right now?</li><li>What's the fastest fix that stays within policy?</li><li>How do we know it's really fixed?</li></ol>
     </div>
-    <div className="scenario-question">
-      <p><b>When EU-A fails, customers stop getting answers.</b></p>
-      <ol><li>Who is affected right now?</li><li>What's the fastest fix that stays within company policy?</li><li>How do we know it's really fixed?</li></ol>
+    <p className="slide-meta">Simulated AI models and capacity · real requests, monitoring and Drasi</p>
+  </div>;
+
+  if (slide === "drasi") return <div className="drasi-slide">
+    <span className="eyebrow">Drasi in one picture</span>
+    <h1>Change-driven computation</h1>
+    <Flow />
+    <div className="ownership">
+      <div><b>Built into Drasi</b><span>Sources, continuous queries kept current as data and time change, re-running your models when their inputs change, and reactions</span></div>
+      <div><b>Written for this demo</b><span>The policy, planner and what-if models, and the AI service that applies approved plans</span></div>
     </div>
-    <section className="drasi-strip" aria-label="Drasi">
-      <p className="drasi-strip-name"><b>Drasi</b> · change-driven computation answers those questions as they change</p>
-      <div className="drasi-roles">
-        <div><b>Sources</b><span>bring in changes: requests, deployment reports, policy</span></div>
-        <i aria-hidden="true">→</i>
-        <div><b>Continuous models</b><span>keep answers current as data and time change</span><small>continuous queries · continuous policy · continuous monitors</small></div>
-        <i aria-hidden="true">→</i>
-        <div><b>Reactions</b><span>publish answers to Grafana and Langfuse, and act on approval</span></div>
-      </div>
-    </section>
-    <p className="slide-meta">Simulated AI models and capacity · Real requests, telemetry and Drasi computation</p>
+    <p className="polling"><b>"Without polling"</b> No answer is recomputed on a schedule: answers change when the facts or the time do. Health checks still run, and Grafana still refreshes to draw the screen.</p>
   </div>;
 
   return <div className="closing-slide">
     <div className="slide-brand">drasi</div>
-    <div className="closing-copy">
-      <h1>From change to action</h1>
-      <p className="closing-lead">Keep your observability tools.<br />Add change-driven computation.</p>
-      <ul><li>Connect changing context</li><li>Maintain valid decisions</li><li>Verify the outcome</li></ul>
+    <div className="closing-body">
+      <div className="closing-copy">
+        <h1>Answers that change when the facts do</h1>
+        <p className="lead">Keep your monitoring tools. Add change-driven computation.</p>
+        <ul>
+          <li>Who is affected, the moment they're affected</li>
+          <li>Plans that fit your rules and the current facts</li>
+          <li>Proof a fix worked, not just that it was approved</li>
+          <li>Safe from the next failure? Answered all the time</li>
+        </ul>
+      </div>
+      <div className="closing-links">
+        <RepositoryCode />
+        <p className="repo">{products.repositoryLabel}</p>
+        <p>drasi.io</p>
+      </div>
     </div>
-    <a className="slide-resource" href={products.repository} target="_blank" rel="noopener noreferrer">github.com/drasi-project/community</a>
   </div>;
 }

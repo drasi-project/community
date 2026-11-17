@@ -1,98 +1,167 @@
-import type { SceneId } from "./scenes";
+import type { SceneId, StageView } from "./scenes";
 
-// The single source for what the presenter does. The presenter desk shows these
-// cue by cue, and PRESENTER.md's run of show and script are generated from them
+// The single source for what the presenter says and does. The presenter desk shows it beat by
+// beat, and PRESENTER.md's run of show and script are generated from it
 // (cd demo/ui && npm run sync-presenter). A test fails if PRESENTER.md drifts.
-export type Notes = {
-  summary: string;  // a few words for the run-of-show table
-  say: string;
-  do: string;
-  point: string;
-  happens: string;
-  ifBroken: string;
-  next: string;
-};
 
-export const notes: Record<SceneId, Notes> = {
+// Buttons the desk shows next to a beat. Each changes the live demo.
+export type ActionId = "start-traffic" | "stop-traffic" | "fail-eu-a" | "select-plan" | "approve-plan"
+  | "summaries-europe" | "summaries-anywhere" | "eu-a-half" | "eu-a-full";
+
+export type Beat = {
+  show: StageView;     // what the projector shows during this beat (Next switches it)
+  say: string;         // what to say, in your own words
+  do?: ActionId[];     // the buttons to press, in order, before or while saying it
+  watch?: string;      // what appears on screen
+  optional?: true;     // skipped when "Short on time" is ticked
+  expect?: "rejected"; // the approval is meant to be rejected
+  recording?: string;  // the recording shown instead in recording mode (default: the part's)
+};
+export type Cue = { summary: string; beats: Beat[]; ifBroken: string; recording?: string };
+
+export const notes: Record<SceneId, Cue> = {
   title: {
-    summary: "Introduce yourself and the session",
-    say: "This talk is about adding change-driven computation alongside the observability tools you already use.",
-    do: "Introduce yourself, then advance to the next slide.",
-    point: "The session title.",
-    happens: "Nothing changes in the demo.",
+    summary: "Introduce yourself and the talk",
+    beats: [{
+      show: "title",
+      say: "Introduce yourself. Your monitoring tells you something is wrong. This talk is about getting the next answers too: who is affected, what to do, and whether it worked, worked out the moment things change, in the tools you already use.",
+    }],
     ifBroken: "The slides don't depend on the demo. Carry on.",
-    next: "First, what does Drasi add?",
   },
   concepts: {
-    summary: "Set up the scenario, then Drasi's role",
-    say: "Here's a situation many teams running AI will recognise. A company's AI assistant answers customer-support questions, and a background job summarizes documents. Both draw on the same limited AI model capacity, deployed in three regions, each with a budget of tokens per minute. Support data is restricted, so it must stay in Europe; the summaries use public data and can run anywhere. Customers expect an answer within 15 seconds, and moving work between regions needs someone's approval. Right now EU-A serves support, EU-B runs the summaries, and US-C in the United States is spare. When EU-A fails, customers stop getting answers, and the business needs to know three things: who is affected right now, what's the fastest fix that stays within company policy, and how do we know it's really fixed? Your monitoring tools will tell you something is wrong; answering those three questions is where Drasi comes in. Drasi is change-driven computation: sources bring in changes, continuous models keep results current as data changes and as time passes, and reactions publish results or take action. The AI models and capacity are simulated; the requests, monitoring and Drasi computation are real.",
-    do: "When you've explained the slide, advance (or click Live demo · Grafana) to open Grafana.",
-    point: "The capacity in each region and what is using it, the rules on the right, then the three questions. Finish on the Drasi section at the bottom: sources, continuous models, reactions.",
-    happens: "Advancing opens Grafana's Operations dashboard in the same window.",
-    ifBroken: "If Grafana doesn't open, open http://localhost:13000/d/ignite-workload in the projected window.",
-    next: "Let's run this service in Grafana.",
+    summary: "Set up the scenario and the three questions",
+    beats: [
+      { show: "concepts", say: "A company runs two AI workloads on the same limited AI model capacity: an assistant that answers customer-support questions, and a background job that writes document summaries. The capacity is split across three deployments, EU-A and EU-B in Europe and US-C in the United States, each with 100k tokens a minute." },
+      { show: "concepts", say: "Two rules. Customer support handles restricted data, so it may only run in Europe; summaries use public data and can run anywhere. Customers expect an answer within 15 seconds, and moving work between deployments needs a person's approval." },
+      { show: "concepts", say: "When EU-A fails, the business needs three answers: who is affected right now, what's the fastest fix that stays within policy, and how do we know it's really fixed? You're about to see Drasi answer all three." },
+    ],
+    ifBroken: "Carry on; the demo doesn't depend on the slides.",
+  },
+  drasi: {
+    summary: "Explain Drasi's parts and what is built in",
+    beats: [
+      { show: "drasi", say: "Drasi is open-source change-driven computation. Sources bring in every change as it happens: here, from the AI service's database. Continuous queries keep a result up to date as changes arrive, and as time passes. Continuous models run your own logic on those results and re-run it whenever an input changes. Reactions deliver each change to where it's needed." },
+      { show: "drasi", say: "What's what. Drasi does the hard part: it keeps results up to date incrementally as changes arrive, re-checks them when time passes a deadline, and re-runs your models whenever their inputs change. You write the business logic: here, the policy, planner and what-if models, and the AI service that applies plans and exports the answers as metrics, were written for this demo. 'Without polling' is about computing the answers: nothing is recomputed on a schedule. Health checks still run every second, as in any system, and Grafana still refreshes to draw the screen; Drasi reacts to what they report." },
+    ],
+    ifBroken: "Carry on.",
   },
   normal: {
     summary: "Walk through the healthy dashboard",
-    say: "The top half is a normal service dashboard measured from real requests: call rate, errors, latency, the support queue and a Grafana alert. OpenTelemetry collects the measurements, Prometheus stores them and Grafana shows them. The bottom half is what Drasi adds: customer impact, kept current continuously.",
-    do: "Nothing to click. If traffic isn't running, click Start demo traffic on the desk.",
-    point: "Support errors 0%, Support queue 0, Support overdue 0, all three deployments Healthy, Recovery None in progress, Action needed None.",
-    happens: "The charts update every 5 seconds.",
-    ifBroken: "If the charts are empty, traffic isn't running: start it and keep talking. Never wait on stage for a chart to fill.",
-    next: "Now the deployment serving customer support fails.",
+    beats: [
+      { show: "ops", do: ["start-traffic"],
+        say: "This is the AI service's Grafana dashboard. The top half is ordinary monitoring, measured from real requests: calls, errors, answer time, the support queue and Grafana alerts. OpenTelemetry, Prometheus and Grafana; nothing new.",
+        watch: "Charts moving. Support errors 0%, Support queue 0 to 2 (green). (Start demo traffic only if it isn't already running.)" },
+      { show: "ops",
+        say: "The bottom half is Drasi's answers, worked out from changes in the AI service's database rather than from metrics. The service records every request and attempt, and checks each deployment's health every second. Drasi turns that into: overdue support requests, each deployment's status, recovery, what action is needed, and whether we'd survive losing any one deployment. They arrive as ordinary metrics, so you can alert on them like anything else.",
+        watch: "Support overdue 0, all deployments Healthy, Recovery Nothing to verify, Action needed None, Safe if one fails? Yes." },
+      { show: "drasi-healthy",
+        say: "So far Drasi has read every change in the database, kept two queries current, run the policy, planner and what-if, and pushed the answers into Grafana. Nothing new to watch: the answers sit where you already look." },
+    ],
+    ifBroken: "If the charts are empty, traffic isn't running: press Start demo traffic and keep talking.",
   },
   failure: {
     summary: "Fail EU-A",
-    say: "The monitoring stack sees failed calls and a growing queue, as it should. Drasi answers a different question: which customer requests have now missed their deadline? That answer changes just because time passes, with no new event on the request.",
-    do: "On the desk, choose Deployment EU-A and Action fail, then click Apply to deployment. Stay on the Grafana page. Optional: click Submit support request, then Open returned task trace to show that request in Langfuse.",
-    point: "Model calls by outcome, Support errors, Support queue, Deployment status, Support overdue and Action needed.",
-    happens: "In order: support → EU-A shows HTTP 503 in red; Support errors and Support queue rise; Deployment status shows EU-A Failed; after about 15 seconds Support overdue starts counting; after about 30 seconds the Grafana alert fires; Action needed changes to Approve proposed plan.",
-    ifBroken: "If nothing happens within 30 seconds, play the failure recording.",
-    next: "US-C has spare capacity. Can we use it?",
+    recording: "failure",
+    beats: [
+      { show: "ops", do: ["fail-eu-a"], say: "Now I'll make EU-A, the deployment serving customer support, fail.",
+        watch: "Within about 8 seconds: Deployment status EU-A Failed, and Action needed Approve proposed plan." },
+      { show: "ops", say: "Look at the bottom row first: EU-A Failed, and Action needed already says Approve proposed plan. Drasi has worked out a fix that fits the rules. We'll come back to it." },
+      { show: "ops", say: "The top half does its job: calls fail, errors and the queue climb, and Grafana's alert fires. Something is wrong.",
+        watch: "Support errors red, Support queue rising, Grafana alerts firing 1 or 2 (the second is an alert on Drasi's overdue answer)." },
+      { show: "ops", say: "And Support overdue is climbing. Each request has a 15-second deadline. When a request passes it, nothing happens to that request: no new row, no new metric. Drasi counts it at that exact moment anyway, because its query re-checks each request at its deadline. On the chart, the red overdue line follows the orange waiting line 15 seconds later. I'll show you how in a moment.",
+        watch: "Support overdue above 0; on the right-hand chart, the red line trails the orange one." },
+      { show: "drasi-failure", say: "Drasi saw the failed attempts and EU-A's health turn to Failed, worked out which requests were late as each deadline passed, and re-ran the planner. It didn't re-scan the database; it reacted to each change and each deadline. And notice the order: Drasi had a plan ready before Grafana's alert fired." },
+    ],
+    ifBroken: "If nothing changes within 30 seconds, press Use recordings from here on and say it's a recording.",
+  },
+  who: {
+    summary: "Show who is affected: the query and its live list",
+    beats: [
+      { show: "query", say: "Which customers are affected? This is the actual query behind Support overdue. 1: every request, as it arrives from the database. 2: not answered yet. 3: this condition becomes true at the deadline, and Drasi re-checks just that request then. 4: the result is the list itself, not just a count, and here it is, live. With Prometheus you'd get a number from a gauge or a rule evaluated every so often; here it's the exact set of late requests, kept current request by request, from one query.",
+        watch: "Under the query: how many support requests are late, and the oldest few with their traces." },
+      { show: "request", optional: true, say: "Here's one of those customers: their question, every attempt to send it to EU-A failing, and the moment its deadline passed and Drasi listed it. The same request is a trace in Langfuse, so whoever picks it up has the detail.",
+        watch: "The oldest late request, with its attempts and the moment Drasi listed it." },
+    ],
+    ifBroken: "If the list is empty, traffic has stopped: say what it would show. The request beat is skipped automatically when nothing is late.",
   },
   recovery: {
-    summary: "Approve Drasi's proposed plan",
-    say: "On paper we have plenty: 200k of healthy capacity for 140k of work. But US-C has the room, and policy denies it for support. Drasi's answer moves the summaries to US-C, which frees EU-B for support. Drasi keeps that complete plan current as things change. But approving a plan isn't the same as proving it worked.",
-    do: "Click Policy and recovery in Grafana's links. On the desk, click Select proposed plan, then Approve selected plan, once.",
-    point: "Capacity: Healthy 200k, Needed 140k. Customer support may run on: US-C Denied. Document summaries may run on: US-C Allowed. Proposed routes: support → EU-B and summaries → US-C.",
-    happens: "Decision events records the approval; Current routes change; Recovery shows Awaiting evidence, then Verified once real support requests succeed for 5 seconds. Back on Operations, the queue drains and successful calls return.",
-    ifBroken: "If Recovery stays at Awaiting evidence, say it's applied but not yet verified, and keep traffic running. Never approve a second time. If needed, play the recovery recording.",
-    next: "Here's the continuous query behind one of those answers.",
-  },
-  change: {
-    summary: "Show the query behind \"overdue\"",
-    say: "This is a continuous query, not a scheduled check. Drasi keeps its result current as changes arrive, and re-evaluates it when time alone changes the answer. These results feed the models and dashboards you've just seen.",
-    do: "Click Drasi queries in Grafana's links. Select the overdue-tasks query, click Expand query, and zoom the browser (Cmd +) so it's readable. Keep this to two minutes.",
-    point: "The deadline condition in the query.",
-    happens: "Nothing changes in the demo.",
-    ifBroken: "If the query text doesn't appear (a known Drasi Server UI issue), describe the query in one sentence and go back to Grafana.",
-    next: "Policy is another input to the same computation.",
-  },
-  policy: {
-    summary: "Restrict summaries to Europe (optional)",
-    say: "A proposal belongs to the facts that produced it. Change the policy and the answer changes, even though nothing has failed. An old approval can't silently apply a different plan.",
-    do: "On the desk, click Select proposed plan. Then click Batch policy: Europe only. When US-C turns Denied for summaries, click Approve selected plan. Afterwards, click Batch policy: Europe + US to restore the policy.",
-    point: "Document summaries may run on: US-C, and Decision events.",
-    happens: "US-C changes to Denied for summaries, and the approval is rejected; the rejection appears in Decision events.",
-    ifBroken: "Restore the policy (Batch policy: Europe + US) and describe what happened in words. Play the policy recording if needed.",
-    next: "Finally: can a healthy service survive the next failure?",
+    summary: "Approve the proposed plan; optionally show a stale approval rejected",
+    recording: "recovery",
+    beats: [
+      { show: "plan", say: "This dashboard is all Drasi. Capacity: 300k in total, 200k on healthy deployments, 140k needed. On paper there's plenty. But US-C has the free room, and customer support isn't allowed there.",
+        watch: "Customer support may run on: US-C Not allowed." },
+      { show: "plan", do: ["select-plan"], say: "The planner, our own code that Drasi re-runs on every change, respects that: move summaries to US-C, which frees EU-B for support. I'll take this plan to approve, on my laptop; in your world that's a change-approval tool.",
+        watch: "Proposed plan: support → EU-B, summaries → US-C. (Selecting changes nothing on the projector.)" },
+      { show: "plan", optional: true, recording: "policy", do: ["summaries-europe"], say: "While it waits for approval, compliance restricts summaries to Europe too. The answer changes at once: no valid plan. Plans keep both workloads running, and with EU-A down, support and summaries can't both fit in EU-B. Dropping work is a decision for a person, not the planner.",
+        watch: "Document summaries may run on: US-C Not allowed. Action needed and Proposed plan: No valid plan." },
+      { show: "plan", optional: true, recording: "policy", do: ["approve-plan"], expect: "rejected", say: "If I approve the plan I selected a moment ago, it's rejected: every plan carries the facts it was based on, and those facts changed.",
+        watch: "Last approval: Rejected." },
+      { show: "plan", optional: true, recording: "policy", do: ["summaries-anywhere"], say: "Compliance allows the US for summaries again, and the plan comes straight back.",
+        watch: "Action needed: Approve proposed plan." },
+      { show: "drasi-policy", optional: true, say: "The policy change came in as a change like any other. Drasi re-ran the policy and the planner, and the AI service refused the out-of-date approval." },
+      { show: "plan", do: ["select-plan", "approve-plan"], say: "Now I approve the current plan.",
+        watch: "Last approval: Applied, awaiting evidence. Running now changes. Action needed None. Recovery Awaiting evidence." },
+      { show: "plan", say: "Look at Recovery. Approving isn't enough to call it fixed: another Drasi query waits until the queue has cleared and at least three support requests have been answered on the new route. Only then does it say Verified.",
+        watch: "Recovery goes from Awaiting evidence to Verified, often within 30 seconds of approval. If it's already Verified, say so." },
+      { show: "ops", say: "On Operations: the queue has drained, Support overdue is back to 0 and errors are falling. EU-A is still down: we routed around it, within policy." },
+      { show: "drasi-recovery", say: "Drasi kept the policy and the plan current as health and capacity changed, and then checked the outcome. Approving a change isn't the same as fixing the problem." },
+    ],
+    ifBroken: "If Recovery stays Awaiting evidence, say it's applied but not yet verified, and carry on. Never approve twice. If the plan or the policy change doesn't behave as described, press Use recordings from here on.",
   },
   resilience: {
-    summary: "Cut EU-B's budget, then restore it",
-    say: "Everything is healthy: support on EU-A, summaries on US-C. But EU-B now has only 50k of capacity, and support needs 60k. If EU-A failed, support would have nowhere it's allowed to go. A dashboard of current health can't tell you that.",
-    do: "On the desk, click Healthy-fragile inputs · EU-B 50k. After explaining, click Restore EU-B capacity · 100k.",
-    point: "Safe if EU-A fails? and Deployment budgets. Optionally show Operations: everything is green.",
-    happens: "Safe if EU-A fails? changes to No. After restoring EU-B it changes back to Yes, with no outage.",
-    ifBroken: "Play the resilience recording.",
-    next: "That's the idea: change-driven computation alongside the tools you already use.",
+    summary: "Healthy but fragile: EU-A returns with half its capacity",
+    recording: "resilience",
+    beats: [
+      { show: "plan", do: ["eu-a-half"], say: "Later that day EU-A is fixed, but it comes back with only 50k of capacity. Nothing is broken.",
+        watch: "Deployment capacity EU-A 50k. Safe if one fails? No: not if EU-B fails. Action needed: At risk." },
+      { show: "ops", say: "Every service-health signal is green. But Drasi says we're not safe. Support now runs on EU-B. If EU-B failed, support would need 60k in Europe, and EU-A has only 50k." },
+      { show: "plan", say: "That's the what-if model: for each deployment, would every workload still fit somewhere allowed if that one failed? It re-asks whenever anything changes. A game-day question, answered all the time. And it's a metric, so you can alert on it." },
+      { show: "plan", do: ["eu-a-full"], say: "Give EU-A its full capacity back, and the answer is Yes again, without any outage.",
+        watch: "Safe if one fails? Yes. Action needed None." },
+      { show: "drasi-resilience", say: "One capacity change, and Drasi re-checked every what-if. Are we safe from the next failure? Answered before it happens." },
+    ],
+    ifBroken: "If Safe if one fails? doesn't change, press Use recordings from here on.",
   },
   closing: {
-    summary: "Three takeaways",
-    say: "Keep your observability tools. Add change-driven computation to connect changing context, keep decisions valid, and verify what actually happened.",
-    do: "Click Closing slide in Grafana's links. Take questions. When you've finished, click Stop demo traffic on the desk.",
-    point: "The three takeaways and the repository link.",
-    happens: "The projected window returns to the slides.",
+    summary: "Four takeaways, then questions",
+    beats: [
+      { show: "closing", say: "Keep your monitoring tools, and add change-driven computation next to them. Drasi turned changing facts (requests, health, capacity, policy, approvals and time) into live answers: who is late, what fits the rules, whether the fix worked, and whether we're safe from the next failure. Everything you saw is in the repository on screen. Thank you. Questions?" },
+      { show: "closing", do: ["stop-traffic"], say: "After questions, stop the demo traffic." },
+    ],
     ifBroken: "Summarize in words. Never project the desk.",
-    next: "Questions.",
   },
+};
+
+export const glossary: readonly [string, string][] = [
+  ["Deployment", "One place the AI model runs: EU-A, EU-B (Europe) or US-C (United States)"],
+  ["Capacity", "How much a deployment can handle, in tokens per minute (100k each)"],
+  ["Customer support / document summaries", "The two workloads: support needs 60k, summaries 80k"],
+  ["Plan", "Where each workload should run. The planner (demo code, re-run by Drasi on every change) proposes one; you approve it"],
+  ["Policy", "The rules: support only in Europe; summaries anywhere"],
+  ["Source", "How Drasi hears about changes; here, the database's live list of changes"],
+  ["Continuous query", "A question whose answer Drasi keeps up to date as data changes and time passes"],
+  ["Continuous model", "Your own logic (here: policy, planner, what-if) that Drasi re-runs when its inputs change"],
+  ["Reaction", "Delivers each change in an answer to where it's needed"],
+  ["Trace", "One customer request, start to finish, in Langfuse"],
+];
+
+export const questions: readonly [string, string][] = [
+  ["How is this different from a Prometheus alert?", "Prometheus evaluates numbers on an interval. Drasi keeps the actual list of affected requests current as changes arrive, joins in business facts like policy and approvals, and re-checks an item at the moment a deadline passes. Its answers still go to Prometheus and alerts, as you saw."],
+  ["Couldn't I just export 'age of the oldest waiting request'?", "That's one number. Drasi gives the exact set of late requests with their traces, updated request by request, without writing that logic yourself."],
+  ["Isn't trueLater just a timer?", "It's a re-check of one item at one moment. The claim is no scheduled scans or recomputation, not no clock."],
+  ["Grafana refreshes every 5 seconds. Isn't that polling?", "That's Grafana drawing the screen. Deciding who is late, what's allowed and which plan fits happens as changes and deadlines arrive."],
+  ["Was the alert slow on purpose?", "The alert is measured over a short window, as most are. The point isn't speed: Drasi has a plan that fits policy, not just a signal."],
+  ["Does it only work with PostgreSQL?", "No. Drasi has sources for other databases, Kafka, Kubernetes, OpenTelemetry and HTTP. This demo uses PostgreSQL's change feed and an HTTP source for Grafana's alerts."],
+  ["Are the policy, planner and what-if part of Drasi?", "No, they're this demo's own code (in the repository), with the policy written in Rego. Drasi runs them as continuous models and re-runs them when their inputs change."],
+  ["How do the answers reach Grafana?", "Drasi streams every change to the AI service, which publishes them as OpenTelemetry metrics. Prometheus stores them and Grafana shows them."],
+  ["What happens when Drasi restarts?", "It rebuilds its state from the database and resumes the change feed. Until then the tiles show Unknown."],
+  ["How does it scale?", "This demo isn't a benchmark. Each query only keeps what it needs, here the unanswered requests. For performance work, see drasi.io."],
+  ["Anything else", "\"Good question. I'll follow up; the repository on screen has the details.\""],
+];
+
+export const actionLabels: Record<ActionId, string> = {
+  "start-traffic": "Start demo traffic", "stop-traffic": "Stop demo traffic", "fail-eu-a": "Fail EU-A",
+  "select-plan": "Select proposed plan", "approve-plan": "Approve selected plan",
+  "summaries-europe": "Summaries: Europe only", "summaries-anywhere": "Summaries: Europe + US",
+  "eu-a-half": "EU-A back at 50k", "eu-a-full": "EU-A back to 100k",
 };

@@ -14,7 +14,8 @@
     "paths": {
       "react": ["node_modules/@types/react/index.d.ts"],
       "react/*": ["node_modules/@types/react/*"],
-      "reveal.js": ["node_modules/@types/reveal.js/index.d.ts"]
+      "reveal.js": ["node_modules/@types/reveal.js/index.d.ts"],
+      "qrcode": ["node_modules/@types/qrcode/index.d.ts"]
     },
     "types": ["vite/client", "node"]
   },

@@ -20,10 +20,8 @@ pub async fn current(app: &App) -> Result<Decision> {
         .and_then(|r| r.get("active"))
         .context("candidate unavailable")?;
     let d: Decision = serde_json::from_str(row["payload"].as_str().context("candidate payload")?)?;
-    ensure!(
-        d.valid && fresh(&d, now()),
-        "candidate invalid, expired or unknown"
-    );
+    ensure!(d.valid, "the facts changed; no plan fits now");
+    ensure!(fresh(&d, now()), "Drasi's plan is out of date: deployment reports have expired");
     Ok(d)
 }
 
@@ -34,11 +32,11 @@ async fn verify(client: &impl GenericClient, d: &Decision) -> Result<()> {
             && revision == d.revision
             && m.policy.revision == d.policy_revision
             && serde_json::to_value(&m)? == serde_json::to_value(&d.model)?,
-        "stale decision basis/policy"
+        "the facts behind this plan changed (policy, capacity or deployment health)"
     );
     ensure!(
         fresh(d, now()) && d.valid,
-        "decision evidence expired/unknown"
+        "Drasi's plan is out of date: deployment reports have expired"
     );
     let reports = client
         .query(
@@ -54,7 +52,7 @@ async fn verify(client: &impl GenericClient, d: &Decision) -> Result<()> {
             r.get::<_, String>(1) == epoch
                 && r.get::<_, String>(2) == e.status
                 && r.get::<_, i64>(3) > now(),
-            "observation changed or expired"
+            "a deployment's health changed after this plan was computed"
         );
     }
     let mut proposed = m;
@@ -112,7 +110,7 @@ async fn approve(app: &App, input: &Approval) -> Result<Value> {
     let d = current(app).await?;
     ensure!(
         d.basis == input.basis && d.candidate_id == input.candidate_id,
-        "stale candidate; refresh and approve explicitly"
+        "the plan you selected is out of date: the facts changed and Drasi's plan changed with them"
     );
     verify(&tx, &d).await?;
     ensure!(
@@ -120,10 +118,10 @@ async fn approve(app: &App, input: &Approval) -> Result<Value> {
             .workloads
             .iter()
             .any(|w| d.assignments[&w.id] != w.destination),
-        "candidate needs no route change"
+        "the plan needs no route change"
     );
     ensure!(tx.query_opt("SELECT id FROM ignite_commands WHERE run_epoch=$1 AND (candidate_id=$2 OR status='committed')",
-        &[&d.run_epoch,&d.candidate_id]).await?.is_none(), "candidate already approved or another command awaiting application");
+        &[&d.run_epoch,&d.candidate_id]).await?.is_none(), "this plan was already approved, or another approval is still being applied");
     tx.execute("INSERT INTO ignite_commands(id,run_epoch,candidate_id,basis,input_revision,policy_revision,decision,status,committed_ms,support_endpoint) VALUES($1,$2,$3,$4,$5,$6,$7,'committed',$8,$9)",
         &[&input.command_id,&d.run_epoch,&d.candidate_id,&d.basis,&d.revision,&d.policy_revision,
           &serde_json::to_value(&d)?,&now(),&d.assignments["support"]]).await?;
@@ -137,10 +135,7 @@ async fn approve(app: &App, input: &Approval) -> Result<Value> {
     annotation(
         &tx,
         &format!("{}-committed", input.command_id),
-        &format!(
-            "Recovery approved: support to {}, summaries to {}. Awaiting gateway adoption.",
-            d.assignments["support"], d.assignments["batch"]
-        ),
+        &format!("Approved: {}", routes(&d.assignments)),
     )
     .await?;
     let command: Value = tx
@@ -166,7 +161,7 @@ pub async fn approval(State(app): State<App>, Json(input): Json<Approval>) -> Ap
             annotation(
                 &client,
                 &format!("approval-rejected-{event_id}"),
-                &format!("Approval rejected: {error}"),
+                &format!("Rejected: {error}"),
             )
             .await?;
             Err(error.into())
@@ -313,8 +308,7 @@ pub async fn apply_once(app: &App) -> Result<()> {
         annotation(
             &tx,
             &format!("{id}-applied"),
-            &format!("Gateway adopted routes: support to {}, summaries to {}. Recovery not yet verified.",
-                current.assignments["support"], current.assignments["batch"]),
+            &format!("Applied: {}", routes(&current.assignments)),
         )
         .await?;
     }
@@ -350,8 +344,8 @@ pub async fn recovered(row: &Value) -> Result<()> {
     if current_epoch != epoch || current_revision != revision || expires <= now() {
         return Ok(());
     }
-    let evidence:bool=tx.query_one("SELECT NOT EXISTS(SELECT 1 FROM ignite_tasks WHERE run_epoch=$1 AND workload='support' AND completed_ms IS NULL AND cancelled_ms IS NULL) AND EXISTS(SELECT 1 FROM ignite_tasks WHERE run_epoch=$1 AND workload='support' AND completed_revision=$2 AND completed_ms>$3)",
-        &[&epoch,&revision,&(now()-15000)]).await?.get(0);
+    let evidence:bool=tx.query_one("SELECT NOT EXISTS(SELECT 1 FROM ignite_tasks t JOIN ignite_commands c ON c.id=$4 WHERE t.run_epoch=$1 AND t.workload='support' AND t.completed_ms IS NULL AND t.cancelled_ms IS NULL AND t.created_ms<=c.applied_ms) AND EXISTS(SELECT 1 FROM ignite_tasks WHERE run_epoch=$1 AND workload='support' AND completed_revision=$2 AND completed_ms>$3) AND (SELECT count(*) FROM ignite_tasks WHERE run_epoch=$1 AND workload='support' AND completed_revision=$2)>=3",
+        &[&epoch,&revision,&(now()-15000),&id]).await?.get(0);
     if !evidence {
         return Ok(());
     }
@@ -365,7 +359,7 @@ pub async fn recovered(row: &Value) -> Result<()> {
         &[&now(),&id,&revision]).await?;
     if changed > 0 {
         audit(&tx, Some(id), "recovery_confirmed", row).await?;
-        annotation(&tx,&format!("{id}-recovered"),"Recovery verified: successful support requests and no outstanding support tasks after the observation window.").await?;
+        annotation(&tx,&format!("{id}-recovered"),"Recovery verified: queue cleared, new requests answered").await?;
         for task in tx.query("SELECT id,trace_id FROM ignite_tasks WHERE run_epoch=$1 AND workload='support' AND completed_revision=$2",&[&epoch,&revision]).await? {
             score(&tx,&format!("{}-recovery-{id}",task.get::<_,String>(0)),&task.get::<_,String>(1),"drasi_recovery",1.,&row.to_string()).await?;
         }
@@ -446,6 +440,17 @@ async fn reset_model(input: Reset) -> Result<Value> {
         .collect::<Vec<_>>()
         .join("\n");
     tx.batch_execute(&sql).await?;
+    // Start the decision events list clean: skip undelivered events, delete delivered ones.
+    tx.execute("UPDATE ignite_publications SET delivered_ms=$1,last_error='superseded by reset' WHERE target='grafana' AND delivered_ms IS NULL",
+        &[&now()]).await?;
+    let cleared = now();
+    publication(
+        &tx,
+        &format!("reset-{epoch}-{revision}-{cleared}"),
+        "grafana",
+        &json!({"clear_before":cleared}),
+    )
+    .await?;
     audit(
         &tx,
         None,
@@ -511,7 +516,30 @@ pub async fn publish_once(app: &App) -> Result<()> {
         let target: String = row.get(1);
         let payload: Value = row.get(2);
         let outcome = async {
-            if target == "grafana" {
+            if let Some(before) = payload["clear_before"].as_i64() {
+                let password = std::env::var("GRAFANA_ADMIN_PASSWORD")?;
+                let existing: Value = app
+                    .http
+                    .get("http://127.0.0.1:13000/api/annotations")
+                    .query(&[("tags", "ignite-decision"), ("limit", "5000")])
+                    .basic_auth("admin", Some(&password))
+                    .send()
+                    .await?
+                    .error_for_status()?
+                    .json()
+                    .await?;
+                for annotation in existing.as_array().context("Grafana annotation list")? {
+                    if annotation["time"].as_i64().is_some_and(|t| t <= before) {
+                        let id = annotation["id"].as_i64().context("annotation id")?;
+                        app.http
+                            .delete(format!("http://127.0.0.1:13000/api/annotations/{id}"))
+                            .basic_auth("admin", Some(&password))
+                            .send()
+                            .await?
+                            .error_for_status()?;
+                    }
+                }
+            } else if target == "grafana" {
                 let password = std::env::var("GRAFANA_ADMIN_PASSWORD")?;
                 let existing: Value = app
                     .http
@@ -565,50 +593,114 @@ pub async fn publish_once(app: &App) -> Result<()> {
     Ok(())
 }
 
+fn routes(assignments: &std::collections::BTreeMap<String, String>) -> String {
+    format!(
+        "support → {}, summaries → {}",
+        assignments.get("support").map_or("?", String::as_str),
+        assignments.get("batch").map_or("?", String::as_str)
+    )
+}
+
+fn latest() -> &'static std::sync::Mutex<std::collections::HashMap<String, String>> {
+    static LATEST: std::sync::OnceLock<std::sync::Mutex<std::collections::HashMap<String, String>>> =
+        std::sync::OnceLock::new();
+    LATEST.get_or_init(Default::default)
+}
+
+/// Annotate a plan or what-if state only if it is still Drasi's answer two seconds later, so
+/// transitional results after a reset or configuration change don't appear as decision events.
 pub async fn maintain(name: &str, row: &Value) -> Result<()> {
     if !["allocation-results", "resilience-results"].contains(&name) {
         return Ok(());
     }
     let d: Decision = serde_json::from_str(row["payload"].as_str().context("decision payload")?)?;
     let id = format!("{name}-{}-{}", d.basis, d.state);
-    annotation(
-        &db().await?,
-        &id,
-        &format!(
-            "{}: {}. {} (model {}, policy {})",
-            if name == "allocation-results" {
-                "Recovery plan"
-            } else {
-                "Resilience after EU-A loss"
-            },
-            d.state,
-            d.reason,
-            d.revision,
-            d.policy_revision
+    latest()
+        .lock()
+        .expect("latest decision lock")
+        .insert(name.to_owned(), id.clone());
+    // The what-if only matters when every deployment is healthy; while one is down, say nothing.
+    let degraded = d.evidence.values().any(|e| e.status != "ok");
+    if d.state == "unknown" || (name == "resilience-results" && degraded) {
+        return Ok(());
+    }
+    let text = match (name, d.state.as_str()) {
+        ("allocation-results", "feasible")
+            if d.model
+                .workloads
+                .iter()
+                .all(|w| d.assignments.get(&w.id) == Some(&w.destination)) =>
+        {
+            format!("Plan: keep {}", routes(&d.assignments))
+        }
+        ("allocation-results", "feasible") => format!("Plan: {}", routes(&d.assignments)),
+        ("allocation-results", _) => "Plan: none fits policy and capacity".to_string(),
+        (_, "feasible") => "Safe if one fails? Yes".to_string(),
+        _ => format!(
+            "Safe if one fails? No: not if {} fails",
+            d.failure.as_deref().unwrap_or("any")
         ),
-    )
-    .await
+    };
+    let name = name.to_owned();
+    tokio::spawn(async move {
+        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+        if latest().lock().expect("latest decision lock").get(&name) != Some(&id) {
+            return;
+        }
+        let result = async {
+            let client = db().await?;
+            let (epoch, _, _) = model(&client).await?;
+            if epoch == d.run_epoch {
+                annotation(&client, &id, &text).await?;
+            }
+            Ok::<(), anyhow::Error>(())
+        }
+        .await;
+        if let Err(error) = result {
+            eprintln!("Decision event for {name} not recorded: {error:#}");
+        }
+    });
+    Ok(())
 }
 
-pub async fn metrics(app: &App, epoch: &str, revision: i64, model: &Model) -> Result<()> {
+pub async fn metrics(
+    app: &App,
+    client: &impl GenericClient,
+    epoch: &str,
+    revision: i64,
+    model: &Model,
+) -> Result<()> {
     use opentelemetry::KeyValue;
+    let approvals = client
+        .query_one(
+            "SELECT (SELECT jsonb_build_object('id',id,'status',status,'committed_ms',committed_ms) FROM ignite_commands WHERE run_epoch=$1 ORDER BY committed_ms DESC LIMIT 1),
+                    (SELECT max(recorded_ms) FROM ignite_audit WHERE run_epoch=$1 AND action='approval_rejected')",
+            &[&epoch],
+        )
+        .await?;
+    let latest: Option<Value> = approvals.get(0);
+    let rejected: Option<i64> = approvals.get(1);
     let rows = app.context_rows.read().await;
     let attached = app.context_ready.load(Ordering::Acquire) == STREAM_MASK;
     let at = now();
-    for sample in crate::dashboard::samples(&rows, epoch, revision, model, attached, at)? {
-        app.telemetry.dashboard_valid_until.record(
-            sample.valid_until_ms / 1000,
-            &[KeyValue::new("view", sample.view)],
-        );
-        app.telemetry.dashboard.record(
-            sample.value,
-            &[
-                KeyValue::new("view", sample.view),
-                KeyValue::new("workload", sample.workload),
-                KeyValue::new("endpoint", sample.endpoint),
-            ],
-        );
-    }
+    let mut samples = crate::dashboard::samples(&rows, epoch, revision, model, attached, at)?;
+    samples.push(crate::dashboard::last_approval(
+        &rows,
+        latest
+            .as_ref()
+            .map(|c| -> Result<_> {
+                Ok(crate::dashboard::Approval {
+                    id: c["id"].as_str().context("command id")?,
+                    status: c["status"].as_str().context("command status")?,
+                    committed_ms: c["committed_ms"].as_i64().context("committed")?,
+                })
+            })
+            .transpose()?,
+        rejected,
+        epoch,
+        at,
+    ));
+    app.telemetry.project(samples);
     app.telemetry.dashboard_timestamp.record(at / 1000, &[]);
     for (kind, name) in [
         ("policy", "policy-results"),
