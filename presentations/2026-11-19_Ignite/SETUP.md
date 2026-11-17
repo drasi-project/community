@@ -48,9 +48,13 @@ Put the three repositories side by side in one folder, on these branches:
 ```sh
 mkdir ignite && cd ignite
 git clone -b agentofreality-ignite https://github.com/drasi-project/community.git
-git clone -b agentofreality-parallel-computation-graph-recovery https://github.com/drasi-project/drasi-core.git
-git clone -b agentofreality-parallel-computation-graph-recovery https://github.com/drasi-project/drasi-server.git
+git clone -b agentofreality-ignite https://github.com/drasi-project/drasi-core.git
+git clone -b agentofreality-ignite https://github.com/drasi-project/drasi-server.git
 ```
+
+The drasi-core and drasi-server branches add two fixes the demo needs to
+`agentofreality-parallel-computation-graph-recovery` (see
+[DEVELOPERS.md](DEVELOPERS.md#dependencies-on-drasi-core-and-server)).
 
 All remaining commands run from the demo folder:
 

@@ -200,13 +200,17 @@ Evidence from every run, including failures, is kept under `.native/evidence/`.
 
 ## Dependencies on Drasi Core and Server
 
-The demo builds against the sibling `drasi-core` and `drasi-server` checkouts
-on `agentofreality-parallel-computation-graph-recovery`, not published packages.
+The demo builds against the sibling `drasi-core` and `drasi-server` checkouts,
+not published packages. Both are on `agentofreality-ignite`:
+`agentofreality-parallel-computation-graph-recovery` plus the two fixes below.
 Problems in Drasi itself are fixed in those repositories, not worked around
 here, except where noted below.
 
-The demo needs two fixes in those checkouts, made after the graph-native
-bootstrap change:
+The two fixes, made after the graph-native bootstrap change, are in review:
+[drasi-core#1029](https://github.com/drasi-project/drasi-core/pull/1029) and
+[drasi-server#243](https://github.com/drasi-project/drasi-server/pull/243). Once
+both merge, the `agentofreality-parallel-computation-graph-recovery` branches work
+on their own.
 
 - `drasi-server/src/computation.rs`: the `memoryIndexes` resource declares itself
   volatile (`QueryIndexProviderResource::handle`). Without it every query fails
