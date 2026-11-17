@@ -27,7 +27,7 @@
   <rect width="1920" height="1080" fill="#10141c"/>
   <text x="60" y="82" fill="#eeeef2" font-size="44" font-weight="700">Inside Drasi: the demo's computation graph</text>
   <text x="60" y="122" class="sub" font-size="22">Changes flow left to right. Every answer stays current as data changes and as time passes, and reactions deliver it.</text>
-  <text x="60" y="205" class="head">SOURCES</text>
+  <text x="60" y="205" class="head">SOURCE</text>
   <text x="330" y="205" class="head">CONTINUOUS QUERIES</text>
   <text x="660" y="205" class="head">CONTINUOUS MODELS</text>
   <text x="960" y="205" class="head">CONTINUOUS QUERIES</text>
@@ -45,9 +45,6 @@
   <text x="82" y="568" class="desc">allowed destinations</text>
   <text x="82" y="592" class="desc">approvals · tasks</text>
   <text x="82" y="616" class="desc">attempts · health reports</text>
-  <rect x="60" y="950" width="220" height="60" rx="12" class="box"/>
-  <text x="82" y="977" class="name">HTTP source</text>
-  <text x="82" y="998" class="desc">Grafana alert webhooks</text>
   <path d="M280,565 H305" class="line"/>
   <path d="M305,280 V930" class="line"/>
   <path d="M305,280 H328" class="flow"/>
@@ -75,10 +72,6 @@
   <text x="352" y="870" class="desc">deadline-history</text>
   <use href="#clock" x="466.8" y="856" width="18" height="18"/>
   <text x="352" y="890" class="desc">task-context · attempt-context</text>
-  <rect x="330" y="950" width="280" height="60" rx="12" class="box"/>
-  <text x="352" y="977" class="name">grafana-alerts</text>
-  <text x="352" y="998" class="desc">Diagnostics page only</text>
-  <path d="M280,980 H328" class="flow"/>
   <rect x="660" y="230" width="250" height="100" rx="12" class="model"/>
   <text x="682" y="264" class="name">policy</text>
   <text x="682" y="290" class="desc">Rego rules, given as</text>
@@ -180,5 +173,5 @@
   <text x="704" y="1053" class="sub">Reaction</text>
   <use href="#clock" x="812" y="1038" width="18" height="18"/>
   <text x="840" y="1053" class="sub">Time-aware: the answer changes as time passes, with no new data</text>
-  <text x="1860" y="1053" class="sub" text-anchor="end">47 components in one Drasi Server</text>
+  <text x="1860" y="1053" class="sub" text-anchor="end">45 components in one Drasi Server</text>
 </svg>

@@ -37,7 +37,7 @@ simulated.
    Langfuse's scores API; and an SSE stream for the presenter desk.
 4. The AI service also sends its own **telemetry** through the OpenTelemetry
    Collector to Prometheus (metrics) and Langfuse (traces). **Grafana** shows
-   both, and its alerts are posted to Drasi's HTTP source.
+   both and raises the alerts.
 5. A small **web app** serves the projected stage (slides, the two dashboards
    embedded from Grafana, the late request view) and the private presenter desk
    that drives it. Its controls only change inputs (traffic, deployment faults,
@@ -78,7 +78,7 @@ All paths are under `demo/` unless noted.
 | `plugins/optimizer` | Plan and what-if models, `ignite/assignment-plan` and `ignite/assignment-resilience` (crate `ignite-optimizer`, `good_lp` with `microlp`) |
 | `plugins/prometheus` | Prometheus reaction, `ignite/prometheus-exporter` (crate `ignite-prometheus`) |
 | `plugins/*/examples/ignite.json` | Each plugin's configuration in this graph |
-| `drasi/*.cypher` | The 35 continuous queries |
+| `drasi/*.cypher` | The 34 continuous queries |
 | `ops/config/` | Generates Drasi Server's configuration (`.native/server.json`): every source, query, model, reaction and connection |
 | `database/` | PostgreSQL schema (`schema.sql`, `workload.sql`) and scenario seed (`reset.sql`) |
 | `observability/` | Container configuration: Collector, Prometheus, Grafana dashboards, alerts and data source, and an integration test probe |
@@ -117,7 +117,7 @@ beat, what's shown) and stores it in `localStorage`.
 | `observability-stack.sh` | Runs `podman compose` for this copy only (project `$IGNITE_PROJECT`). `env` creates `.env`; `up` also writes Prometheus's scrape target for the Drasi reaction and, when it starts Grafana, makes sure `.env` has a working `IGNITE_GRAFANA_TOKEN` |
 | `observability-env.py` | Creates `.env`; `grafana-token` creates or checks the `drasi-annotations` service-account token |
 | `observability-build.sh` | Builds the test probe container image (`localhost/$IGNITE_PROJECT-probe:phase1`) |
-| `native-build.sh` | Builds Drasi Server and its UI; the Core plugins (PostgreSQL source and bootstrap, query transformer, HTTP source, HTTP and SSE sinks); the three demo plugins; the config generator and the AI service. Writes and validates `server.json` and stamps the build |
+| `native-build.sh` | Builds Drasi Server and its UI; the Core plugins (PostgreSQL source and bootstrap, query transformer, HTTP and SSE sinks); the three demo plugins; the config generator and the AI service. Writes and validates `server.json` and stamps the build |
 | `native-runtime.py` | `init` (create database), `migrate`, `reset`, `run` (delete earlier runs' rows and recorded deliveries, export the reactions' secrets, then start Server), `sql`, `stamp` |
 | `workload.py` | `run` (start the AI service), `status` (its `/health`), `approve`, `configure`, `control`, `client`, `reset` |
 | `settings.py` | Reads `ports.env` for Python and shell (`eval "$(python3 ops/settings.py)"`) |
@@ -139,7 +139,6 @@ regenerate them with `observability/grafana/dashboards.py` after changing it.
 | Setting | This copy | Original | Service |
 |---|---|---|---|
 | `IGNITE_DRASI_API_PORT` | 19421 | 18421 | Drasi Server API and UI (`/ui/`) |
-| `IGNITE_DRASI_ALERT_PORT` | 19422 | 18422 | Drasi HTTP source (Grafana alert webhooks) |
 | `IGNITE_DRASI_METRICS_PORT` | 19423 | 18423 | Drasi Prometheus reaction (`/metrics`) |
 | `IGNITE_DRASI_SSE_PORT` | 19424 | 18424 | Drasi SSE reaction for the desk (`/events`, `/snapshot/{query}`) |
 | `IGNITE_WORKLOAD_PORT` | 19500 | 18500 | AI service: gateway, controls, approval tool, gateway configuration |
@@ -226,7 +225,7 @@ query results), never from the AI service.
 | Command | Checks | Changes data? |
 |---|---|---|
 | `cd ui && npm run test:live` | Slides and desk against the real services | No |
-| `python3 tests/workload-telemetry.py` | Metrics, Langfuse traces and Grafana alerts (read from `grafana-alerts`) for real requests | Yes |
+| `python3 tests/workload-telemetry.py` | Metrics, Langfuse traces and Grafana alerts for real requests | Yes |
 | `python3 tests/decision-integration.py` | Policy, plan and what-if | Yes |
 | `python3 tests/recovery-integration.py` | Approval checked by Drasi, routes changed by its gateway reaction, stale rejection, verified recovery, annotations and scores | Yes |
 | `node ui/scripts/walkthrough.mjs capture <folder>` | The whole talk through the desk, beat by beat, as a presenter would; saves the projector and the desk at every beat (about 12 minutes) | Yes; resets at the start and the end |
@@ -271,7 +270,7 @@ here, except where [Known issues](#known-issues) says so.
 | Issue | Effect | Status |
 |---|---|---|
 | A query fed by another query receives only that query's changes, not its bootstrap rows | Query-to-query edges are used only where the upstream's rows arrive live after startup: the models' results and the recovery chain (`recovery-task-context` and `recovery-observation-context` → `recovery-results`, a workaround: it should bootstrap from their snapshots). Tiles over rows that rarely change read PostgreSQL directly instead of an upstream query: `tile-capacity` joins the deployment and report tables itself rather than reading `plan-bins`. These queries rebuild only when the whole graph starts, so restart all of Server, never one query | Open. Queries now have a `snapshot` output; try bootstrap edges from upstream queries in `ops/config/src/main.rs` |
-| Not yet ported to the new tables: `tests/workload-integration.py`, `workload-lifecycle.py`, `recovery-lifecycle.py`, `current-epoch-growth.py`, `retained-history.py`, and `ops/release.py` `cycles`, `soak` and `preflight` | They read `ignite_model`, `ignite_commands` or the AI service's removed `continuous_context`, and fail | Open |
+| Not yet ported to the new tables: `tests/workload-integration.py`, `workload-lifecycle.py`, `recovery-lifecycle.py`, and `ops/release.py` `cycles`, `soak` and `preflight` | They read `ignite_model`, `ignite_commands` or the AI service's removed `continuous_context`, and fail | Open |
 | Drasi Server's API lists no reactions (`GET …/instances/ignite/reactions` is empty) | The Server UI shows the queries and sources but none of the five native sinks; see `.native/server.json` | Drasi Server issue, not yet filed |
 | Drasi Server UI requests component details by ID, but the API now expects names | The UI shows no query text or configuration | Drasi Server issue, not yet filed |
 | Drasi Server's expanded query view uses 14 px text | Too small to read on a projector; use browser zoom | Drasi Server issue, not yet filed |

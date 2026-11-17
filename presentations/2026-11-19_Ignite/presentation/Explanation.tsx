@@ -20,10 +20,10 @@ function Flow({ compact = false }: { compact?: boolean }) {
   </ol>;
 }
 
-function RepositoryCode() {
+function DrasiCode() {
   const [svg, setSvg] = useState("");
-  useEffect(() => { void QRCode.toString(products.repository, { type: "svg", margin: 0, color: { dark: "#e8eef5", light: "#0000" } }).then(setSvg); }, []);
-  return <div className="qr" role="img" aria-label="QR code for the repository" dangerouslySetInnerHTML={{ __html: svg }} />;
+  useEffect(() => { void QRCode.toString(products.drasi, { type: "svg", margin: 0, color: { dark: "#e8eef5", light: "#0000" } }).then(setSvg); }, []);
+  return <div className="qr" role="img" aria-label="QR code for drasi.io" dangerouslySetInnerHTML={{ __html: svg }} />;
 }
 
 export function Explanation({ slide, active = false }: { slide: SlideId; active?: boolean }) {
@@ -107,9 +107,8 @@ export function Explanation({ slide, active = false }: { slide: SlideId; active?
         </ul>
       </div>
       <div className="closing-links">
-        <RepositoryCode />
-        <p className="repo">{products.repositoryLabel}</p>
-        <p>drasi.io</p>
+        <DrasiCode />
+        <p className="repo">drasi.io</p>
       </div>
     </div>
   </div>;

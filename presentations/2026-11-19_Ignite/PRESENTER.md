@@ -247,7 +247,7 @@ Say it in your own words.
 
 ### 9. Close (1½ minutes)
 
-1. **Close.** Keep your monitoring tools, and add change-driven computation next to them. Drasi turned changing facts (requests, health, capacity, policy, approvals and time) into live answers: who is late, what fits the rules, whether the fix worked, and whether we're safe from the next failure. Everything you saw is in the repository on screen. Thank you. Questions?
+1. **Close.** Keep your monitoring tools, and add change-driven computation next to them. Drasi turned changing facts (requests, health, capacity, policy, approvals and time) into live answers: who is late, what fits the rules, whether the fix worked, and whether we're safe from the next failure. To learn more, go to drasi.io, on screen. Thank you. Questions?
 2. **Close.** After questions, stop the demo traffic.
    - **Press:** Stop demo traffic
 
@@ -277,13 +277,13 @@ Say it in your own words.
 | Isn't trueLater just a timer? | It's a re-check of one item at one moment. The claim is no scheduled scans or recomputation, not no clock. |
 | Grafana refreshes every 5 seconds. Isn't that polling? | That's Prometheus and Grafana collecting and drawing, as they always do. Deciding who is late, what's allowed and which plan fits happens in Drasi as changes and deadlines arrive. |
 | Was the alert slow on purpose? | The alert is measured over a short window, as most are. The point isn't speed: Drasi has a plan that fits policy, not just a signal. |
-| Does it only work with PostgreSQL? | No. Drasi has sources for other databases, Kafka, Kubernetes, OpenTelemetry and HTTP. This demo uses PostgreSQL's change feed, and an HTTP source receives Grafana's alerts. |
+| Does it only work with PostgreSQL? | No. Drasi has sources for other databases, Kafka, Kubernetes, OpenTelemetry and HTTP. This demo uses PostgreSQL's change feed. |
 | Are the policy, planner and what-if part of Drasi? | Not yet built in: they're plugins written for this demo, in the repository. One runs Rego rules; the other is an optimizer on the open-source good_lp solver. Both are generic: the rules, workloads and capacities are configuration. Drasi runs them as continuous models and re-runs them when their inputs change. |
 | Who changes the routes? | Drasi's reaction calls the gateway's configuration API, only for an approval that still matches Drasi's current plan. The AI service just applies the call, and refuses it if the scenario changed in between. |
 | How do the answers reach Grafana? | A Drasi reaction keeps every answer as a Prometheus metric. Prometheus scrapes it and Grafana shows it. |
 | What happens when Drasi restarts? | It rebuilds its state from the database and resumes the change feed. Until then the tiles show Unknown. |
 | How does it scale? | This demo isn't a benchmark. Each query only keeps what it needs, here the unanswered requests. For performance work, see drasi.io. |
-| Anything else | "Good question. I'll follow up; the repository on screen has the details." |
+| Anything else | "Good question. I'll follow up; drasi.io, on screen, is a good place to start." |
 
 <!-- end generated -->
 

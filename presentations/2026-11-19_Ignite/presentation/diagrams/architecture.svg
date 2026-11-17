@@ -78,11 +78,11 @@
   <rect x="1050" y="640" width="810" height="320" rx="18" class="drasi"/>
   <text x="1080" y="690" class="title" font-size="32">Drasi Server</text>
   <text x="1080" y="722" class="accent">Change-driven computation</text>
-  <text x="1080" y="770" class="sub">Sources: PostgreSQL change feed; HTTP (Grafana alerts)</text>
-  <text x="1080" y="804" class="sub">35 continuous queries, time-aware</text>
+  <text x="1080" y="770" class="sub">Source: PostgreSQL change feed, with bootstrap</text>
+  <text x="1080" y="804" class="sub">34 continuous queries, time-aware</text>
   <text x="1080" y="838" class="sub">Models: Rego policy · optimizer (plan and what-if)</text>
   <text x="1080" y="872" class="sub">Reactions: Prometheus · HTTP (gateway, Grafana, Langfuse) · SSE (desk)</text>
-  <text x="1080" y="906" class="sub">47 components · native plugins</text>
+  <text x="1080" y="906" class="sub">45 components · native plugins</text>
   <path d="M340,322 H433" class="flow"/>
   <path d="M340,603 H433" class="flow"/>
   <text x="352" y="590" class="edge"></text>
@@ -100,8 +100,6 @@
   <path d="M945,842 H1048" class="flow"/>
   <text x="955" y="830" class="edge">Change feed</text>
   <text x="960" y="870" class="edge">+ bootstrap</text>
-  <path d="M1810,375 V638" class="flow"/>
-  <text x="1756" y="612" class="edge">Alerts</text>
   <path d="M1240,640 V542" class="answer"/>
   <text x="1250" y="612" class="edge-accent">Scores</text>
   <path d="M1460,640 V377" class="answer"/>

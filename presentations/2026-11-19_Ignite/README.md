@@ -168,7 +168,7 @@ just saw.
 
 - [System architecture](presentation/diagrams/architecture.svg): the AI service,
   the observability tools and Drasi Server
-- [Inside Drasi](presentation/diagrams/drasi-graph.svg): the demo's 47 components:
+- [Inside Drasi](presentation/diagrams/drasi-graph.svg): the demo's 45 components:
   sources, continuous queries, continuous models and reactions
 
 ## What's in this folder

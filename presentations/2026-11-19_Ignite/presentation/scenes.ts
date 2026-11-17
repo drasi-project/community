@@ -11,9 +11,7 @@ export const products = {
   decisions: grafana("ignite-decisions"),
   langfuse: `${settings.langfuse}/project/ignite-probe/traces?filter=isRootObservation%3Bboolean%3B%3B%3D%3Btrue`,
   server: `${settings.server}/ui/?instance=ignite`,
-  repository: "https://github.com/drasi-project/community/tree/agentofreality-ignite/presentations/2026-11-19_Ignite",
-  repositoryLabel: "github.com/drasi-project/community",
-  drasi: "https://drasi.io",
+  drasi: "https://drasi.io/",
 };
 // Dashboards as projected: kiosk mode (no Grafana toolbar), embedded in the stage.
 export const dashboards = { ops: grafana("ignite-workload", true), plan: grafana("ignite-decisions", true) } as const;
