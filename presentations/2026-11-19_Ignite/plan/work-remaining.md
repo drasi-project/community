@@ -5,26 +5,17 @@ Remove an item when it is done.
 
 ## Before the go/no-go decision (Nov 18)
 
-- **Phase 8a verification.** Full walkthrough, integration tests rewritten
-  against Drasi's outputs, new fallback recordings, and a go/no-go assessment.
+- **Phase 8a verification.** Integration tests are ported and passing; still to
+  do: lifecycle tests, the full walkthrough, new fallback recordings, release
+  cycles and a go/no-go assessment.
 - **Timings in the script are unverified.** "Within about 8 seconds", "plan before
   the alert", "Verified within about 30 seconds" and "about 20 seconds to start
   after a reset" must be measured on the rework and the script corrected.
-- **Old tests and release checks.** `tests/workload-integration.py`,
-  `workload-lifecycle.py`, `recovery-lifecycle.py`, `current-epoch-growth.py`,
-  `retained-history.py` and `ops/release.py` (cycles, soak, preflight) still use
-  the old schema. Port or delete them (assigned to 8a).
-- **Leftovers to remove** (assigned to 8a): `demo/policies/placement.rego`
-  (unused), `ignite_breaches` (published, never written), the "blocked by policy"
-  label for HTTP 403 in `RequestView.tsx`.
-- **Remove the Grafana alert path into Drasi** (decided): the HTTP source, its
-  query and Grafana's contact point. Nothing in the talk uses them.
 
 ## Speaker material
 
 - **"Drasi in one picture", second beat.** About 110 spoken words (about 45
   seconds). Keep for now; the presenter will review and decide whether to trim.
-- **Closing slide link** points to https://drasi.io/ (decided).
 
 ## Known compromises
 
