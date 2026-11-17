@@ -1577,6 +1577,7 @@ dependencies = [
  "axum",
  "drasi-computation-contracts",
  "drasi-computation-plugin-sdk",
+ "drasi-core-types",
  "futures-util",
  "serde",
  "serde_json",

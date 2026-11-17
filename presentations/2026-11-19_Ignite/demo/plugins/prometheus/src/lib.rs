@@ -1,24 +1,28 @@
 //! `ignite/prometheus-exporter`: a native sink that keeps the current rows of
 //! each bound output and serves them in the Prometheus text format.
 //!
-//! Contract: `plan/contracts.md` (Prometheus reaction). This crate is the
-//! phase-0 skeleton: factory metadata and configuration are final; component
-//! construction is implemented by workstream 4.
+//! Contract: `plan/contracts.md` §8 (Prometheus reaction) and §9 (metrics).
 //!
-//! Layout: `config` and `text` (exposition format) are plain Rust with
-//! host-free unit tests; this file is the thin SDK wrapper.
+//! Layout: `config`, `state` (current rows per output, snapshot and buffered
+//! changes) and `text` (exposition format) are plain Rust with host-free unit
+//! tests; `component` is the SDK lifecycle and HTTP listener; this file is the
+//! factory.
 use anyhow::Result;
 use drasi_computation_contracts::*;
 use drasi_computation_plugin_sdk::{
-    Capabilities, ConfigSchema, ConfigType, ControlSender, CreateRequest, CreatedComponent,
-    Factory, FactoryMetadata, NativeOutputSnapshots, PluginDefinition,
+    Capabilities, Component, ConfigSchema, ConfigType, ControlSender, CreateRequest,
+    CreatedComponent, Factory, FactoryMetadata, NativeOutputSnapshots, PluginDefinition,
 };
 use std::sync::Arc;
 
 pub const IMPLEMENTATION: &str = "ignite/prometheus-exporter";
 /// One input port; every bound output arrives on it (route by binding).
 pub const IN: &str = "in";
+mod component;
 pub mod config;
+pub mod state;
+#[cfg(test)]
+mod tests;
 pub mod text;
 pub use config::{Config, READY_METRIC};
 
@@ -50,6 +54,8 @@ impl Factory for ExporterFactory {
             completion: Some(SinkCompletion::Accepted),
             capabilities: Capabilities {
                 binds_inputs: true,
+                // Volatile: there is no owned state, so an erasing dispose is a no-op.
+                erases_owned_state: true,
                 ..Capabilities::default()
             },
         }
@@ -64,11 +70,19 @@ impl Factory for ExporterFactory {
         &self,
         request: &CreateRequest,
         _: ControlSender,
-        _snapshots: Option<NativeOutputSnapshots>,
+        snapshots: Option<NativeOutputSnapshots>,
     ) -> Result<CreatedComponent> {
-        self.metadata().configuration.validate(&request.configuration)?;
-        Config::parse(&request.configuration)?;
-        anyhow::bail!("{IMPLEMENTATION}: not implemented yet (workstream 4)")
+        self.metadata()
+            .configuration
+            .validate(&request.configuration)?;
+        let config = Config::parse(&request.configuration)?;
+        Ok(Component::Sink(Box::new(component::ExporterSink::new(
+            self.metadata().descriptor(request.id.clone())?,
+            config,
+            &request.inputs,
+            snapshots,
+        )?))
+        .into())
     }
 }
 
@@ -82,20 +96,3 @@ pub fn plugin() -> Result<PluginDefinition> {
 }
 #[cfg(feature = "dynamic-plugin")]
 drasi_computation_plugin_sdk::export_computation_plugin!(plugin());
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn example_configuration_is_valid() {
-        let example: serde_json::Value = serde_json::from_str(include_str!("../examples/ignite.json")).unwrap();
-        ExporterFactory.metadata().configuration.validate(&example).unwrap();
-        let config = Config::parse(&example).unwrap();
-        assert_eq!(config.outputs.len(), config.metrics.len());
-        let mut bad = example.clone();
-        bad["metrics"]["overdue"][0]["metric"] = serde_json::json!("ignite-drasi");
-        assert!(Config::parse(&bad).is_err());
-        assert!(plugin().is_ok());
-    }
-}

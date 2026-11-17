@@ -15,7 +15,11 @@ pub struct Family {
 pub fn render(families: &[Family]) -> String {
     let mut out = String::new();
     for family in families {
-        out.push_str(&format!("# HELP {} {}\n", family.name, escape_help(&family.help)));
+        out.push_str(&format!(
+            "# HELP {} {}\n",
+            family.name,
+            escape_help(&family.help)
+        ));
         out.push_str(&format!("# TYPE {} gauge\n", family.name));
         for (labels, value) in &family.series {
             out.push_str(&family.name);
@@ -36,13 +40,19 @@ fn escape_help(text: &str) -> String {
     text.replace('\\', "\\\\").replace('\n', "\\n")
 }
 fn escape_label(text: &str) -> String {
-    text.replace('\\', "\\\\").replace('"', "\\\"").replace('\n', "\\n")
+    text.replace('\\', "\\\\")
+        .replace('"', "\\\"")
+        .replace('\n', "\\n")
 }
 fn number(value: f64) -> String {
     if value.is_nan() {
         "NaN".into()
     } else if value.is_infinite() {
-        if value > 0.0 { "+Inf".into() } else { "-Inf".into() }
+        if value > 0.0 {
+            "+Inf".into()
+        } else {
+            "-Inf".into()
+        }
     } else {
         format!("{value}")
     }

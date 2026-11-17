@@ -21,4 +21,9 @@ sha2 = "0.10"
 drasi-computation-contracts = { path = "../../../../../../drasi-core/components/computation-contracts" }
 drasi-computation-plugin-sdk = { path = "../../../../../../drasi-core/components/computation-plugin-sdk" }
 axum = "0.8"
-tokio = { version = "1", features = ["rt", "net", "sync", "macros"] }
+tokio = { version = "1", features = ["rt", "net", "sync", "macros", "time"] }
+
+[dev-dependencies]
+drasi-computation-plugin-sdk = { path = "../../../../../../drasi-core/components/computation-plugin-sdk", features = ["test-support"] }
+drasi-core-types = { path = "../../../../../../drasi-core/core-types" }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "io-util"] }
