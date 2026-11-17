@@ -314,6 +314,24 @@ Required outcomes (unit tests in `solve.rs`, from today's `domain/src/decision.r
 | US-C failed | feasible | at_risk, first failure EU-A |
 | A report expired | unknown | unknown |
 
+Implementation notes (workstream 3, done): `solve` (lexicographic `good_lp`
+model, exact integer re-check), `model` (rows → problem → elements, hashes) and
+`component` (snapshot bootstrap, coalescing, one solver thread per component,
+watchdog at `timeLimitMs` + 500 ms) with host-free and SDK-level tests. Precise
+where the tables above leave room:
+
+- `basis` hashes the run, the revision, and each item (key, demand, current),
+  bin (key, capacity, health as `healthy`/`unhealthy`) and eligibility
+  (`allowed`/`denied`) that was solved; `failed` ↔ `throttled` does not change it.
+- `unhealthy_bins` is a count. `Resilience` also carries `reason` and `revision`
+  (additive). The `Assignment` demand property is named by `items.demand`
+  (`demand_tpm` here).
+- Until a changed input's solve finishes (`coalesceMs` plus solve time), the
+  previous answer stays published; a superseded result is never emitted.
+- With the baseline infeasible, `first_failure` is the lowest-sorted healthy bin
+  (every loss leaves no plan). When the inputs are unknown, no `LossScenario`
+  is emitted.
+
 ## 8. Prometheus reaction
 
 Factory `ignite/prometheus-exporter` (`plugins/prometheus`), sink, one input
