@@ -152,8 +152,7 @@ services:
       GF_NEWS_NEWS_FEED_ENABLED: "false"
       GF_PLUGINS_PREINSTALL_DISABLED: "true"
       GF_SERVER_ROOT_URL: http://localhost:${IGNITE_GRAFANA_PORT:?}
-      # Read by provisioning/alerting/workload.yaml.
-      IGNITE_WORKLOAD_PORT: ${IGNITE_WORKLOAD_PORT:?}
+      # Read by provisioning/alerting/workload.yaml: the contact point posts to Drasi's HTTP source.
       IGNITE_DRASI_ALERT_PORT: ${IGNITE_DRASI_ALERT_PORT:?}
       # The projected stage shows dashboards inside the slides page, read-only, without sign-in.
       GF_SECURITY_ALLOW_EMBEDDING: "true"

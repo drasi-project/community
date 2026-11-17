@@ -1,14 +1,15 @@
 apiVersion: 1
 contactPoints:
   - orgId: 1
-    name: ignite-workload-webhook
+    name: drasi-http-source
     receivers:
-      - uid: ignite-workload-webhook
+      - uid: drasi-http-source
         type: webhook
         disableResolveMessage: false
         settings:
-          # Grafana expands $IGNITE_WORKLOAD_PORT from its environment (compose.yaml, from ports.env).
-          url: http://host.containers.internal:$IGNITE_WORKLOAD_PORT/alerts/grafana
+          # Drasi's HTTP source (grafana-input). Grafana expands $IGNITE_DRASI_ALERT_PORT
+          # from its environment (compose.yaml, from ports.env).
+          url: http://host.containers.internal:$IGNITE_DRASI_ALERT_PORT/alerts/grafana
           httpMethod: POST
 groups:
   - orgId: 1
@@ -34,7 +35,7 @@ groups:
               expr: >-
                 (sum by(workload,endpoint) (increase(ignite_workload_requests_total{status!="200"}[30s]))
                 or on(workload,endpoint) (0 * sum by(workload,endpoint) (increase(ignite_workload_requests_total[30s]))))
-                and on() (time() - max(ignite_drasi_projection_timestamp_seconds) < 8)
+                and on() count(ignite_workload_queue_depth)
               instant: true
               refId: A
           - refId: B
@@ -64,9 +65,12 @@ groups:
             datasourceUid: ignite-prometheus
             relativeTimeRange: {from: 60, to: 0}
             model:
+              # Drasi's Prometheus reaction (tile-overdue). No series is 0 only while the
+              # reaction's input is ready; otherwise Unknown, which is NoData (OK).
               expr: >-
-                max(ignite_drasi_dashboard{view="overdue",workload="support"}
-                and on(view) (ignite_drasi_valid_until_seconds > time()))
+                max((max(ignite_drasi_overdue_requests{workload="support"})
+                and on() (drasi_reaction_input_ready{output="overdue"} == 1))
+                or on() ((drasi_reaction_input_ready{output="overdue"} == 1) * 0))
               instant: true
               refId: A
           - refId: B

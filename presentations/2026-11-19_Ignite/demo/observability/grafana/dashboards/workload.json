@@ -2,7 +2,7 @@
   "uid": "ignite-workload",
   "title": "AI service · Operations",
   "schemaVersion": 39,
-  "version": 23,
+  "version": 27,
   "refresh": "5s",
   "time": {
     "from": "now-5m",
@@ -394,7 +394,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "ignite_workload_queue_depth{workload=\"support\"} and on() (time() - max(ignite_drasi_projection_timestamp_seconds) < 5)",
+          "expr": "ignite_workload_queue_depth{workload=\"support\"}",
           "instant": true,
           "range": false,
           "interval": "1s"
@@ -493,7 +493,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "((sum(increase(ignite_workload_requests_total{status!=\"200\"}[30s])) > bool 0) or vector(0)) + ((max(ignite_drasi_dashboard{view=\"overdue\",workload=\"support\"} and on(view) (ignite_drasi_valid_until_seconds > time())) > bool 0) or vector(0))",
+          "expr": "((sum(increase(ignite_workload_requests_total{status!=\"200\"}[30s])) > bool 0) or vector(0)) + ((max((max(ignite_drasi_overdue_requests{workload=\"support\"}) and on() (drasi_reaction_input_ready{output=\"overdue\"} == 1)) or on() ((drasi_reaction_input_ready{output=\"overdue\"} == 1) * 0 + 0)) > bool 0) or vector(0))",
           "instant": true,
           "range": false,
           "interval": "1s"
@@ -715,7 +715,7 @@
         },
         {
           "refId": "B",
-          "expr": "ignite_drasi_dashboard{view=\"overdue\",workload=\"support\"} and on(view) (ignite_drasi_valid_until_seconds > time())",
+          "expr": "max((max(ignite_drasi_overdue_requests{workload=\"support\"}) and on() (drasi_reaction_input_ready{output=\"overdue\"} == 1)) or on() ((drasi_reaction_input_ready{output=\"overdue\"} == 1) * 0 + 0))",
           "legendFormat": "overdue (Drasi)"
         }
       ],
@@ -805,7 +805,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "ignite_drasi_dashboard{view=\"overdue\",workload=\"support\"} and on(view) (ignite_drasi_valid_until_seconds > time())",
+          "expr": "max((max(ignite_drasi_overdue_requests{workload=\"support\"}) and on() (drasi_reaction_input_ready{output=\"overdue\"} == 1)) or on() ((drasi_reaction_input_ready{output=\"overdue\"} == 1) * 0 + 0))",
           "instant": true,
           "range": false,
           "interval": "1s"
@@ -900,11 +900,11 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "ignite_drasi_dashboard{view=\"endpoint\"} and on(view) (ignite_drasi_valid_until_seconds > time())",
+          "expr": "(ignite_drasi_deployment_status and on() (drasi_reaction_input_ready{output=\"deployments\"} == 1))",
           "instant": true,
           "range": false,
           "interval": "1s",
-          "legendFormat": "{{endpoint}}"
+          "legendFormat": "{{deployment}}"
         }
       ],
       "fieldConfig": {
@@ -977,7 +977,7 @@
         "showPercentChange": false,
         "text": {
           "titleSize": 15,
-          "valueSize": 24
+          "valueSize": 22
         }
       }
     },
@@ -998,7 +998,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "ignite_drasi_dashboard{view=\"recovery\"} and on(view) (ignite_drasi_valid_until_seconds > time())",
+          "expr": "max((max(ignite_drasi_recovery_state) and on() (drasi_reaction_input_ready{output=\"recovery\"} == 1)) or on() ((drasi_reaction_input_ready{output=\"recovery\"} == 1) * 0 + 2))",
           "instant": true,
           "range": false,
           "interval": "1s"
@@ -1095,7 +1095,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "((ignite_drasi_dashboard{view=\"approval\"} and on(view) (ignite_drasi_valid_until_seconds > time())) unless on() ((ignite_drasi_dashboard{view=\"approval\"} and on(view) (ignite_drasi_valid_until_seconds > time())) == 3 and on() (max(ignite_drasi_dashboard{view=\"endpoint\"} and on(view) (ignite_drasi_valid_until_seconds > time())) > 0))) or on() (((ignite_drasi_dashboard{view=\"approval\"} and on(view) (ignite_drasi_valid_until_seconds > time())) == 3 and on() (max(ignite_drasi_dashboard{view=\"endpoint\"} and on(view) (ignite_drasi_valid_until_seconds > time())) > 0)) * 0)",
+          "expr": "(max(ignite_drasi_action_needed) and on() (drasi_reaction_input_ready{output=\"action\"} == 1))",
           "instant": true,
           "range": false,
           "interval": "1s"
@@ -1196,7 +1196,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "((ignite_drasi_dashboard{view=\"resilience\"} and on(view) (ignite_drasi_valid_until_seconds > time())) == 1) unless on() (max(ignite_drasi_dashboard{view=\"endpoint\"} and on(view) (ignite_drasi_valid_until_seconds > time())) > 0)",
+          "expr": "(ignite_drasi_safe_if_one_fails and on() (drasi_reaction_input_ready{output=\"resilience\"} == 1)) != 0",
           "instant": true,
           "range": false,
           "interval": "1s",
@@ -1204,19 +1204,11 @@
         },
         {
           "refId": "B",
-          "expr": "((ignite_drasi_dashboard{view=\"resilience\"} and on(view) (ignite_drasi_valid_until_seconds > time())) == 0) unless on() (max(ignite_drasi_dashboard{view=\"endpoint\"} and on(view) (ignite_drasi_valid_until_seconds > time())) > 0)",
+          "expr": "(ignite_drasi_safe_if_one_fails and on() (drasi_reaction_input_ready{output=\"resilience\"} == 1)) == 0",
           "instant": true,
           "range": false,
           "interval": "1s",
-          "legendFormat": "not if {{endpoint}} fails"
-        },
-        {
-          "refId": "C",
-          "expr": "(max(ignite_drasi_dashboard{view=\"endpoint\"} and on(view) (ignite_drasi_valid_until_seconds > time())) > 0) * 0 + 2",
-          "instant": true,
-          "range": false,
-          "interval": "1s",
-          "legendFormat": " "
+          "legendFormat": "not if {{lost}} fails"
         }
       ],
       "fieldConfig": {

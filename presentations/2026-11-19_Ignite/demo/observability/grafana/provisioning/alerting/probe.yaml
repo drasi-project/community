@@ -17,7 +17,7 @@ policies:
     group_interval: 5s
     repeat_interval: 1h
     routes:
-      - receiver: ignite-workload-webhook
+      - receiver: drasi-http-source
         object_matchers:
           - [component, "=", workload]
         group_by: [alertname, workload, endpoint]
