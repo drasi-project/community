@@ -1598,9 +1598,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "axum",
- "chrono",
- "futures-util",
- "ignite-domain",
  "ignite-settings",
  "opentelemetry 0.33.1",
  "opentelemetry-otlp",

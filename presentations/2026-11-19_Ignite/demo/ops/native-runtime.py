@@ -88,7 +88,8 @@ def prune():
     # Every query snapshots these tables on start but only reads the current
     # run, so earlier runs' rows only slow startup. Delete them while Server is
     # stopped, in batches below the source's per-transaction change limit.
-    for table in ["ignite_attempts", "ignite_breaches", "ignite_receipts", "ignite_tasks"]:
+    for table in ["ignite_attempts", "ignite_breaches", "ignite_receipts", "ignite_tasks",
+                  "ignite_approvals"]:
         removed = 0
         while True:
             output = sql(f"""DELETE FROM {table} WHERE ctid IN (
@@ -101,6 +102,11 @@ def prune():
                 break
         if removed:
             print(f"pruned {removed} earlier-run rows from {table}", file=sys.stderr)
+    # Delivery IDs name the producer run, which a Server restart replaces, so recorded
+    # deliveries can never repeat; approval state keeps the gateway API idempotent.
+    removed = int(sql("DELETE FROM ignite_deliveries;").split()[-1])
+    if removed:
+        print(f"pruned {removed} recorded deliveries", file=sys.stderr)
 
 
 def main():
@@ -110,8 +116,9 @@ def main():
     elif action == "init":
         print(sql((DEMO / "database/schema.sql").read_text()), end="")
         print(sql((DEMO / "database/workload.sql").read_text()), end="")
-        # Initial fixture is explicit once; subsequent starts never seed or reset.
-        if sql("SELECT run_epoch FROM ignite_scenario;").count("(0 rows)"):
+        # Initial fixture is explicit once (or after migrating from the JSON model, which leaves
+        # the scenario tables empty); subsequent starts never seed or reset.
+        if sql("SELECT 1 FROM ignite_scenario s JOIN ignite_workloads w USING (run_epoch) LIMIT 1;").count("(0 rows)"):
             print(sql((DEMO / "database/reset.sql").read_text()), end="")
     elif action == "reset":
         print(sql((DEMO / "database/reset.sql").read_text()), end="")

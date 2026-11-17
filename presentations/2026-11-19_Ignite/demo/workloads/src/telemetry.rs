@@ -1,6 +1,6 @@
 use anyhow::Result;
 use opentelemetry::{
-    metrics::{Counter, Gauge, Histogram, ObservableGauge},
+    metrics::{Counter, Gauge, Histogram},
     trace::{
         Span, SpanContext, SpanId, SpanKind, TraceContextExt, TraceFlags, TraceId, TraceState,
         Tracer, TracerProvider,
@@ -13,14 +13,7 @@ use opentelemetry_sdk::{
     trace::{SdkTracer, SdkTracerProvider},
     Resource,
 };
-use std::{
-    collections::BTreeMap,
-    sync::{Arc, Mutex},
-    time::Duration,
-};
-
-/// Latest dashboard projection: (view, workload, endpoint, value, valid until in seconds).
-type Projection = Arc<Mutex<Vec<(&'static str, String, String, i64, i64)>>>;
+use std::time::Duration;
 
 pub struct Telemetry {
     traces: SdkTracerProvider,
@@ -33,13 +26,7 @@ pub struct Telemetry {
     pub duration: Histogram<f64>,
     pub answer: Histogram<f64>,
     pub queue: Gauge<u64>,
-    pub capacity: Gauge<u64>,
     pub failure: Gauge<u64>,
-    pub assessment: Gauge<u64>,
-    projection: Projection,
-    _dashboard: ObservableGauge<i64>,
-    pub dashboard_timestamp: Gauge<i64>,
-    _dashboard_valid_until: ObservableGauge<i64>,
 }
 
 impl Telemetry {
@@ -68,40 +55,6 @@ impl Telemetry {
             .build();
         use opentelemetry::metrics::MeterProvider;
         let meter = metrics.meter("ignite.workload");
-        // Observable gauges report only the latest projection, so a label set that is no longer
-        // current (such as the deployment named by an infeasible resilience result) disappears.
-        let projection = Projection::default();
-        let current = projection.clone();
-        let dashboard = meter
-            .i64_observable_gauge("ignite_drasi_dashboard")
-            .with_callback(move |observer| {
-                for (view, workload, endpoint, value, _) in current.lock().unwrap().iter() {
-                    observer.observe(
-                        *value,
-                        &[
-                            KeyValue::new("view", *view),
-                            KeyValue::new("workload", workload.clone()),
-                            KeyValue::new("endpoint", endpoint.clone()),
-                        ],
-                    );
-                }
-            })
-            .build();
-        let current = projection.clone();
-        let dashboard_valid_until = meter
-            .i64_observable_gauge("ignite_drasi_valid_until_seconds")
-            .with_callback(move |observer| {
-                let views: BTreeMap<_, _> = current
-                    .lock()
-                    .unwrap()
-                    .iter()
-                    .map(|(view, _, _, _, until)| (*view, *until))
-                    .collect();
-                for (view, until) in views {
-                    observer.observe(until, &[KeyValue::new("view", view)]);
-                }
-            })
-            .build();
         Ok(Self {
             tracer: traces.tracer("ignite.workload"),
             requests: meter.u64_counter("ignite_workload_requests").build(),
@@ -125,35 +78,12 @@ impl Telemetry {
                 ])
                 .build(),
             queue: meter.u64_gauge("ignite_workload_queue_depth").build(),
-            capacity: meter.u64_gauge("ignite_workload_capacity_tpm").build(),
             failure: meter
                 .u64_gauge("ignite_workload_last_request_failed")
                 .build(),
-            assessment: meter.u64_gauge("ignite_drasi_assessment").build(),
-            projection,
-            _dashboard: dashboard,
-            dashboard_timestamp: meter
-                .i64_gauge("ignite_drasi_projection_timestamp_seconds")
-                .build(),
-            _dashboard_valid_until: dashboard_valid_until,
             traces,
             metrics,
         })
-    }
-
-    pub fn project(&self, samples: Vec<crate::dashboard::Sample>) {
-        *self.projection.lock().unwrap() = samples
-            .into_iter()
-            .map(|s| {
-                (
-                    s.view,
-                    s.workload,
-                    s.endpoint,
-                    s.value,
-                    s.valid_until_ms / 1000,
-                )
-            })
-            .collect();
     }
 
     pub fn span(

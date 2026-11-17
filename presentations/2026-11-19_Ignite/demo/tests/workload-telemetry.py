@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Require actual workload metrics, correlated Langfuse spans and new Grafana transitions."""
+"""Require actual workload metrics, correlated Langfuse spans and new Grafana transitions.
+
+Grafana's contact point posts to Drasi's HTTP source; its alerts are read from the
+`grafana-alerts` query (plan/contracts.md section 4), not from the AI service."""
 import base64
 import importlib.util
 import json
@@ -24,6 +27,12 @@ work = load("workload", "workload-integration.py")
 obs = load("observability", "observability-smoke.py")
 
 
+def control(action, deployment="EU-A"):
+    # Simulated fault mode only (AI service demo control); see plan/contracts.md section 10.
+    state = work.api("/health")
+    return work.api("/control", {"run_epoch": state["run_epoch"], "deployment": deployment, "action": action})
+
+
 def main():
     env = obs.environment()
     auth = base64.b64encode(f"admin:{env['GRAFANA_ADMIN_PASSWORD']}".encode()).decode()
@@ -38,15 +47,15 @@ def main():
         return float(rows[0]["value"][1]) if rows else 0
 
     # Finish a successful request before the new measured incident, so previous alert state resolves.
-    work.control("restore")
+    control("restore")
     warm, _ = work.submit()
     work.wait(lambda: work.api("/tasks/" + warm["id"])["task"]["completed_ms"])
     time.sleep(20)
-    alerts = work.native.Attachment("alert-context")
+    alerts = work.native.Attachment("grafana-alerts")
     evidence = {"role": "actual-support-workload", "dashboard_uid": "ignite-workload"}
     try:
         baseline = metric()
-        work.control("fail")
+        control("fail")
         started = int(time.time() * 1000)
         body, trace = work.submit()
         evidence.update({"task_id": body["id"], "trace": trace, "started_ms": started})
@@ -56,8 +65,6 @@ def main():
             for r in rows.values()), timeout=100)
         row = next(r for r in firing.values() if r["status"]=="firing" and r["event_ms"]>=started and "Model calls failing" in r["title"])
         evidence["firing"] = row
-        firing_payload = json.loads(work.native.runtime.sql(
-            f"SELECT payload FROM ignite_alerts WHERE id='{row['id']}';",tuples=True))
         evidence["firing_wait_seconds"] = round((time.time()*1000-started)/1000,3)
         query = urllib.parse.urlencode({"traceId":trace["trace_id"],"fields":"core,basic,metadata","limit":100})
         url = settings.url("LANGFUSE")+"/api/public/v2/observations?" + query
@@ -69,29 +76,19 @@ def main():
         evidence["observations"], evidence["trace_wait_seconds"] = obs.wait_for("exact Langfuse task/trace correlation",correlated)
         assert any(r["name"].startswith("attempt · ") for r in evidence["observations"])
         assert any(r["name"]=="request received" and r["id"]==trace["root_span_id"] and r["isRootObservation"] for r in evidence["observations"])
-        work.control("restore")
+        control("restore")
         work.wait(lambda: work.api("/tasks/" + body["id"])["task"]["completed_ms"])
         alerts.until(lambda rows: rows.get(row["id"],{}).get("status")=="resolved"
                      and rows[row["id"]]["event_ms"]>row["event_ms"],timeout=100)
         evidence["resolved"] = alerts.rows[row["id"]]
-        # Replay the actual captured older notification, twice; no fabricated alert payload.
-        work.api("/alerts/grafana",firing_payload)
-        work.api("/alerts/grafana",firing_payload)
-        replayed = work.native.Attachment("alert-context")
-        try:
-            assert replayed.rows[row["id"]]["status"]=="resolved"
-            assert replayed.rows[row["id"]]["event_ms"]==evidence["resolved"]["event_ms"]
-        finally:
-            replayed.close()
-        evidence["older_duplicate_firing_rejected"] = True
         evidence["query_events"] = alerts.history
         path = DEMO / ".native/evidence/workload-telemetry.json"
         path.write_text(json.dumps(evidence,indent=2))
-        print(json.dumps({"passed":"real measured workload -> Grafana metric/firing/resolved -> durable Drasi CQ; exact Langfuse task trace",
+        print(json.dumps({"passed":"real measured workload -> Grafana metric/firing/resolved -> Drasi HTTP source -> CQ; exact Langfuse task trace",
                           "task_id":body["id"], "trace_id":trace["trace_id"],"evidence":str(path)},indent=2))
     finally:
         alerts.close()
-        work.control("restore")
+        control("restore")
 
 
 if __name__ == "__main__":

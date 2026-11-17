@@ -30,12 +30,12 @@ pub struct Input {
     running: bool,
 }
 
-pub async fn control(State(app): State<App>, Json(input): Json<Input>) -> Api {
-    let (epoch, _, _) = model(&db().await?).await?;
+pub async fn control(State(app): State<App>, Payload(input): Payload<Input>) -> Api {
+    let (epoch, _) = scenario::current(&db().await?).await?;
     let mut traffic = app.traffic.lock().await;
     if input.running {
         if epoch != input.run_epoch {
-            return Err(anyhow::anyhow!("stale traffic scenario").into());
+            return Err(Error::conflict("stale traffic scenario"));
         }
         if traffic.epoch.as_ref() != Some(&epoch) || traffic.until_ms <= now() {
             *traffic = Traffic {
@@ -61,12 +61,12 @@ pub async fn tick(app: &App) {
         return;
     }
     let result = async {
-        let (current, _, _) = model(&db().await?).await?;
+        let (current, _) = scenario::current(&db().await?).await?;
         anyhow::ensure!(current == epoch, "Scenario changed; start traffic again");
         for workload in ["support", "batch"] {
             let _response = submit(
                 State(app.clone()),
-                Json(Submit {
+                Payload(Submit {
                     id: format!("{epoch}-traffic-{workload}-{}", identity()),
                     run_epoch: epoch.clone(),
                     workload: workload.into(),
@@ -76,7 +76,7 @@ pub async fn tick(app: &App) {
                 }),
             )
             .await
-            .map_err(|e| e.0)?;
+            .map_err(|e| e.error)?;
             traffic.submitted += 1;
         }
         Ok::<(), anyhow::Error>(())

@@ -431,6 +431,32 @@ does not retry it; malformed requests answer 400 (permanent); a database outage
 answers 503 (the sink retries). Idempotency holds across Server restarts because
 it is keyed on the approval's state as well as the delivery ID.
 
+Implementation details (workstream 1, `workloads/src/external.rs`):
+
+- **Responses.** Apply answers `{"result":"applied","revision":N}`,
+  `{"result":"duplicate","status":…}` or `{"result":"conflict","reason":…}`;
+  reject and verified answer `{"result":"rejected"|"verified"}` or
+  `{"result":"no-op","status":…}`.
+- **Permanent errors.** 400 for a missing `x-drasi-delivery-id`, a body that
+  does not parse, a `candidate_id`/`basis` that differs from the stored approval,
+  or `assignments` that do not name every workload once with a known deployment
+  (a structural check; any route is accepted, policy is never consulted). 404
+  for an unknown approval ID.
+- **Earlier run.** A pending approval from before a reset is rejected by apply
+  with "The demo was reset after this approval" (`conflict`).
+- **Routes.** Apply updates only routes whose deployment changes, setting their
+  `approval` and `applied_ms`, then raises the revision once.
+- **`decided_ms`** is the time of the approval's latest status change
+  (applied, rejected or verified), so `approval-events` sees each change.
+- **`ignite_breaches`** is no longer written: the AI service's observer that
+  persisted `deadline-history` rows (Drasi results) is removed. The table stays
+  (empty) until workstream 7 drops `breach-history` or reads `deadline-history`.
+- **Revision.** Desk configuration (capacity, destinations) and apply each raise
+  `ignite_scenario.revision` by one per transaction that changes a row;
+  simulation controls never do.
+- **Prune.** `ops/native-runtime.py run` also deletes earlier-run approvals and
+  all `ignite_deliveries` before Server starts (a restart issues new delivery IDs).
+
 Demo controls stay demo controls: reset may delete the previous run's Grafana
 annotations (tag `ignite-decision`) as today; that is the demo driver, not
 Drasi. The Grafana contact point posts to the Drasi HTTP source at

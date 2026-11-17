@@ -1,32 +1,33 @@
+//! The AI service: the application (gateway, retries, telemetry), its simulated external
+//! systems (three model deployments, their health monitor, the change-approval tool and the
+//! gateway configuration API), and the demo driver (traffic, controls, reset). It reads no
+//! Drasi results: every write is a simulation, a demo control, or a call it received.
 mod content;
-mod dashboard;
-mod decisions;
+#[cfg(test)]
+mod db_tests;
+mod external;
 mod model;
-mod observer;
+mod scenario;
 mod telemetry;
 mod traffic;
 
 use anyhow::{Context, Result};
 use axum::{
-    extract::{Path, State},
+    extract::{FromRequest, Path, Request, State},
     http::StatusCode,
     response::{IntoResponse, Response},
     routing::{get, post},
     Json, Router,
 };
-use model::{port, Model};
+use model::port;
 use opentelemetry::{
     trace::{Span, Status},
     KeyValue,
 };
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{
-    collections::BTreeMap,
-    sync::{
-        atomic::{AtomicU64, Ordering},
-        Arc,
-    },
+    sync::Arc,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 use tokio_postgres::{Client, NoTls};
@@ -62,38 +63,83 @@ async fn db() -> Result<Client> {
 struct App {
     http: reqwest::Client,
     telemetry: Arc<telemetry::Telemetry>,
-    context_ready: Arc<AtomicU64>,
-    context_rows: Arc<tokio::sync::RwLock<BTreeMap<String, BTreeMap<String, Value>>>>,
     traffic: Arc<tokio::sync::Mutex<traffic::Traffic>>,
 }
-struct Error(anyhow::Error);
+
+/// An API error: 400 malformed (permanent), 404 unknown, 409 rejected demo control,
+/// 503 database unavailable (callers such as Drasi's HTTP sink retry it).
+struct Error {
+    status: StatusCode,
+    error: anyhow::Error,
+}
+impl Error {
+    fn with(status: StatusCode, message: &str) -> Self {
+        Self {
+            status,
+            error: anyhow::anyhow!(message.to_owned()),
+        }
+    }
+    fn bad_request(message: &str) -> Self {
+        Self::with(StatusCode::BAD_REQUEST, message)
+    }
+    fn not_found(message: &str) -> Self {
+        Self::with(StatusCode::NOT_FOUND, message)
+    }
+    fn conflict(message: &str) -> Self {
+        Self::with(StatusCode::CONFLICT, message)
+    }
+    fn bad(error: anyhow::Error) -> Self {
+        Self {
+            status: StatusCode::BAD_REQUEST,
+            error,
+        }
+    }
+}
+/// A database that cannot be reached (as opposed to one that refused a statement).
+fn unavailable(error: &anyhow::Error) -> bool {
+    error.chain().any(|cause| {
+        cause
+            .downcast_ref::<tokio_postgres::Error>()
+            .is_some_and(|e| match e.as_db_error() {
+                None => {
+                    e.is_closed()
+                        || std::error::Error::source(e).is_some_and(|s| s.is::<std::io::Error>())
+                }
+                Some(db) => ["08", "57P"].iter().any(|c| db.code().code().starts_with(c)),
+            })
+    })
+}
 impl<E: Into<anyhow::Error>> From<E> for Error {
     fn from(e: E) -> Self {
-        Self(e.into())
+        let error = e.into();
+        Self {
+            status: if unavailable(&error) {
+                StatusCode::SERVICE_UNAVAILABLE
+            } else {
+                StatusCode::CONFLICT
+            },
+            error,
+        }
     }
 }
 impl IntoResponse for Error {
     fn into_response(self) -> Response {
-        eprintln!("Request failed: {:#}", self.0);
-        (
-            StatusCode::CONFLICT,
-            Json(json!({"error":self.0.to_string()})),
-        )
-            .into_response()
+        eprintln!("Request failed ({}): {:#}", self.status, self.error);
+        (self.status, Json(json!({"error":self.error.to_string()}))).into_response()
     }
 }
 type Api = std::result::Result<Json<Value>, Error>;
 
-async fn model(client: &impl tokio_postgres::GenericClient) -> Result<(String, i64, Model)> {
-    let row = client
-        .query_one(
-            "SELECT run_epoch, revision, payload FROM ignite_model WHERE id='active'",
-            &[],
-        )
-        .await?;
-    let model: Model = serde_json::from_value(row.get(2))?;
-    model.validate()?;
-    Ok((row.get(0), row.get(1), model))
+/// A JSON body; anything malformed is a permanent 400, so retrying callers stop.
+struct Payload<T>(T);
+impl<S: Send + Sync, T: DeserializeOwned> FromRequest<S> for Payload<T> {
+    type Rejection = Error;
+    async fn from_request(request: Request, state: &S) -> std::result::Result<Self, Error> {
+        match Json::<T>::from_request(request, state).await {
+            Ok(Json(value)) => Ok(Payload(value)),
+            Err(rejection) => Err(Error::bad_request(&rejection.body_text())),
+        }
+    }
 }
 
 #[derive(Deserialize, Serialize)]
@@ -107,7 +153,7 @@ struct Submit {
     destination: Option<String>,
 }
 
-async fn submit(State(app): State<App>, Json(input): Json<Submit>) -> Api {
+async fn submit(State(app): State<App>, Payload(input): Payload<Submit>) -> Api {
     ensure!(
         !input.id.is_empty()
             && input.id.len() <= 100
@@ -121,20 +167,12 @@ async fn submit(State(app): State<App>, Json(input): Json<Submit>) -> Api {
         .await?;
     tx.batch_execute("SELECT pg_advisory_xact_lock(190621)")
         .await?;
-    let (epoch, _, m) = model(&tx).await?;
+    let scenario = scenario::load(&tx).await?;
+    let epoch = scenario.run_epoch.clone();
     ensure!(input.run_epoch == epoch, "stale submission epoch");
-    ensure!(
-        m.workloads.iter().any(|w| w.id == input.workload),
-        "unknown workload"
-    );
+    let route = scenario.route(&input.workload)?;
     if let Some(destination) = &input.destination {
-        m.dispatch(&input.workload, destination)?;
-        ensure!(
-            m.workloads
-                .iter()
-                .any(|w| w.id == input.workload && &w.destination == destination),
-            "destination is not the committed route"
-        );
+        ensure!(destination == route, "destination is not the configured route");
     }
     if let Some(row) = tx
         .query_opt(
@@ -178,61 +216,6 @@ async fn submit(State(app): State<App>, Json(input): Json<Submit>) -> Api {
     ))
 }
 
-async fn health(State(app): State<App>) -> Api {
-    let client = db().await?;
-    let (epoch, revision, m) = model(&client).await?;
-    let pending: i64 = client
-        .query_one(
-            "SELECT count(*) FROM ignite_tasks WHERE run_epoch=$1 AND completed_ms IS NULL",
-            &[&epoch],
-        )
-        .await?
-        .get(0);
-    let rows = app.context_rows.read().await;
-    let coherent = coherent_context(&rows, &epoch, revision)
-        && app.context_ready.load(Ordering::Acquire) == decisions::STREAM_MASK;
-    drop(rows);
-    let traffic = app.traffic.lock().await.snapshot();
-    Ok(Json(
-        json!({"run_epoch":epoch,"revision":revision,"model":m,"pending":pending,
-        "continuous_context":if coherent {"ready"} else {"unknown"},
-        "streams_attached":app.context_ready.load(Ordering::Acquire)==decisions::STREAM_MASK,
-        "task_target_seconds":15,"report_expiry_seconds":8,"traffic":traffic}),
-    ))
-}
-
-fn coherent_context(
-    rows: &BTreeMap<String, BTreeMap<String, Value>>,
-    epoch: &str,
-    revision: i64,
-) -> bool {
-    let Some(model) = rows.get("model-context").and_then(|r| r.get("active")) else {
-        return false;
-    };
-    if model["run_epoch"] != epoch || model["revision"] != revision {
-        return false;
-    }
-    let Some(reports) = rows.get("endpoint-freshness") else {
-        return false;
-    };
-    reports.len() == 3
-        && ["EU-A", "EU-B", "US-C"].iter().all(|id| {
-            reports.get(*id).is_some_and(|r| {
-                r["run_epoch"] == epoch
-                    && r["status"] != "unknown"
-                    && r["expires_ms"]
-                        .as_i64()
-                        .is_some_and(|expires| expires > now())
-            })
-        })
-}
-
-async fn context(State(app): State<App>) -> Json<Value> {
-    Json(
-        json!({"streams_attached":app.context_ready.load(Ordering::Acquire)==decisions::STREAM_MASK,
-        "queries":*app.context_rows.read().await}),
-    )
-}
 async fn task(Path(id): Path<String>) -> Api {
     let client = db().await?;
     let row = client
@@ -253,73 +236,6 @@ async fn task(Path(id): Path<String>) -> Api {
     ))
 }
 
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct Control {
-    run_epoch: String,
-    revision: i64,
-    endpoint: String,
-    action: String,
-}
-async fn control(Json(input): Json<Control>) -> Api {
-    let mut client = db().await?;
-    let tx = client.transaction().await?;
-    tx.batch_execute("SELECT pg_advisory_xact_lock(190619)")
-        .await?;
-    let (epoch, revision, mut m) = model(&tx).await?;
-    let before = serde_json::to_value(&m)?;
-    ensure!(
-        epoch == input.run_epoch && revision == input.revision,
-        "stale control basis"
-    );
-    let e = m
-        .endpoints
-        .iter_mut()
-        .find(|e| e.id == input.endpoint)
-        .context("unknown endpoint")?;
-    match input.action.as_str() {
-        "fail" => e.mode = "failed".into(),
-        "throttle" => e.mode = "throttled".into(),
-        "pause-reports" => e.reporting = false,
-        "resume-reports" => e.reporting = true,
-        "restore" => {
-            e.mode = "ok".into();
-            e.reporting = true;
-        }
-        _ => return Err(anyhow::anyhow!("unknown control action").into()),
-    }
-    m.validate()?;
-    let payload = serde_json::to_value(&m)?;
-    if payload == before {
-        return Ok(Json(
-            json!({"run_epoch":epoch,"revision":revision,"model":m}),
-        ));
-    }
-    tx.execute(
-        "UPDATE ignite_model SET payload=$1,revision=revision+1 WHERE id='active'",
-        &[&payload],
-    )
-    .await?;
-    tx.execute(
-        "UPDATE ignite_endpoints SET available=$1,revision=revision+1 WHERE id=$2",
-        &[
-            &(m.endpoints
-                .iter()
-                .find(|e| e.id == input.endpoint)
-                .context("endpoint")?
-                .mode
-                == "ok"),
-            &input.endpoint,
-        ],
-    )
-    .await?;
-    decisions::audit(&tx,None,"control",&json!({"run_epoch":epoch,"revision":revision+1,"endpoint":input.endpoint,"action":input.action})).await?;
-    tx.commit().await?;
-    Ok(Json(
-        json!({"run_epoch":epoch,"revision":revision+1,"model":m}),
-    ))
-}
-
 #[derive(Deserialize, Serialize)]
 struct Inference {
     task_id: String,
@@ -336,22 +252,26 @@ struct EndpointApp {
     id: String,
 }
 
+/// A simulated deployment's own health endpoint, polled by the simulated health monitor.
 async fn endpoint_health(State(state): State<EndpointApp>) -> Api {
     let client = db().await?;
-    let (epoch, _, m) = model(&client).await?;
-    let e = m
-        .endpoints
-        .iter()
-        .find(|e| e.id == state.id)
-        .context("endpoint")?;
+    let (epoch, _) = scenario::current(&client).await?;
+    let row = client
+        .query_one(
+            "SELECT mode, reporting FROM ignite_simulation WHERE deployment=$1",
+            &[&state.id],
+        )
+        .await?;
     Ok(Json(
-        json!({"run_epoch":epoch,"id":e.id,"status":e.mode,"reporting":e.reporting}),
+        json!({"run_epoch":epoch,"id":state.id,"status":row.get::<_,String>(0),"reporting":row.get::<_,bool>(1)}),
     ))
 }
 
+/// A simulated model deployment: answers, or fails (503) or throttles (429) per its fault mode
+/// and token quota. It knows nothing of routes, policy or plans.
 async fn infer(
     State(state): State<EndpointApp>,
-    Json(input): Json<Inference>,
+    Payload(input): Payload<Inference>,
 ) -> std::result::Result<Response, Error> {
     let mut client = db().await?;
     let tx = client.transaction().await?;
@@ -361,31 +281,10 @@ async fn infer(
             .get::<_, bool>(0),
         "control or reset pending; retry admission"
     );
-    let (epoch, revision, m) = model(&tx).await?;
-    ensure!(
-        epoch == input.run_epoch && revision == input.model_revision,
-        "stale dispatch basis"
-    );
-    let e = m.dispatch(&input.workload, &state.id)?;
-    ensure!(
-        m.workloads
-            .iter()
-            .any(|w| w.id == input.workload && w.destination == state.id),
-        "not the committed destination"
-    );
-    let row = tx
-        .query_one(
-            "SELECT content,workload,trace_id,root_span_id FROM ignite_tasks WHERE id=$1 AND run_epoch=$2",
-            &[&input.task_id, &epoch],
-        )
-        .await?;
-    ensure!(
-        row.get::<_, String>(0) == input.content
-            && row.get::<_, String>(1) == input.workload
-            && row.get::<_, String>(2) == input.trace_id
-            && row.get::<_, String>(3) == input.root_span_id,
-        "task identity mismatch"
-    );
+    let scenario = scenario::load(&tx).await?;
+    let epoch = scenario.run_epoch.clone();
+    ensure!(epoch == input.run_epoch, "stale run epoch");
+    let e = scenario.deployment(&state.id)?;
     tx.query_one(
         "SELECT pg_advisory_xact_lock($1)",
         &[&(190700i64 + i64::from(port(&state.id)?))],
@@ -423,7 +322,7 @@ async fn infer(
         &[&state.id,&epoch,&(now()-60_000)]).await?.get(0);
     let status = if e.mode == "failed" {
         503
-    } else if e.mode == "throttled" || used + tokens > e.budget_tpm {
+    } else if e.mode == "throttled" || used + tokens > e.capacity_tpm {
         429
     } else {
         200
@@ -448,7 +347,7 @@ async fn infer(
             .into_response());
     }
     tx.execute("INSERT INTO ignite_receipts(id,task_id,run_epoch,endpoint,workload,content,response,tokens,received_ms,model_revision) VALUES($1,$1,$2,$3,$4,$5,$6,$7,$8,$9)",
-        &[&input.task_id,&epoch,&state.id,&input.workload,&input.content,&response,&tokens,&now(),&revision]).await?;
+        &[&input.task_id,&epoch,&state.id,&input.workload,&input.content,&response,&tokens,&now(),&input.model_revision]).await?;
     tx.commit().await?;
     span.set_attribute(KeyValue::new(
         "gen_ai.usage.input_tokens",
@@ -470,7 +369,8 @@ async fn dispatch_once(app: &App, workload: &str) -> Result<()> {
     let tx = client.transaction().await?;
     tx.batch_execute("SELECT pg_advisory_xact_lock_shared(190619)")
         .await?;
-    let (epoch, revision, m) = model(&tx).await?;
+    let scenario = scenario::load(&tx).await?;
+    let (epoch, revision) = (scenario.run_epoch.clone(), scenario.revision);
     let pending: i64 = tx.query_one("SELECT count(*) FROM ignite_tasks WHERE run_epoch=$1 AND workload=$2 AND completed_ms IS NULL", &[&epoch,&workload]).await?.get(0);
     app.telemetry.queue.record(
         pending as u64,
@@ -492,8 +392,6 @@ async fn dispatch_once(app: &App, workload: &str) -> Result<()> {
     {
         tx.execute("UPDATE ignite_tasks SET completed_ms=$1,endpoint=$2,outcome=$3,revision=revision+1,completed_revision=$5 WHERE id=$4 AND completed_ms IS NULL",
             &[&receipt.get::<_,i64>(2),&receipt.get::<_,String>(0),&receipt.get::<_,String>(1),&id,&receipt.get::<_,Option<i64>>(3)]).await?;
-        decisions::score(&tx,&format!("{id}-outcome"),&trace,"drasi_task_completed",1.,
-            &format!("Durable receipt at {}; actual task completion, not a recovery assertion",receipt.get::<_,String>(0))).await?;
         tx.commit().await?;
         app.telemetry
             .completed
@@ -515,39 +413,8 @@ async fn dispatch_once(app: &App, workload: &str) -> Result<()> {
         done.end();
         return Ok(());
     }
-    let w = m
-        .workloads
-        .iter()
-        .find(|w| w.id == workload)
-        .context("workload")?;
-    let e = match m.dispatch(workload, &w.destination) {
-        Ok(e) => e,
-        Err(error) => {
-            let detail = error.to_string();
-            tx.execute("INSERT INTO ignite_attempts(id,task_id,run_epoch,workload,endpoint,model_revision,started_ms,finished_ms,status,detail,trace_id) VALUES($1,$2,$3,$4,$5,$6,$7,$7,403,$8,$9)",
-                &[&identity(),&id,&epoch,&workload,&w.destination,&revision,&now(),&detail,&trace]).await?;
-            decisions::score(
-                &tx,
-                &format!("{id}-policy-{revision}"),
-                &trace,
-                "drasi_policy_allowed",
-                0.,
-                &detail,
-            )
-            .await?;
-            tx.commit().await?;
-            let mut span =
-                app.telemetry
-                    .span("gateway.policy_rejected", &trace, &root_span, &id, workload)?;
-            span.set_attributes([
-                KeyValue::new("langfuse.observation.level", "WARNING"),
-                KeyValue::new("langfuse.observation.status_message", detail.clone()),
-            ]);
-            span.set_status(Status::error(detail));
-            span.end();
-            return Ok(());
-        }
-    };
+    // The gateway sends to the configured route; Drasi decides routes, the gateway only follows them.
+    let deployment = scenario.route(workload)?.to_owned();
     let attempt = identity();
     let started = now();
     let count: i64 = tx
@@ -558,33 +425,20 @@ async fn dispatch_once(app: &App, workload: &str) -> Result<()> {
         .await?
         .get(0);
     tx.execute("INSERT INTO ignite_attempts(id,task_id,run_epoch,workload,endpoint,model_revision,started_ms,trace_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8)",
-        &[&attempt,&id,&epoch,&workload,&e.id,&revision,&started,&trace]).await?;
+        &[&attempt,&id,&epoch,&workload,&deployment,&revision,&started,&trace]).await?;
     tx.commit().await?;
     // The shared reset/control lock is held from the final basis check through HTTP completion.
     let tx = client.transaction().await?;
     tx.batch_execute("SELECT pg_advisory_xact_lock_shared(190619)")
         .await?;
-    let (current_epoch, current_revision, current) = model(&tx).await?;
+    let (current_epoch, current_revision) = scenario::current(&tx).await?;
     if current_epoch != epoch || current_revision != revision {
-        tx.execute("UPDATE ignite_attempts SET finished_ms=$1,status=409,detail='basis changed before transmission' WHERE id=$2", &[&now(),&attempt]).await?;
+        tx.execute("UPDATE ignite_attempts SET finished_ms=$1,status=409,detail='route configuration changed before transmission' WHERE id=$2", &[&now(),&attempt]).await?;
         tx.commit().await?;
         return Ok(());
     }
-    current.dispatch(workload, &e.id)?;
-    decisions::score(
-        &tx,
-        &format!("{id}-policy-{revision}"),
-        &trace,
-        "drasi_policy_allowed",
-        1.,
-        &format!(
-            "Current Rego policy revision {} checked before transmission to {}",
-            current.policy.revision, e.id
-        ),
-    )
-    .await?;
     let mut span = app.telemetry.span(
-        format!("attempt · {}", e.id),
+        format!("attempt · {}", deployment),
         &trace,
         &root_span,
         &id,
@@ -593,11 +447,11 @@ async fn dispatch_once(app: &App, workload: &str) -> Result<()> {
     span.set_attributes([
         KeyValue::new(
             "langfuse.observation.input",
-            format!("Send to {}, attempt {}", e.id, count + 1),
+            format!("Send to {}, attempt {}", deployment, count + 1),
         ),
-        KeyValue::new("endpoint.id", e.id.clone()),
+        KeyValue::new("endpoint.id", deployment.clone()),
         KeyValue::new("attempt.id", attempt.clone()),
-        KeyValue::new("langfuse.observation.metadata.deployment", e.id.clone()),
+        KeyValue::new("langfuse.observation.metadata.deployment", deployment.clone()),
         KeyValue::new(
             "langfuse.observation.metadata.attempt",
             (count + 1).to_string(),
@@ -605,7 +459,7 @@ async fn dispatch_once(app: &App, workload: &str) -> Result<()> {
     ]);
     let response = app
         .http
-        .post(format!("http://127.0.0.1:{}/infer", port(&e.id)?))
+        .post(format!("http://127.0.0.1:{}/infer", port(&deployment)?))
         .json(&Inference {
             task_id: id.clone(),
             run_epoch: epoch,
@@ -637,7 +491,7 @@ async fn dispatch_once(app: &App, workload: &str) -> Result<()> {
     tx.commit().await?;
     let labels = [
         KeyValue::new("workload", workload.to_owned()),
-        KeyValue::new("endpoint", e.id.clone()),
+        KeyValue::new("endpoint", deployment.clone()),
     ];
     let mut status_labels = labels.to_vec();
     status_labels.push(KeyValue::new("status", status.to_string()));
@@ -655,13 +509,13 @@ async fn dispatch_once(app: &App, workload: &str) -> Result<()> {
     span.set_attribute(KeyValue::new("http.response.status_code", status as i64));
     if status != 200 {
         let message = match status {
-            503 => format!("Deployment {} failed (HTTP 503); will retry", e.id),
+            503 => format!("Deployment {} failed (HTTP 503); will retry", deployment),
             429 => format!(
                 "Deployment {} is over its token quota (HTTP 429); will retry",
-                e.id
+                deployment
             ),
-            0 => format!("No response from deployment {}; will retry", e.id),
-            other => format!("Deployment {} returned HTTP {other}", e.id),
+            0 => format!("No response from deployment {}; will retry", deployment),
+            other => format!("Deployment {} returned HTTP {other}", deployment),
         };
         span.set_attributes([
             KeyValue::new("langfuse.observation.level", "ERROR"),
@@ -675,39 +529,36 @@ async fn dispatch_once(app: &App, workload: &str) -> Result<()> {
     Ok(())
 }
 
+/// The simulated health monitor: checks each deployment every second and records what it saw.
+/// A deployment whose reporting is paused stays silent, so its last report expires.
 async fn report_once(app: &App) -> Result<()> {
     let mut client = db().await?;
     let tx = client.transaction().await?;
     tx.batch_execute("SELECT pg_advisory_xact_lock_shared(190619)")
         .await?;
-    let (epoch, revision, m) = model(&tx).await?;
-    decisions::metrics(app, &tx, &epoch, revision, &m).await?;
-    for e in &m.endpoints {
-        app.telemetry.capacity.record(
-            e.budget_tpm as u64,
-            &[KeyValue::new("endpoint", e.id.clone())],
-        );
-        if !e.reporting {
-            continue;
-        }
+    let (epoch, _) = scenario::current(&tx).await?;
+    for id in scenario::DEPLOYMENTS {
         let value: Value = app
             .http
-            .get(format!("http://127.0.0.1:{}/health", port(&e.id)?))
+            .get(format!("http://127.0.0.1:{}/health", port(id)?))
             .send()
             .await?
             .error_for_status()?
             .json()
             .await?;
         ensure!(
-            value["run_epoch"] == epoch && value["id"] == e.id,
+            value["run_epoch"] == epoch && value["id"] == id,
             "mismatched report identity"
         );
+        if value["reporting"] != true {
+            continue;
+        }
         let status = value["status"]
             .as_str()
-            .context("missing endpoint status")?;
+            .context("missing deployment status")?;
         let observed = now();
         tx.execute("UPDATE ignite_reports SET observed_ms=$1,expires_ms=$2,status=$3,sequence=sequence+1 WHERE id=$4 AND run_epoch=$5",
-            &[&observed,&(observed+8_000),&status,&e.id,&epoch]).await?;
+            &[&observed,&(observed+8_000),&status,&id,&epoch]).await?;
     }
     tx.commit().await?;
     Ok(())
@@ -783,14 +634,12 @@ async fn main() -> Result<()> {
             .get::<_, bool>(0),
         "workload service already running"
     );
-    model(&owner).await?;
+    scenario::load(&owner).await?;
     let app = App {
         http: reqwest::Client::builder()
             .timeout(Duration::from_secs(4))
             .build()?,
         telemetry: Arc::new(telemetry::Telemetry::new()?),
-        context_ready: Arc::new(AtomicU64::new(0)),
-        context_rows: Arc::new(tokio::sync::RwLock::new(BTreeMap::new())),
         traffic: Arc::new(tokio::sync::Mutex::new(traffic::Traffic::default())),
     };
     let mut jobs = tokio::task::JoinSet::<Result<()>>::new();
@@ -815,17 +664,19 @@ async fn main() -> Result<()> {
     let settings = ignite_settings::get();
     let listener = tokio::net::TcpListener::bind(("127.0.0.1", settings.port("WORKLOAD")?)).await?;
     let router = Router::new()
-        .route("/health", get(health))
-        .route("/context", get(context))
+        // Demo driver and the application.
+        .route("/health", get(scenario::health))
         .route("/tasks", post(submit))
-        .route("/traffic", post(traffic::control))
         .route("/tasks/{id}", get(task))
-        .route("/control", post(control))
-        .route("/decisions", get(decisions::get))
-        .route("/approvals", post(decisions::approval))
-        .route("/configuration", post(decisions::configuration))
-        .route("/reset", post(decisions::reset))
-        .route("/alerts/grafana", post(observer::alert))
+        .route("/traffic", post(traffic::control))
+        .route("/control", post(scenario::control))
+        .route("/configuration", post(scenario::configuration))
+        .route("/reset", post(scenario::reset))
+        // Change-approval tool and gateway configuration API (stand-ins for external systems).
+        .route("/approvals", post(external::approve))
+        .route("/routes/apply", post(external::apply))
+        .route("/approvals/{id}/reject", post(external::reject))
+        .route("/approvals/{id}/verified", post(external::verified))
         .with_state(app.clone());
     jobs.spawn(async move {
         axum::serve(listener, router).await?;
@@ -854,22 +705,6 @@ async fn main() -> Result<()> {
             tokio::time::sleep(Duration::from_secs(1)).await;
         }
     });
-    let observer = app.clone();
-    jobs.spawn(async move { observer::watch(observer).await });
-    let adoption = app.clone();
-    jobs.spawn(async move {
-        loop {
-            decisions::apply_once(&adoption).await?;
-            tokio::time::sleep(Duration::from_millis(500)).await;
-        }
-    });
-    let publications = app.clone();
-    jobs.spawn(async move {
-        loop {
-            decisions::publish_once(&publications).await?;
-            tokio::time::sleep(Duration::from_secs(1)).await;
-        }
-    });
     println!(
         "Ignite workload gateway 127.0.0.1:{}; model simulators {}/{}/{}",
         settings.port("WORKLOAD")?,
@@ -894,34 +729,19 @@ mod tests {
     use super::*;
 
     #[test]
-    fn missing_stale_or_mixed_epoch_context_is_not_ready() {
-        let mut rows = BTreeMap::new();
-        assert!(!coherent_context(&rows, "epoch", 1));
-        rows.insert(
-            "model-context".into(),
-            BTreeMap::from([("active".into(), json!({"run_epoch":"epoch","revision":1}))]),
-        );
-        rows.insert(
-            "endpoint-freshness".into(),
-            ["EU-A", "EU-B", "US-C"]
-                .into_iter()
-                .map(|id| {
-                    (
-                        id.into(),
-                        json!({"run_epoch":"epoch","status":"ok","expires_ms":now()+8000}),
-                    )
-                })
-                .collect(),
-        );
-        assert!(coherent_context(&rows, "epoch", 1));
-        assert!(!coherent_context(&rows, "epoch", 2));
-        assert!(!coherent_context(&rows, "new-epoch", 1));
-        rows.get_mut("endpoint-freshness")
-            .unwrap()
-            .get_mut("EU-A")
-            .unwrap()["status"] = json!("unknown");
-        assert!(!coherent_context(&rows, "epoch", 1));
-        rows.get_mut("endpoint-freshness").unwrap().remove("EU-A");
-        assert!(!coherent_context(&rows, "epoch", 1));
+    fn only_an_unreachable_database_is_retriable() {
+        let refused = Error::from(anyhow::anyhow!("stale reset basis"));
+        assert_eq!(refused.status, StatusCode::CONFLICT);
+        assert_eq!(Error::bad_request("x").status, StatusCode::BAD_REQUEST);
+        assert!(!unavailable(&anyhow::anyhow!("no database involved")));
+    }
+
+    #[tokio::test]
+    async fn database_outage_answers_503() {
+        let error = tokio_postgres::connect("postgresql://ignite@127.0.0.1:1/none", NoTls)
+            .await
+            .err()
+            .expect("nothing listens on port 1");
+        assert_eq!(Error::from(error).status, StatusCode::SERVICE_UNAVAILABLE);
     }
 }
