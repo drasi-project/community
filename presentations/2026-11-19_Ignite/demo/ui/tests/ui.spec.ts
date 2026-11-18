@@ -525,7 +525,7 @@ test("Next warns once when the beat's button hasn't been pressed", async ({ page
 });
 
 test("recording mode shows each live part's recording as the presenter presses Next", async ({ page, request }) => {
-  await desk(page, "normal", 2);
+  await desk(page, "normal", notes.normal.beats.length - 1);
   const projector = await page.context().newPage();
   await projector.goto("/present");
   await page.getByRole("button", { name: "Use recordings from here on" }).click();

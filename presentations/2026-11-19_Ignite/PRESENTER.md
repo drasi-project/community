@@ -212,8 +212,16 @@ Say it in your own words.
    - **Watch for:** Charts moving (traffic started on the walk-in beat; if the desk says Traffic: stopped, press Start demo traffic in All demo controls).
 2. **Grafana · Operations.** The top row, AI Deployments, is ordinary monitoring, measured from real requests: calls, errors, answer time, the support queue and Grafana alerts. OpenTelemetry, Prometheus and Grafana; nothing new.
    - **Watch for:** Support errors 0%, Support queue 0 to 2 (green).
-3. **Grafana · Operations.** The bottom row, Decision Support, is Drasi's answers, worked out from changes as they happen: in the AI service's database, and in its health-check telemetry. The service records every request and attempt in its database, and checks each deployment's health every second, sending the result as ordinary OpenTelemetry metrics. Drasi turns that into Decision Support: overdue support requests, each deployment's status, the status of any change, the recommended action, and whether we'd survive losing any one deployment. A Drasi reaction publishes them as ordinary Prometheus metrics, so you can alert on them like anything else; another posts to the team's incident channel when something needs them. No new tool to watch: the answers arrive where you already look.
-   - **Watch for:** Support overdue 0, all deployments Healthy, Change status: No change in progress, Recommended action: None, Failover readiness: Survives losing any one deployment.
+3. **Grafana · Operations.** The bottom row, Decision Support, is Drasi's answers, worked out from changes as they happen: changes in the AI service's database, where it records every request, route, policy and approval, and its health checks, which arrive as ordinary OpenTelemetry metrics every second. A Drasi reaction publishes each answer as a Prometheus metric, so Grafana draws it and you can alert on it like anything else; another posts to the team's incident channel when something needs them. Let's take them one at a time.
+   - **Watch for:** The whole Decision Support row outlined.
+4. **Grafana · Operations.** Support overdue: customer requests past their 15-second deadline. A continuous query over the requests table: a request joins the list the moment its deadline passes, even though nothing about the request changed, and leaves it when it's answered.
+   - **Watch for:** Support overdue 0.
+5. **Grafana · Operations.** Deployment status is each deployment's latest health check, from the telemetry: Healthy, Over quota or Failed, and Unknown if the checks go quiet for 8 seconds. Workload status joins that with where each workload runs and what the policy allows there, so it tells you whether each workload is being served somewhere it's allowed to run.
+   - **Watch for:** Deployment status: EU-A, EU-B, US-C Healthy. Workload status: Support · EU-A and Summaries · EU-B Healthy.
+6. **Grafana · Operations.** Recommended action is Drasi's planner: an optimization model that re-solves whenever health, capacity or policy changes, and proposes the change with the fewest moves that keeps every workload running within policy. It also follows that change through approval, applying and verification. Right now there's nothing to do.
+   - **Watch for:** Recommended action: None (green).
+7. **Grafana · Operations.** Failover readiness is a what-if the same model answers continuously: if any one deployment failed, would every workload still have somewhere allowed to run? A game-day question, answered all the time. No new tool to watch: the answers arrive where you already look.
+   - **Watch for:** Failover readiness: Survives losing any one deployment.
 
 **If it breaks:** If the charts are empty, traffic isn't running: press Start demo traffic and keep talking.
 
@@ -265,14 +273,14 @@ Say it in your own words.
 7. **Mattermost · #incident-ai-support.** Now I approve the current proposal, here on its card, as the on-call engineer would. The approval goes to the change-approval tool; Drasi checks it still matches its current plan, and its reaction applies the new routes through the gateway's configuration API.
    - **Click on the projector:** Approve on the newest orange Proposed change card, at the bottom. Backup on the desk: Approve the proposed change
    - **Watch for:** The card says Approved by @oncall at …; in its thread, blue Applied: Move summaries to US-C and support to EU-B.
-8. **Grafana · Operations.** Look at Change status. Applied isn't the same as fixed: another Drasi query waits until the backlog from before the change has cleared and at least three support requests have been answered on the new route. Only then does it say Verified.
-   - **Watch for:** Change status goes from Applied, verifying to Verified (green), often within 30 seconds of approval. If it's already Verified, say so.
+8. **Grafana · Operations.** Look at Recommended action: it says Verifying. Applied isn't the same as fixed: another Drasi query waits until the backlog from before the change has cleared and at least three support requests have been answered on the new route. Only then does it say Verified.
+   - **Watch for:** Recommended action goes from Verifying: … to Verified: … (green), often within 30 seconds of approval. If it's already Verified, say so.
 9. **Grafana · Operations.** The rest of the dashboard agrees: the queue has drained, Support overdue is back to 0 and errors are falling. EU-A is still down: we routed around it, within policy.
    - **Watch for:** Support errors falling, Support queue back to 0 to 2, Support overdue 0.
 10. **Mattermost · #incident-ai-support.** And the channel has the whole story in one thread: proposed, approved by the on-call engineer, applied, and verified by Drasi from the evidence. Approving a change isn't the same as fixing the problem; Drasi checked the outcome.
    - **Watch for:** Green Verified: support has recovered, in the approved card's thread.
 
-**If it breaks:** If Approve on the card doesn't respond, press Approve the proposed change on the desk: it presses the same button. Never approve twice. If Change status stays Applied, verifying, say it's applied but not yet verified, and carry on. If the proposal or the policy change doesn't behave as described, press Use recordings from here on.
+**If it breaks:** If Approve on the card doesn't respond, press Approve the proposed change on the desk: it presses the same button. Never approve twice. If Recommended action stays Verifying, say it's applied but not yet verified, and carry on. If the proposal or the policy change doesn't behave as described, press Use recordings from here on.
 
 ### 8. Healthy but fragile (3½ minutes)
 

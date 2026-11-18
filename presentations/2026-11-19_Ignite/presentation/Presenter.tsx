@@ -372,7 +372,7 @@ export default function Presenter({ live, now, control }: { live: Live; now: num
   </div>;
 }
 
-// Drasi's answers from its tile queries: three as on the dashboard, and Recovery (the evidence behind Change status).
+// Drasi's answers from its tile queries: three as on the dashboard, and Recovery (the evidence behind Recommended action's Verifying and Verified).
 function Answers({ live }: { live: Live }) {
   const q = live.queries;
   const late = q["overdue-tasks"].rows.filter(row => row.workload === "support").length;
