@@ -248,7 +248,7 @@ Say it in your own words.
 ### 6. Who is affected (2½ minutes)
 
 1. **Mattermost · #incident-ai-support.** Which customers are affected? Drasi posted that too: Support requests overdue, as soon as the first support request passed its deadline, with a link to the tile on the dashboard. A count tells you it's bad. Let's see who.
-   - **Click on the projector:** If the red Support requests overdue card isn't in view, scroll up to it (Grafana's alerts may have posted below it). Backup on the desk: undefined
+   - **Click on the projector:** If the red Support requests overdue card isn't in view, scroll up to it (Grafana's alerts may have posted below it). 
    - **Watch for:** Red card Support requests overdue, with the count when posted and a link to Operations › Support overdue.
 2. **Who is affected: the continuous query.** This is the Support overdue query from earlier, now with its live result: not just a count, but the exact list of late requests with their traces, kept current request by request. With Prometheus you'd get a number from a gauge or a rule evaluated every so often; here it's the set itself, from one query
    - **Watch for:** Under the query: how many support requests are late, and the oldest few with their traces.
@@ -260,19 +260,19 @@ Say it in your own words.
 ### 7. Recovery (5½ minutes)
 
 1. **Mattermost · #incident-ai-support.** Back to the proposal. On paper there's plenty of room: two healthy deployments with 200k, and we need 140k. But US-C has the free room, and customer support isn't allowed there: restricted data stays in Europe. The planner, an optimizer Drasi re-runs on every change, respects that: move summaries to US-C, which frees EU-B for support. Two moves, both within policy, and the card shows the facts it was based on: that's the Rego policy and the optimization model you saw earlier, re-solved on the new facts.
-   - **Click on the projector:** Scroll up to the orange Proposed change card so the whole card shows. Backup on the desk: undefined
+   - **Click on the projector:** Scroll up to the orange Proposed change card so the whole card shows. 
    - **Watch for:** The orange Proposed change card: Move summaries to US-C and support to EU-B. Why EU-A is down; Policy; Capacity; Based on revision and plan.
 2. **Mattermost · #incident-ai-support (optional).** Before anyone approves it, compliance restricts summaries to Europe too. Drasi re-runs the policy and the planner at once: with EU-A down, support and summaries can't both fit in EU-B, so no change fits now, and Drasi says the proposal is out of date. Dropping work is a decision for a person, not the planner.
    - **Press:** Summaries: Europe only
    - **Watch for:** A grey card Out of date: the facts changed, Now: No valid plan. The proposal above it still has its Approve button.
 3. **Mattermost · #incident-ai-support (optional).** Suppose someone approves the proposal anyway. The approval goes to the change-approval tool, and Drasi rejects it: every proposal carries the facts it was based on, and those facts changed. Nothing is changed.
-   - **Click on the projector:** Approve on the orange proposal card, above the grey Out of date card (scroll up a little if needed) (it's meant to be rejected). Backup on the desk: Approve the proposed change
+   - **Click on the projector:** Approve on the orange proposal card, above the grey Out of date card (scroll up a little if needed) (it's meant to be rejected).  Backup on the desk: Approve the proposed change (it presses the same button)
    - **Watch for:** The card says Approved by @oncall; then, in its thread, Rejected by Drasi: nothing was changed, with Drasi's reason.
 4. **Mattermost · #incident-ai-support (optional).** Compliance allows the US for summaries again, and Drasi posts a new proposal straight away. To Drasi, a policy change is just another change: it re-runs the policy and the planner every time.
    - **Press:** Summaries: Europe + US
    - **Watch for:** A new orange Proposed change card at the bottom, with a new plan in Based on.
 5. **Mattermost · #incident-ai-support.** Now I approve the current proposal, here on its card, as the on-call engineer would. The approval goes to the change-approval tool; Drasi checks it still matches its current plan, and its reaction applies the new routes through the gateway's configuration API.
-   - **Click on the projector:** Approve on the newest orange Proposed change card, at the bottom. Backup on the desk: Approve the proposed change
+   - **Click on the projector:** Approve on the newest orange Proposed change card, at the bottom.  Backup on the desk: Approve the proposed change (it presses the same button)
    - **Watch for:** The card says Approved by @oncall at …; in its thread, blue Applied: Move summaries to US-C and support to EU-B.
 6. **Grafana · Operations.** Look at Recommended action: it says Verifying. Applied isn't the same as fixed: another Drasi query waits until the backlog from before the change has cleared and at least three support requests have been answered on the new route. Only then does it say Verified.
    - **Watch for:** Recommended action goes from Verifying: … to Verified: … (green), often within 30 seconds of approval. If it's already Verified, say so.
