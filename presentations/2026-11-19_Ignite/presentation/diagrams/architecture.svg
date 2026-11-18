@@ -54,7 +54,7 @@
   <text x="783" y="498" class="sub">model · 100k</text>
   <rect x="435" y="550" width="480" height="115" rx="14" class="box"/>
   <text x="461" y="594" class="title" font-size="26">Simulated systems</text>
-  <text x="461" y="630" class="sub">Health monitor, change-approval tool,</text>
+  <text x="461" y="630" class="sub">Health probes, change-approval tool,</text>
   <text x="461" y="654" class="sub">gateway configuration API, demo controls</text>
   <rect x="1080" y="260" width="225" height="115" rx="14" class="box"/>
   <text x="1106" y="304" class="title" font-size="26">OpenTelemetry</text>
@@ -76,28 +76,32 @@
   <text x="1106" y="529" class="sub">and scores</text>
   <rect x="405" y="770" width="540" height="145" rx="14" class="box"/>
   <text x="431" y="814" class="title" font-size="26">PostgreSQL</text>
-  <text x="431" y="850" class="sub">System of record: requests, attempts, health</text>
-  <text x="431" y="874" class="sub">reports, workloads, deployments, routes,</text>
-  <text x="431" y="898" class="sub">allowed destinations, approvals</text>
+  <text x="431" y="850" class="sub">System of record: requests, attempts,</text>
+  <text x="431" y="874" class="sub">workloads, deployments, routes, allowed</text>
+  <text x="431" y="898" class="sub">destinations, approvals</text>
   <rect x="1050" y="640" width="810" height="320" rx="18" class="drasi"/>
   <text x="1080" y="690" class="title" font-size="32">Drasi Server</text>
   <text x="1080" y="722" class="accent">Change-driven computation</text>
-  <text x="1080" y="770" class="sub">Source: PostgreSQL change feed, with bootstrap</text>
-  <text x="1080" y="804" class="sub">34 continuous queries, time-aware</text>
-  <text x="1080" y="838" class="sub">Models: Rego policy · optimizer (plan and what-if)</text>
+  <text x="1080" y="770" class="sub">Sources: PostgreSQL change feed (with bootstrap) · OpenTelemetry</text>
+  <text x="1080" y="804" class="sub">46 continuous queries, time-aware</text>
+  <text x="1080" y="838" class="sub">Models: drasi.standard/policy (Rego) · drasi.standard/optimization</text>
   <text x="1080" y="872" class="sub">Reactions: Prometheus · HTTP (gateway, Grafana, Langfuse, Mattermost) · SSE</text>
-  <text x="1080" y="906" class="sub">45 components · native plugins</text>
+  <text x="1080" y="906" class="sub">58 components in one Drasi Server</text>
   <path d="M340,322 H433" class="flow"/>
   <path d="M340,603 H433" class="flow"/>
   <text x="352" y="590" class="edge"></text>
   <path d="M675,365 V403" class="flow"/>
   <text x="686" y="390" class="edge">HTTP</text>
   <path d="M915,300 H1078" class="flow"/>
-  <text x="950" y="290" class="edge">OTLP metrics</text>
-  <text x="964" y="328" class="edge">and traces</text>
+  <text x="964" y="250" class="edge">OTLP: metrics,</text>
+  <text x="964" y="268" class="edge">traces, health</text>
+  <text x="964" y="286" class="edge">probes</text>
   <path d="M1305,317 H1348" class="flow"/>
   <path d="M1570,317 H1613" class="flow"/>
   <path d="M1150,375 V423" class="flow"/>
+  <path d="M1080,355 H1065 V638" class="flow"/>
+  <text x="1042" y="452" class="edge" text-anchor="end">Health</text>
+  <text x="1042" y="470" class="edge" text-anchor="end">probes</text>
   <text x="1160" y="405" class="edge">Traces</text>
   <path d="M675,690 V768" class="flow"/>
   <text x="688" y="735" class="edge">Writes every change</text>
@@ -113,7 +117,7 @@
   <path d="M1650,377 V482 H1602" class="flow"/>
   <text x="1640" y="414" class="edge" text-anchor="end">Alerts</text>
   <path d="M1420,542 V588 H917" class="flow"/>
-  <text x="1000" y="580" class="edge">Approve button</text>
+  <text x="926" y="580" class="edge">Approve button</text>
   <path d="M1680,640 V377" class="answer"/>
   <text x="1690" y="560" class="edge-accent">Annotations</text>
   <path d="M1050,700 H980 V610 H917" class="answer"/>
