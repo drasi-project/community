@@ -18,9 +18,10 @@ Addresses are this copy's defaults from `demo/ports.env` (see
 | Presenter desk and projector window | The desk you present from, and the window it drives on the projector (slides, dashboards, recordings) | http://127.0.0.1:19580/presenter, and `/present` |
 | Grafana | The two dashboards, shown inside the projector window | http://localhost:14000 |
 | Langfuse | Traces of individual AI requests (not projected) | http://localhost:14001 |
+| Mattermost | The incident channel `#incident-ai-support`, shown inside the projector window: Grafana's alerts and Drasi's incident cards, with the Approve button | http://localhost:19065 |
 | Drasi Server | Runs the continuous queries, models and reactions | http://127.0.0.1:19421 |
 | AI service | The simulated AI service, its traffic and the demo controls | http://127.0.0.1:19500 |
-| Supporting containers | PostgreSQL, Prometheus, OpenTelemetry Collector, Grafana, Langfuse and its storage, and an integration-test probe | Run in Podman |
+| Supporting containers | PostgreSQL, Prometheus, OpenTelemetry Collector, Grafana, Langfuse and its storage, Mattermost, and an integration-test probe | Run in Podman |
 
 ## First-time setup
 
@@ -91,6 +92,17 @@ Starting Grafana also creates the Grafana token that Drasi's annotation
 reaction uses: `up` runs `ops/observability-env.py grafana-token`, which creates
 the `drasi-annotations` service account and writes `IGNITE_GRAFANA_TOKEN` to
 `.env` (it keeps a token that still works). It prints only whether it wrote one.
+
+Starting Mattermost also sets it up: `up` creates its database in this copy's
+PostgreSQL, then runs `ops/mattermost.py bootstrap`, which creates what is
+missing: users `admin` and `oncall` (the on-call engineer, who you act as), team
+`ai-platform`, channel `#incident-ai-support`, the `drasi` bot, their access
+tokens, and an incoming webhook for Grafana's alerts. Secrets go to `.env`
+(never printed); the channel's IDs go to `.native/mattermost.json`. The first
+time, it recreates Grafana so its alerts can post to the channel. Mattermost
+publishes container images for amd64 only, so compose builds an ARM64 image
+(`localhost/ignite-native-mattermost:12.1.0`) from Mattermost's official
+release archive the first time; that needs a network connection.
 
 ### 5. Build Drasi Server, the plugins and the AI service
 
@@ -201,6 +213,12 @@ Open the presenter desk at http://127.0.0.1:19580/presenter and follow
 [PRESENTER.md](PRESENTER.md#set-up-your-screens): it covers the screens, the
 checklist, the script, every control and what to do if something goes wrong.
 
+**Sign the projector in to Mattermost** once, in the browser that runs the
+desk and projector: open http://localhost:19500/mattermost/sign-in (the AI
+service must be running). It signs you in as `oncall` and opens
+`#incident-ai-support`; the projector's Mattermost view then works. No password
+is needed. The sign-in lasts 30 days.
+
 The projector shows Grafana read-only, without signing in. To use Grafana or
 Langfuse yourself (for example to answer a question), sign in privately on the
 laptop: Grafana as `admin` with `GRAFANA_ADMIN_PASSWORD`, Langfuse with
@@ -278,6 +296,8 @@ steps above already give them.
 | Grafana tiles say **Unknown** | Drasi's answers haven't loaded. Right after a start, wait for the desk to say READY and run the `curl` check in [Start the demo](#start-the-demo). |
 | Everything stays Unknown for a long time | A deployment may have been left failed, so requests kept retrying and history grew very large. On the desk, open **All demo controls** and restore every deployment (**Any deployment** › Restore), then **Before and after the talk** › **Reset scenario…**, then restart terminals 1 and 2. |
 | Drasi Server takes minutes to start | The current run has a lot of history. Wait; it will finish (it allows up to 20 minutes). Next time, reset the scenario before restarting. |
+| The projector's Mattermost view shows a sign-in page | Open http://localhost:19500/mattermost/sign-in once in the same browser. |
+| Terminal 1 stops with "IGNITE_MATTERMOST_BOT_TOKEN must be exported" or "Mattermost isn't bootstrapped" | Run `./ops/observability-stack.sh up -d --wait mattermost`, which writes the tokens to `.env` and the channel's IDs to `.native/mattermost.json`, then load `.env` again. If it says the bundle changed, run `./ops/native-build.sh`. |
 | Terminal 1 stops with "IGNITE_GRAFANA_TOKEN must be exported" | Start Grafana with `./ops/observability-stack.sh up -d --wait grafana`, which writes the token to `.env`, then load `.env` again and restart terminal 1. |
 | No decision events in Grafana | Check the token: `python3 ops/observability-env.py grafana-token` replaces it if it no longer works. Restart terminal 1 after it writes a new one. |
 | "Run ops/observability-stack.sh env first" | Do [step 3](#3-create-local-passwords). |

@@ -46,7 +46,8 @@ CREATE TABLE IF NOT EXISTS ignite_approvals (
     candidate_id text NOT NULL,
     basis text NOT NULL,
     revision bigint NOT NULL,
-    status text NOT NULL CHECK (status IN ('pending','applied','rejected','verified')),
+    -- declined: a person pressed Reject on the card (nothing else happens).
+    status text NOT NULL CHECK (status IN ('pending','applied','rejected','verified','declined')),
     reason text,
     latest boolean NOT NULL,
     requested_ms bigint NOT NULL,
@@ -54,6 +55,14 @@ CREATE TABLE IF NOT EXISTS ignite_approvals (
     applied_revision bigint,
     verified_ms bigint
 );
+-- From an approval made on a Mattermost card (POST /mattermost/actions): who pressed it, the
+-- card's post (Drasi replies to it with the outcome) and the change the card proposed.
+ALTER TABLE ignite_approvals ADD COLUMN IF NOT EXISTS requested_by text;
+ALTER TABLE ignite_approvals ADD COLUMN IF NOT EXISTS post_id text;
+ALTER TABLE ignite_approvals ADD COLUMN IF NOT EXISTS change text;
+ALTER TABLE ignite_approvals DROP CONSTRAINT IF EXISTS ignite_approvals_status_check;
+ALTER TABLE ignite_approvals ADD CONSTRAINT ignite_approvals_status_check
+    CHECK (status IN ('pending','applied','rejected','verified','declined'));
 CREATE UNIQUE INDEX IF NOT EXISTS ignite_approvals_latest ON ignite_approvals(run_epoch) WHERE latest;
 -- Gateway configuration API idempotency (x-drasi-delivery-id). Not published.
 CREATE TABLE IF NOT EXISTS ignite_deliveries (

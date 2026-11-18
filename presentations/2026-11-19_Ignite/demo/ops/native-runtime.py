@@ -47,7 +47,10 @@ def stamp():
     ui = DEMO / ".native/ui/dist"
     if not (ui / "index.html").is_file():
         raise RuntimeError("Server UI assets missing; run ops/native-build.sh")
-    files = [BINARY, WORKLOADS, DEMO / ".native/server.json",
+    if not (DEMO / ".native/mattermost.json").is_file():
+        raise RuntimeError("Mattermost isn't bootstrapped; run ops/observability-stack.sh up")
+    # mattermost.json: the incident channel's IDs, written into server.json by the generator.
+    files = [BINARY, WORKLOADS, DEMO / ".native/server.json", DEMO / ".native/mattermost.json",
              *sorted((DEMO / ".native/plugins").glob("*")),
              *sorted(path for path in ui.rglob("*") if path.is_file())]
     value = {
@@ -133,6 +136,7 @@ def main():
         env["IGNITE_POSTGRES_PASSWORD"] = required("POSTGRES_PASSWORD")
         # Secrets for Drasi's HTTP reactions (env references in server.json); never printed.
         env["IGNITE_GRAFANA_TOKEN"] = required("IGNITE_GRAFANA_TOKEN")
+        env["IGNITE_MATTERMOST_BOT_TOKEN"] = required("IGNITE_MATTERMOST_BOT_TOKEN")
         env["IGNITE_LANGFUSE_HEADERS"] = json.dumps(
             {"authorization": f"Basic {required('LANGFUSE_AUTH_BASE64')}"})
         os.chdir(DEMO / ".native")

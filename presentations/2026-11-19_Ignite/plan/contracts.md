@@ -643,15 +643,21 @@ channel's URL is `http://localhost:{IGNITE_MATTERMOST_PORT}/ai-platform/channels
 
 Readers: `ops/settings.py` (`settings.port("MATTERMOST")`), Rust
 `ignite_settings::get().port("MATTERMOST")`, browser `settings.mattermost`
-(`http://localhost:19065`, `demo/ui/src/settings.ts`; A adds it).
+(`http://localhost:19065`) and `settings.mattermostSignIn`
+(`http://localhost:19500/mattermost/sign-in`) in `demo/ui/src/settings.ts`.
 
 ### Container (`compose.yaml` service `mattermost`, workstream A)
 
-- Image `docker.io/mattermost/mattermost-team-edition`, pinned by digest,
-  `127.0.0.1:${IGNITE_MATTERMOST_PORT}:8065`, volume `mattermost-data`.
-- Database `mattermost` in the existing `postgres` container
-  (`observability/postgres/02-mattermost.sql` for new volumes; the bootstrap
-  creates it on today's volume), user `ignite`, `sslmode=disable`.
+- Image `localhost/ignite-native-mattermost:12.1.0`, built by compose from
+  `observability/mattermost/Containerfile`: Mattermost Team Edition 12.1.0's
+  official linux-arm64 release archive (checked by SHA-256) on Debian
+  bookworm-slim. Mattermost publishes container images for amd64 only, and
+  this Podman VM has no Rosetta. `127.0.0.1:${IGNITE_MATTERMOST_PORT}:8065`,
+  volume `mattermost-data`, about 250 MB of memory.
+- Database `mattermost` in the existing `postgres` container, created by
+  `ops/mattermost.py database` before Mattermost starts (an init script would
+  change the PostgreSQL container's definition and make compose recreate it),
+  user `ignite`, `sslmode=disable`.
 - Configuration by `MM_*` environment variables: site URL
   `http://localhost:${IGNITE_MATTERMOST_PORT}`; incoming webhooks, bot accounts,
   personal access tokens, post username and icon overrides on; open server off;
@@ -659,19 +665,27 @@ Readers: `ops/settings.py` (`settings.port("MATTERMOST")`), Rust
   `AllowedUntrustedInternalConnections` = `host.containers.internal` (the
   buttons call the AI service on the host); `FrameAncestors` = the web app's
   origins (`http://localhost:${IGNITE_UI_PORT}`, `http://127.0.0.1:${IGNITE_UI_PORT}`
-  and the UI test port).
+  and the UI test port). Verified: Mattermost sends `Content-Security-Policy:
+  frame-ancestors 'self' <these>` with `X-Frame-Options: SAMEORIGIN`;
+  browsers follow the CSP, and Chromium frames the channel from
+  `localhost:19580`.
+- Preview-mode banner off; names shown as full names ("Drasi", "On-call
+  engineer"); `mmctl --local` enabled for the bootstrap.
 - Grafana gets one new environment line, `MATTERMOST_ALERT_WEBHOOK_URL`
   (section 16), with a placeholder until the bootstrap has made the webhook.
 
 ### Bootstrap (`ops/mattermost.py bootstrap`)
 
 Run by `./ops/observability-stack.sh up` when it starts `mattermost`, and on its
-own. Idempotent: it finds by name and creates only what is missing; it never
-prints a secret. Steps: database → wait for `/api/v4/system/ping` → admin (first
-user) → team → channel → bot `drasi` and its token → user `oncall` and its
-token, both members of the team and channel → incoming webhook (channel
-`incident-ai-support`, display "Grafana alerts") → write `.env` and
-`.native/mattermost.json` → recreate Grafana if the webhook URL changed.
+own. Idempotent: it finds by name and creates only what is missing, keeps
+tokens that still work, and never prints a secret. Steps (`mmctl --local`
+inside the container; the bot through the REST API with the admin token,
+since local mode can't create bots): wait for `/api/v4/system/ping` → users
+`admin` and `oncall` → team → admin token → bot `drasi` → all three in the team
+and channel → oncall and bot tokens → incoming webhook ("Grafana alerts",
+locked to the channel) → `.env` and `.native/mattermost.json`. Exit status 3
+means the webhook URL changed; `observability-stack.sh up` then recreates
+Grafana. `ops/mattermost.py clear` deletes every post in the channel.
 
 `.env` keys (private, mode 600, created if missing; never printed or committed):
 
@@ -724,9 +738,9 @@ Response `200`:
 
 ```json
 {"update":{"props":{…the card's props, every action removed, and the field
-   {"title":"Decision","value":"Approved by @oncall at 10:42:07. Drasi checks it still matches its current plan before anything changes.","short":false}
-   (or "Rejected by @oncall at 10:42:07. Nothing will change.")…}},
- "ephemeral_text":"Sent to the change-approval tool."}
+   {"title":"Decision","value":"Approved by @oncall. Drasi checks it still matches its current plan before anything changes.","short":false}
+   (or "Rejected by @oncall. Nothing will change.")…}},
+ "ephemeral_text":"Sent to the change-approval tool.", "approval":"mm-{post_id}"}
 ```
 
 The endpoint reads the card with `MATTERMOST_ADMIN_TOKEN`
@@ -750,8 +764,9 @@ calls `/mattermost/actions` exactly as for a click.
 Opened in the presenter's browser as `http://localhost:{IGNITE_WORKLOAD_PORT}/mattermost/sign-in`:
 signs `oncall` in server-side and answers `302` to the channel URL with
 Mattermost's session cookies (cookies are per host, not per port, so they apply
-to `localhost:{IGNITE_MATTERMOST_PORT}`). No password is shown. A confirms this
-works and records the result here; the fallback is signing in once by hand.
+to `localhost:{IGNITE_MATTERMOST_PORT}`). No password is shown. Verified in
+Chromium: after it, an iframe on `localhost:19580` shows the channel signed in
+(Mattermost's single-channel layout below 768 px wide).
 
 ### Reset
 
@@ -971,7 +986,7 @@ this button as the backup. Tests and the fixture server gain `approve-latest`.
 
 | Workstream | Owns | Shared, targeted edits only |
 |---|---|---|
-| A. Mattermost platform | `compose.yaml` (`mattermost` service, Grafana's webhook variable, volume), `observability/postgres/02-mattermost.sql`, `ops/mattermost.py`, `ops/observability-stack.sh`, `ops/observability-env.py`, `ops/native-runtime.py`, `ops/workload.py`, `ports.env`, `ports.default.env`, `ui/settings.mjs`, `ui/src/settings.ts`, `database/`, `workloads/`, `tests/mattermost-*.py` | SETUP.md, DEVELOPERS.md, architecture diagram |
+| A. Mattermost platform | `compose.yaml` (`mattermost` service, Grafana's webhook variable, volume), `observability/mattermost/`, `ops/mattermost.py`, `ops/observability-stack.sh`, `ops/observability-env.py`, `ops/native-runtime.py`, `ops/workload.py`, `ports.env`, `ports.default.env`, `ui/settings.mjs`, `ui/src/settings.ts`, `database/`, `workloads/`, `tests/mattermost-*.py` | SETUP.md, DEVELOPERS.md, architecture diagram |
 | B. Drasi event queries and HTTP reaction | `drasi/incident-*.cypher`, `drasi/approval-*.cypher`, `drasi/recovery-*.cypher`, `ops/config/`, `ops/native-build.sh`, `tests/incident-*.py`, `tests/drasi_outputs.py`, `tests/decision-integration.py`, `tests/native-integration.py` | DRASI.md, DEVELOPERS.md |
 | C. Grafana | `observability/grafana/`, `drasi/tile-*.cypher`, `plugins/prometheus/examples/ignite.json`, sections 9 and 16 of this file, `tests/observability-*.py` | README.md, DRASI.md |
 | D. Desk and projector | `presentation/Presenter.tsx`, `notes.ts` sections `failure`, `who`, `recovery`, `resilience` and the action ids, `ui/tests/`, `ui/src/` except `settings.ts`, `PRESENTER.md` (generated), STORY.md | `Audience.tsx` (the `incident` iframe only), `scenes.ts` (`StageView`, `viewLabel`, `dashboards` only); the slides session owns the rest of both, `Explanation.tsx`, `slides.css` and the other `notes.ts` sections |
@@ -992,8 +1007,8 @@ The user reviews the deck on the running stack (containers, Drasi Server on
    `./ops/observability-stack.sh up -d <service>` or `restart <service>`. Drasi
    Server and the AI service: stop the process by PID, then start
    `python3 ops/native-runtime.py run` / `python3 ops/workload.py run` with
-   `.env` loaded, detached, logging to `demo/.native/logs/server.log` /
-   `workload.log`; check the desk says READY afterwards. The web app: `npm run
+   `.env` loaded, detached, appending to `demo/.native/server.log` /
+   `demo/.native/workload.log`; check the desk says READY afterwards. The web app: `npm run
    build` (preview serves the new build; no restart).
 2. **Who restarts what:** A: `mattermost`, Grafana once (when the webhook
    variable first appears), the AI service. B: Drasi Server (after

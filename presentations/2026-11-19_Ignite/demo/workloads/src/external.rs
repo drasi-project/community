@@ -29,12 +29,44 @@ pub struct Approval {
 
 /// `POST /approvals`: insert a pending approval and make it the latest. No validation of the plan.
 pub async fn approve(Payload(input): Payload<Approval>) -> Api {
-    let id = input.id.unwrap_or_else(crate::identity);
+    let id = record(Record {
+        id: input.id.unwrap_or_else(crate::identity),
+        candidate_id: input.candidate_id,
+        basis: input.basis,
+        revision: input.revision,
+        ..Record::default()
+    })
+    .await?;
+    Ok(Json(json!({"id": id})))
+}
+
+/// One approval-tool record. `declined` (Reject pressed on a Mattermost card) is recorded as
+/// decided at once; every other record starts `pending` for Drasi to apply or reject.
+#[derive(Default)]
+pub struct Record {
+    pub id: String,
+    pub candidate_id: String,
+    pub basis: String,
+    pub revision: i64,
+    pub declined: bool,
+    pub requested_by: Option<String>,
+    pub post_id: Option<String>,
+    pub change: Option<String>,
+}
+
+/// Insert an approval and make it the latest of the current run. A repeated ID is a no-op.
+pub async fn record(input: Record) -> std::result::Result<String, Error> {
+    let id = input.id;
     if id.is_empty() || id.len() > 100 {
         return Err(Error::bad_request("approval id must be 1 to 100 characters"));
     }
     bounded(&input.candidate_id, "candidate_id")?;
     bounded(&input.basis, "basis")?;
+    for (value, name) in [(&input.requested_by, "requested_by"), (&input.post_id, "post_id"), (&input.change, "change")] {
+        if let Some(value) = value {
+            bounded(value, name)?;
+        }
+    }
     let mut client = db().await?;
     let tx = client.transaction().await?;
     // Serialises approvals so exactly one is `latest`.
@@ -45,7 +77,7 @@ pub async fn approve(Payload(input): Payload<Approval>) -> Api {
         .await?
         .is_some()
     {
-        return Ok(Json(json!({"id": id})));
+        return Ok(id);
     }
     let (epoch, _) = scenario::current(&tx).await?;
     tx.execute(
@@ -53,14 +85,22 @@ pub async fn approve(Payload(input): Payload<Approval>) -> Api {
         &[&epoch],
     )
     .await?;
+    let (status, reason, decided) = if input.declined {
+        let by = input.requested_by.as_deref().unwrap_or("a person");
+        ("declined", Some(format!("Rejected by {by}")), Some(now()))
+    } else {
+        ("pending", None, None)
+    };
     tx.execute(
-        "INSERT INTO ignite_approvals(id, run_epoch, candidate_id, basis, revision, status, latest, requested_ms)
-         VALUES($1, $2, $3, $4, $5, 'pending', true, $6)",
-        &[&id, &epoch, &input.candidate_id, &input.basis, &input.revision, &now()],
+        "INSERT INTO ignite_approvals(id, run_epoch, candidate_id, basis, revision, status, reason, latest,
+             requested_ms, decided_ms, requested_by, post_id, change)
+         VALUES($1, $2, $3, $4, $5, $6, $7, true, $8, $9, $10, $11, $12)",
+        &[&id, &epoch, &input.candidate_id, &input.basis, &input.revision, &status, &reason, &now(),
+          &decided, &input.requested_by, &input.post_id, &input.change],
     )
     .await?;
     tx.commit().await?;
-    Ok(Json(json!({"id": id})))
+    Ok(id)
 }
 
 #[derive(Deserialize)]

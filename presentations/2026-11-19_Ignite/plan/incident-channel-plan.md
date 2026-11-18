@@ -58,7 +58,7 @@ session.
 ## A. Mattermost platform
 
 Owner: this session. Files: `demo/compose.yaml` (the `mattermost` service and
-Grafana's one new environment line), `demo/observability/postgres/02-mattermost.sql`,
+Grafana's one new environment line), `demo/observability/mattermost/Containerfile`,
 `demo/ops/observability-stack.sh`, `demo/ops/observability-env.py`, new
 `demo/ops/mattermost.py`, `demo/ports.env`, `demo/ports.default.env`, the
 settings readers (`ops/settings.py` needs no change; `ui/settings.mjs` and
@@ -67,7 +67,7 @@ the bot token; stamps `.native/mattermost.json`), `demo/database/` (three
 nullable columns on `ignite_approvals`, status `declined`), `demo/workloads/`
 (the action endpoint and the desk's backup press), tests for the endpoint.
 
-1. **Container.** `mattermost-team-edition`, pinned by digest, its database
+1. **Container.** Mattermost Team Edition 12.1.0 built for ARM64 from the official release archive, its database
    `mattermost` in the existing PostgreSQL container, plugins off, telemetry
    off, about 400 MB. Port `IGNITE_MATTERMOST_PORT` (19065 here, 18065 in the
    original's defaults).

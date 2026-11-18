@@ -22,6 +22,10 @@ simulated.
    systems: a **change-approval tool** (`POST /approvals`, which only records an
    approval) and the gateway's **configuration API** (`POST /routes/apply`,
    `/approvals/{id}/reject`, `/approvals/{id}/verified`, called only by Drasi).
+   **Mattermost**'s card buttons reach the approval tool through
+   `POST /mattermost/actions`, which records the approval exactly as
+   `POST /approvals` does (and updates the card); `POST /mattermost/approve-latest`
+   presses Approve on the newest proposal card for the desk's backup button.
    Every request, attempt, health report, scenario setting and approval is a row
    in **PostgreSQL**. The AI service reads none of Drasi's results.
 2. **Drasi Server** reads PostgreSQL's change feed. Its continuous queries
@@ -37,7 +41,9 @@ simulated.
    Langfuse's scores API; and an SSE stream for the presenter desk.
 4. The AI service also sends its own **telemetry** through the OpenTelemetry
    Collector to Prometheus (metrics) and Langfuse (traces). **Grafana** shows
-   both and raises the alerts.
+   both and raises the alerts, which also post to **Mattermost**'s
+   `#incident-ai-support`, the incident channel where Drasi posts its incident
+   cards.
 5. A small **web app** serves the projected stage (slides, the two dashboards
    embedded from Grafana, the late request view) and the private presenter desk
    that drives it. Its controls only change inputs (traffic, deployment faults,
@@ -150,6 +156,7 @@ regenerate them with `observability/grafana/dashboards.py` after changing it.
 | `IGNITE_PROMETHEUS_PORT` / `IGNITE_OTLP_PORT` | 20090 / 15318 | 19090 / 14318 | Prometheus / OpenTelemetry Collector |
 | `IGNITE_POSTGRES_PORT` | 16432 | 15432 | PostgreSQL (database and user `ignite`) |
 | `IGNITE_PROBE_PORT` | 19888 | 18888 | Integration test probe |
+| `IGNITE_MATTERMOST_PORT` | 19065 | 18065 | Mattermost, the incident channel |
 | `IGNITE_PROJECT` | `ignite-native` | `ignite-observability` | Podman compose project and probe image name |
 | `IGNITE_PG_PUBLICATION`, `IGNITE_PG_SLOT` | `ignite_rework` | `ignite_native` | Logical replication read by Drasi |
 | `IGNITE_STORAGE_KEY` | `ignite-native-stage-v1` | `ignite-presentation-stage-v3` | Presenter stage in browser storage |
@@ -172,6 +179,8 @@ only the one you changed, then reload the desk.
 | Which tile rows become which metrics | `plugins/prometheus/examples/ignite.json` (and Grafana, below) | Rebuild; restart Server |
 | A plugin's code | `plugins/<name>/src/` | Test the crate (below); rebuild; restart Server |
 | Gateway, traffic, simulations, approval tool or gateway configuration API | `workloads/src/` | Rebuild; restart the AI service |
+| Mattermost's settings | `MM_*` variables of the `mattermost` service in `compose.yaml` | `./ops/observability-stack.sh up -d --wait mattermost` (recreates it; data stays in the `mattermost-data` volume and the `mattermost` database) |
+| Mattermost's users, team, channel, bot, tokens, webhook | `ops/mattermost.py` | `python3 ops/mattermost.py bootstrap` (idempotent; secrets to `.env`, IDs to `.native/mattermost.json`). If the channel was recreated, rebuild (`ops/native-build.sh`): the config generator writes its ID into Server's configuration. `python3 ops/mattermost.py clear` empties the channel, as the desk's Reset does |
 | Grafana dashboards | `observability/grafana/dashboards.py` | Run it from `demo/`, then `./ops/observability-stack.sh restart grafana` (Grafana doesn't notice regenerated files through the Podman mount) |
 | Grafana alerts | `observability/grafana/provisioning/alerting/` | Reload Grafana (below). The **Grafana alerts firing** tile in `dashboards.py` repeats the rules' conditions (so it can be coloured); change both together |
 | The script, beats or timings | `presentation/notes.ts`, `scenes.ts` | `cd ui && npm run sync-presenter` (updates `PRESENTER.md`), then `npm run build` |
@@ -231,6 +240,7 @@ query results), never from the AI service.
 | `python3 tests/workload-integration.py` | The application and simulated deployments as Drasi sees them: deployment status, overdue requests and their history | Yes |
 | `python3 tests/workload-telemetry.py` | The application's metrics and Langfuse traces, Drasi's overdue metric, and Grafana's alerts on both | Yes |
 | `python3 tests/decision-integration.py` | Policy, plan and what-if | Yes |
+| `python3 tests/mattermost-actions.py` | Mattermost's card buttons reach the approval tool (approve, reject, an earlier run's card), the desk's backup press, the projector sign-in | Yes: adds approvals Drasi rejects (made-up plans); deletes its cards |
 | `python3 tests/recovery-integration.py` | Approval checked by Drasi, routes changed by its gateway reaction, stale rejection, verified recovery, annotations and scores | Yes |
 | `node ui/scripts/walkthrough.mjs capture <folder>` | The whole talk through the desk, beat by beat, as a presenter would; saves the projector and the desk at every beat (about 12 minutes) | Yes; resets at the start and the end |
 | `node ui/scripts/walkthrough.mjs record` | The same, and re-records the four fallback recordings at 1920×1080 (16:9) | Yes; resets at the start and the end |
@@ -301,3 +311,9 @@ here, except where [Known issues](#known-issues) says so.
 - Grafana allows anonymous read-only viewing and embedding (`compose.yaml`) so the
   projected stage can show dashboards without a sign-in. It listens only on
   127.0.0.1; don't expose its port beyond this machine.
+- Mattermost allows framing only from the web app's origins
+  (`MM_SERVICESETTINGS_FRAMEANCESTORS`) and listens only on 127.0.0.1. Its card
+  buttons call the AI service through `host.containers.internal`
+  (`AllowedUntrustedInternalConnections`). `/mattermost/sign-in` and
+  `/mattermost/actions` have no authentication beyond the loopback bind, like
+  `POST /approvals`.

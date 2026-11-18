@@ -156,6 +156,9 @@ services:
       GF_SECURITY_ALLOW_EMBEDDING: "true"
       GF_AUTH_ANONYMOUS_ENABLED: "true"
       GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      # Grafana's alerts also post to #incident-ai-support (contact point incident-channel);
+      # ops/mattermost.py bootstrap writes the webhook URL to .env and recreates Grafana.
+      MATTERMOST_ALERT_WEBHOOK_URL: ${MATTERMOST_ALERT_WEBHOOK_URL:-http://mattermost:8065/hooks/not-configured}
     volumes:
       - grafana-data:/var/lib/grafana
       - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
@@ -171,6 +174,54 @@ services:
       LANGFUSE_PUBLIC_URL: http://localhost:${IGNITE_LANGFUSE_PORT:?}
     volumes:
       - probe-data:/data
+  # The incident channel (#incident-ai-support). Users, team, channel, bot, tokens and the
+  # Grafana webhook are created by ops/mattermost.py bootstrap (run by observability-stack.sh up).
+  mattermost:
+    image: localhost/${IGNITE_PROJECT:?}-mattermost:12.1.0
+    build:
+      context: ./observability/mattermost
+      dockerfile: Containerfile
+    depends_on:
+      postgres: {condition: service_healthy}
+    ports: ["127.0.0.1:${IGNITE_MATTERMOST_PORT:?}:8065"]
+    environment:
+      MM_SQLSETTINGS_DRIVERNAME: postgres
+      MM_SQLSETTINGS_DATASOURCE: postgres://${POSTGRES_USER:?}:${POSTGRES_PASSWORD:?}@postgres:5432/mattermost?sslmode=disable&connect_timeout=10
+      MM_SERVICESETTINGS_SITEURL: http://localhost:${IGNITE_MATTERMOST_PORT:?}
+      # mmctl --local inside the container, used by the bootstrap.
+      MM_SERVICESETTINGS_ENABLELOCALMODE: "true"
+      MM_SERVICESETTINGS_ENABLEINCOMINGWEBHOOKS: "true"
+      MM_SERVICESETTINGS_ENABLEPOSTUSERNAMEOVERRIDE: "true"
+      MM_SERVICESETTINGS_ENABLEPOSTICONOVERRIDE: "true"
+      MM_SERVICESETTINGS_ENABLEBOTACCOUNTCREATION: "true"
+      MM_SERVICESETTINGS_ENABLEUSERACCESSTOKENS: "true"
+      # Card buttons call the AI service on the host (POST /mattermost/actions).
+      MM_SERVICESETTINGS_ALLOWEDUNTRUSTEDINTERNALCONNECTIONS: host.containers.internal
+      # The projected stage frames the channel from the web app (and its test copy).
+      MM_SERVICESETTINGS_FRAMEANCESTORS: http://localhost:${IGNITE_UI_PORT:?} http://127.0.0.1:${IGNITE_UI_PORT:?} http://localhost:${IGNITE_UI_TEST_PORT:?} http://127.0.0.1:${IGNITE_UI_TEST_PORT:?}
+      MM_SERVICESETTINGS_ENABLESECURITYFIXALERT: "false"
+      MM_SERVICESETTINGS_ENABLELINKPREVIEWS: "false"
+      MM_SERVICESETTINGS_ENABLEONBOARDINGFLOW: "false"
+      MM_SERVICESETTINGS_ENABLETUTORIAL: "false"
+      MM_TEAMSETTINGS_ENABLEOPENSERVER: "false"
+      MM_EMAILSETTINGS_SENDEMAILNOTIFICATIONS: "false"
+      MM_EMAILSETTINGS_REQUIREEMAILVERIFICATION: "false"
+      MM_EMAILSETTINGS_ENABLEPREVIEWMODEBANNER: "false"
+      # "Drasi" and "On-call engineer" rather than usernames.
+      MM_TEAMSETTINGS_TEAMMATENAMEDISPLAY: full_name
+      MM_TEAMSETTINGS_LOCKTEAMMATENAMEDISPLAY: "true"
+      MM_PLUGINSETTINGS_ENABLE: "false"
+      MM_LOGSETTINGS_ENABLEDIAGNOSTICS: "false"
+      MM_LOGSETTINGS_CONSOLELEVEL: WARN
+      MM_RATELIMITSETTINGS_ENABLE: "false"
+    volumes:
+      - mattermost-data:/opt/mattermost/data
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://127.0.0.1:8065/api/v4/system/ping"]
+      interval: 5s
+      timeout: 5s
+      start_period: 30s
+      retries: 36
 volumes:
   postgres-data:
   redis-data:
@@ -179,3 +230,4 @@ volumes:
   prometheus-data:
   grafana-data:
   probe-data:
+  mattermost-data:

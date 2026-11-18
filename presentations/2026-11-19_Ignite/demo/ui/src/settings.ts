@@ -13,5 +13,8 @@ export const settings = {
   // Grafana and Langfuse are opened as localhost, as their root URLs are configured.
   grafana: `http://localhost:${port("GRAFANA")}`,
   langfuse: `http://localhost:${port("LANGFUSE")}`,
+  // The incident channel (#incident-ai-support); /mattermost/sign-in on the AI service signs the browser in.
+  mattermost: `http://localhost:${port("MATTERMOST")}`,
+  mattermostSignIn: `http://localhost:${port("WORKLOAD")}/mattermost/sign-in`,
   server: `http://127.0.0.1:${port("DRASI_API")}`,
 } as const;

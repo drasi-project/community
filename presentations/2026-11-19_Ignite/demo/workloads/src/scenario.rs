@@ -322,6 +322,13 @@ pub async fn reset(State(app): State<App>, Payload(input): Payload<Reset>) -> Ap
     let (epoch, revision) = current(&tx).await?;
     tx.commit().await?;
     let cleared = now();
+    let channel = app.clone();
+    tokio::spawn(async move {
+        // The incident channel starts empty too (best effort; Mattermost may not be running).
+        if let Err(error) = crate::mattermost::clear_channel(&channel).await {
+            eprintln!("#incident-ai-support not cleared: {error:#}");
+        }
+    });
     tokio::spawn(async move {
         for attempt in 0..5 {
             match clear_annotations(&app, cleared).await {

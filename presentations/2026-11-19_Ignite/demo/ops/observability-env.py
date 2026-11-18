@@ -53,6 +53,9 @@ def create_env():
         "GRAFANA_ADMIN_PASSWORD": secret(),
         # Filled by `observability-env.py grafana-token` once Grafana runs.
         "IGNITE_GRAFANA_TOKEN": "",
+        # Mattermost (ops/mattermost.py bootstrap adds its tokens and webhook URL once it runs).
+        "MATTERMOST_ADMIN_PASSWORD": secret(),
+        "MATTERMOST_ONCALL_PASSWORD": secret(),
     }
     with os.fdopen(os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "w") as stream:
         stream.writelines(f"{key}='{value}'\n" for key, value in values.items())

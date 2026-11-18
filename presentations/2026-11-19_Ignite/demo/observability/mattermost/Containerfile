@@ -1,0 +1,24 @@
+# Mattermost Team Edition (open source) for ARM64. Mattermost publishes container images
+# for amd64 only, so this builds one from the official release archive, checked by SHA-256.
+FROM docker.io/library/debian:bookworm-slim@sha256:734a72b3d6142a71993b4bc580ca01d8ca687f77a2c422d96a961d3376b179bc
+ARG MM_VERSION=12.1.0
+ARG MM_SHA256=3f2fbd8484c5f5fb7d132d2b395272065ef75b048195d0ff045aec37977045e2
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ca-certificates curl tzdata media-types \
+ && rm -rf /var/lib/apt/lists/* \
+ && curl -fsSL -o /tmp/mattermost.tar.gz \
+      "https://releases.mattermost.com/${MM_VERSION}/mattermost-team-${MM_VERSION}-linux-$(dpkg --print-architecture).tar.gz" \
+ && echo "${MM_SHA256}  /tmp/mattermost.tar.gz" | sha256sum -c - \
+ && tar -xzf /tmp/mattermost.tar.gz -C /opt \
+ && rm /tmp/mattermost.tar.gz \
+ # Plugins are off (MM_PLUGINSETTINGS_ENABLE=false); their bundles only take space.
+ && rm -rf /opt/mattermost/prepackaged_plugins \
+ && useradd --system --uid 2000 --home-dir /opt/mattermost mattermost \
+ && mkdir -p /opt/mattermost/data /opt/mattermost/logs /opt/mattermost/plugins /opt/mattermost/client/plugins \
+ && chown -R mattermost /opt/mattermost
+USER mattermost
+WORKDIR /opt/mattermost
+ENV PATH=/opt/mattermost/bin:$PATH
+EXPOSE 8065
+HEALTHCHECK CMD curl -fs http://127.0.0.1:8065/api/v4/system/ping || exit 1
+CMD ["mattermost"]

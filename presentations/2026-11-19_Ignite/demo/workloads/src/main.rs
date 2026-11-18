@@ -6,6 +6,7 @@ mod content;
 #[cfg(test)]
 mod db_tests;
 mod external;
+mod mattermost;
 mod model;
 mod scenario;
 mod telemetry;
@@ -677,6 +678,10 @@ async fn main() -> Result<()> {
         .route("/routes/apply", post(external::apply))
         .route("/approvals/{id}/reject", post(external::reject))
         .route("/approvals/{id}/verified", post(external::verified))
+        // Mattermost, the incident channel: card buttons, the desk's backup press, projector sign-in.
+        .route("/mattermost/actions", post(mattermost::actions))
+        .route("/mattermost/approve-latest", post(mattermost::approve_latest))
+        .route("/mattermost/sign-in", get(mattermost::sign_in))
         .with_state(app.clone());
     jobs.spawn(async move {
         axum::serve(listener, router).await?;
