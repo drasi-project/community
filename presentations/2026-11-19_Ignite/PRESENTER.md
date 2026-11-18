@@ -236,7 +236,7 @@ Say it in your own words.
 4. **Mattermost · #incident-ai-support.** The team doesn't live on a dashboard, though. This is their incident channel in Mattermost. Drasi posted here as soon as EU-A failed, and its proposed change is already waiting, with an Approve button. Grafana hasn't alerted yet. We'll come back to the proposal.
    - **Watch for:** Red card Deployment failed: EU-A, then the orange Proposed change card with Approve and Reject, the newest at the bottom.
 5. **Grafana · Operations.** Back on the dashboard, the top half catches up: calls fail, errors and the queue climb, and Grafana's alert fires; it posts to the channel too. Something is wrong.
-   - **Watch for:** Support errors red, Support queue rising, Alerts firing 1 or 2 (the second is an alert on Drasi's overdue answer).
+   - **Watch for:** Support errors red, Support queue rising; Alerts firing lists Model calls failing, then Support requests overdue (Drasi), an alert on Drasi's answer.
 6. **Grafana · Operations.** And Support overdue is climbing. Each request has a 15-second deadline. When a request passes it, nothing happens to that request: no new row, no new metric. Drasi counts it at that exact moment anyway, because its query re-checks each request at its deadline. On the chart, the red overdue line follows the orange waiting line 15 seconds later. Nothing re-scans the database: Drasi reacts to each change and each deadline, which is why its proposal was in the channel before Grafana's alert fired.
    - **Watch for:** Support overdue above 0; on the right-hand chart, the red line trails the orange one.
 

@@ -83,10 +83,10 @@
   <text x="1080" y="690" class="title" font-size="32">Drasi Server</text>
   <text x="1080" y="722" class="accent">Change-driven computation</text>
   <text x="1080" y="770" class="sub">Sources: PostgreSQL change feed (with bootstrap) · OpenTelemetry</text>
-  <text x="1080" y="804" class="sub">46 continuous queries, time-aware</text>
+  <text x="1080" y="804" class="sub">47 continuous queries, time-aware</text>
   <text x="1080" y="838" class="sub">Models: drasi.standard/policy (Rego) · drasi.standard/optimization</text>
   <text x="1080" y="872" class="sub">Reactions: Prometheus · HTTP (gateway, Grafana, Langfuse, Mattermost) · SSE</text>
-  <text x="1080" y="906" class="sub">58 components in one Drasi Server</text>
+  <text x="1080" y="906" class="sub">59 components in one Drasi Server</text>
   <path d="M340,322 H433" class="flow"/>
   <path d="M340,603 H433" class="flow"/>
   <text x="352" y="590" class="edge"></text>

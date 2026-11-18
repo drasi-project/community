@@ -98,7 +98,7 @@ export const notes: Record<SceneId, Cue> = {
         watch: "Red card Deployment failed: EU-A, then the orange Proposed change card with Approve and Reject, the newest at the bottom." },
       { show: "ops", highlight: ["ignite-workload.ai-deployments"],
         say: "Back on the dashboard, the top half catches up: calls fail, errors and the queue climb, and Grafana's alert fires; it posts to the channel too. Something is wrong.",
-        watch: "Support errors red, Support queue rising, Alerts firing 1 or 2 (the second is an alert on Drasi's overdue answer)." },
+        watch: "Support errors red, Support queue rising; Alerts firing lists Model calls failing, then Support requests overdue (Drasi), an alert on Drasi's answer." },
       { show: "ops", highlight: ["ignite-workload.support-overdue", "ignite-workload.support-waiting"],
         say: "And Support overdue is climbing. Each request has a 15-second deadline. When a request passes it, nothing happens to that request: no new row, no new metric. Drasi counts it at that exact moment anyway, because its query re-checks each request at its deadline. On the chart, the red overdue line follows the orange waiting line 15 seconds later. Nothing re-scans the database: Drasi reacts to each change and each deadline, which is why its proposal was in the channel before Grafana's alert fired.",
         watch: "Support overdue above 0; on the right-hand chart, the red line trails the orange one." },
