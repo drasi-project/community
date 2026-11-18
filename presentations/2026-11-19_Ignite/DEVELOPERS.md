@@ -33,9 +33,10 @@ simulated.
    probe metrics through its OpenTelemetry source (`IGNITE_HEALTH_SOURCE=otel`
    in `ports.env`; with `postgres` the monitor writes `ignite_reports` and Drasi
    reads health from PostgreSQL instead). Its continuous queries
-   (Cypher) prepare the inputs for three continuous models (native plugins in
-   `plugins/`): a Rego **policy**, and an **optimizer** on `good_lp` that
-   produces the **plan** and the **what-if** (is there still a plan if any one
+   (Cypher) prepare the inputs for two of Drasi's standard continuous models,
+   configured by files in `drasi/`: a Rego **policy** (`drasi.standard/policy`),
+   and an **optimizer** (`drasi.standard/optimization`, on `good_lp`) that
+   produces the **plan** and its **what-if** (is there still a plan if any one
    healthy deployment fails?). Further queries turn the results into one answer
    per Grafana tile, decide whether a pending approval still matches the current
    plan, and decide whether recovery is verified. Seven event queries
@@ -91,7 +92,7 @@ All paths are under `demo/` unless noted.
 | `drasi/policy/` | The placement rules (`ignite.rego`) and the configuration (`policy.json`) of Drasi's Rego policy, `drasi.standard/policy` (drasi-core crate `drasi-computation-transformer-policy`) |
 | `drasi/optimization/` | The placement model, its single-loss what-if and its preconditions: the configuration (`optimization.json`) of Drasi's optimization, `drasi.standard/optimization` (drasi-core crate `drasi-computation-transformer-optimization`, `good_lp` with `microlp`) |
 | `plugins/prometheus` | Prometheus reaction, `ignite/prometheus-exporter` (crate `ignite-prometheus`) |
-| `plugins/*/examples/ignite.json` | Each plugin's configuration in this graph |
+| `plugins/prometheus/examples/ignite.json` | The Prometheus reaction's metric mapping in this graph |
 | `drasi/*.cypher` | The 46 continuous queries; `incident-*` build the incident cards |
 | `ops/config/` | Generates Drasi Server's configuration (`.native/server.json`): every source, query, model, reaction and connection |
 | `database/` | PostgreSQL schema (`schema.sql`, `workload.sql`) and scenario seed (`reset.sql`) |
@@ -132,7 +133,7 @@ beat, what's shown) and stores it in `localStorage`.
 | `observability-stack.sh` | Runs `podman compose` for this copy only (project `$IGNITE_PROJECT`). `env` creates `.env`; `up` also writes Prometheus's scrape target for the Drasi reaction and, when it starts Grafana, makes sure `.env` has a working `IGNITE_GRAFANA_TOKEN` |
 | `observability-env.py` | Creates `.env`; `grafana-token` creates or checks the `drasi-annotations` service-account token |
 | `observability-build.sh` | Builds the test probe container image (`localhost/$IGNITE_PROJECT-probe:phase1`) |
-| `native-build.sh` | Builds Drasi Server and its UI; the Core plugins (PostgreSQL source and bootstrap, query transformer, HTTP and SSE sinks); the three demo plugins; the config generator and the AI service. Writes and validates `server.json` and stamps the build |
+| `native-build.sh` | Builds Drasi Server and its UI; the Core plugins (PostgreSQL source and bootstrap, OpenTelemetry source, query, policy and optimization transformers, HTTP and SSE sinks); the demo's Prometheus reaction; the config generator and the AI service. Aligns the plugin libraries (`macho-align.py`), writes and validates `server.json` and stamps the build |
 | `native-runtime.py` | `init` (create database), `migrate`, `reset`, `run` (delete earlier runs' rows and recorded deliveries, export the reactions' secrets, then start Server), `sql`, `stamp` |
 | `workload.py` | `run` (start the AI service), `status` (its `/health`), `approve`, `configure`, `control`, `client`, `reset` |
 | `settings.py` | Reads `ports.env` for Python and shell (`eval "$(python3 ops/settings.py)"`) |
@@ -188,7 +189,7 @@ only the one you changed, then reload the desk.
 | Policy rules | `drasi/policy/ignite.rego` (its input and output mapping: `drasi/policy/policy.json`; what it decides: `drasi/policy-input.cypher`) | Rebuild; restart Server |
 | The optimizer's inputs, constraints, objectives, what-if or preconditions | `drasi/optimization/optimization.json` (its inputs: `drasi/plan-*.cypher`; its results: `plan-`, `assignment-`, `resilience-` and `loss-results.cypher`) | `cargo test --locked -p ignite-config`; rebuild; restart Server |
 | Which tile rows become which metrics | `plugins/prometheus/examples/ignite.json` (and Grafana, below) | Rebuild; restart Server |
-| A plugin's code | `plugins/<name>/src/` | Test the crate (below); rebuild; restart Server |
+| The Prometheus reaction's code | `plugins/prometheus/src/` | Test the crate (below); rebuild; restart Server |
 | Gateway, traffic, simulations, approval tool or gateway configuration API | `workloads/src/` | Rebuild; restart the AI service |
 | Mattermost's settings | `MM_*` variables of the `mattermost` service in `compose.yaml` | `./ops/observability-stack.sh up -d --wait mattermost` (recreates it; data stays in the `mattermost-data` volume and the `mattermost` database) |
 | Mattermost's users, team, channel, bot, tokens, webhook | `ops/mattermost.py` | `python3 ops/mattermost.py bootstrap` (idempotent; secrets to `.env`, IDs to `.native/mattermost.json`). If the channel was recreated, rebuild (`ops/native-build.sh`): the config generator writes its ID into Server's configuration. `python3 ops/mattermost.py clear` empties the channel, as the desk's Reset does |
@@ -217,7 +218,7 @@ Panel titles and values are referenced by `presentation/notes.ts` (and so
 Run from `demo/` with `.env` loaded (`set -a; . ./.env; set +a`).
 
 **Quick checks** (no running demo needed). Build and test one crate at a time;
-builds go to the shared `.cargo-target` beside the three checkouts
+builds go to the shared `.cargo-target-next` beside the checkouts
 (`demo/.cargo/config.toml`, at most 4 jobs). Never use `--workspace` in
 drasi-core or drasi-server.
 
@@ -228,10 +229,14 @@ drasi-core or drasi-server.
 | Settings | | `cargo test --locked -p ignite-settings --lib` |
 | Config generator and incident cards | `cargo check --locked -p ignite-config` | `cargo test --locked -p ignite-config`: the card templates render to the contract's Mattermost posts, and every `incident-*` query runs through drasi-core with a test clock (debounce, one card per event, the 60 s window, nothing after a restart or a reset). `./ops/native-build.sh` runs the generator and `drasi-server validate` on its output |
 
-Each plugin keeps its logic in plain modules with host-free tests (Rego
-evaluation, the solver, the Prometheus text format) and has one SDK-level test of
-its factory. The optimizer's tests reproduce the talk's outcomes (failure plan,
-infeasible after the policy edit, "not if EU-B fails" at EU-A 50k).
+The Prometheus reaction keeps its logic in plain modules with host-free tests
+(the text format) and has one SDK-level test of its factory. The policy and the
+optimizer are Drasi's own crates, tested in `drasi-core-next`
+(`cargo test -p drasi-computation-transformer-policy`,
+`-p drasi-computation-transformer-optimization`). `ignite-config`'s tests run
+the demo's result queries over the optimizer's output, and
+`tests/decision-integration.py` checks the talk's outcomes live (the failure
+plan, infeasible after the policy edit, at risk at EU-A 50k).
 
 | Command | Checks |
 |---|---|
@@ -286,23 +291,33 @@ Evidence from every run, including failures, is kept under `.native/evidence/`.
 
 ## Dependencies on Drasi Core and Server
 
-The demo builds against the sibling `drasi-core` and `drasi-server` checkouts,
-not published packages, both on `agentofreality-ignite-native`. That is
-`agentofreality-parallel-computation-graph-recovery` plus the fixes below.
-Problems in Drasi itself are fixed in those repositories, not worked around
-here, except where [Known issues](#known-issues) says so.
+The demo builds against sibling checkouts of Drasi Core and Server, not
+published packages: `drasi-core-next` and `drasi-server-next` beside this
+repository, both on branch `agentofreality-ignite-native-next`. They are the
+merged drasi-core (PR 1030) and the Server adapted to it, on
+`agentofreality-parallel-computation-graph-recovery`. `ops/settings.py` and
+`ops/native-build.sh` name them (`IGNITE_DRASI_CORE`, `IGNITE_DRASI_SERVER`,
+defaults `drasi-core-next` and `drasi-server-next`), and the demo's Rust crates
+reference `../drasi-core-next` by path. Server and every plugin must come from
+the same drasi-core build: the plugin services interface (version 2) requires an
+exact match, so `native-build.sh` builds them together.
 
-| Fix | Where | Without it | Status |
-|---|---|---|---|
-| The `memoryIndexes` resource declares itself volatile (`QueryIndexProviderResource::handle`) | `drasi-server/src/computation.rs` | Every query fails at creation with "the constructed instance's description differs from its factory's declaration" | In review: [drasi-server#243](https://github.com/drasi-project/drasi-server/pull/243) |
-| A native query with bootstrap edges is configured to bootstrap | `drasi-core/lib/src/computation/v1/query_construction.rs`, `drasi-core/components/host-sdk/src/computation/query.rs` | Every query reading PostgreSQL fails to start with "bootstrap configuration requires its actual provider before initialization" | In review: [drasi-core#1029](https://github.com/drasi-project/drasi-core/pull/1029) |
-| HTTP sink option `unroutedChanges: ignore`: a change whose operation has no template route completes without a request | `drasi-core/components/computation-plugins/sinks/http` (commit `d34892e7`, this branch only) | The HTTP reactions route only additions (and updates, for approval annotations); every other change would be posted to `{baseUrl}/changes/{alias}`, which the receivers don't have, and the strict gateway reaction would fail and retry it indefinitely | Not yet proposed upstream |
+Problems in Drasi itself are fixed in those repositories, not worked around
+here, except where [Known issues](#known-issues) says so. The checkouts carry
+these commits beyond their upstream branch:
+
+| Commit | Where | What the demo needs from it |
+|---|---|---|
+| `0e0e3ed4` | drasi-core: HTTP sink | `unroutedChanges: ignore`: a change whose operation has no template route completes without a request. The HTTP reactions route only additions (and updates, for approval annotations); without it every other change would be posted to `{baseUrl}/changes/{alias}`, which the receivers don't have, and the gateway reaction would stall |
+| `b282af95`, `6b663dd0`, `26267f08`, `9afd6aa6` | drasi-core: `drasi.standard/optimization` | Preconditions, solution summaries and identities (`signature`, `solutionSignature`), the scenario roll-up, placement candidates separate from policy decisions, start from upstream snapshots, and `atomicScenarios` |
+| `a79f7e27`, `854886c3`, `8d0dcce9` | drasi-core: `drasi.standard/policy` and the plugin SDK | Volatile transformers start from their upstream outputs' snapshots, and the policy emits the decisions for that snapshot at startup |
+| `a4eed95` | drasi-server | Builds against `../drasi-core-next` |
 
 ## Known issues
 
 | Issue | Effect | Status |
 |---|---|---|
-| A query fed by another query receives only that query's changes, not its bootstrap rows | Query-to-query edges are used only where the upstream's rows arrive live after startup: the models' results and the recovery chain (`recovery-task-context` and `recovery-observation-context` → `recovery-results`, a workaround: it should bootstrap from their snapshots). Tiles over rows that rarely change read PostgreSQL directly instead of an upstream query: `tile-capacity` joins the deployment and report tables itself rather than reading `plan-bins`. These queries rebuild only when the whole graph starts, so restart all of Server, never one query | Open. Queries now have a `snapshot` output; try bootstrap edges from upstream queries in `ops/config/src/main.rs` |
+| A query fed by another query receives only that query's changes, not its bootstrap rows | Query-to-query edges are used only where the upstream's rows arrive live after startup: the models' results and the recovery chain (`recovery-task-context` and `recovery-observation-context` → `recovery-results`, a workaround: it should bootstrap from their snapshots). Tiles over rows that rarely change read PostgreSQL directly instead of an upstream query: `tile-capacity` joins the deployments and their health itself rather than reading `plan-bins`. These queries rebuild only when the whole graph starts, so restart all of Server, never one query | Open. Queries now have a `snapshot` output; try bootstrap edges from upstream queries in `ops/config/src/main.rs` |
 | Drasi Server's API lists no reactions (`GET …/instances/ignite/reactions` is empty) | The Server UI shows the queries and sources but none of the six native sinks; see `.native/server.json` | Drasi Server issue, not yet filed |
 | Drasi Server UI requests component details by ID, but the API now expects names | The UI shows no query text or configuration | Drasi Server issue, not yet filed |
 | Drasi Server's expanded query view uses 14 px text | Too small to read on a projector; use browser zoom | Drasi Server issue, not yet filed |
