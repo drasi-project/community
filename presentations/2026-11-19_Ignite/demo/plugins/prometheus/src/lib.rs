@@ -32,7 +32,10 @@ impl Factory for ExporterFactory {
         &self,
         request: &drasi_computation_plugin_sdk::wire::DescribeRequest,
     ) -> Result<drasi_computation_plugin_sdk::ComponentDescription> {
-        Ok(request.unkeyed_sink())
+        // A change the exporter cannot read stalls the sink, as before the policy existed.
+        Ok(request.unkeyed_sink(
+            drasi_computation_contracts::PermanentFailurePolicy::Stall,
+        ))
     }
     fn metadata(&self) -> FactoryMetadata {
         FactoryMetadata {
