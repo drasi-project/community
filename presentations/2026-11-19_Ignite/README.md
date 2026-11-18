@@ -87,8 +87,8 @@ When EU-A fails, the dashboards turn red. The hard questions remain:
 
 1. **Which customer requests have missed their deadline?** A request that is
    simply waiting produces no new event. It becomes late because time passed.
-2. **Is a deployment's status still trustworthy?** If reports stop, the last
-   value looks fine but is no longer evidence of anything.
+2. **Is a deployment's status still trustworthy?** If its health checks go
+   quiet, the last value looks fine but is no longer evidence of anything.
 3. **Where may this work go?** US-C has room, but policy forbids support there.
 4. **What plan fits everything?** EU-B has only 20k spare. The answer is a
    system-wide move: summaries to US-C, which frees EU-B for support.
@@ -112,10 +112,10 @@ its answers current. It has four kinds of component, all working in this demo:
 
 | Component | What it does in this demo | Built into Drasi? |
 |---|---|---|
-| **Sources** | Read the service database's change feed: requests, attempts, deployment health reports (every second), capacity, allowed destinations and approvals | Yes: the PostgreSQL source |
+| **Sources** | Read the service database's change feed (requests, attempts, capacity, allowed destinations and approvals) and each deployment's health checks, as OpenTelemetry metrics every second | Yes: the PostgreSQL and OpenTelemetry sources |
 | **Continuous queries** | Cypher queries kept current as data changes and as time passes, for example *overdue support requests* (past 15 seconds), *deployment status* (Unknown after 8 silent seconds), *is this approval still valid?* and *verified recovery*, plus one query per Grafana tile | Yes |
-| **Continuous models** | Logic re-run whenever its inputs change. Here: **policy** (where each workload may run: Rego rules, given as configuration), **planner** (an optimizer that finds the best complete plan within policy and capacity) and **what-if** (if any one deployment failed, would every workload still fit?) | Drasi runs them; the Rego and optimizer plugins were written for this demo |
-| **Reactions** | Deliver every change in an answer: as Prometheus metrics for Grafana; to the gateway's configuration API, applying an approved plan only if it still matches Drasi's current plan and otherwise rejecting it; as Grafana annotations and Langfuse scores; and to the presenter desk | Yes: the HTTP and SSE reactions. The Prometheus reaction was written for this demo |
+| **Continuous models** | Logic re-run whenever its inputs change. Here: **policy** (where each workload may run: Rego rules, given as configuration), **planner** (an optimizer that finds the best complete plan within policy and capacity) and **what-if** (if any one deployment failed, would every workload still fit?) | Yes: Drasi's standard policy and optimization components. The demo supplies the rules and the model as configuration |
+| **Reactions** | Deliver every change in an answer: as Prometheus metrics for Grafana; to the gateway's configuration API, applying an approved plan only if it still matches Drasi's current plan and otherwise rejecting it; as Grafana annotations and Langfuse scores; as incident cards in Mattermost; and to the presenter desk | Yes: the HTTP and SSE reactions. The Prometheus reaction was written for this demo |
 
 During the talk, the presenter says which of these components produced what
 the audience just saw; after the healthy-but-fragile part, a short **What Drasi
@@ -127,8 +127,8 @@ just did** visual shows it.
    EU-B. Grafana's AI Deployments row is ordinary monitoring; its Decision
    Support row is Drasi's answers, including Failover readiness: "Survives
    losing any one deployment".
-2. **Failure.** EU-A fails. Within seconds Drasi shows EU-A Failed and has a plan
-   ready; errors and the queue rise and Grafana alerts. Support requests count as
+2. **Failure.** EU-A fails. Within seconds Drasi, reading EU-A's health-check
+   telemetry, shows it Failed and has a plan ready; errors and the queue rise and Grafana alerts. Support requests count as
    overdue the moment each passes its 15-second deadline, with no new event.
 3. **Who is affected.** The actual continuous query behind "overdue", with Drasi's
    live list of late requests, then one of those customers' requests, attempt by
@@ -173,7 +173,7 @@ just did** visual shows it.
 
 - [System architecture](presentation/diagrams/architecture.svg): the AI service,
   the observability tools and Drasi Server
-- [Inside Drasi](presentation/diagrams/drasi-graph.svg): the demo's 45 components:
+- [Inside Drasi](presentation/diagrams/drasi-graph.svg): the demo's 58 components:
   sources, continuous queries, continuous models and reactions
 
 ## What's in this folder
