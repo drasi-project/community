@@ -426,12 +426,15 @@ fn otel_configuration() -> Result<Value> {
         "destinationAttributes":[],
     }))
 }
+/// Relations a source delivers (Drasi's OTel source: Service-[:REPORTS]->Metric), not joins.
+const SOURCE_RELATIONS: &[&str] = &["REPORTS"];
 fn joins(text: &str, health: Health) -> Result<Vec<Value>> {
     let used: BTreeSet<_> = text
         .split(":")
         .skip(1)
         .filter_map(|rest| rest.split(']').next())
         .filter(|name| name.chars().all(|c| c.is_ascii_uppercase() || c == '_') && !name.is_empty())
+        .filter(|name| !SOURCE_RELATIONS.contains(name))
         .collect();
     used.into_iter()
         .map(|name| {
@@ -966,6 +969,17 @@ mod tests {
             expected["action"] = json!(id);
             assert_eq!(button["integration"]["context"], expected);
         }
+    }
+
+    #[test]
+    fn every_query_uses_declared_joins_or_source_relations() {
+        for health in [Health::Postgres, Health::Otel] {
+            for query in queries(health) {
+                joins(&query.text, health).unwrap_or_else(|e| panic!("{health:?} {}: {e}", query.name));
+            }
+        }
+        let adapter = queries(Health::Otel).into_iter().find(|q| q.name == HEALTH).unwrap();
+        assert!(joins(&adapter.text, Health::Otel).unwrap().is_empty(), "REPORTS comes from the OTel source");
     }
 
     #[test]
