@@ -13,8 +13,9 @@ The graph is one Drasi Server instance (`ignite`) with 58 components, generated 
 The AI service keeps its state in PostgreSQL and reads none of Drasi's results.
 Drasi follows that database through one logical replication slot, and the AI
 service's health probes through its OpenTelemetry source. It keeps 46
-continuous queries current, and runs three continuous models: a Rego policy, and
-an optimizer that produces the plan and the what-if. Six reactions deliver every
+continuous queries current, and runs two of Drasi's standard continuous models:
+a Rego policy, and an optimizer that produces the plan and its what-if. Six
+reactions deliver every
 answer: a Prometheus endpoint for Grafana's tiles and alert, calls to the
 gateway configuration API that apply or reject approvals and record verified
 recovery, Grafana annotations, Langfuse scores, a live stream for the
@@ -28,7 +29,7 @@ flowchart LR
   AI -- health probes, OTLP --> COL[OpenTelemetry Collector] -- OTLP/gRPC --> OT[otel source]
   SRC --> Q[continuous queries]
   OT --> Q
-  Q --> M[continuous models<br/>Rego policy · plan · what-if]
+  Q --> M[continuous models<br/>policy · plan with what-if]
   M --> Q
   Q --> PROM[Prometheus reaction] -- scraped --> P[Prometheus] --> GRAF[Grafana]
   Q --> GW[gateway reaction] -- apply, reject, verified --> AI
@@ -41,12 +42,12 @@ flowchart LR
 
 | Part of the talk | What Drasi does | Components |
 |---|---|---|
-| **Healthy service** | Context queries feed the scenario rows and each deployment's latest health probe to the models. The policy allows support on EU-A and EU-B, the plan equals the current routes (0 moves), and the what-if is *safe*. One tile query per Grafana tile turns these into the metrics on the bottom row. | `policy-*`, `plan-*` → `policy`, `plan`, `resilience` → `*-results` → `tile-*` → `metrics` |
+| **Healthy service** | Context queries feed the scenario rows and each deployment's latest health probe to the models. The policy allows support on EU-A and EU-B, the plan equals the current routes (0 moves), and the what-if is *safe*. One tile query per Grafana tile turns these into the metrics on the bottom row. | `policy-input`, `plan-*` → `policy`, `plan` → `*-results` → `tile-*` → `metrics` |
 | **Failure** | EU-A's health probes turn `failed`: nobody tells Drasi, it derives the status from the probe metrics (`deployment-health`). `plan-bins` changes, and the plan becomes support → EU-B, summaries → US-C (2 moves) within seconds, before Grafana's error alert rule (evaluated every 10 s over 30 s) fires, about 20 s after the failure. As each waiting support request passes its 15-second deadline, `drasi.trueLater` adds it to `overdue-tasks` and `tile-overdue` with no new change on the row. `plan-events` posts "Drasi proposes a plan" to Grafana once the plan has held for 2 s. | `plan-bins`, `plan`, `overdue-tasks`, `tile-*`, `plan-events` → `grafana-annotations` |
 | **Who is affected** | The query slide shows `overdue-tasks` live through the desk stream. The late-request view reads the request's history from the AI service, not from Drasi. | `overdue-tasks` → `desk-stream` |
 | **Recovery** | The policy denies support on US-C. The desk sends the plan's `candidate_id`, `basis` and `revision` to the approval tool, which only records it. `approval-valid` matches the pending approval to Drasi's current plan, and `gateway-reaction` calls `POST /routes/apply`. `recovery-results` then decides *confirmed*: the support queue that predates the change has cleared, at least 3 support requests have succeeded at the applied revision, the last success is under 15 s old, at least 5 s have passed since applying, and the new deployment's probes read `ok`. `recovery-verified` records it; `recovery-scores` scores the answered requests in Langfuse. | `approval-valid` → `gateway-reaction`; `recovery-*` → `gateway-reaction`, `langfuse-scores` |
-| **Policy change** (optional) | The desk removes US-C from summaries' allowed destinations (a data change). The policy denies it, the plan becomes *infeasible*, and `approval-stale` matches the earlier approval to the changed plan; `gateway-reaction` rejects it with Drasi's reason. Restoring the row brings a feasible plan back. | `policy-destinations`, `policy`, `plan`, `approval-stale` → `gateway-reaction` |
-| **Healthy but fragile** | EU-A's capacity drops to 50k. `resilience` re-solves the plan once per healthy deployment with that deployment removed; losing EU-B leaves no plan, so the result is `at_risk` with first failure EU-B. Restoring 100k makes it *safe* again. | `plan-bins`, `resilience`, `tile-resilience`, `tile-action` |
+| **Policy change** (optional) | The desk removes US-C from summaries' allowed destinations (a data change). The policy denies it, the plan becomes *infeasible*, and `approval-stale` matches the earlier approval to the changed plan; `gateway-reaction` rejects it with Drasi's reason. Restoring the row brings a feasible plan back. | `policy-input`, `policy`, `plan`, `approval-stale` → `gateway-reaction` |
+| **Healthy but fragile** | EU-A's capacity drops to 50k. The plan's `loss` scenario re-solves it once per healthy deployment with that deployment removed; losing EU-B leaves no plan, so the result is `at_risk` with first failure EU-B. Restoring 100k makes it *safe* again. | `plan-bins`, `plan`, `resilience-results`, `tile-resilience`, `tile-action` |
 | **Incident channel** | Seven event queries turn these changes into cards that `incident-channel` posts to #incident-ai-support: the failure (failed for 3 s), support overdue (3 s), the proposed change with Approve and Reject buttons (the plan unchanged for 5 s), Out of date when the facts change under a posted proposal (2 s), the outcome of an approval in the approved card's thread (applied, verified, or rejected by Drasi), failover at risk and failover restored (3 s). Pressing Approve records the same approval the desk used to send; Drasi then decides as above. | `incident-*` → `incident-channel` |
 
 What Drasi enables here:
@@ -63,7 +64,7 @@ What Drasi enables here:
 | Source | 2 | `postgres`, `otel` |
 | Bootstrap provider | 1 | `postgres-bootstrap` |
 | Continuous queries | 46 | [2.2](#22-continuous-queries) |
-| Continuous models | 3 | `policy`, `plan`, `resilience` |
+| Continuous models | 2 | `policy` (`drasi.standard/policy`), `plan` (`drasi.standard/optimization`) |
 | Reactions | 6 | `metrics`, `desk-stream`, `gateway-reaction`, `grafana-annotations`, `langfuse-scores`, `incident-channel` |
 | Result outlet | 1 | `query-results`: every query through Server's query API |
 
@@ -97,30 +98,32 @@ secret store.
 
 ### 2.2 Continuous queries
 
-All 45 are Cypher files in `drasi/`, run by `drasi_computation_transformer_query`
+All 46 are Cypher files in `drasi/`, run by `drasi_computation_transformer_query`
 with `outbox_capacity: 128` and memory indexes. Queries over tables join
 `ignite_scenario` on `run_epoch` through synthetic relationships (`JOINS` in
 `main.rs`), so a reset, which starts a new `run_epoch`, drops old rows. Queries
-over model output read the models' elements (`PolicyDecision`, `Plan`,
-`Assignment`, `Resilience`, `LossScenario`) or another query's result label.
+over model output read the models' elements (`PolicyDecision`, `PlanStatus`,
+`Assignment`, `LossScenario`) or another query's result label.
 
 | Group | Queries | Reads | Feeds |
 |---|---|---|---|
 | Health | `deployment-health` (label `DeploymentHealth`) | `otel`: each deployment's latest `ignite_probe_status` for the run: `ok`, `throttled` or `failed`, expiring 8 s after the probe. The deployment and run come from the Metric's id | `plan-bins`, `tile-deployments`, `tile-capacity`, `incident-deployments`, `incident-failed`, `recovery-observation-context` |
 | Model inputs | `policy-input` | One row per workload × deployment: the pair's properties and whether it is an allowed destination | `policy` (`in`) |
-| | `plan-items` | Workloads ⋈ routes, with the scenario `revision` | `plan`, `resilience` (`items`) |
-| | `plan-bins` | Deployments ⋈ latest probe (`DeploymentHealth`); `unknown` once it expires (`trueLater(expires_ms)`) | `plan`, `resilience` (`bins`) |
-| Model results | `policy-results` | `PolicyDecision` | `plan`, `resilience` (`eligibility`); `tile-policy`, `tile-running` |
-| | `plan-results`, `assignment-results` | `Plan`, `Assignment` | Tiles, approval queries, `plan-events`, desk |
-| | `resilience-results`, `loss-results` | `Resilience`, `LossScenario` | `tile-action`, `tile-resilience`; `loss-results` only the result outlet |
+| | `plan-context` | The scenario's `run_epoch` and `revision` | `plan` (set `context`) |
+| | `plan-items` | Workloads ⋈ routes: demand and current deployment | `plan` (set `items`) |
+| | `plan-bins` | Deployments ⋈ latest probe (`DeploymentHealth`): capacity and `healthy`, `unhealthy` or `unknown` once the probe expires (`trueLater(expires_ms)`) | `plan` (set `bins`) |
+| | `plan-candidates` | Workload × deployment: demand, current route and capacity | `plan` (set `candidates`) |
+| Model results | `policy-results` | `PolicyDecision` | `plan`; `tile-policy`, `tile-running`, `incident-policy` |
+| | `plan-results`, `assignment-results` | `PlanStatus`, `Assignment` | Tiles, approval queries, `plan-events`, incident cards, desk |
+| | `resilience-results`, `loss-results` | `PlanStatus` (its `scenarios.loss` summary), `LossScenario` | `tile-action`, `tile-resilience`, `incident-at-risk`, `incident-restored`; `loss-results` only the result outlet |
 | Requests | `overdue-tasks` | Unanswered tasks past their deadline (`trueLater(deadline_ms)`) | Query slide and desk (`desk-stream`) |
 | | `task-context`, `attempt-context`, `deadline-history` | Tasks, attempts, every task that ever went late | Result outlet only (tests) |
 | Recovery | `recovery-task-context` (label `RecoveryTasks`) | One aggregate row of support tasks at the current revision | `recovery-results` |
 | | `recovery-observation-context` (label `RecoveryObservation`) | The applied approval, its route's `applied_ms` and the support deployment's latest probe | `recovery-results` |
 | | `recovery-results` (label `RecoveryResult`) | The two above (`RECOVERY_SUMMARY`), with several `trueLater` | `tile-recovery`, `recovery-verified` |
 | Tiles | `tile-overdue`, `tile-deployments`, `tile-change`, `tile-action`, `tile-resilience` (Grafana's Decision Support row); `tile-capacity`, `tile-demand`, `tile-recovery`, `tile-running`, `tile-proposed`, `tile-policy`, `tile-last-approval` (the desk and tests) | One query per tile, returning exactly the value shown; `tile-action` and `tile-resilience` also return the answer's wording as `text` ([contracts.md › Operations dashboard](plan/contracts.md#16-operations-dashboard)) | `metrics`; five also `desk-stream` |
-| Reaction drivers | `approval-valid` | A pending approval whose `candidate_id`, `basis` and `revision` match a feasible `Plan` | `gateway-reaction` (`approve`) |
-| | `approval-stale` | A pending approval that doesn't match the current `Plan`, with the reason | `gateway-reaction` (`reject`) |
+| Reaction drivers | `approval-valid` | A pending approval whose `candidate_id`, `basis` and `revision` match the feasible plan in `plan-results` | `gateway-reaction` (`approve`) |
+| | `approval-stale` | A pending approval that doesn't match the current plan, with the reason | `gateway-reaction` (`reject`) |
 | | `recovery-verified` | A `confirmed` recovery result | `gateway-reaction` (`verified`) |
 | | `approval-events` | An approval's status for 30 s after it changes | `grafana-annotations` |
 | | `plan-events` | A feasible plan with moves, held for 2 s (`trueFor`) | `grafana-annotations` |
@@ -135,8 +138,10 @@ Server's API.
 
 ### 2.3 Continuous models
 
-Native plugins loaded from the plugin directory: Drasi's standard Rego policy
-(`drasi.standard/policy`) and this demo's optimizer (`plugins/`). Each is volatile: on start it reads its upstream outputs' snapshots
+Drasi's standard components, loaded from the plugin directory: the Rego policy
+(`drasi.standard/policy`) and the optimizer (`drasi.standard/optimization`).
+The demo supplies only their configuration (`drasi/policy/`,
+`drasi/optimization/`) and the queries that feed them. Each is volatile: on start it reads its upstream outputs' snapshots
 through a `nativeOutputSnapshots` resource, then applies later changes. It emits
 only changed elements, and emits `unknown` rather than a guess when an input is
 missing, inconsistent or times out.
@@ -153,8 +158,9 @@ Configuration:
   - **Model:** one yes/no `assign` per workload × deployment that is allowed, healthy and has room (`plan-candidates` joins demand, current route and capacity; `policy-results` says allowed). Each workload is placed exactly once (nothing is shed), within capacity. Objectives: fewest moves, then the lowest peak use.
   - **What-if:** the `loss` scenario re-solves without each healthy deployment and lists the losses that leave no plan.
   - **Preconditions:** if health or policy is unknown, a decision is missing, or the inputs belong to another revision, the answer is `unknown`, never a guess.
-  - **Timing:** changes within 100 ms are solved together in the background, with a 2 s limit.
-  - **Identities:** `basis` is the signature of exactly what was solved, and `candidate_id` that of the published plan, so an approval binds to both.
+  - **Timing:** changes within 100 ms are solved together in the background (at most 1 s late), with a 2 s limit.
+  - **Atomic scenarios** (`atomicScenarios: true`): a new plan is published only together with its own what-if, never beside the previous what-if, so failover readiness never mixes two plans.
+  - **Identities:** `basis` is the input signature (`signature`), exactly what was solved. `candidate_id` is the plan's `solutionSignature` followed by `basis`, so the same routes proposed again under new facts get a new candidate. An approval binds to both.
   - **Startup:** the component starts from its input queries' snapshots.
 
 ### 2.4 Reactions
@@ -169,8 +175,8 @@ Configuration:
 | `incident-channel` | `drasi.network/http-sink` | The seven `incident-*` card queries | `POST /api/v4/posts` on Mattermost (`127.0.0.1:$IGNITE_MATTERMOST_PORT`) as the `drasi` bot (`env:IGNITE_MATTERMOST_BOT_TOKEN`), into the channel named in `.native/mattermost.json`. Success is `201`; `onPermanentFailure: skip`, 3 retries, 5 s timeout. The proposal's buttons call `http://host.containers.internal:$IGNITE_WORKLOAD_PORT/mattermost/actions` |
 
 The HTTP reactions post only additions (and updates, for approval annotations):
-`unroutedChanges: ignore`, an option added on this branch of drasi-core, drops
-other changes. Every request carries `x-drasi-delivery-id`; the gateway
+`unroutedChanges: ignore` drops other changes. That HTTP sink option is a
+local commit on `drasi-core-next`, not yet upstream. Every request carries `x-drasi-delivery-id`; the gateway
 configuration API is idempotent on it and on the approval's status, and applies
 routes only if the scenario revision still equals the plan's.
 
@@ -226,9 +232,9 @@ Drasi run for real. These parts are simulated or shortened for the stage:
   `gateway-reaction` calls the gateway configuration API. Its compare-and-set on
   the scenario revision is ordinary optimistic concurrency, not a second policy
   check: the gateway never evaluates policy or plans.
-- **Three plugins are this demo's own:** the Rego policy, the optimizer and the
-  Prometheus reaction (`plugins/`). They are generic: the rules, the items and
-  capacities, and the metric mapping are configuration.
+- **One plugin is this demo's own:** the Prometheus reaction
+  (`plugins/prometheus`). The policy and the optimizer are Drasi's standard
+  components; the rules, the model and the metric mapping are configuration.
 - **What "without polling" means here:** no answer is recomputed on a schedule;
   results change with each change and each deadline. The health monitor,
   Prometheus's scrape of the reaction (every 2 s) and Grafana's refresh (every
@@ -238,8 +244,9 @@ Drasi run for real. These parts are simulated or shortened for the stage:
   metrics; Drasi's OpenTelemetry source turns them into a live graph, and
   continuous queries turn that into Healthy, Over quota or Failed, and into
   Unknown when a deployment goes quiet for 8 seconds (`drasi.trueLater`).
-  `IGNITE_HEALTH_SOURCE=postgres` (`ports.env`) restores the earlier path,
-  where the monitor writes `ignite_reports`.
+  `IGNITE_HEALTH_SOURCE=postgres` (`ports.env`) is the fallback: the monitor
+  writes `ignite_reports`, the `postgres` source reads it, and there is no
+  `otel` source or `deployment-health` query (56 components).
 - **Grafana's alerts stay in Grafana.** Its two rules (model-call errors, and
   Drasi's overdue count) fire in Grafana; nothing sends alerts to Drasi.
 - **Server's reaction list is empty.** `GET /api/v1/instances/ignite/reactions`
