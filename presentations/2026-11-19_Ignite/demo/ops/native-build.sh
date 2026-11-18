@@ -2,12 +2,13 @@
 set -euo pipefail
 DEMO="$(cd "$(dirname "$0")/.." && pwd)"
 ROOT="$(cd "$DEMO/../../../.." && pwd)"
-SERVER="$ROOT/drasi-server"
-CORE="$ROOT/drasi-core"
+# The next-version checkouts beside this one (ops/settings.py uses the same names).
+SERVER="$ROOT/${IGNITE_DRASI_SERVER:-drasi-server-next}"
+CORE="$ROOT/${IGNITE_DRASI_CORE:-drasi-core-next}"
 # At most 4 parallel jobs; one shared build folder for the copy (see demo/.cargo/config.toml).
 export CARGO_BUILD_JOBS="$(( ${CARGO_BUILD_JOBS:-4} > 4 ? 4 : ${CARGO_BUILD_JOBS:-4} ))"
 export CARGO_PROFILE_DEV_DEBUG=0
-export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$ROOT/.cargo-target}"
+export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$ROOT/.cargo-target-next}"
 export JQ_LIB_DIR="${JQ_LIB_DIR:-/opt/homebrew/lib}"
 mkdir -p "$DEMO/.native/plugins"
 # Install as a new file: macOS kills a process that loads a library overwritten
@@ -33,8 +34,7 @@ for package in drasi-computation-source-postgres drasi-computation-bootstrap-pos
     cargo build --locked --manifest-path "$CORE/Cargo.toml" -p "$package" --lib --features "$package/dynamic-plugin"
     install_plugin "$CARGO_TARGET_DIR/debug/lib${package//-/_}.$extension"
 done
-# Drasi's native OpenTelemetry source (drasi-core PR 1030), once drasi-core has it. The
-# generator wires it only when IGNITE_HEALTH_SOURCE=otel (plan/otel-detection-plan.md).
+# Drasi's native OpenTelemetry source (drasi-core PR 1030). The generator wires it only when IGNITE_HEALTH_SOURCE=otel (plan/otel-detection-plan.md).
 if [ -f "$CORE/components/computation-plugins/sources/otel/Cargo.toml" ]; then
     package=drasi-computation-source-otel
     cargo build --locked --manifest-path "$CORE/Cargo.toml" -p "$package" --lib --features "$package/dynamic-plugin"

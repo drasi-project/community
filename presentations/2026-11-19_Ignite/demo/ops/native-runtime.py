@@ -12,8 +12,8 @@ import settings  # noqa: E402
 
 DEMO = Path(__file__).resolve().parents[1]
 ROOT = DEMO.parents[3]
-SERVER = ROOT / "drasi-server"
-CORE = ROOT / "drasi-core"
+SERVER = settings.SERVER
+CORE = settings.CORE
 BINARY = settings.TARGET / "debug/drasi-server"
 WORKLOADS = settings.TARGET / "debug/ignite-workloads"
 
@@ -61,7 +61,7 @@ def stamp():
                     subprocess.check_output(["git", "-C", str(repo), "diff", "--binary", "HEAD"])
                 ).hexdigest(),
             }
-            for repo in [CORE, SERVER, ROOT / "community"]
+            for repo in [CORE, SERVER, settings.COMMUNITY]
         },
         "files": {str(path.relative_to(ROOT)): digest(path) for path in files},
         "demo_sources": {

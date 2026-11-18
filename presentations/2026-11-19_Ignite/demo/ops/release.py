@@ -282,8 +282,8 @@ def stamp():
     build_hash = sha(DEMO / ".native/build.json")
     assert all(gates[name]["native_build_sha256"] == build_hash for name in ["cycles", "soak", "recordings"])
     source = {}
-    for name in ["drasi-core", "drasi-server", "community"]:
-        repo = ROOT / name
+    for repo in [settings.CORE, settings.SERVER, settings.COMMUNITY]:
+        name = repo.name
         # Fingerprint source in place; do not copy private ignored data or caches.
         fingerprints = source_fingerprints(repo)
         source[name] = {
@@ -305,7 +305,7 @@ def stamp():
     drasi.runtime.verify_bundle()
     paths = [ROOT / p for p in native["files"]]
     paths += [p for p in (DEMO / "ui/dist").rglob("*") if p.is_file()]
-    paths += [ROOT / "drasi-core/Cargo.lock", ROOT / "drasi-server/Cargo.lock",
+    paths += [settings.CORE / "Cargo.lock", settings.SERVER / "Cargo.lock",
               DEMO / "Cargo.lock", DEMO / "ui/package-lock.json"]
     linkage, external = {}, {}
     if platform.system() == "Darwin":
@@ -317,7 +317,7 @@ def stamp():
                     library = line.strip().split(" (")[0]
                     if library.startswith("/opt/homebrew/"):
                         external[library] = sha(Path(library))
-    licenses = [ROOT / name / "LICENSE" for name in ["community", "drasi-core", "drasi-server"]]
+    licenses = [repo / "LICENSE" for repo in [settings.COMMUNITY, settings.CORE, settings.SERVER]]
     lock = json.loads((DEMO / "ui/package-lock.json").read_text())
     for package in lock["packages"]:
         directory = DEMO / "ui" / package
