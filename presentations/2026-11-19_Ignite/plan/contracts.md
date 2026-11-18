@@ -540,7 +540,7 @@ fixture). Each window opens one `GET /drasi-stream/events` and nothing polls Dra
 
 1. Open `/events` and buffer its frames.
 2. Read `/snapshot/{alias}` for each output the window needs. The desk needs all
-   seven aliases; the query slide needs only `overdue-tasks`.
+   seven aliases; the projector needs only `overdue-tasks` (the oldest late request).
 3. Apply each snapshot, then the buffered frames whose `sequence` is after that
    output's `x-drasi-output-position`, and continue live. Rows are keyed by
    `identity` (`namespace`/`id`); `ADD`/`REPLACE` set `after`, `PATCH` merges
@@ -552,8 +552,8 @@ alias has loaded its snapshot; otherwise each answer shows Unknown.
 
 | Alias | Used for |
 |---|---|
-| `overdue-tasks` | Support overdue, the oldest late request, the query slide |
-| `plan-results` | The proposed plan and what "Select proposed plan" takes to the approval tool (`id` = `plan`, section 5 properties; `assignments` is JSON text) |
+| `overdue-tasks` | Support overdue and the oldest late request |
+| `plan-results` | The proposed plan, shown under Routes, and whether **Approve the proposed change** is enabled (`id` = `plan`, section 5 properties; `assignments` is JSON text) |
 | `tile-action`, `tile-recovery`, `tile-resilience`, `tile-running`, `tile-last-approval` | The four answers (the values Grafana shows), Running now, and the approval outcome with Drasi's `reason` |
 
 Only the private diagnostics page (`/inspect`) still attaches to other queries
@@ -885,7 +885,7 @@ through drasi-core with a test clock). Where it differs from the above:
 | Item | Implemented |
 |---|---|
 | Card rows | Each card query is non-aggregating and returns one row per card; the reaction posts on `added`. Aggregates reach sinks as updates, so the three facts the cards need come from helper queries with result labels: `incident-overdue-count` (`SupportOverdue`), `incident-deployments` (`DeploymentFacts`: Why and healthy capacity), `incident-policy` (`PolicyFacts`: Policy and demand) |
-| Restarts and resets | Besides the 60 s window, a card needs the state before it, seen by this Server (`drasi.previousDistinctValue`): a healthy report before a failure, a clear queue before overdue, a known plan or resilience state of the same run before a proposal, Out of date, at risk or restored. A state standing at a restart or a reset is not posted |
+| Restarts and resets | Besides the 60 s window, a card needs the state before it, seen by this Server (`drasi.previousDistinctValue`): a healthy report before a failure, a clear queue before overdue, a known plan or resilience state of the same run before a proposal, Out of date, at risk or restored; for at risk, `unknown` counts, so a run that starts at risk (the seed, summaries Europe-only) posts its card after a reset. A state standing at a Server restart is not posted |
 | `at_ms` | failed: the last healthy report; overdue: the deadline that started the episode; proposal, Out of date, at risk, restored: the plan's `solved_ms`; outcome: `decided_ms`. At risk and restored close 60 s after the state began (`trueFor(…, 63000)`) |
 | Proposal debounce | 5 s, not 2 s, so the failure card (3 s after the first failed report) comes first and an Out of date card (2 s) precedes the proposal that replaces it. Out of date is posted only for a proposal that stood 5 s (its card was posted), and not after an apply (new plan with no moves and the same assignments) |
 | Outcome | Posted 1 s after the status change. Colour, and the second field (`Routes` for applied, `Change` otherwise), come from the query; Approved by is `requested_by` or `desk` |
@@ -1020,7 +1020,11 @@ The `plan` view goes; beats that showed it show `ops` or `incident`.
 
 | Action id | Label | Enabled | Press |
 |---|---|---|---|
-| `approve-change` | Approve the proposed change | The SSE `plan-results` row is feasible with `moves > 0`, or the beat expects a rejection (`expect: "rejected"`, the stale card) | `POST /mattermost/approve-latest {"run_epoch"}`: exactly what pressing Approve on the newest proposal card does |
+| `approve-change` | Approve the proposed change | The SSE `plan-results` row is feasible with `moves > 0`, or the beat expects a rejection (`expect: "rejected"`) | `POST /mattermost/approve-latest {"run_epoch"}`: exactly what pressing Approve on the newest proposal card does |
+| `start-traffic`, `stop-traffic` | Start demo traffic, Stop demo traffic | Traffic stopped, running | `POST /traffic {"run_epoch", "running"}` |
+| `summaries-anywhere`, `summaries-europe` | Summaries: Europe + US, Summaries: Europe only | US-C not allowed for `batch`, allowed | `POST /configuration` with `destinations.batch` = `EU-A, EU-B, US-C` or `EU-A, EU-B` (the talk's compliance change uses Europe + US) |
+| `fail-eu-a`, `restore-eu-a` | Fail EU-A, Restore EU-A | EU-A `ok`, not `ok` | `POST /control {"run_epoch", "deployment": "EU-A", "action": "fail" \| "restore"}` |
+| `eu-a-half`, `eu-a-full` | EU-A back at 50k, EU-A back to 100k | Always (All demo controls only; no beat uses them) | Restore EU-A if needed, then `POST /configuration` with `capacity.EU-A` 50 000 or 100 000 |
 
 `select-plan` and `approve-plan` (and the desk's plan selection state) are
 removed. The outcome comes from Drasi as today (`tile-last-approval`, approval

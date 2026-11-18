@@ -117,7 +117,7 @@ export const notes: Record<SceneId, Cue> = {
     ifBroken: "If nothing changes within 30 seconds, press Use recordings from here on and say it's a recording.",
   },
   who: {
-    summary: "The incident channel: Drasi's failure and overdue cards; the query and its live list",
+    summary: "The incident channel: Drasi's failure and overdue cards; one late request",
     beats: [
       { show: "incident",
         click: "If Drasi's red Deployment failed: EU-A card isn't in view, scroll up to it",
@@ -184,7 +184,7 @@ export const glossary: readonly [string, string][] = [
   ["Source", "How Drasi hears about changes; here, the database's live list of changes and the health checks' OpenTelemetry metrics"],
   ["Continuous query", "A question whose answer Drasi keeps up to date as data changes and time passes"],
   ["Continuous model", "Logic that Drasi re-runs when its inputs change: here a Rego policy, and an optimizer for the planner and the what-if"],
-  ["Reaction", "Delivers each change in an answer to another system: here Prometheus, the gateway's configuration API, Grafana, Langfuse and the presenter desk"],
+  ["Reaction", "Delivers each change in an answer to another system: here Prometheus, the gateway's configuration API, Grafana, Langfuse, the incident channel and the presenter desk"],
   ["Trace", "One customer request, start to finish, in Langfuse"],
 ];
 
@@ -196,7 +196,7 @@ export const questions: readonly [string, string][] = [
   ["Was the alert slow on purpose?", "The alert is measured over a short window, as most are. The point isn't speed: Drasi has a plan that fits policy, not just a signal."],
   ["Does it only work with PostgreSQL?", "No. Drasi has sources for other databases, Kafka, Kubernetes, OpenTelemetry and HTTP. This demo uses two: PostgreSQL's change feed, and OpenTelemetry for the deployments' health checks."],
   ["Are the policy, planner and what-if part of Drasi?", "Yes. They're Drasi's standard policy and optimization models. The demo supplies only configuration: the Rego rules, and a placement model of workloads, deployments, constraints and objectives, solved with the open-source good_lp solver. Drasi re-runs them whenever their inputs change."],
-  ["Who changes the routes?", "Drasi's reaction calls the gateway's configuration API, only for an approval that still matches Drasi's current plan. The AI service just applies the call, and refuses it if the scenario changed in between."],
+  ["Who changes the routes?", "Drasi's reaction calls the gateway's configuration API, only for an approval that still matches Drasi's current plan. The AI service just applies the call, and refuses it if the routing configuration changed in between."],
   ["How do the answers reach Grafana?", "A Drasi reaction keeps every answer as a Prometheus metric. Prometheus scrapes it and Grafana shows it."],
   ["What happens when Drasi restarts?", "It rebuilds its state from the database and resumes the change feed. Until then the tiles show Unknown."],
   ["How does it scale?", "This demo isn't a benchmark. Each query only keeps what it needs, here the unanswered requests. For performance work, see drasi.io."],

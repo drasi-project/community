@@ -39,7 +39,7 @@ The talk is a sequence of **beats**. Press **Next** on the desk (or your clicker
 the next slide, a dashboard, or the incident channel. Your clicker works
 whichever window is in front.
 
-Some beats have buttons, such as **Fail EU-A** or **Summaries: Europe only**. They
+Some beats have buttons, such as **Summaries: Europe + US** or **Fail EU-A**. They
 appear in the beat itself: press them when you reach the beat, while you say its
 words. Nothing in the demo changes unless you press a button; **Back** and
 **Next** never change the demo. If you forget a button, Next reminds you once.
@@ -138,11 +138,10 @@ no proposal). **Fail EU-A** is red.
 After pressing, the result appears right under the buttons: **Done.** On the
 approving beats a second line follows Drasi's answer, whichever button was
 pressed: waiting for Approve, checking, **Done: Drasi checked it and the new
-routes are applied**, or in green **Rejected by Drasi, as intended** for the
-approval that's meant to be rejected.
+routes are applied**, or **Rejected by Drasi** with its reason.
 
-**Short on time:** tick it to skip the beats marked optional (the policy change
-and the late request view). Their buttons and notes disappear from the sequence.
+**Short on time:** tick it to skip the beats marked optional (the late request
+view). Their notes disappear from the sequence.
 
 **The approval flow.** Drasi's planner works out a change and re-works it whenever
 anything changes; Drasi posts each new proposal as a card in #incident-ai-support
@@ -169,7 +168,7 @@ proposal: approve the new one.
 | 2:00 | The scenario | A typical scenario, The scenario · deployments, The scenario · rules, The scenario · three answers, Bringing it together when EU-A fails | A typical scenario: two workloads, the rules, three questions; then what Drasi brings together |
 | 3:30 | Healthy service | Grafana · Operations | Walk through the healthy dashboard |
 | 6:00 | Failure | Grafana · Operations | Fail EU-A; Drasi's row is ahead of the alert |
-| 9:00 | Who is affected | Mattermost · #incident-ai-support, One late request | The incident channel: Drasi's failure and overdue cards; the query and its live list |
+| 9:00 | Who is affected | Mattermost · #incident-ai-support, One late request | The incident channel: Drasi's failure and overdue cards; one late request |
 | 11:30 | Recovery | Mattermost · #incident-ai-support, Grafana · Operations | Approve Drasi's proposed change on its card; then see it verified |
 | 17:00 | Back to normal | Grafana · Operations | EU-A comes back at full capacity: everything healthy, and safe again |
 | 20:30 | Close | Close, Session survey | Richer context without an integration project; the session survey, then questions |
@@ -308,7 +307,7 @@ Say it in your own words.
 | Source | How Drasi hears about changes; here, the database's live list of changes and the health checks' OpenTelemetry metrics |
 | Continuous query | A question whose answer Drasi keeps up to date as data changes and time passes |
 | Continuous model | Logic that Drasi re-runs when its inputs change: here a Rego policy, and an optimizer for the planner and the what-if |
-| Reaction | Delivers each change in an answer to another system: here Prometheus, the gateway's configuration API, Grafana, Langfuse and the presenter desk |
+| Reaction | Delivers each change in an answer to another system: here Prometheus, the gateway's configuration API, Grafana, Langfuse, the incident channel and the presenter desk |
 | Trace | One customer request, start to finish, in Langfuse |
 
 ## Questions to expect
@@ -322,7 +321,7 @@ Say it in your own words.
 | Was the alert slow on purpose? | The alert is measured over a short window, as most are. The point isn't speed: Drasi has a plan that fits policy, not just a signal. |
 | Does it only work with PostgreSQL? | No. Drasi has sources for other databases, Kafka, Kubernetes, OpenTelemetry and HTTP. This demo uses two: PostgreSQL's change feed, and OpenTelemetry for the deployments' health checks. |
 | Are the policy, planner and what-if part of Drasi? | Yes. They're Drasi's standard policy and optimization models. The demo supplies only configuration: the Rego rules, and a placement model of workloads, deployments, constraints and objectives, solved with the open-source good_lp solver. Drasi re-runs them whenever their inputs change. |
-| Who changes the routes? | Drasi's reaction calls the gateway's configuration API, only for an approval that still matches Drasi's current plan. The AI service just applies the call, and refuses it if the scenario changed in between. |
+| Who changes the routes? | Drasi's reaction calls the gateway's configuration API, only for an approval that still matches Drasi's current plan. The AI service just applies the call, and refuses it if the routing configuration changed in between. |
 | How do the answers reach Grafana? | A Drasi reaction keeps every answer as a Prometheus metric. Prometheus scrapes it and Grafana shows it. |
 | What happens when Drasi restarts? | It rebuilds its state from the database and resumes the change feed. Until then the tiles show Unknown. |
 | How does it scale? | This demo isn't a benchmark. Each query only keeps what it needs, here the unanswered requests. For performance work, see drasi.io. |
@@ -351,8 +350,8 @@ what it shows.
 | Decision Support (bottom: Drasi) | Support overdue | Support requests past their 15-second deadline |
 | | Deployment status | Each deployment's health as Drasi derives it from its health-probe telemetry: Healthy, Over quota or Failed; Unknown if its probes have been silent for 8 seconds |
 | | Workload status | Each workload where it runs now, for example **Support · EU-A**: Healthy, Over quota or Failing as its deployment is; Not allowed when policy no longer allows it there; Unknown if its deployment has been silent for 8 seconds |
-| | Recommended action | Drasi's recommended change and where it is: **None**; **Approve: Move summaries to US-C and support to EU-B** (approve it on its card in #incident-ai-support); **Applying: …**, then **Verifying: …** until the backlog has cleared and support is answered on the new route; **Verified: …** (green); **No change fits policy and capacity**; **Add capacity: losing EU-B leaves support nowhere to run** |
-| | Failover readiness | If any one deployment failed, would every workload still have somewhere allowed to run? **No** names the deployment whose loss would hurt. **Already one down** while a deployment has failed |
+| | Recommended action | Drasi's recommended change and where it is: **None**; **Approve: Move summaries to US-C and support to EU-B** (approve it on its card in #incident-ai-support); **Applying: …**, then **Verifying: …** until the backlog has cleared and support is answered on the new route; **Verified: …** (green); **No change fits policy and capacity**; **Add capacity: losing EU-A leaves no valid plan** (yellow; the starting state, until summaries are also allowed in the US) |
+| | Failover readiness | If any one deployment failed, would every workload still have somewhere allowed to run? **Survives losing any one deployment** (green); **At risk: losing EU-A leaves no valid plan** (yellow; the starting state); **Already degraded: EU-A down** (grey) while a deployment has failed |
 
 The deadlines (15-second target, 8-second silence) are shortened for the demo.
 
@@ -369,8 +368,8 @@ The newest post is at the bottom.
 | Proposed change: … | orange | Drasi's plan for the current facts, with Why, Policy, Capacity and Based on, and **Approve** / **Reject**. After a press it says who approved or rejected it, and its buttons go |
 | Out of date: the facts changed | grey | The proposal above no longer matches Drasi's plan; approving it would be rejected. Now says the new change or **No valid plan** |
 | Applied / Verified / Rejected by Drasi | blue / green / orange | Drasi's answer to an approval, in the approved card's thread |
-| Failover at risk: losing EU-B leaves support nowhere to run | orange | Everything is healthy, but losing one deployment would leave a workload nowhere to run |
-| Failover restored | green | Losing any one deployment again leaves a valid plan |
+| Failover at risk: losing EU-A leaves no valid plan | orange | Everything is healthy, but losing one deployment would leave no valid plan. Posted after every reset, while summaries are Europe-only |
+| Failover restored | green | Losing any one deployment again leaves a valid plan: after **Summaries: Europe + US** |
 
 ## The late request view
 
@@ -399,9 +398,8 @@ still appear. The buttons are hidden. Stay in recording mode for the rest of the
 talk.
 
 **You pressed the wrong button.** Back and Next never undo anything. Use the
-opposite button in **All demo controls**: **Summaries: Europe + US** undoes
-**Europe only**; to undo **Fail EU-A**, press **Restore
-EU-A**. If
+opposite button in **All demo controls**: **Summaries: Europe only** undoes
+**Summaries: Europe + US**; to undo **Fail EU-A**, press **Restore EU-A**. If
 you're not sure what state the demo is in, switch to recordings.
 
 **You pressed Next before the beat's button.** The desk stops you once: "You

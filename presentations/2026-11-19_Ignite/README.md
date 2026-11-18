@@ -46,8 +46,11 @@ of live demo:
 4. **Live demo** in Grafana and the team's incident channel, with the Drasi
    configuration behind each Decision Support panel and one late customer
    request on the way.
-5. **Close:** keep your monitoring tools, add change-driven computation; then
-   the Ignite session survey during questions.
+5. **Close:** richer context, without an integration project: Drasi brought
+   together data that already existed (the application's database, the
+   health-check telemetry, the policy and the approvals), and it's all
+   configuration apart from one small Prometheus reaction plugin; then the
+   Ignite session survey during questions.
 
 The presenter drives everything from a private presenter desk; the projector
 follows. See [PRESENTER.md](PRESENTER.md).

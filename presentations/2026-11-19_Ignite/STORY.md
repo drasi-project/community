@@ -74,10 +74,10 @@ support stayed on EU-B and summaries on US-C, because that still fits, and Drasi
 doesn't propose a change unless the facts call for one.
 
 **Bottom line.** Grafana told me something was broken. Drasi told me, on the
-dashboard and in the incident channel, who was waiting, where the work was allowed
-to go, what would fit, whether the fix
-actually worked. It all just updated as
-things changed, without me running queries or re-checking anything.
+dashboard and in the incident channel, that we were exposed before anything
+broke, who was waiting, where the work was allowed to go, what would fit, and
+whether the fix actually worked. It all just updated as things changed, without
+me running queries or re-checking anything.
 
 ---
 

@@ -53,9 +53,9 @@ simulated.
    `#incident-ai-support`, the incident channel where Drasi posts its incident
    cards.
 5. A small **web app** serves the projected stage (slides, the dashboard
-   embedded from Grafana, the incident channel embedded from Mattermost, the late
-   request view) and the private presenter desk
-   that drives it. Its controls only change inputs (traffic, deployment faults,
+   embedded from Grafana with the Drasi configuration behind each Decision Support
+   panel shown above it, the incident channel embedded from Mattermost, the late
+   request view) and the private presenter desk that drives it. Its controls only change inputs (traffic, deployment faults,
    policy, capacity, approvals); every answer comes from Drasi.
 
 Deployments, their health checks, capacity, the approval tool and the gateway
@@ -70,7 +70,7 @@ configuration API are simulated. Everything else is real.
 - **Inputs, not answers.** Controls change inputs only. Policy, plans, approval
   checks and recovery are computed by Drasi, never by the AI service, the
   dashboards or the web app.
-- **Snapshot first.** The desk, the query slide, the Prometheus reaction and the
+- **Snapshot first.** The desk, the projector, the Prometheus reaction and the
   models load a snapshot, then apply changes. On reconnect they start again
   from a snapshot.
 - **Epoch and revision.** A scenario reset starts a new `run_epoch`; every
@@ -95,7 +95,7 @@ All paths are under `demo/` unless noted.
 | `plugins/prometheus/examples/ignite.json` | The Prometheus reaction's metric mapping in this graph |
 | `drasi/*.cypher` | The 47 continuous queries; `incident-*` build the incident cards |
 | `ops/config/` | Generates Drasi Server's configuration (`.native/server.json`): every source, query, model, reaction and connection |
-| `database/` | PostgreSQL schema (`schema.sql`, `workload.sql`) and scenario seed (`reset.sql`) |
+| `database/` | PostgreSQL schema (`schema.sql`, `workload.sql`), scenario seed (`reset.sql`: both workloads Europe-only, so failover starts at risk) and the in-place rename from earlier table names (`rename.sql`) |
 | `observability/` | Container configuration: Collector, Prometheus, Grafana dashboards, alerts and data source, and an integration test probe |
 | `observability/grafana/dashboards.py` | Generates the audience dashboard, `ai-operations` (AI Deployments and Decision Support rows); `fixture.py` serves sample `/metrics` for each tile state |
 | `ui/` | The web app (Vite, React, Reveal.js) and its tests and scripts |
@@ -118,7 +118,7 @@ All paths are under `demo/` unless noted.
 | `Presenter.tsx`, `desk.css` | The presenter desk: the current beat with its buttons and what to click on the projector, a mirror of Drasi's answers, the live demo and routes, and the collapsible extras. Approving happens on the projected proposal card; the desk's backup, **Approve the proposed change**, calls `POST /mattermost/approve-latest`, which presses that card's Approve, and the desk reports Drasi's answer from `tile-last-approval`. **Next** moves to the next beat and switches the projector, warning once if the beat's button wasn't pressed. Recording mode (`fallback` in the stage state) shows each live part's recording instead |
 | `Explanation.tsx`, `slides.css` | Slide content and styles. `slides.css` holds the Ignite template's dark theme: its colours, Segoe UI, and the layout grid in pixels on a 1920×1080 slide (92 px side margins, titles at y 72, body from y 226, nothing below y 1002, the closed-caption clear space). Template artwork and fonts load from `/template/` (see `ops/template-assets.py` below) |
 | `Highlight.tsx`, `panels.ts` | Highlights the dashboard panels a beat talks about (a beat's `highlight` in `notes.ts`, as `<dashboard uid>.<panel key>`): dims the rest of the projected dashboard and outlines the panels, placed from the dashboard JSON's `gridPos` the way Grafana lays it out. A panel's key is its `key` in the dashboard JSON, else its title in lower case with dashes; a row's key covers its panels. A test fails if a highlight names no panel |
-| `QuerySlide.tsx` | The continuous query slide: `demo/drasi/overdue-tasks.cypher` laid out for the projector (a test checks it matches the file), and Drasi's live list of late requests |
+| `ConfigSlides.tsx`, `codeSlides.ts` | The configuration overlays: above each highlighted Decision Support panel, the Drasi query or model behind it (`overdue-tasks`, `deployment-health`, `tile-workloads`, the Rego policy, the optimization model and its what-if), read from `demo/drasi/` at build time, with its inputs in plain words grouped by source (a beat's `config` in `notes.ts`) |
 | `RequestView.tsx` | One late request: its question, attempts and the moment Drasi listed it, from the AI service's `/tasks/{id}` |
 | `replay.ts` | The recorded fallback clips |
 
@@ -196,7 +196,7 @@ only the one you changed, then reload the desk.
 | Grafana dashboards | `observability/grafana/dashboards.py` | Run it from `demo/`, then `./ops/observability-stack.sh restart grafana` (Grafana doesn't notice regenerated files through the Podman mount) |
 | Grafana alerts | `observability/grafana/provisioning/alerting/` | Reload Grafana (below). Both rules also post to #incident-ai-support (contact point `incident-channel`). The **Alerts firing** panel is Grafana's own alert list, showing rules labelled `component: workload`; give a new rule that label to list it |
 | The script, beats or timings | `presentation/notes.ts`, `scenes.ts` | `cd ui && npm run sync-presenter` (updates `PRESENTER.md`), then `npm run build` |
-| Slides | `presentation/Explanation.tsx`, `slides.css` (the query slide: `QuerySlide.tsx`, which a test keeps in step with `drasi/overdue-tasks.cypher`) | `cd ui && npm run build` |
+| Slides | `presentation/Explanation.tsx`, `slides.css`; the configuration overlays: `ConfigSlides.tsx`, `codeSlides.ts` (they read `demo/drasi/` at build time) | `cd ui && npm run build` |
 | Desk or app behaviour | `presentation/Presenter.tsx`, `ui/src/` | `cd ui && npm run build`; update `PRESENTER.md` if a desk label changes |
 | Database schema | `database/workload.sql` | `python3 ops/native-runtime.py migrate` with Server and the AI service stopped |
 | The diagrams | `presentation/diagrams/*.svg` (template colours and Segoe UI, as the slides) | `node ui/scripts/render-diagrams.mjs` re-renders each PNG at 3840×2160 |
@@ -264,7 +264,7 @@ safe; `reset(us=False)` leaves the seed, with failover at risk.
 | `python3 tests/incident-channel-integration.py` | Drasi's incident cards in #incident-ai-support in the talk's order: the seed's at risk, restored once summaries may run in the US, failure, proposal, overdue, approve → Applied → Verified in the card's thread, then Restore EU-A posts nothing and moves nothing back; each posted once | Yes; resets at the start and the end (clears the channel) |
 | `python3 tests/recovery-integration.py` | Approval checked by Drasi, routes changed by its gateway reaction, stale rejection, verified recovery, annotations and scores | Yes |
 | `node ui/scripts/walkthrough.mjs capture <folder>` | The whole talk through the desk, beat by beat, as a presenter would; saves the projector and the desk at every beat (about 12 minutes) | Yes; resets at the start and the end |
-| `node ui/scripts/walkthrough.mjs record` | The same, and re-records the four fallback recordings at 1920×1080 (16:9) | Yes; resets at the start and the end |
+| `node ui/scripts/walkthrough.mjs record` | The same, and re-records the three fallback recordings (failure, recovery, back to normal) at 1920×1080 (16:9) | Yes; resets at the start and the end |
 
 After `record`, run `cd ui && npm run build` so the app serves the new clips.
 Tests that change data must not run while someone else is using the demo.
@@ -327,6 +327,7 @@ these commits beyond their upstream branch:
 | Drasi Server's expanded query view uses 14 px text | Too small to read on a projector; use browser zoom | Drasi Server issue, not yet filed |
 | Grafana's annotations API has no idempotency key | A retried post whose response was lost, or a Server restart within 30 s of an approval event, can add the same decision event twice (same tag) | Accepted for the demo |
 | A macOS linker release leaves some plugin libraries unloadable ("mis-aligned LINKEDIT string pool") | `ops/macho-align.py` repairs them during the build | Apple toolchain bug |
+| The fallback recordings in `ui/public/replay/` predate the current flow: they show summaries already allowed in the US, the policy change and EU-A back at 50k | Recording mode shows a different story from the live talk | Open; re-record with `node ui/scripts/walkthrough.mjs record` once the flow is final |
 | The fallback recordings are long (failure about 2 minutes, recovery about 4) | The presenter talks over a lot of footage in recording mode | Open; trim with a video tool, or shorten the waits in `ui/scripts/walkthrough.mjs` and re-record |
 | Retries have no limit | A deployment left failed or throttled for hours creates tens of thousands of attempts; a reset can exceed Drasi's 64 MB message limit, and Server startup slows to minutes | Open; avoid leaving faults on. A reset followed by a restart clears it, because startup deletes earlier runs' rows |
 | Incident cards are posted, not updated | Mattermost assigns post IDs and the sink ignores responses, so only approval outcomes can reply in a thread (the approval records the card's post ID). Each post carries `pending_post_id` (run and card id), and Mattermost returns the existing post for a repeated one within its de-duplication window (about 30 s), so a retried delivery doesn't post a card twice; a Server restart within 60 s of an approval outcome still can. A state standing at a restart (EU-A already failed, a proposal) is not posted again; the next change is | Accepted for the demo |

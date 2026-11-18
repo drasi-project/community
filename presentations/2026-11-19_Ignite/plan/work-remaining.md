@@ -1,6 +1,6 @@
 # Work remaining
 
-Open items for the rework (`agentofreality-ignite-native`), most important first.
+Open items for the demo (`agentofreality-ignite-native-next`), most important first.
 Remove an item when it is done.
 
 ## Before the talk
@@ -12,35 +12,31 @@ Remove an item when it is done.
   previous run for 5 minutes after a reset.
 - **Not yet run:** `ops/release.py soak` (1 hour) and `ops/release.py stamp`.
 
-## Speaker material
-
-- **"Drasi in one picture", second beat.** About 110 spoken words (about 45
-  seconds). Keep for now; the presenter will review and decide whether to trim.
-
 ## Known compromises
 
 - **`recovery-results`** still uses the query-to-query workaround: a query can't
   yet bootstrap from its upstream queries' snapshots.
 - **The capacity tile's query** reads the PostgreSQL tables directly rather than
   another query's result.
-- **Drasi Server lists no reactions** (`/instances/ignite/reactions` returns an
-  empty list), so its UI shows none, although the graph has five.
+- **Drasi Server lists no reactions** (`/instances/ai-ops/reactions` returns an
+  empty list), so its UI shows none, although the graph has six.
 - **Grafana annotations and Langfuse scores** are best effort: their reactions
   skip after 3 retries, so an outage loses those events, and annotations can be
   duplicated on a retry or restart.
-- **"Grafana alerts firing" tile** recomputes the two alert rules in PromQL, so it
-  flips within seconds; Grafana's real alert fires about 20 seconds after the
-  failure. The script doesn't point at the tile for the "plan before the alert"
-  comparison.
 - **Restarting a single query** isn't supported (queries fed by other queries get
   only their changes); restart the whole of Drasi Server.
-- **The HTTP sink option `unroutedChanges`** exists only on this drasi-core branch.
+- **The HTTP sink option `unroutedChanges`** exists only on `drasi-core-next`
+  (`0e0e3ed4`), not yet upstream.
 
 ## After the talk
 
-- **Push and merge.** The rework branches in community, drasi-core and
-  drasi-server are local only. Push them, and open pull requests for the
-  drasi-core and drasi-server fixes.
+- **Merge.** The `agentofreality-ignite-native-next` branches of community,
+  drasi-core and drasi-server are pushed. Open pull requests for drasi-core's
+  commits beyond `agentofreality-parallel-computation-graph-recovery` (the HTTP
+  sink's `unroutedChanges`, and the policy and optimization changes) and for the
+  community branch.
+- **Re-record the fallback recordings** (`node ui/scripts/walkthrough.mjs record`)
+  once the flow is final: the current ones show the earlier flow.
 - **Drasi Server UI issues:** component details requested by ID; 14 px text in
   the expanded query view.
 - **Podman memory.** The Podman VM has 7.45 GiB; running both stacks at once ran
@@ -52,13 +48,9 @@ Remove an item when it is done.
   - change "Answers that update the moment things change, beside the monitoring you already use" to "???"
 - **4, 5 and 7: done, waiting for your review.** One dashboard with "AI
   Deployments" and "Decision Support" rows, (i) descriptions and menus that stay
-  visible; Change status, Recommended action and Failover readiness replace
-  Recovery, Action needed and Safe if one fails?; the Recovery plan dashboard and
+  visible; Workload status, Recommended action (with the change's progress),
+  Failover readiness and Grafana's alert list replace Recovery, Action needed,
+  Safe if one fails? and the alert count; the Recovery plan dashboard and
   the desk's select and approve buttons are replaced by Drasi's cards in a real
   Mattermost incident channel (`#incident-ai-support`), approved on the projected
   card. See `plan/incident-channel-plan.md`.
-  
-
-
-
-

@@ -46,7 +46,7 @@ class ReleaseGuards(unittest.TestCase):
                 "cycles": {"passed": True, "cycles": [{}] * 5},
                 "soak": {"passed": True, "duration_seconds": 3599.99, "errors": []},
                 "offline-browser": {"passed": True}, "offline-images": {"passed": True},
-                "recordings": {"clips": [{}] * 4},
+                "recordings": {"clips": [{}] * 3},
             }
             with patch.object(release, "DEMO", demo), patch.object(release, "OUT", out):
                 for passed, duration in [(True, 3599.99), (False, 3601)]:

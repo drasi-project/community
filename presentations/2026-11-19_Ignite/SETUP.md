@@ -253,9 +253,13 @@ On the presenter desk, open **Before and after the talk** and press **Reset scen
 python3 ops/workload.py reset
 ```
 
-This restores the starting state and cancels waiting requests. It also deletes
-the previous run's decision events from Grafana; other Grafana and Langfuse
-history is kept. Never reset in the middle of a talk.
+This restores the starting state and cancels waiting requests. In the starting
+state both workloads are Europe-only, so Failover readiness reads "At risk: losing
+EU-A leaves no valid plan" and Drasi posts that card; the talk's compliance beat
+(**Summaries: Europe + US**) makes it safe. Reset also empties
+`#incident-ai-support` (the projector reloads the channel so deleted posts don't
+linger) and deletes the previous run's decision events from Grafana; other Grafana
+and Langfuse history is kept. Never reset in the middle of a talk.
 
 ## After pulling new code
 

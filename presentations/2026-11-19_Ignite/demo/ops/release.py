@@ -272,7 +272,7 @@ def stamp():
     assert all(gates[name]["passed"] for name in ["cycles", "soak", "offline-browser", "offline-images"])
     assert len(gates["cycles"]["cycles"]) == 5
     assert gates["soak"]["duration_seconds"] >= 3600 and not gates["soak"]["errors"]
-    assert len(gates["recordings"]["clips"]) == 4
+    assert len(gates["recordings"]["clips"]) == 3
     for clip in gates["recordings"]["clips"]:
         recorded = DEMO / "ui/public" / clip["src"].lstrip("/")
         built = DEMO / "ui/dist" / clip["src"].lstrip("/")
