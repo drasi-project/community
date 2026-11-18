@@ -57,6 +57,16 @@ Remove an item when it is done.
   the desk's select and approve buttons are replaced by Drasi's cards in a real
   Mattermost incident channel (`#incident-ai-support`), approved on the projected
   card. See `plan/incident-channel-plan.md`.
+- Need to make some flow changes to simplify the presentation and clarify the message.
+  - The scenario section
+    1. An initial slide on observability ecosystem and challenges. Lots of inputs, lots of complexity. need to understand what is going on, what action to take, knwo consequences. Benefits in bringing together data from multiple system to provide context.
+    2. Drasi makes this simpler and quicker - Sources, COntinuous Model, Reactions
+    3. Lets have a look at a typical scenario (then use the current scenario)
+    4. Highlight need to bring together, telemtry, policy and integrate with common tools like grafana, messaging, ticketingg.
+  - In the dashboard overlays, for each of the drasi sections, need simple diagram showing what data is being brought together.
+  - Minimize the number of jumps back and forth between dashboard and mattermost while telling them same story.
+  
+
 
 
 
