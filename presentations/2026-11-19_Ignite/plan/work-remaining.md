@@ -50,16 +50,10 @@ Remove an item when it is done.
 
 - **1. Title Slide**
   - change "Answers that update the moment things change, beside the monitoring you already use" to "???"
-- **4. Healthy Service**
-  - The section headings should be more generic and typical of a dashboard like "AI Deployments" and "Decision Support" or something like that
-  - THere used to be little (i) icons that gave extra info, they have gone and should return. The current 3 dots in top right disappear as you move the mouse across them making them not useful.
-- **5. Failure**
-  - When i first hit Fail EU-A, in the 'Drasi' section of the dashboard multiple things are poorly expressed and are meanignless:
-    - 'Recovery' says Nothing to verify, which makes no sense, it is meaningless.
-    - Action needed says 'Approve proposed plan'. it is a call to action with no way to take action. Wouldnt the dashboard say the proposal or give a way to get to the proposal.
-    - 'Safe if one fails?' is a very stupid and meaningless title and when it says 'already one down' it makes even less sense.
-- **7. Recovery**
-  - what does this screen even represent? it is a poorly organized hodge podge of made up panels. Is there a way to present this in a way that a real infra support person might have access to? Its really a dashboard for the demo process, not a real operational demo
-  - in the presenter screen 2 of section 7, there is a button to "Select proposed plan" at this point i am just confused. What plan is it talking about? And when i click it, the presenter button shows a green tick, but i have no idea what just happened and i dont see anything on the presentation screen.
-
-
+- **4, 5 and 7: done, waiting for your review.** One dashboard with "AI
+  Deployments" and "Decision Support" rows, (i) descriptions and menus that stay
+  visible; Change status, Recommended action and Failover readiness replace
+  Recovery, Action needed and Safe if one fails?; the Recovery plan dashboard and
+  the desk's select and approve buttons are replaced by Drasi's cards in a real
+  Mattermost incident channel (`#incident-ai-support`), approved on the projected
+  card. See `plan/incident-channel-plan.md`.
