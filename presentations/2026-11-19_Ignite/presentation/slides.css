@@ -190,7 +190,7 @@
 
 /* Highlighted dashboard panels: the rest dimmed, the panels outlined, above the caption line */
 .slide-deck .stage-frame .panel-highlight { position: absolute; left: 0; top: 0; pointer-events: none; animation: panel-highlight .4s ease-out; }
-.slide-deck .stage-frame .panel-highlight .dim { fill: var(--blue-black); fill-opacity: .6; }
+.slide-deck .stage-frame .panel-highlight .dim { fill: var(--blue-black); fill-opacity: .45; }
 .slide-deck .stage-frame .panel-highlight .outline { fill: none; stroke: var(--light-yellow); stroke-width: 4; }
 @keyframes panel-highlight { from { opacity: 0; } to { opacity: 1; } }
 
