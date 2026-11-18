@@ -89,7 +89,7 @@ All paths are under `demo/` unless noted.
 | `ops/config/` | Generates Drasi Server's configuration (`.native/server.json`): every source, query, model, reaction and connection |
 | `database/` | PostgreSQL schema (`schema.sql`, `workload.sql`) and scenario seed (`reset.sql`) |
 | `observability/` | Container configuration: Collector, Prometheus, Grafana dashboards, alerts and data source, and an integration test probe |
-| `observability/grafana/dashboards.py` | Generates the two audience dashboards; `fixture.py` serves sample `/metrics` for each tile state |
+| `observability/grafana/dashboards.py` | Generates the audience dashboard, `ignite-workload` (AI Deployments and Decision Support rows); `fixture.py` serves sample `/metrics` for each tile state |
 | `ui/` | The web app (Vite, React, Reveal.js) and its tests and scripts |
 | `../presentation/` | Slide content and speaker notes, built by `ui/` (see below) |
 | `tests/` | Integration and regression tests (Python) |
@@ -183,7 +183,7 @@ only the one you changed, then reload the desk.
 | Mattermost's settings | `MM_*` variables of the `mattermost` service in `compose.yaml` | `./ops/observability-stack.sh up -d --wait mattermost` (recreates it; data stays in the `mattermost-data` volume and the `mattermost` database) |
 | Mattermost's users, team, channel, bot, tokens, webhook | `ops/mattermost.py` | `python3 ops/mattermost.py bootstrap` (idempotent; secrets to `.env`, IDs to `.native/mattermost.json`). If the channel was recreated, rebuild (`ops/native-build.sh`): the config generator writes its ID into Server's configuration. `python3 ops/mattermost.py clear` empties the channel, as the desk's Reset does |
 | Grafana dashboards | `observability/grafana/dashboards.py` | Run it from `demo/`, then `./ops/observability-stack.sh restart grafana` (Grafana doesn't notice regenerated files through the Podman mount) |
-| Grafana alerts | `observability/grafana/provisioning/alerting/` | Reload Grafana (below). The **Grafana alerts firing** tile in `dashboards.py` repeats the rules' conditions (so it can be coloured); change both together |
+| Grafana alerts | `observability/grafana/provisioning/alerting/` | Reload Grafana (below). Both rules also post to #incident-ai-support (contact point `incident-channel`). The **Alerts firing** tile in `dashboards.py` repeats the rules' conditions (so it can be coloured); change both together |
 | The script, beats or timings | `presentation/notes.ts`, `scenes.ts` | `cd ui && npm run sync-presenter` (updates `PRESENTER.md`), then `npm run build` |
 | Slides | `presentation/Explanation.tsx`, `slides.css` (the query slide: `QuerySlide.tsx`, which a test keeps in step with `drasi/overdue-tasks.cypher`) | `cd ui && npm run build` |
 | Desk or app behaviour | `presentation/Presenter.tsx`, `ui/src/` | `cd ui && npm run build`; update `PRESENTER.md` if a desk label changes |
