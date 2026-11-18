@@ -77,7 +77,7 @@ Origin `0e039e5` already does what the demo needs:
 | 5 | Official policy plugin replaces `ignite-policy` (generator, queries, `native-build.sh`) | policy workstream | Done: `7d0cd2d`. `native-build.sh` builds `drasi-computation-transformer-policy` and removes the old `ignite_policy` library |
 | 6 | Official optimization plugin replaces `ignite-optimizer` | optimization workstream | Done: `e3d5fbe`, `bbe44f0` |
 | 7 | Native OTel source path (`IGNITE_HEALTH_SOURCE=otel`): the generator's `REPORTS` join fix (`fc035a1`), then validate | OTel workstream | Done: validates with 58 components |
-| 8 | Full `ops/native-build.sh` in community-next: UI, Server, all plugins, generator, `validate`, `stamp` | this workstream | Done at `e3d5fbe`. Re-run after any later change |
+| 8 | Full `ops/native-build.sh` in community-next: UI, Server, all plugins, generator, `validate`, `stamp` | this workstream | Done at `eab949d`. Re-run after any later change |
 | 9 | Re-run every crate's tests: `cargo test -p ignite-prometheus`, `-p ignite-config`, `-p ignite-workloads`, plus the replacement plugins' | all | Done at `e3d5fbe`: 15, 20 and 19 passed (1 ignored) |
 | 10 | `community-next/.../demo/.env` and `.native/mattermost.json` copied from the running demo (both ignored by git) | switch operator | Done. Copy them again if the running demo's files change |
 | 11 | Presenter UI: `npm ci && npm run build` in `community-next/.../demo/ui` | switch operator | Done at `e3d5fbe` |
