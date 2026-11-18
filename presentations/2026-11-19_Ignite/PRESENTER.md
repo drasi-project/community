@@ -168,8 +168,8 @@ proposal: approve the new one.
 | 0:30 | Observability and Drasi | Observability today, Drasi: change-driven computation | The observability challenge, and Drasi in three parts |
 | 2:00 | The scenario | A typical scenario, The scenario · deployments, The scenario · rules, The scenario · three answers, Bringing it together when EU-A fails | A typical scenario: two workloads, the rules, three questions; then what Drasi brings together |
 | 3:30 | Healthy service | Grafana · Operations | Walk through the healthy dashboard |
-| 6:00 | Failure | Grafana · Operations, Mattermost · #incident-ai-support | Fail EU-A; Drasi's row and the incident channel are ahead of the alert |
-| 9:00 | Who is affected | Mattermost · #incident-ai-support, Who is affected: the continuous query, One late request | Show who is affected: the overdue card, the query and its live list |
+| 6:00 | Failure | Grafana · Operations | Fail EU-A; Drasi's row is ahead of the alert |
+| 9:00 | Who is affected | Mattermost · #incident-ai-support, Who is affected: the continuous query, One late request | The incident channel: Drasi's failure and overdue cards; the query and its live list |
 | 11:30 | Recovery | Mattermost · #incident-ai-support, Grafana · Operations | Approve Drasi's proposed change on its card; optionally show an out-of-date proposal rejected |
 | 17:00 | Healthy but fragile | Grafana · Operations, Mattermost · #incident-ai-support, What Drasi just did | Healthy but fragile: EU-A returns with half its capacity |
 | 20:30 | Close | Close, Session survey | Four takeaways, the session survey, then questions |
@@ -237,26 +237,27 @@ Say it in your own words.
    - **Watch for:** Within about 8 seconds: Deployment status EU-A Failed, and Recommended action names a change.
 2. **Grafana · Operations.** Look at the bottom row first, Decision Support: EU-A Failed, and Recommended action already names a fix: move summaries to US-C and support to EU-B. Nobody told Drasi EU-A was down: its health probes failed, and the deployment-health query you saw turned that into Failed. And it has worked out a change that fits the rules. We'll come back to it.
    - **Watch for:** Recommended action: Move summaries to US-C and support to EU-B (orange).
-3. **Mattermost · #incident-ai-support.** The team doesn't live on a dashboard, though. This is their incident channel in Mattermost. Drasi posted here as soon as EU-A failed, and its proposed change is already waiting, with an Approve button. Grafana hasn't alerted yet. We'll come back to the proposal.
-   - **Watch for:** Red card Deployment failed: EU-A, then the orange Proposed change card with Approve and Reject, the newest at the bottom.
-4. **Grafana · Operations.** Back on the dashboard, the top half catches up: calls fail, errors and the queue climb, and Grafana's alert fires; it posts to the channel too. Something is wrong.
+3. **Grafana · Operations.** Back on the dashboard, the top half catches up: calls fail, errors and the queue climb, and Grafana's alert fires; it posts to the channel too. Something is wrong.
    - **Watch for:** Support errors red, Support queue rising; Alerts firing lists Model calls failing, then Support requests overdue (Drasi), an alert on Drasi's answer.
-5. **Grafana · Operations.** And Support overdue is climbing. Each request has a 15-second deadline. When a request passes it, nothing happens to that request: no new row, no new metric. Drasi counts it at that exact moment anyway, because its query re-checks each request at its deadline. On the chart, the red overdue line follows the orange waiting line 15 seconds later. Nothing re-scans the database: Drasi reacts to each change and each deadline, which is why its proposal was in the channel before Grafana's alert fired.
+4. **Grafana · Operations.** And Support overdue is climbing. Each request has a 15-second deadline. When a request passes it, nothing happens to that request: no new row, no new metric. Drasi counts it at that exact moment anyway, because its query re-checks each request at its deadline. On the chart, the red overdue line follows the orange waiting line 15 seconds later. Nothing re-scans the database: Drasi reacts to each change and each deadline, which is why it had a fix proposed before Grafana's alert fired. Let's see what the team saw.
    - **Watch for:** Support overdue above 0; on the right-hand chart, the red line trails the orange one.
 
-**If it breaks:** If nothing changes within 30 seconds, press Use recordings from here on and say it's a recording. If the channel shows no cards, say Drasi posts them there and stay on the dashboard: the same answers are on the Decision Support row.
+**If it breaks:** If nothing changes within 30 seconds, press Use recordings from here on and say it's a recording.
 
 ### 6. Who is affected (2½ minutes)
 
-1. **Mattermost · #incident-ai-support.** Which customers are affected? Drasi posted that too: Support requests overdue, as soon as the first support request passed its deadline, with a link to the tile on the dashboard. A count tells you it's bad. Let's see who.
-   - **Click on the projector:** If the red Support requests overdue card isn't in view, scroll up to it (Grafana's alerts may have posted below it). 
+1. **Mattermost · #incident-ai-support.** The team doesn't live on a dashboard, though. This is their incident channel in Mattermost. Drasi posted here as soon as EU-A failed, with its proposed change already waiting and an Approve button. Look at the times: Drasi's cards came before Grafana's alert, which posts here too. We'll come back to the proposal.
+   - **Click on the projector:** If Drasi's red Deployment failed: EU-A card isn't in view, scroll up to it. 
+   - **Watch for:** Red card Deployment failed: EU-A, then the orange Proposed change card with Approve and Reject; Grafana's alert after them.
+2. **Mattermost · #incident-ai-support.** Which customers are affected? Drasi posted that too: Support requests overdue, as soon as the first support request passed its deadline, with a link to the tile on the dashboard. A count tells you it's bad. Let's see who.
+   - **Click on the projector:** If the red Support requests overdue card isn't in view, scroll to it. 
    - **Watch for:** Red card Support requests overdue, with the count when posted and a link to Operations › Support overdue.
-2. **Who is affected: the continuous query.** This is the Support overdue query from earlier, now with its live result: not just a count, but the exact list of late requests with their traces, kept current request by request. With Prometheus you'd get a number from a gauge or a rule evaluated every so often; here it's the set itself, from one query
+3. **Who is affected: the continuous query.** This is the Support overdue query from earlier, now with its live result: not just a count, but the exact list of late requests with their traces, kept current request by request. With Prometheus you'd get a number from a gauge or a rule evaluated every so often; here it's the set itself, from one query
    - **Watch for:** Under the query: how many support requests are late, and the oldest few with their traces.
-3. **One late request (optional).** Here's one of those customers: their question, every attempt to send it to EU-A failing, and the moment its deadline passed and Drasi listed it. The same request is a trace in Langfuse, so whoever picks it up has the detail.
+4. **One late request (optional).** Here's one of those customers: their question, every attempt to send it to EU-A failing, and the moment its deadline passed and Drasi listed it. The same request is a trace in Langfuse, so whoever picks it up has the detail.
    - **Watch for:** The oldest late request, with its attempts and the moment Drasi listed it.
 
-**If it breaks:** If the list is empty, traffic has stopped: say what it would show. The request beat is skipped automatically when nothing is late.
+**If it breaks:** If the channel shows no cards, say Drasi posts them there and go on to the query. If the list is empty, traffic has stopped: say what it would show. The request beat is skipped automatically when nothing is late.
 
 ### 7. Recovery (5½ minutes)
 
@@ -277,10 +278,8 @@ Say it in your own words.
    - **Watch for:** The card says Approved by @oncall at …; in its thread, blue Applied: Move summaries to US-C and support to EU-B.
 6. **Grafana · Operations.** Look at Recommended action: it says Verifying. Applied isn't the same as fixed: another Drasi query waits until the backlog from before the change has cleared and at least three support requests have been answered on the new route. Only then does it say Verified.
    - **Watch for:** Recommended action goes from Verifying: … to Verified: … (green), often within 30 seconds of approval. If it's already Verified, say so.
-7. **Grafana · Operations.** The rest of the dashboard agrees: the queue has drained, Support overdue is back to 0 and errors are falling. EU-A is still down: we routed around it, within policy.
+7. **Grafana · Operations.** The rest of the dashboard agrees: the queue has drained, Support overdue is back to 0 and errors are falling. EU-A is still down: we routed around it, within policy. And in the channel, the proposal's thread now tells the whole story: proposed, approved by the on-call engineer, applied, and verified by Drasi from the evidence. Approving a change isn't the same as fixing the problem; Drasi checked the outcome.
    - **Watch for:** Support errors falling, Support queue back to 0 to 2, Support overdue 0.
-8. **Mattermost · #incident-ai-support.** And the channel has the whole story in one thread: proposed, approved by the on-call engineer, applied, and verified by Drasi from the evidence. Approving a change isn't the same as fixing the problem; Drasi checked the outcome.
-   - **Watch for:** Green Verified: support has recovered, in the approved card's thread.
 
 **If it breaks:** If Approve on the card doesn't respond, press Approve the proposed change on the desk: it presses the same button. Never approve twice. If Recommended action stays Verifying, say it's applied but not yet verified, and carry on. If the proposal or the policy change doesn't behave as described, press Use recordings from here on.
 
@@ -289,9 +288,9 @@ Say it in your own words.
 1. **Grafana · Operations.** Later that day EU-A is fixed, but it comes back with only 50k of capacity. Nothing is broken: every deployment is healthy, every service-health signal is green. But Failover readiness says No.
    - **Press:** EU-A back at 50k
    - **Watch for:** Deployment status all Healthy, EU-A 50k. Failover readiness: No, not if EU-B fails. Recommended action: Add capacity: losing EU-B leaves support nowhere to run.
-2. **Mattermost · #incident-ai-support.** Drasi posted it in the channel, while everything is green. Support now runs on EU-B. If EU-B failed, support would need 60k in Europe, and EU-A has only 50k. Nobody would notice until EU-B fell over.
+2. **Grafana · Operations.** That's the what-if model: for each deployment, would every workload still fit somewhere allowed if that one failed? It re-asks whenever anything changes. A game-day question, answered all the time. And it's a metric, so you can alert on it.
+3. **Mattermost · #incident-ai-support.** Drasi posted it in the channel, while everything is green. Support now runs on EU-B. If EU-B failed, support would need 60k in Europe, and EU-A has only 50k. Nobody would notice until EU-B fell over.
    - **Watch for:** Orange card Failover at risk: losing EU-B leaves support nowhere to run.
-3. **Grafana · Operations.** That's the what-if model: for each deployment, would every workload still fit somewhere allowed if that one failed? It re-asks whenever anything changes. A game-day question, answered all the time. And it's a metric, so you can alert on it.
 4. **Mattermost · #incident-ai-support.** Give EU-A its full capacity back, and Drasi says we're safe again, without any outage.
    - **Press:** EU-A back to 100k
    - **Watch for:** Green card Failover restored. (On the dashboard, Failover readiness: Yes, and Recommended action: None.)

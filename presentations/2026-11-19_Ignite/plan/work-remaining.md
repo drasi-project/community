@@ -58,7 +58,6 @@ Remove an item when it is done.
   Mattermost incident channel (`#incident-ai-support`), approved on the projected
   card. See `plan/incident-channel-plan.md`.
 - Need to make some flow changes to simplify the presentation and clarify the message.
-  - Minimize the number of jumps back and forth between dashboard and mattermost while telling them same story.
   
 
 

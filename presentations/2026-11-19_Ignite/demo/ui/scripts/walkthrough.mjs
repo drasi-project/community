@@ -43,22 +43,21 @@ const lastApproval = () => drasi("ignite_drasi_last_approval_state");
 const waits = {
   "normal/0": async () => until("traffic history", async () => (await api("/health")).traffic?.running, 10).then(() => sleep(15000)),
   "failure/0": () => until("Recommended action: the change", async () => await action() === 1, 60),
-  "failure/2": () => sleep(5000),
-  "failure/3": () => until("errors and alert", async () => await drasi("ignite_drasi_overdue_requests", '{workload="support"}') > 0, 60).then(() => sleep(15000)),
-  "who/0": () => sleep(3000),
+  "failure/2": () => until("errors and alert", async () => await drasi("ignite_drasi_overdue_requests", '{workload="support"}') > 0, 60).then(() => sleep(15000)),
+  "who/0": () => sleep(5000),
   "who/1": () => sleep(3000),
+  "who/2": () => sleep(3000),
   "recovery/1": () => until("no valid plan", async () => await action() === 2, 30).then(() => sleep(6000)),
   "recovery/2": () => until("rejected", async () => await lastApproval() === 4, 30).then(() => sleep(6000)),
   "recovery/3": () => until("new proposal", async () => await action() === 1, 30).then(() => sleep(6000)),
   "recovery/4": () => until("applied", async () => [2, 3].includes(await lastApproval()), 30).then(() => sleep(6000)),
   "recovery/5": () => until("verified", async () => await drasi("ignite_drasi_change_status") === 4, 150).then(() => sleep(6000)),
   "recovery/6": () => sleep(30000),
-  "recovery/7": () => sleep(3000),
   "resilience/0": () => until("not safe", async () => await failover() === 0, 30).then(() => sleep(8000)),
-  "resilience/1": () => sleep(4000),
+  "resilience/2": () => sleep(4000),
   "resilience/3": () => until("safe again", async () => await failover() === 1, 30).then(() => sleep(8000)),
 };
-const recordings = { failure: ["failure/0", "failure/4"], policy: ["recovery/1", "recovery/3"], recovery: ["recovery/4", "recovery/7"], resilience: ["resilience/0", "resilience/3"] };
+const recordings = { failure: ["failure/0", "failure/3"], policy: ["recovery/1", "recovery/3"], recovery: ["recovery/4", "recovery/6"], resilience: ["resilience/0", "resilience/3"] };
 
 await fs.mkdir(output, { recursive: true });
 // The projector and recording pages run in background tabs: keep Chromium from throttling their

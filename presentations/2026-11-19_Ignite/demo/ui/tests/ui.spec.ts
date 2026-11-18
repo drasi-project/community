@@ -93,6 +93,13 @@ test("each Decision Support beat shows its configuration above the highlighted p
   }
 });
 
+test("the live demo switches between Grafana and the incident channel only a few times", () => {
+  const live = ["failure", "who", "recovery", "resilience"] as const;
+  const views = live.flatMap(id => notes[id].beats.map(beat => beat.show)).filter(view => view === "ops" || view === "incident");
+  const switches = views.filter((view, i) => i > 0 && view !== views[i - 1]).length;
+  expect(switches).toBeLessThanOrEqual(5);
+});
+
 test("the scenario reveals its sections one desk beat at a time", async ({ page }) => {
   await desk(page, "concepts", 1);
   const projector = await page.context().newPage();
@@ -293,7 +300,7 @@ test("the projected incident view frames the channel above the caption line, kep
   await stubMattermost(page);
   await failEuA(request);
   await page.setViewportSize({ width: 1920, height: 1080 });
-  await desk(page, "failure", 2);
+  await desk(page, "who", 0);
   const projector = await page.context().newPage();
   await stubGrafana(projector);
   await stubMattermost(projector);
@@ -522,7 +529,7 @@ test("the oldest late request is shown on the projector with its attempts", asyn
   await page.route("**/api/tasks/TEST-TASK", route => route.fulfill({ json: {
     task: { id: "TEST-TASK", content: "My order hasn't arrived.", created_ms: Date.now() - 20000, deadline_ms: Date.now() - 5000, completed_ms: null, trace_id: "abcdef123456" },
     attempts: [503, 503, 503].map((status, i) => ({ endpoint: "EU-A", status, started_ms: Date.now() - 18000 + i * 3000 })) } }));
-  await desk(page, "who", 1);
+  await desk(page, "who", 2);
   const projector = await page.context().newPage();
   await projector.route("**/api/tasks/TEST-TASK", route => route.fulfill({ json: {
     task: { id: "TEST-TASK", content: "My order hasn't arrived.", created_ms: Date.now() - 20000, deadline_ms: Date.now() - 5000, completed_ms: null, trace_id: "abcdef123456" },
@@ -613,7 +620,7 @@ test("the incident channel follows the talk: failure, overdue, proposal, out of 
 
   await press("Fail EU-A");
   await expect(page.locator(".now").getByRole("button", { name: /Fail EU-A/ })).toContainText("✓");
-  await next(); await next();
+  for (let i = 0; i < 4; i++) await next(); // the failure stays on Grafana; then the channel
   await expect(page.locator(".projector-line")).toContainText("Mattermost · #incident-ai-support");
   await expect(card("failed")).toContainText("Deployment failed: EU-A");
   await expect(card("proposal")).toContainText("Proposed change: Move summaries to US-C and support to EU-B");
@@ -621,7 +628,7 @@ test("the incident channel follows the talk: failure, overdue, proposal, out of 
   await request.post(`${fixture}/test/query`, { data: { query: "overdue-tasks", rows: Object.fromEntries([1, 2, 3].map(n =>
     [`late-${n}`, { id: `late-${n}`, run_epoch: "TEST-FIXTURE-EPOCH", workload: "support", trace_id: `trace${n}`, deadline_ms: Date.now() - n * 1000 }])) } });
 
-  for (let i = 0; i < 4; i++) await next();
+  await next();
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Who is affected");
   await expect(card("overdue")).toContainText("Support requests overdue");
   await shot(2, "overdue");
@@ -657,21 +664,22 @@ test("the incident channel follows the talk: failure, overdue, proposal, out of 
   await shot(7, "applied");
 
   await request.post(`${fixture}/test/recover`);
-  await next(); await next(); await next();
+  await next(); await next(); // back to Grafana: Verifying, then Verified and the queue drained
+  await expect(page.locator(".projector-line")).toContainText("Grafana");
   await expect(card("outcome").last()).toContainText("Verified: support has recovered");
   await expect(page.locator(".approval")).toHaveText("Recovery verified ✓");
   await shot(8, "verified");
 
-  await next(); await next();
+  await next();
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Healthy but fragile");
   await press("EU-A back at 50k");
   await expect(page.locator(".now").getByRole("button", { name: /EU-A back at 50k/ })).toContainText("✓");
-  await next();
+  await next(); await next(); // the what-if on Grafana, then the channel once
   await expect(card("at-risk")).toContainText("Failover at risk: losing EU-B leaves support nowhere to run");
   await expect(page.locator(".answers")).toContainText("No: not if EU-B fails");
   await shot(9, "at-risk");
 
-  await next(); await next();
+  await next();
   await press("EU-A back to 100k");
   await expect(card("restored")).toContainText("Failover restored");
   await expect(page.locator(".answers")).toContainText("Yes");
