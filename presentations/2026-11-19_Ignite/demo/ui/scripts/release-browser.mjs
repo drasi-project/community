@@ -8,7 +8,7 @@ import { url } from "../settings.mjs";
 const ui = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const demo = path.dirname(ui);
 const out = path.join(demo, ".native/evidence/release");
-const origin = url("UI");
+const origin = url("UI", "localhost");
 const mode = process.argv[2];
 await fs.mkdir(out, { recursive: true });
 

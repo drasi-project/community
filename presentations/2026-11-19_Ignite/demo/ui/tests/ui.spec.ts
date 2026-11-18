@@ -623,3 +623,11 @@ test("the incident channel follows the talk: failure, overdue, proposal, out of 
   await shot(10, "restored");
   await context.close();
 });
+
+test("the stage moves from 127.0.0.1 to localhost, so the framed Mattermost gets its cookies", async ({ page }) => {
+  for (const path of ["/presenter?x=1#here", "/present?view=title&preview=1"]) {
+    await page.goto(`${url("UI_TEST")}${path}`);
+    await expect(page).toHaveURL(`${url("UI_TEST", "localhost")}${path}`);
+  }
+  await expect(page.locator(".title-slide")).toBeVisible();
+});

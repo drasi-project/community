@@ -61,7 +61,8 @@ the demo changes. Open the desk to give the talk.
 1. Connect the projector and set the displays to **extend**, not mirror
    (macOS: System Settings › Displays › Use as: Extended display). If they mirror,
    the audience sees your desk.
-2. In Chrome, open the desk: http://127.0.0.1:19580/presenter
+2. In Chrome, open the desk: http://localhost:19580/presenter (`localhost`, not
+   `127.0.0.1`: the projected Mattermost channel only stays signed in on `localhost`)
 3. On the desk, press **Open projector window**. Drag that window onto the
    projector and make it full screen (Ctrl ⌘ F). The desk's header then says
    **Projector window connected**.
@@ -412,6 +413,7 @@ without it.
 | Change status stays Applied, verifying | Say it's applied but not yet verified; keep going. Never approve twice |
 | Approve on the card does nothing | Press **Approve the proposed change** on the desk: it presses the same button |
 | The channel shows Mattermost's sign-in page | Press **Sign the projector in to Mattermost** (Before and after the talk), then show the channel again |
+| The channel shows its sign-in page again, or "session expired" after signing in | The desk must be open at `http://localhost:19580`, not `127.0.0.1` (Mattermost's cookies only reach the projected channel from `localhost`). The web app moves `127.0.0.1` to `localhost` by itself; if the address bar still says `127.0.0.1`, open http://localhost:19580/presenter and reopen the projector window |
 | No cards appear in the channel | Say Drasi posts them there, and stay on the dashboard: the Decision Support row shows the same answers |
 | The projector shows the wrong thing | Press **Back**, then **Next**, or use **Jump to a part** |
 | The projector window closed | Press **Open projector window** in the header and put it back on the projector |

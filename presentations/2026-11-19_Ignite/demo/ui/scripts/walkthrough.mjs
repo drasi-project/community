@@ -18,7 +18,7 @@ import { settings, url } from "../settings.mjs";
 const mode = process.argv[2] ?? "capture";
 const ui = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const output = path.resolve(process.argv[3] ?? path.join(ui, "evidence", "walkthrough"));
-const base = url("UI");
+const base = url("UI", "localhost"); // localhost, so the framed Mattermost gets its cookies
 const api = async (route, body) => {
   const response = await fetch(`${url("WORKLOAD")}${route}`, body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : undefined);
   return response.json();

@@ -44,3 +44,15 @@ test("the projector's Mattermost sign-in lands on the incident channel, which th
   if (policy.includes("frame-ancestors")) expect(policy).toMatch(new RegExp(`frame-ancestors[^;]*http://localhost:${port("UI")}`));
   else expect(channel.headers()["x-frame-options"]).toBeUndefined();
 });
+
+test("at localhost, after sign-in, the projected incident view shows the channel, not Mattermost's login page", async ({ page }) => {
+  await page.goto(settings.mattermostSignIn);
+  await page.goto("/present?view=incident&preview=1");
+  expect(new URL(page.url()).hostname).toBe("localhost");
+  const channel = page.frameLocator("iframe.stage-incident");
+  await expect(channel.locator("#post_textbox")).toBeVisible();
+  await expect(channel.locator("#input_loginId")).toHaveCount(0);
+  await page.waitForTimeout(3000);
+  await expect(channel.locator("#post_textbox")).toBeVisible();
+  await page.screenshot({ path: "evidence/live-incident.png" });
+});

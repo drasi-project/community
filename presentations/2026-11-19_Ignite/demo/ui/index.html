@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" href="data:," />
     <title>Drasi | Ignite live demo</title>
+    <script>
+      // The stage frames Mattermost (localhost:IGNITE_MATTERMOST_PORT). Its cookies are SameSite=Lax,
+      // and 127.0.0.1 and localhost are different sites, so from 127.0.0.1 the framed channel never
+      // gets them and shows its login page. Move to localhost before any storage or channel is used.
+      if (/^(127\.\d+\.\d+\.\d+|\[::1\])$/.test(location.hostname))
+        location.replace(`${location.protocol}//localhost${location.port ? `:${location.port}` : ""}${location.pathname}${location.search}${location.hash}`);
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -15,7 +15,7 @@ Addresses are this copy's defaults from `demo/ports.env` (see
 
 | Part | What it is | Address |
 |---|---|---|
-| Presenter desk and projector window | The desk you present from, and the window it drives on the projector (slides, dashboards, recordings) | http://127.0.0.1:19580/presenter, and `/present` |
+| Presenter desk and projector window | The desk you present from, and the window it drives on the projector (slides, dashboards, recordings) | http://localhost:19580/presenter, and `/present` (use `localhost`, not `127.0.0.1`: see [Troubleshooting](#troubleshooting)) |
 | Grafana | The two dashboards, shown inside the projector window | http://localhost:14000 |
 | Langfuse | Traces of individual AI requests (not projected) | http://localhost:14001 |
 | Mattermost | The incident channel `#incident-ai-support`, shown inside the projector window: Grafana's alerts and Drasi's incident cards, with the Approve button | http://localhost:19065 |
@@ -209,7 +209,7 @@ curl -s http://127.0.0.1:19423/metrics | grep drasi_reaction_input_ready
 
 ## Get ready to present
 
-Open the presenter desk at http://127.0.0.1:19580/presenter and follow
+Open the presenter desk at http://localhost:19580/presenter and follow
 [PRESENTER.md](PRESENTER.md#set-up-your-screens): it covers the screens, the
 checklist, the script, every control and what to do if something goes wrong.
 
@@ -297,6 +297,7 @@ steps above already give them.
 | Everything stays Unknown for a long time | A deployment may have been left failed, so requests kept retrying and history grew very large. On the desk, open **All demo controls** and restore every deployment (**Any deployment** › Restore), then **Before and after the talk** › **Reset scenario…**, then restart terminals 1 and 2. |
 | Drasi Server takes minutes to start | The current run has a lot of history. Wait; it will finish (it allows up to 20 minutes). Next time, reset the scenario before restarting. |
 | The projector's Mattermost view shows a sign-in page | Open http://localhost:19500/mattermost/sign-in once in the same browser. |
+| The Mattermost view shows its sign-in page again, or "session expired" right after signing in | Open the desk at http://localhost:19580/presenter, not `127.0.0.1`. Mattermost's cookies are SameSite=Lax, and `127.0.0.1` and `localhost` are different sites, so a stage on `127.0.0.1` frames the channel without its cookies. The web app moves a `127.0.0.1` address to `localhost` by itself; reopen the projector window from the desk afterwards. |
 | Terminal 1 stops with "IGNITE_MATTERMOST_BOT_TOKEN must be exported" or "Mattermost isn't bootstrapped" | Run `./ops/observability-stack.sh up -d --wait mattermost`, which writes the tokens to `.env` and the channel's IDs to `.native/mattermost.json`, then load `.env` again. If it says the bundle changed, run `./ops/native-build.sh`. |
 | Terminal 1 stops with "IGNITE_GRAFANA_TOKEN must be exported" | Start Grafana with `./ops/observability-stack.sh up -d --wait grafana`, which writes the token to `.env`, then load `.env` again and restart terminal 1. |
 | No decision events in Grafana | Check the token: `python3 ops/observability-env.py grafana-token` replaces it if it no longer works. Restart terminal 1 after it writes a new one. |
