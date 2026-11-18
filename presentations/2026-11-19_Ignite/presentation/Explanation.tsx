@@ -142,26 +142,27 @@ export function Explanation({ slide, active = false }: { slide: SlideId; active?
         <text className="dep-name" x="542" y="318">{nb("US-C")}</text>
         <text className="dep-work gray" x="542" y="362">Spare</text>
         <rect className="box" x="28" y="514" width="684" height="84" />
-        <text className="box-name" x="56" y="567">Database <tspan className="box-note">every request, health report, policy change</tspan></text>
+        <text className="box-name" x="56" y="567">Database <tspan className="box-note">every request, policy change, approval</tspan></text>
 
         <rect className="group" x="960" y="0" width="776" height="300" />
         <text className="group-label" x="988" y="48">YOUR OBSERVABILITY</text>
-        <rect className="box" x="988" y="76" width="344" height="196" />
-        <text className="box-name" x="1016" y="130">Prometheus</text><text className="box-name" x="1016" y="170">and Grafana</text>
-        <text className="box-note" x="1016" y="220">Metrics, dashboards, alerts</text>
-        <rect className="box" x="1356" y="76" width="352" height="196" />
-        <text className="box-name" x="1384" y="130">Incident</text><text className="box-name" x="1384" y="170">channel</text>
-        <text className="box-note" x="1384" y="220">Where the team responds</text>
+        <rect className="box" x="988" y="76" width="380" height="196" />
+        <text className="box-name" x="1016" y="130">OpenTelemetry,</text><text className="box-name" x="1016" y="170">Prometheus, Grafana</text>
+        <text className="box-note" x="1016" y="220">Dashboards and alerts</text>
+        <rect className="box" x="1392" y="76" width="316" height="196" />
+        <text className="box-name" x="1420" y="130">Incident</text><text className="box-name" x="1420" y="170">channel</text>
+        <text className="box-note" x="1420" y="220">Where the team</text><text className="box-note" x="1420" y="248">responds</text>
 
         <rect className="drasi" x="960" y="380" width="776" height="218" />
         <text className="drasi-name" x="992" y="446">Drasi</text>
         <text className="drasi-note" x="992" y="500">Reacts to every change and keeps the</text>
         <text className="drasi-note" x="992" y="540">answers current, where the team looks</text>
 
-        <path className="flow" d="M712,118 H982" /><text className="edge" x="760" y="100">Metrics, traces</text>
+        <path className="flow" d="M712,118 H982" /><text className="edge" x="760" y="76">Metrics, traces,</text><text className="edge" x="760" y="102">health probes</text>
+        <path className="flow" d="M1020,300 V374" /><text className="edge" x="1006" y="342" textAnchor="end">Health probes</text>
         <path className="flow" d="M712,556 H954" /><text className="edge" x="760" y="538">Every change</text>
         <path className="flow answer" d="M1160,380 V278" /><text className="edge answer" x="1174" y="342">Answers</text>
-        <path className="flow answer" d="M1420,380 V278" /><text className="edge answer" x="1434" y="342">Who's affected, what to do</text>
+        <path className="flow answer" d="M1520,380 V278" /><text className="edge answer" x="1534" y="328">Who's affected,</text><text className="edge answer" x="1534" y="354">what to do</text>
         <path className="flow" d="M370,160 V198" />
       </svg>
     </div>

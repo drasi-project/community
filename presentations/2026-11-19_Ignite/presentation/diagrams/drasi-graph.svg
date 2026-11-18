@@ -33,21 +33,38 @@
   <text x="660" y="205" class="head">CONTINUOUS MODELS</text>
   <text x="960" y="205" class="head">CONTINUOUS QUERIES</text>
   <text x="1590" y="205" class="head">REACTIONS</text>
-  <rect x="60" y="230" width="220" height="670" rx="16" class="box"/>
+  <rect x="60" y="230" width="220" height="360" rx="16" class="box"/>
   <text x="82" y="272" class="title">PostgreSQL</text>
   <text x="82" y="300" class="title">source</text>
   <text x="82" y="340" class="sub">Change feed from one</text>
   <text x="82" y="364" class="sub">replication slot</text>
-  <text x="82" y="412" class="sub">Each query starts</text>
-  <text x="82" y="436" class="sub">from its own snapshot,</text>
-  <text x="82" y="460" class="sub">then follows changes</text>
-  <text x="82" y="520" class="desc">Scenario · workloads</text>
-  <text x="82" y="544" class="desc">deployments · routes</text>
-  <text x="82" y="568" class="desc">allowed destinations</text>
-  <text x="82" y="592" class="desc">approvals · tasks</text>
-  <text x="82" y="616" class="desc">attempts · health reports</text>
-  <path d="M280,565 H305" class="line"/>
-  <path d="M305,280 V930" class="line"/>
+  <text x="82" y="404" class="sub">Each query starts</text>
+  <text x="82" y="428" class="sub">from its own snapshot,</text>
+  <text x="82" y="452" class="sub">then follows changes</text>
+  <text x="82" y="496" class="desc">Scenario · workloads</text>
+  <text x="82" y="520" class="desc">deployments · routes</text>
+  <text x="82" y="544" class="desc">allowed destinations</text>
+  <text x="82" y="568" class="desc">approvals · tasks · attempts</text>
+  <rect x="60" y="610" width="220" height="290" rx="16" class="box"/>
+  <text x="82" y="652" class="title">OpenTelemetry</text>
+  <text x="82" y="680" class="title">source</text>
+  <text x="82" y="720" class="sub">Health probes from the</text>
+  <text x="82" y="744" class="sub">AI service, every second,</text>
+  <text x="82" y="768" class="sub">via the Collector</text>
+  <text x="82" y="808" class="desc">ignite_probe_status</text>
+  <text x="82" y="832" class="desc">per deployment</text>
+  <path d="M280,410 H305" class="line"/>
+  <path d="M305,280 V624" class="line"/>
+  <path d="M305,646 V930" class="line"/>
+  <path d="M280,635 H328" class="flow"/>
+  <rect x="330" y="545" width="280" height="110" rx="12" class="box"/>
+  <text x="352" y="576" class="name">Health</text>
+  <text x="352" y="600" class="desc">deployment-health</text>
+  <use href="#clock" x="482" y="586" width="18" height="18"/>
+  <text x="352" y="620" class="desc">Latest probe per deployment;</text>
+  <text x="352" y="640" class="desc">Unknown after 8 s of silence</text>
+  <path d="M470,545 V524" class="flow"/>
+  <path d="M470,655 V678" class="flow"/>
   <path d="M305,280 H328" class="flow"/>
   <path d="M305,475 H328" class="flow"/>
   <path d="M305,725 H328" class="flow"/>
@@ -174,5 +191,5 @@
   <text x="704" y="1053" class="sub">Reaction</text>
   <use href="#clock" x="812" y="1038" width="18" height="18"/>
   <text x="840" y="1053" class="sub">Time-aware: the answer changes as time passes, with no new data</text>
-  <text x="1860" y="1053" class="sub" text-anchor="end">45 components in one Drasi Server</text>
+  <text x="1860" y="1053" class="sub" text-anchor="end">58 components in one Drasi Server</text>
 </svg>
