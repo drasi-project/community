@@ -471,11 +471,11 @@ host references (`env:…` on the `configuration` resource), exported by
 
 | Reaction | Outputs (alias ← query) | Request | Policy |
 |---|---|---|---|
-| `gateway-reaction` | `approve` ← `approval-valid` (added) | `POST {workload}/routes/apply`, body `{"approval":"{{after.approval}}","candidate_id":…,"basis":…,"expected_revision":{{after.expected_revision}},"assignments":{{{after.assignments}}}}` | `failurePolicy: strict`, `maxRetries: 10`, `retryBudgetMs: 30000`, `timeoutMs: 5000` |
+| `gateway-reaction` | `approve` ← `approval-valid` (added) | `POST {workload}/routes/apply`, body `{"approval":"{{after.approval}}","candidate_id":…,"basis":…,"expected_revision":{{after.expected_revision}},"assignments":{{{after.assignments}}}}` | `onPermanentFailure: stall`, `maxRetries: 10`, `retryBudgetMs: 30000`, `timeoutMs: 5000` |
 | | `reject` ← `approval-stale` (added) | `POST {workload}/approvals/{{after.approval}}/reject`, body `{"reason": {{json after.reason}}}` | same |
 | | `verified` ← `recovery-verified` (added) | `POST {workload}/approvals/{{after.approval}}/verified`, body `{"verified_ms": {{after.verified_ms}}}` | same |
-| `grafana-annotations` | `events` ← `approval-events`, `plan-events` (added) | `POST {grafana}/api/annotations`, `token` = `env:IGNITE_GRAFANA_TOKEN` (service account, workstream 5), body `{"time":{{after.at_ms}},"tags":["ignite-decision","{{after.id}}"],"text":{{json after.text}}}` | `failurePolicy: skip`, `maxRetries: 3` |
-| `langfuse-scores` | `scores` ← `recovery-scores` (added) | `POST {langfuse}/api/public/scores`, `secretHeaders.authorization` = `env:IGNITE_LANGFUSE_AUTHORIZATION` (`Basic …`), body `{"id":"{{after.id}}","traceId":"{{after.trace_id}}","name":"drasi_recovery","value":1,"dataType":"NUMERIC","comment":{{json after.comment}}}` | `failurePolicy: skip`, `maxRetries: 3` |
+| `grafana-annotations` | `events` ← `approval-events`, `plan-events` (added) | `POST {grafana}/api/annotations`, `token` = `env:IGNITE_GRAFANA_TOKEN` (service account, workstream 5), body `{"time":{{after.at_ms}},"tags":["ignite-decision","{{after.id}}"],"text":{{json after.text}}}` | `onPermanentFailure: skip`, `maxRetries: 3` |
+| `langfuse-scores` | `scores` ← `recovery-scores` (added) | `POST {langfuse}/api/public/scores`, `secretHeaders.authorization` = `env:IGNITE_LANGFUSE_AUTHORIZATION` (`Basic …`), body `{"id":"{{after.id}}","traceId":"{{after.trace_id}}","name":"drasi_recovery","value":1,"dataType":"NUMERIC","comment":{{json after.comment}}}` | `onPermanentFailure: skip`, `maxRetries: 3` |
 
 Driving queries:
 
@@ -588,7 +588,7 @@ reading the SDK and host and compiling the three plugin skeletons against them.
 | Many edges into one input port | Supported | GPU lab `policy` and `gpu-demo-ui` |
 | Bootstrap from several upstream snapshots | Supported | `nativeOutputSnapshots` takes a list of outputs; `NativeOutputSnapshots::snapshot(endpoint, schema)` per binding |
 | Native sink with output snapshots and its own listener | Supported | `drasi.network/sse-sink` (`supports_output_snapshots`, `binds_inputs`, `SinkOutputs`); the export allows output snapshots for `Sink` and `Transformer`, but not together with consumer progress, so the Prometheus reaction is volatile |
-| HTTP reactions with templates, secret headers and delivery IDs | Supported | `drasi-computation-sink-http` (`CONFIGURATION.md`): routes per alias, Handlebars `url`/`template`, `token`, `secretHeaders`, `x-drasi-delivery-id`, `failurePolicy` |
+| HTTP reactions with templates, secret headers and delivery IDs | Supported | `drasi-computation-sink-http` (`CONFIGURATION.md`): routes per alias, Handlebars `url`/`template`, `token`, `secretHeaders`, `x-drasi-delivery-id`, `onPermanentFailure` |
 | `drasi.trueFor`, `drasi.trueLater` | Supported | `core/src/evaluation/functions/future` |
 | `good_lp` 1.15 + `microlp`, `regorus` 0.12 | Available offline | Plugin unit tests pass |
 
@@ -780,7 +780,7 @@ annotations. Best effort: a Mattermost outage doesn't fail the reset.
 
 `drasi.network/http-sink`, `baseUrl` `http://127.0.0.1:{IGNITE_MATTERMOST_PORT}`,
 `token` = `env:IGNITE_MATTERMOST_BOT_TOKEN`, `successStatusCodes: [201]`
-(Mattermost answers 201 to a new post), `failurePolicy: skip`, `maxRetries: 3`,
+(Mattermost answers 201 to a new post), `onPermanentFailure: skip`, `maxRetries: 3`,
 `timeoutMs: 5000`, `unroutedChanges: ignore`. Every route is
 `added` → `POST /api/v4/posts`. The generator takes `channel_id` from
 `.native/mattermost.json` and the button URL from `IGNITE_WORKLOAD_PORT`.

@@ -3,7 +3,7 @@
 
 Owns both processes: run it with Drasi Server and the AI service stopped (containers and UI keep
 running); it leaves both stopped and Grafana and Langfuse running.
-- The gateway reaction (failurePolicy strict, 10 retries within 30 s) applies an approval once the
+- The gateway reaction (onPermanentFailure stall, 10 retries within 30 s) applies an approval once the
   gateway configuration API is back.
 - Grafana and Langfuse outages do not hold up the gateway reaction or recovery verification; their
   reactions skip what they could not deliver (plan/contracts.md section 10, known limits)."""
