@@ -4,6 +4,7 @@
   "timeLimitMs": 2000,
   "statusLabel": "PlanStatus",
   "scenarioLabel": "LossScenario",
+  "atomicScenarios": true,
   "sets": [
     {
       "name": "context",
