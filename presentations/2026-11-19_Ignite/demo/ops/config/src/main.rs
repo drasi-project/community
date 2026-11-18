@@ -697,7 +697,7 @@ fn main() -> Result<()> {
     let plan_annotation = r#"{"tags":["ignite-decision","{{after.id}}"],"text":{{json after.text}}}"#;
     let reaction_configs: BTreeMap<&str, (Value, Vec<(&str, ConfigurationValue)>)> = BTreeMap::from([
         ("gateway-reaction", (json!({
-            "baseUrl":workload, "failurePolicy":"strict", "maxRetries":10, "retryBudgetMs":30000, "timeoutMs":5000,
+            "baseUrl":workload, "onPermanentFailure":"stall", "maxRetries":10, "retryBudgetMs":30000, "timeoutMs":5000,
             "outputTemplates":{"routes":{
                 "approve":http_route("POST", "/routes/apply",
                     r#"{"approval":{{json after.approval}},"candidate_id":{{json after.candidate_id}},"basis":{{json after.basis}},"expected_revision":{{json after.expected_revision}},"assignments":{{{after.assignments}}}}"#, false),
@@ -706,21 +706,21 @@ fn main() -> Result<()> {
             }},
         }), vec![])),
         ("grafana-annotations", (json!({
-            "baseUrl":grafana, "failurePolicy":"skip", "maxRetries":3, "timeoutMs":5000,
+            "baseUrl":grafana, "onPermanentFailure":"skip", "maxRetries":3, "timeoutMs":5000,
             "outputTemplates":{"routes":{
                 "approval-events":http_route("POST", "/api/annotations", annotation, true),
                 "plan-events":http_route("POST", "/api/annotations", plan_annotation, true),
             }},
         }), vec![("token", reference("env:IGNITE_GRAFANA_TOKEN")?)])),
         ("langfuse-scores", (json!({
-            "baseUrl":langfuse, "failurePolicy":"skip", "maxRetries":3, "timeoutMs":5000,
+            "baseUrl":langfuse, "onPermanentFailure":"skip", "maxRetries":3, "timeoutMs":5000,
             "outputTemplates":{"routes":{
                 "scores":http_route("POST", "/api/public/scores",
                     r#"{"id":{{json after.id}},"traceId":{{json after.trace_id}},"name":"drasi_recovery","value":1,"dataType":"NUMERIC","comment":{{json after.comment}}}"#, false),
             }},
         }), vec![("secretHeaders", reference("env-json:IGNITE_LANGFUSE_HEADERS")?)])),
         ("incident-channel", (json!({
-            "baseUrl":mattermost, "failurePolicy":"skip", "maxRetries":3, "timeoutMs":5000,
+            "baseUrl":mattermost, "onPermanentFailure":"skip", "maxRetries":3, "timeoutMs":5000,
             "successStatusCodes":[201],
             "outputTemplates":{"routes":incident_routes(&channel, settings.port("GRAFANA")?, settings.port("WORKLOAD")?)},
         }), vec![("token", reference("env:IGNITE_MATTERMOST_BOT_TOKEN")?)])),
