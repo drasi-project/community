@@ -30,11 +30,13 @@ export const slides = [
   { id: "walkin", title: "Walk-in" },
   { id: "title", title: "Title" },
   // The scenario reveals its three sections one desk beat at a time.
+  { id: "ecosystem", title: "Observability today" },
+  { id: "drasi", title: "Drasi: change-driven computation" },
+  { id: "scenario", title: "A typical scenario" },
   { id: "concepts", title: "The scenario · deployments" },
   { id: "concepts-rules", title: "The scenario · rules" },
   { id: "concepts-questions", title: "The scenario · three answers" },
-  { id: "setup", title: "What happens when EU-A fails" },
-  { id: "drasi", title: "Drasi: change-driven computation" },
+  { id: "setup", title: "Bringing it together when EU-A fails" },
   { id: "query", title: "Who is affected: the continuous query" },
   { id: "closing", title: "Close" },
   { id: "survey", title: "Session survey" },
@@ -70,8 +72,8 @@ export const viewLabel = (view: StageView) => view === "ops" ? "Grafana · Opera
 // The talk's parts. Timings are minutes from the start.
 export const scenes = [
   { id: "title", title: "Title", start: 0, minutes: .5 },
-  { id: "concepts", title: "The scenario", start: .5, minutes: 1.5 },
-  { id: "drasi", title: "Drasi in one picture", start: 2, minutes: 1.5 },
+  { id: "drasi", title: "Observability and Drasi", start: .5, minutes: 1.5 },
+  { id: "concepts", title: "The scenario", start: 2, minutes: 1.5 },
   { id: "normal", title: "Healthy service", start: 3.5, minutes: 2.5 },
   { id: "failure", title: "Failure", start: 6, minutes: 3 },
   { id: "who", title: "Who is affected", start: 9, minutes: 2.5 },

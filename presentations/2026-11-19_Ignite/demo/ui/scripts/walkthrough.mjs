@@ -100,7 +100,7 @@ let index = 0, clip = null;
 for (;;) {
   const title = (await desk.locator(".now-head h1").innerText()).replace(/\s+\d.*$/, "");
   const part = (await desk.evaluate(key => JSON.parse(localStorage.getItem(key)), settings.IGNITE_STORAGE_KEY));
-  const sceneId = ["title", "concepts", "drasi", "normal", "failure", "who", "recovery", "resilience", "closing"][part.cue];
+  const sceneId = ["title", "drasi", "concepts", "normal", "failure", "who", "recovery", "resilience", "closing"][part.cue];
   const key = `${sceneId}/${part.beat}`;
   if (index === 0) {
     // Sign the projector's browser in to Mattermost as oncall, as the presenter does before the talk.

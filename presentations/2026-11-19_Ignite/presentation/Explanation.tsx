@@ -117,60 +117,64 @@ export function Explanation({ slide, active = false }: { slide: SlideId; active?
     </div>;
   }
 
-  // What happens when EU-A fails: the demo's setup, simplified, and where Drasi sits beside existing observability.
-  if (slide === "setup") return <div className="content-slide setup-slide">
-    <h1>What happens when {nb("EU-A")} Fails</h1>
+  if (slide === "ecosystem") return <div className="content-slide ecosystem-slide">
+    <h1>Observability today</h1>
     <div className="body">
-      <p className="lead">Imagine your observability setup looks something like this. We'll see how Drasi works with it to respond to events intelligently, and sooner.</p>
-      <svg className="setup-diagram" viewBox="0 0 1736 620" role="img" aria-label="The AI service's deployments in Europe and the United States, the existing monitoring and incident channel, and Drasi beside them">
-        <defs><marker id="setup-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" className="arrowhead" /></marker></defs>
-        <rect className="group" x="0" y="0" width="740" height="620" />
-        <text className="group-label" x="28" y="48">AI SERVICE</text>
-        <rect className="box" x="28" y="76" width="684" height="84" />
-        <text className="box-name" x="56" y="129">Gateway <tspan className="box-note">routes each customer request</tspan></text>
-        <rect className="region" x="28" y="200" width="446" height="290" />
-        <text className="region-label" x="52" y="240">Europe</text>
-        <rect className="deployment blue" x="52" y="262" width="193" height="200" />
-        <text className="dep-name" x="74" y="318">{nb("EU-A")}</text>
-        <text className="dep-work blue" x="74" y="362">Customer</text><text className="dep-work blue" x="74" y="396">support</text>
-        <rect className="deployment purple" x="257" y="262" width="193" height="200" />
-        <text className="dep-name" x="279" y="318">{nb("EU-B")}</text>
-        <text className="dep-work purple" x="279" y="362">Document</text><text className="dep-work purple" x="279" y="396">summaries</text>
-        <rect className="region" x="498" y="200" width="214" height="290" />
-        <text className="region-label" x="520" y="240">United States</text>
-        <rect className="deployment gray" x="520" y="262" width="170" height="200" />
-        <text className="dep-name" x="542" y="318">{nb("US-C")}</text>
-        <text className="dep-work gray" x="542" y="362">Spare</text>
-        <rect className="box" x="28" y="514" width="684" height="84" />
-        <text className="box-name" x="56" y="567">Database <tspan className="box-note">every request, policy change, approval</tspan></text>
+      <p className="lead">Lots of inputs, lots of tools, and the context you need is spread across them.</p>
+      <div className="eco">
+        <ul className="eco-inputs">
+          {["Metrics", "Logs", "Traces", "Health checks", "Application data", "Business data", "Policy and compliance", "Change approvals", "Incidents and tickets"]
+            .map(item => <li key={item}>{item}</li>)}
+        </ul>
+        <div className="eco-arrow" aria-hidden="true">→</div>
+        <ol className="eco-questions">
+          <li><b>What's going on?</b><span>Who and what is affected, right now</span></li>
+          <li><b>What should we do?</b><span>An action that fits the rules and the current facts</span></li>
+          <li><b>What will it cause?</b><span>The consequences, and whether it worked</span></li>
+        </ol>
+      </div>
+      <p className="callout"><b>The opportunity</b> Bring data from many systems together, and the context answers these questions for you.</p>
+    </div>
+  </div>;
 
-        <rect className="group" x="960" y="0" width="776" height="300" />
-        <text className="group-label" x="988" y="48">YOUR OBSERVABILITY</text>
-        <rect className="box" x="988" y="76" width="380" height="196" />
-        <text className="box-name" x="1016" y="130">OpenTelemetry,</text><text className="box-name" x="1016" y="170">Prometheus, Grafana</text>
-        <text className="box-note" x="1016" y="220">Dashboards and alerts</text>
-        <rect className="box" x="1392" y="76" width="316" height="196" />
-        <text className="box-name" x="1420" y="130">Incident</text><text className="box-name" x="1420" y="170">channel</text>
-        <text className="box-note" x="1420" y="220">Where the team</text><text className="box-note" x="1420" y="248">responds</text>
+  if (slide === "scenario") return <div className="section-slide">
+    <h1>Let's look at a typical scenario</h1>
+    <p>Two AI workloads, limited capacity, and the rules they must follow</p>
+  </div>;
 
-        <rect className="drasi" x="960" y="380" width="776" height="218" />
-        <text className="drasi-name" x="992" y="446">Drasi</text>
-        <text className="drasi-note" x="992" y="500">Reacts to every change and keeps the</text>
-        <text className="drasi-note" x="992" y="540">answers current, where the team looks</text>
-
-        <path className="flow" d="M740,118 H982" /><text className="edge" x="760" y="76">Metrics, traces,</text><text className="edge" x="760" y="102">health probes</text>
-        <path className="flow" d="M1020,272 V374" /><text className="edge" x="1006" y="342" textAnchor="end">Health probes</text>
-        <path className="flow" d="M712,556 H954" /><text className="edge" x="760" y="538">Every change</text>
-        <path className="flow answer" d="M1160,380 V278" /><text className="edge answer" x="1174" y="342">Answers</text>
-        <path className="flow answer" d="M1520,380 V278" /><text className="edge answer" x="1534" y="328">Who's affected,</text><text className="edge answer" x="1534" y="354">what to do</text>
-        <path className="flow" d="M370,160 V198" />
-      </svg>
+  // Bringing it together when EU-A fails: what Drasi joins, and the tools it works with.
+  if (slide === "setup") return <div className="content-slide setup-slide">
+    <h1>Bringing it together when {nb("EU-A")} fails</h1>
+    <div className="body">
+      <p className="lead">Drasi joins telemetry, application data and policy, and works with the tools the team already uses.</p>
+      <div className="together">
+        <div className="together-col">
+          <h2>Brings together</h2>
+          <div className="t-card blue"><b>Telemetry</b><span>Health probes as OpenTelemetry metrics, through the Collector</span></div>
+          <div className="t-card purple"><b>Application data</b><span>Requests, deployments, routes and capacity, from the database's change feed</span></div>
+          <div className="t-card green"><b>Policy and approvals</b><span>Data compliance rules, allowed destinations and change approvals</span></div>
+        </div>
+        <div className="together-arrow" aria-hidden="true">→</div>
+        <div className="together-drasi">
+          <b>Drasi</b>
+          <span>Sources</span><span>Continuous Models</span><span>Reactions</span>
+          <p>Answers kept current as the facts change, and as time passes</p>
+        </div>
+        <div className="together-arrow" aria-hidden="true">→</div>
+        <div className="together-col">
+          <h2>Works with</h2>
+          <div className="t-card lime"><b>Grafana</b><span>Decision Support tiles beside the existing dashboards and alerts</span></div>
+          <div className="t-card lime"><b>Messaging</b><span>Cards in the team's incident channel, in Mattermost</span></div>
+          <div className="t-card lime"><b>Change management</b><span>The change-approval tool and the gateway, where e.g. a ticketing system would sit</span></div>
+        </div>
+      </div>
     </div>
   </div>;
 
   if (slide === "drasi") return <div className="content-slide drasi-slide">
     <h1>Drasi – change-driven computation</h1>
     <div className="body">
+      <p className="lead">Simpler and quicker: bring the data together, and keep the answers current.</p>
       <ol className="drasi-parts">
         <li className="part blue"><b>Sources</b></li>
         <li className="part models"><b>Continuous Models</b>

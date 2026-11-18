@@ -165,8 +165,8 @@ proposal: approve the new one.
 | Time | Part | Projector shows | You |
 |---|---|---|---|
 | 0:00 | Title | Walk-in, Title | Walk-in slide while people arrive; then introduce yourself and the talk |
-| 0:30 | The scenario | The scenario · deployments, The scenario · rules, The scenario · three answers, What happens when EU-A fails | Set up the scenario and the three questions; what you'll see |
-| 2:00 | Drasi in one picture | Drasi: change-driven computation | Explain Drasi's parts and what is built in |
+| 0:30 | Observability and Drasi | Observability today, Drasi: change-driven computation | The observability challenge, and Drasi in three parts |
+| 2:00 | The scenario | A typical scenario, The scenario · deployments, The scenario · rules, The scenario · three answers, Bringing it together when EU-A fails | A typical scenario: two workloads, the rules, three questions; then what Drasi brings together |
 | 3:30 | Healthy service | Grafana · Operations | Walk through the healthy dashboard |
 | 6:00 | Failure | Grafana · Operations, Mattermost · #incident-ai-support | Fail EU-A; Drasi's row and the incident channel are ahead of the alert |
 | 9:00 | Who is affected | Mattermost · #incident-ai-support, Who is affected: the continuous query, One late request | Show who is affected: the overdue card, the query and its live list |
@@ -190,21 +190,22 @@ Say it in your own words.
 
 **If it breaks:** The slides don't depend on the demo. Carry on.
 
-### 2. The scenario (1½ minutes)
+### 2. Observability and Drasi (1½ minutes)
 
-1. **The scenario · deployments.** A company runs two AI workloads on the same limited AI model capacity: an assistant that answers customer-support questions, and a background job that writes document summaries. The capacity is split across three deployments, EU-A and EU-B in Europe and US-C in the United States, each with 100k tokens a minute.
-2. **The scenario · rules.** Two kinds of rule. Data compliance: customer support handles restricted data, so it may only run in Europe; summaries use public data and can run anywhere. Business requirements: customers expect an answer within 15 seconds, and infrastructure changes, like moving work between deployments, require human approval.
-3. **The scenario · three answers.** When something goes wrong, the business needs three answers: who is affected, what's the fastest fix that stays within policy, and how do we know when it's resolved? You're about to see Drasi answer all three.
-4. **What happens when EU-A fails.** Here's the setup: two deployments in Europe, one in the United States, and the two workloads on them. The team already has monitoring, Prometheus and Grafana, and an incident channel. We're going to see what happens when EU-A fails, and how Drasi works with that existing observability, adding to it, to respond to events intelligently, and sooner.
+1. **Observability today.** Today's systems produce a lot of signals: metrics, logs, traces and health checks, plus the business data, the policies and the change process around them, spread across many tools. When something goes wrong, someone has to work out what's going on, what to do about it, and what doing it will cause. The context for those answers is spread across systems; bringing it together is what makes them possible.
+2. **Drasi: change-driven computation.** Drasi makes that simpler and quicker. It's open-source change-driven computation, in three parts. Sources bring in every change as it happens, from databases, telemetry and other systems. Continuous Models do the work: continuous queries keep a result up to date as data changes and as time passes, and policy and optimization models re-run whenever their inputs change. Reactions deliver each change to the tools people already use. You configure it; you don't write the plumbing.
+
+**If it breaks:** Carry on; the slides don't depend on the demo.
+
+### 3. The scenario (1½ minutes)
+
+1. **A typical scenario.** Let's look at a typical scenario.
+2. **The scenario · deployments.** A company runs two AI workloads on the same limited AI model capacity: an assistant that answers customer-support questions, and a background job that writes document summaries. The capacity is split across three deployments, EU-A and EU-B in Europe and US-C in the United States, each with 100k tokens a minute.
+3. **The scenario · rules.** Two kinds of rule. Data compliance: customer support handles restricted data, so it may only run in Europe; summaries use public data and can run anywhere. Business requirements: customers expect an answer within 15 seconds, and infrastructure changes, like moving work between deployments, require human approval.
+4. **The scenario · three answers.** When something goes wrong, the business needs three answers: who is affected, what's the fastest fix that stays within policy, and how do we know when it's resolved? You're about to see Drasi answer all three.
+5. **Bringing it together when EU-A fails.** Here's what we'll watch when EU-A fails. Drasi brings together the telemetry, the application's own data and the policy, and works with the tools the team already uses: Grafana for dashboards and alerts, the incident channel for messaging, and the change-approval tool, where a ticketing system would sit. We'll see it answer those three questions, sooner.
 
 **If it breaks:** Carry on; the demo doesn't depend on the slides.
-
-### 3. Drasi in one picture (1½ minutes)
-
-1. **Drasi: change-driven computation.** Drasi is open-source change-driven computation, in three parts. Sources bring in every change as it happens: here, from the AI service's database and from its health-check telemetry. Continuous models do the work: continuous queries keep a result up to date as changes arrive, and as time passes, and policy and optimization models run logic on those results, re-running whenever an input changes. Reactions deliver each change to other systems.
-2. **Drasi: change-driven computation.** What's what. Drasi does the hard part: it keeps results up to date incrementally as changes arrive, re-checks them when time passes a deadline, and re-runs the models whenever their inputs change. The policy model that runs Rego rules and the optimizer behind the planner and the what-if are Drasi's own; this demo gives them configuration: the rules, and the placement model. We wrote one plugin, a reaction that publishes answers to Prometheus. The AI service, its change-approval tool and its gateway configuration API are the systems Drasi works with. 'Without polling' is about computing the answers: nothing is recomputed on a schedule. Health checks still run every second, as in any system, and Prometheus and Grafana still collect and draw on their own schedule; Drasi reacts to what changes.
-
-**If it breaks:** Carry on.
 
 ### 4. Healthy service (2½ minutes)
 

@@ -130,27 +130,32 @@
 .slide-deck .stage-frame .drasi-parts .models ul { list-style: none; padding: 0; margin-top: 36px; display: grid; grid-template-columns: 1fr 1fr 1.35fr; gap: 20px; }
 .slide-deck .stage-frame .drasi-parts .models li { padding: 40px 8px; background: var(--tone); color: var(--navy); text-align: center; font: 600 34px/1.15 var(--display); }
 
-/* What you'll see: the demo's setup */
-.slide-deck .stage-frame .setup-diagram { width: 1736px; height: 620px; margin-top: auto; overflow: visible; }
-.slide-deck .stage-frame .setup-diagram text { font-family: var(--text); }
-.slide-deck .stage-frame .setup-diagram .group { fill: none; stroke: var(--light-gray); stroke-opacity: .6; stroke-width: 2; stroke-dasharray: 10 8; }
-.slide-deck .stage-frame .setup-diagram .group-label { fill: var(--light-gray); font-size: 24px; font-weight: 600; letter-spacing: 2px; }
-.slide-deck .stage-frame .setup-diagram .box { fill: var(--blue-black); fill-opacity: .45; stroke: var(--light-gray); stroke-opacity: .45; stroke-width: 2; }
-.slide-deck .stage-frame .setup-diagram .box-name { fill: var(--white); font-size: 32px; font-weight: 600; }
-.slide-deck .stage-frame .setup-diagram .box-note { fill: var(--light-gray); font-size: 24px; font-weight: 400; }
-.slide-deck .stage-frame .setup-diagram .region { fill: none; stroke: var(--light-gray); stroke-opacity: .45; stroke-width: 2; }
-.slide-deck .stage-frame .setup-diagram .region-label { fill: var(--off-white); font-size: 28px; font-weight: 600; }
-.slide-deck .stage-frame .setup-diagram .deployment { fill: var(--blue-black); fill-opacity: .45; stroke: var(--tone); stroke-width: 3; }
-.slide-deck .stage-frame .setup-diagram .dep-name { fill: var(--white); font-size: 44px; font-weight: 600; }
-.slide-deck .stage-frame .setup-diagram .dep-work { fill: var(--tone); font-size: 28px; font-weight: 600; }
-.slide-deck .stage-frame .setup-diagram .drasi { fill: var(--light-blue); }
-.slide-deck .stage-frame .setup-diagram .drasi-name { fill: var(--navy); font-size: 56px; font-weight: 600; }
-.slide-deck .stage-frame .setup-diagram .drasi-note { fill: var(--navy); font-size: 30px; }
-.slide-deck .stage-frame .setup-diagram .flow { fill: none; stroke: var(--light-gray); stroke-width: 3; marker-end: url(#setup-arrow); }
-.slide-deck .stage-frame .setup-diagram .flow.answer { stroke: var(--light-blue); stroke-dasharray: 10 7; }
-.slide-deck .stage-frame .setup-diagram .arrowhead { fill: var(--light-gray); }
-.slide-deck .stage-frame .setup-diagram .edge { fill: var(--light-gray); font-size: 22px; }
-.slide-deck .stage-frame .setup-diagram .edge.answer { fill: var(--light-blue); }
+/* Observability today */
+.slide-deck .stage-frame .eco { margin-top: 40px; display: grid; grid-template-columns: 1fr 80px 1fr; align-items: center; }
+.slide-deck .stage-frame .eco-inputs { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 14px; }
+.slide-deck .stage-frame .eco-inputs li { padding: 12px 22px; background: var(--panel); border: 2px solid rgba(217, 217, 214, .45); font-size: 30px; color: var(--off-white); }
+.slide-deck .stage-frame .eco-arrow, .slide-deck .stage-frame .together-arrow { font-size: 64px; color: var(--light-gray); text-align: center; }
+.slide-deck .stage-frame .eco-questions { list-style: none; padding: 0; display: grid; gap: 20px; }
+.slide-deck .stage-frame .eco-questions li { padding: 16px 26px; border-left: 8px solid var(--light-yellow); background: var(--panel); }
+.slide-deck .stage-frame .eco-questions b { display: block; font: 600 38px/1.2 var(--display); }
+.slide-deck .stage-frame .eco-questions span { font-size: 28px; color: var(--off-white); }
+.slide-deck .stage-frame .ecosystem-slide .callout { margin-top: auto; }
+
+/* A section divider: the template's Section Title layout */
+.slide-deck .stage-frame .section-slide { background: var(--navy) url("/template/content-bg.jpg") center / cover no-repeat; }
+.slide-deck .stage-frame .section-slide h1 { position: absolute; left: 92px; top: 420px; width: 1200px; font: 600 80px/1.1 var(--display); }
+.slide-deck .stage-frame .section-slide p { position: absolute; left: 92px; top: 540px; width: 1200px; font-size: 36px; color: var(--off-white); }
+
+/* Bringing it together */
+.slide-deck .stage-frame .together { margin-top: 36px; display: grid; grid-template-columns: 1fr 70px 420px 70px 1fr; align-items: center; }
+.slide-deck .stage-frame .together-col h2 { margin: 0 0 12px; font: 600 26px/1.2 var(--display); color: var(--light-gray); letter-spacing: .06em; text-transform: uppercase; }
+.slide-deck .stage-frame .t-card { margin-top: 16px; padding: 16px 22px; background: var(--panel); border-left: 8px solid var(--tone); }
+.slide-deck .stage-frame .t-card b { display: block; font: 600 32px/1.2 var(--display); color: var(--tone); }
+.slide-deck .stage-frame .t-card span { display: block; margin-top: 4px; font-size: 24px; line-height: 1.3; color: var(--off-white); }
+.slide-deck .stage-frame .together-drasi { padding: 30px; background: var(--light-blue); color: var(--navy); text-align: center; }
+.slide-deck .stage-frame .together-drasi b { display: block; font: 600 64px/1.1 var(--display); margin-bottom: 16px; }
+.slide-deck .stage-frame .together-drasi span { display: block; margin: 10px 0; padding: 10px; background: rgba(255, 255, 255, .55); font: 600 28px/1.2 var(--display); }
+.slide-deck .stage-frame .together-drasi p { margin-top: 16px; font-size: 24px; line-height: 1.3; }
 
 /* What Drasi just did */
 .slide-deck .stage-frame .recap-slide .lead { font: 600 40px/1.25 var(--display); color: var(--white); }

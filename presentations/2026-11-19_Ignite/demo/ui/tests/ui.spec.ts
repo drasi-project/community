@@ -47,11 +47,11 @@ test("the talk is 22 minutes and every beat says something and shows something",
     expect(cue.ifBroken.trim()).not.toBe("");
   }
   for (const recap of recaps) expect(Object.values(notes).some(cue => cue.beats.some(beat => beat.show === recap.id))).toBe(true);
-  expect(slides.map(s => s.id)).toEqual(["walkin", "title", "concepts", "concepts-rules", "concepts-questions", "setup", "drasi", "query", "closing", "survey"]);
+  expect(slides.map(s => s.id)).toEqual(["walkin", "title", "ecosystem", "drasi", "scenario", "concepts", "concepts-rules", "concepts-questions", "setup", "query", "closing", "survey"]);
   // The walk-in opens the talk, the scenario reveals a section per beat, and the survey is last.
   const shown = scenes.flatMap(scene => notes[scene.id].beats.map(beat => beat.show));
   expect(shown[0]).toBe("walkin");
-  expect(notes.concepts.beats.map(beat => beat.show)).toEqual(["concepts", "concepts-rules", "concepts-questions", "setup"]);
+  expect(notes.concepts.beats.map(beat => beat.show)).toEqual(["scenario", "concepts", "concepts-rules", "concepts-questions", "setup"]);
   expect(shown.at(-1)).toBe("survey");
 });
 
@@ -94,7 +94,7 @@ test("each Decision Support beat shows its configuration above the highlighted p
 });
 
 test("the scenario reveals its sections one desk beat at a time", async ({ page }) => {
-  await desk(page, "concepts");
+  await desk(page, "concepts", 1);
   const projector = await page.context().newPage();
   await projector.goto("/present");
   const slide = (id: string) => projector.locator(`[data-slide="${id}"]`);
@@ -167,13 +167,13 @@ test("Next on the desk moves through beats and changes what the projector shows"
   await page.getByRole("button", { name: "Next ▶" }).click();
   await expect(projector.locator(".title-slide")).toBeVisible();
   await page.getByRole("button", { name: "Next ▶" }).click();
-  await expect(projector.locator('[data-slide="concepts"]')).toBeVisible();
-  for (let i = 0; i < 6; i++) await page.getByRole("button", { name: "Next ▶" }).click();
+  await expect(projector.locator('[data-slide="ecosystem"]')).toBeVisible();
+  for (let i = 0; i < 7; i++) await page.getByRole("button", { name: "Next ▶" }).click();
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Healthy service");
   await expect(projector.locator("iframe.stage-dashboard").first()).toBeVisible();
   await expect(projector.locator("iframe.stage-dashboard").first()).toHaveAttribute("src", dashboards.ops);
   await page.getByRole("button", { name: "◀ Back" }).click();
-  await expect(projector.locator('[data-slide="drasi"]')).toBeVisible();
+  await expect(projector.locator('[data-slide="setup"]')).toBeVisible();
   // Off-screen dashboards stay rendered (visibility, not display:none) so Grafana keeps refreshing them.
   await expect(projector.locator("iframe.stage-dashboard").first()).toBeHidden();
   await expect(projector.locator("iframe.stage-dashboard").first()).toHaveCSS("display", "block");
@@ -189,8 +189,8 @@ test("keys pressed on the projector (a clicker) drive the desk", async ({ page }
   await projector.keyboard.press("PageDown");
   await expect(projector.locator(".title-slide")).toBeVisible();
   await projector.keyboard.press("PageDown");
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("The scenario");
-  await expect(projector.locator('[data-slide="concepts"]')).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Observability and Drasi");
+  await expect(projector.locator('[data-slide="ecosystem"]')).toBeVisible();
   await projector.keyboard.press("PageUp");
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Title");
 });
@@ -573,7 +573,7 @@ test("with no desk open, the clicker still steps through the slides", async ({ p
   await page.keyboard.press("ArrowRight");
   await expect(page.locator(".title-slide")).toBeVisible();
   await page.keyboard.press("PageDown");
-  await expect(page.locator('[data-slide="concepts"]')).toBeVisible();
+  await expect(page.locator('[data-slide="ecosystem"]')).toBeVisible();
   await page.keyboard.press("PageUp");
   await expect(page.locator(".title-slide")).toBeVisible();
 });
