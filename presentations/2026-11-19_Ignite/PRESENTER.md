@@ -165,7 +165,7 @@ proposal: approve the new one.
 | Time | Part | Projector shows | You |
 |---|---|---|---|
 | 0:00 | Title | Walk-in, Title | Walk-in slide while people arrive; then introduce yourself and the talk |
-| 0:30 | Observability and Drasi | Observability today, Drasi: change-driven computation | The observability challenge, and Drasi in three parts |
+| 0:30 | Observability and Drasi | Observability today · fragmented, noisy, Observability today · symptoms, health, Observability today · context elsewhere, What would help, Drasi: change-driven computation | Observability today: the challenges, what would help, and where Drasi fits |
 | 2:00 | The scenario | A typical scenario, The scenario · deployments, The scenario · rules, The scenario · three answers, Bringing it together when EU-A fails | A typical scenario: two workloads, the rules, three questions; then what Drasi brings together |
 | 3:30 | Healthy service | Grafana · Operations | Walk through the healthy dashboard |
 | 6:00 | Failure | Grafana · Operations | Fail EU-A; Drasi's row is ahead of the alert |
@@ -192,8 +192,11 @@ Say it in your own words.
 
 ### 2. Observability and Drasi (1½ minutes)
 
-1. **Observability today.** Today's systems produce a lot of signals: metrics, logs, traces and health checks, plus the business data, the policies and the change process around them, spread across many tools. When something goes wrong, someone has to work out what's going on, what to do about it, and what doing it will cause. The context for those answers is spread across systems; bringing it together is what makes them possible.
-2. **Drasi: change-driven computation.** Drasi makes that simpler and quicker. It's open-source change-driven computation, in three parts. Sources bring in every change as it happens, from databases, telemetry and other systems. Continuous Models do the work: continuous queries keep a result up to date as data changes and as time passes, and policy and optimization models re-run whenever their inputs change. Reactions deliver each change to the tools people already use. You configure it; you don't write the plumbing.
+1. **Observability today · fragmented, noisy.** Most teams have plenty of observability data. What's missing is context. It's fragmented: the signals for one customer request are spread across several tools, and following it means jumping between them. And it's noisy, yet late: lots of low-value alerts, while the failures that matter often reach the team from customers first.
+2. **Observability today · symptoms, health.** The tools show symptoms, not answers: it's easy to see that something is wrong, and much harder to see who's affected, what changed, and what to do. And healthy isn't the same as working: every component can be green while customers don't get what they needed. AI services make that sharper: they can look healthy and still get it wrong.
+3. **Observability today · context elsewhere.** Underneath that, the context lives elsewhere. Who owns what, the policies, the deployments and the business data sit outside the monitoring stack, so teams bridge the gap with scripts, polling jobs, and people.
+4. **What would help.** What would help? Connected context: telemetry linked to dependencies, changes, owners, policy and customer impact. Alerts on situations, not individual signals: conditions that matter across systems, and knowing when they start, change or clear. Outcomes, including what didn't happen, like a missed deadline. Action backed by evidence, with safeguards: recommend a change within policy, let a person approve it, and check it worked. And all of it in the tools teams already use, on open standards like OpenTelemetry.
+5. **Drasi: change-driven computation.** That's where Drasi fits. It's a change-driven computation platform, in three parts. Sources bring in every change as it happens, from databases, telemetry and other systems you already have. Continuous Models keep the answers current: continuous queries as data changes and as time passes, and policy and optimization models whenever their inputs change. Reactions deliver each change into the tools people already use, so there's no new application to watch. It complements your observability stack; it doesn't replace collection, storage or dashboards.
 
 **If it breaks:** Carry on; the slides don't depend on the demo.
 

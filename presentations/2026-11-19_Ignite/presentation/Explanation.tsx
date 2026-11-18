@@ -117,23 +117,35 @@ export function Explanation({ slide, active = false }: { slide: SlideId; active?
     </div>;
   }
 
-  if (slide === "ecosystem") return <div className="content-slide ecosystem-slide">
-    <h1>Observability today</h1>
-    <div className="body">
-      <p className="lead">Lots of inputs, lots of tools, and the context you need is spread across them.</p>
-      <div className="eco">
-        <ul className="eco-inputs">
-          {["Metrics", "Logs", "Traces", "Health checks", "Application data", "Business data", "Policy and compliance", "Change approvals", "Incidents and tickets"]
-            .map(item => <li key={item}>{item}</li>)}
-        </ul>
-        <div className="eco-arrow" aria-hidden="true">→</div>
-        <ol className="eco-questions">
-          <li><b>What's going on?</b><span>Who and what is affected, right now</span></li>
-          <li><b>What should we do?</b><span>An action that fits the rules and the current facts</span></li>
-          <li><b>What will it cause?</b><span>The consequences, and whether it worked</span></li>
-        </ol>
+  // Observability today: five challenges, revealed one desk beat at a time (from plan/research/research_001.md).
+  if (slide.startsWith("ecosystem")) {
+    const step = slide === "ecosystem-3" ? 3 : slide === "ecosystem-2" ? 2 : 1;
+    const challenges = [
+      [1, "Fragmented", "Signals are spread across many tools; following one customer request means jumping between them"],
+      [1, "Noisy, yet late", "Lots of low-value alerts, yet important failures often reach teams from customers first"],
+      [2, "Symptoms, not answers", "Easy to see that something is wrong; hard to see who's affected, what changed and what to do"],
+      [2, "Healthy isn't the same as working", "Green components don't mean customers got what they needed, and AI services can look healthy while getting it wrong"],
+      [3, "Context lives elsewhere", "Owners, policy, deployments and business data sit outside the monitoring stack, so teams bridge the gap with scripts, polling jobs and people"],
+    ] as const;
+    return <div className="content-slide ecosystem-slide">
+      <h1 className="long">Observability today: plenty of data, not enough context</h1>
+      <div className="body">
+        <ul className="challenges">{challenges.map(([n, name, text]) =>
+          <li key={name} className={step >= n ? undefined : "pending"} aria-hidden={step < n}><b>{name}</b><span>{text}</span></li>)}</ul>
       </div>
-      <p className="callout"><b>The opportunity</b> Bring data from many systems together, and the context answers these questions for you.</p>
+    </div>;
+  }
+
+  if (slide === "answers") return <div className="content-slide answers-slide">
+    <h1>What would help</h1>
+    <div className="body">
+      <ul className="challenges answers">{([
+        ["Connected context", "Link telemetry to dependencies, changes, owners, policy and customer impact"],
+        ["Situations, not signals", "Alert on conditions that matter across systems, and know when they start, change or clear"],
+        ["Outcomes, including what didn't happen", "Track completed customer work and missed deadlines, not just component health"],
+        ["Evidence-backed action, with safeguards", "Recommend changes within policy, let people approve them, and check that they worked"],
+        ["In the tools teams already use", "Open standards like OpenTelemetry, and the dashboards and channels people already watch"],
+      ] as const).map(([name, text]) => <li key={name}><b>{name}</b><span>{text}</span></li>)}</ul>
     </div>
   </div>;
 
@@ -174,13 +186,14 @@ export function Explanation({ slide, active = false }: { slide: SlideId; active?
   if (slide === "drasi") return <div className="content-slide drasi-slide">
     <h1>Drasi – change-driven computation</h1>
     <div className="body">
-      <p className="lead">Simpler and quicker: bring the data together, and keep the answers current.</p>
+      <p className="lead">Drasi is a change-driven computation platform. It keeps that richer context current as data changes in the systems you already have, and delivers the answers into the tools you already use, so there's no new application to watch.</p>
       <ol className="drasi-parts">
         <li className="part blue"><b>Sources</b></li>
         <li className="part models"><b>Continuous Models</b>
           <ul><li className="purple">Query</li><li className="green">Policy</li><li className="green">Optimization</li></ul></li>
         <li className="part lime"><b>Reactions</b></li>
       </ol>
+      <p className="slide-meta drasi-note">It complements your observability stack: it doesn't replace collection, storage or dashboards.</p>
     </div>
   </div>;
 

@@ -47,7 +47,7 @@ test("the talk is 22 minutes and every beat says something and shows something",
     expect(cue.ifBroken.trim()).not.toBe("");
   }
   for (const recap of recaps) expect(Object.values(notes).some(cue => cue.beats.some(beat => beat.show === recap.id))).toBe(true);
-  expect(slides.map(s => s.id)).toEqual(["walkin", "title", "ecosystem", "drasi", "scenario", "concepts", "concepts-rules", "concepts-questions", "setup", "query", "closing", "survey"]);
+  expect(slides.map(s => s.id)).toEqual(["walkin", "title", "ecosystem", "ecosystem-2", "ecosystem-3", "answers", "drasi", "scenario", "concepts", "concepts-rules", "concepts-questions", "setup", "query", "closing", "survey"]);
   // The walk-in opens the talk, the scenario reveals a section per beat, and the survey is last.
   const shown = scenes.flatMap(scene => notes[scene.id].beats.map(beat => beat.show));
   expect(shown[0]).toBe("walkin");
@@ -93,7 +93,7 @@ test("each Decision Support beat shows its configuration above the highlighted p
     const arrow = page.locator(".config-arrow");
     const [startX, startY] = (await arrow.getAttribute("data-start"))!.split(",").map(Number);
     const [tipX, tipY] = (await arrow.getAttribute("data-tip"))!.split(",").map(Number);
-    expect(Math.abs(startY - overlay.bottom)).toBeLessThanOrEqual(1);
+    expect(Math.abs(startY - overlay.bottom)).toBeLessThanOrEqual(2); // offsetHeight is whole pixels
     expect(startX).toBeGreaterThanOrEqual(overlay.left);
     expect(startX).toBeLessThanOrEqual(overlay.right);
     const panel = outlines[0];
@@ -187,7 +187,7 @@ test("Next on the desk moves through beats and changes what the projector shows"
   await expect(projector.locator(".title-slide")).toBeVisible();
   await page.getByRole("button", { name: "Next ▶" }).click();
   await expect(projector.locator('[data-slide="ecosystem"]')).toBeVisible();
-  for (let i = 0; i < 7; i++) await page.getByRole("button", { name: "Next ▶" }).click();
+  for (let i = 0; i < 10; i++) await page.getByRole("button", { name: "Next ▶" }).click();
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Healthy service");
   await expect(projector.locator("iframe.stage-dashboard").first()).toBeVisible();
   await expect(projector.locator("iframe.stage-dashboard").first()).toHaveAttribute("src", dashboards.ops);

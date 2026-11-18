@@ -121,7 +121,7 @@
 .slide-deck .stage-frame .roles small { margin-top: 12px; font-size: 26px; line-height: 1.3; color: var(--navy); }
 
 /* Drasi: three parts */
-.slide-deck .stage-frame .drasi-parts { list-style: none; padding: 0; margin: auto 0; display: grid; grid-template-columns: 1fr 1.85fr 1fr; gap: 72px; align-items: stretch; }
+.slide-deck .stage-frame .drasi-parts { list-style: none; padding: 0; margin: 72px 0 0; display: grid; grid-template-columns: 1fr 1.85fr 1fr; gap: 72px; align-items: stretch; }
 .slide-deck .stage-frame .drasi-parts > li { position: relative; min-height: 380px; padding: 40px 36px; display: flex; flex-direction: column; justify-content: center; }
 .slide-deck .stage-frame .drasi-parts > li:not(:last-child)::after { content: "→"; position: absolute; right: -58px; top: 50%; transform: translateY(-50%); font-size: 48px; color: var(--light-gray); }
 .slide-deck .stage-frame .drasi-parts > li.blue, .slide-deck .stage-frame .drasi-parts > li.lime { background: var(--tone); color: var(--navy); text-align: center; }
@@ -130,16 +130,14 @@
 .slide-deck .stage-frame .drasi-parts .models ul { list-style: none; padding: 0; margin-top: 36px; display: grid; grid-template-columns: 1fr 1fr 1.35fr; gap: 20px; }
 .slide-deck .stage-frame .drasi-parts .models li { padding: 40px 8px; background: var(--tone); color: var(--navy); text-align: center; font: 600 34px/1.15 var(--display); }
 
-/* Observability today */
-.slide-deck .stage-frame .eco { margin-top: 40px; display: grid; grid-template-columns: 1fr 80px 1fr; align-items: center; }
-.slide-deck .stage-frame .eco-inputs { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 14px; }
-.slide-deck .stage-frame .eco-inputs li { padding: 12px 22px; background: var(--panel); border: 2px solid rgba(217, 217, 214, .45); font-size: 30px; color: var(--off-white); }
-.slide-deck .stage-frame .eco-arrow, .slide-deck .stage-frame .together-arrow { font-size: 64px; color: var(--light-gray); text-align: center; }
-.slide-deck .stage-frame .eco-questions { list-style: none; padding: 0; display: grid; gap: 20px; }
-.slide-deck .stage-frame .eco-questions li { padding: 16px 26px; border-left: 8px solid var(--light-yellow); background: var(--panel); }
-.slide-deck .stage-frame .eco-questions b { display: block; font: 600 38px/1.2 var(--display); }
-.slide-deck .stage-frame .eco-questions span { font-size: 28px; color: var(--off-white); }
-.slide-deck .stage-frame .ecosystem-slide .callout { margin-top: auto; }
+/* Observability today, and what would help */
+.slide-deck .stage-frame .challenges { list-style: none; padding: 0; margin: 0; display: grid; gap: 18px; }
+.slide-deck .stage-frame .challenges li { display: grid; grid-template-columns: 560px 1fr; gap: 32px; align-items: baseline; padding: 18px 28px; background: var(--panel); border-left: 8px solid var(--light-red); }
+.slide-deck .stage-frame .challenges.answers li { border-left-color: var(--green); }
+.slide-deck .stage-frame .challenges b { font: 600 38px/1.2 var(--display); }
+.slide-deck .stage-frame .challenges span { font-size: 30px; line-height: 1.3; color: var(--off-white); }
+.slide-deck .stage-frame .drasi-slide .lead { font-size: 36px; }
+.slide-deck .stage-frame .drasi-note { margin-top: 24px; font-size: 30px; }
 
 /* A section divider: the template's Section Title layout */
 .slide-deck .stage-frame .section-slide { background: var(--navy) url("/template/content-bg.jpg") center / cover no-repeat; }

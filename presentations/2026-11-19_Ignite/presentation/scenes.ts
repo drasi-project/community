@@ -30,7 +30,11 @@ export const slides = [
   { id: "walkin", title: "Walk-in" },
   { id: "title", title: "Title" },
   // The scenario reveals its three sections one desk beat at a time.
-  { id: "ecosystem", title: "Observability today" },
+  // Observability today reveals its five challenges in three desk beats.
+  { id: "ecosystem", title: "Observability today · fragmented, noisy" },
+  { id: "ecosystem-2", title: "Observability today · symptoms, health" },
+  { id: "ecosystem-3", title: "Observability today · context elsewhere" },
+  { id: "answers", title: "What would help" },
   { id: "drasi", title: "Drasi: change-driven computation" },
   { id: "scenario", title: "A typical scenario" },
   { id: "concepts", title: "The scenario · deployments" },

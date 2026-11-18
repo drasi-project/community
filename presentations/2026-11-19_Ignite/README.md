@@ -31,9 +31,12 @@ A few slides, in the Microsoft Ignite session template, frame about 17 minutes
 of live demo:
 
 1. **Title:** Monitoring without polling (after the Ignite walk-in slide).
-2. **Observability today, and Drasi:** many signals and tools, and the
-   questions that need context from all of them; then Drasi in three parts:
-   sources, continuous models (query, policy, optimization) and reactions.
+2. **Observability today, and Drasi:** plenty of data, not enough context
+   (fragmented, noisy yet late, symptoms not answers, healthy isn't working,
+   context lives elsewhere); what would help; then Drasi, a change-driven
+   computation platform that keeps that context current inside the tools teams
+   already use, in three parts: sources, continuous models (query, policy,
+   optimization) and reactions.
 3. **A typical scenario:** two AI workloads sharing limited AI capacity across
    three deployments, the data-compliance rules and business requirements they
    must follow, and three questions for when something goes wrong: who is
