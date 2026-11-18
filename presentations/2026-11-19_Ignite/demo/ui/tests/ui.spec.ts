@@ -96,7 +96,12 @@ test("each Decision Support beat shows its configuration above the highlighted p
     expect(Math.abs(startY - overlay.bottom)).toBeLessThanOrEqual(2); // offsetHeight is whole pixels
     expect(startX).toBeGreaterThanOrEqual(overlay.left);
     expect(startX).toBeLessThanOrEqual(overlay.right);
+    expect(overlay.top).toBeGreaterThanOrEqual(0);
     const panel = outlines[0];
+    // The card sits just above its own panel, overlapping it horizontally, with a short arrow.
+    expect(overlay.left, beat.config!.join()).toBeLessThan(panel.right);
+    expect(overlay.right).toBeGreaterThan(panel.left);
+    expect(panel.top - overlay.bottom).toBeLessThan(80);
     expect(tipX).toBeGreaterThan(panel.left);
     expect(tipX).toBeLessThan(panel.right);
     expect(tipY).toBeLessThan(panel.top + 6 + 1);

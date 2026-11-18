@@ -186,7 +186,7 @@
 .slide-deck .stage-frame .query-live li.more { color: var(--light-gray); justify-content: center; }
 
 /* The configuration behind the highlighted dashboard panel, over the dimmed rows above it */
-.slide-deck .stage-frame .config-overlay { position: absolute; left: 92px; top: 24px; max-width: 1736px; max-height: 584px; display: grid; gap: 16px;
+.slide-deck .stage-frame .config-overlay { position: absolute; max-width: 1736px; display: grid; gap: 16px;
   pointer-events: none; box-shadow: 0 12px 40px rgba(0, 0, 0, .55); animation: panel-highlight .4s ease-out; }
 .slide-deck .stage-frame .config-overlay .code-tab { font-size: 22px; padding: 8px 22px 12px; }
 .slide-deck .stage-frame .config-overlay pre { font-size: 19px; line-height: 1.4; padding: 10px 22px 14px; }
@@ -194,12 +194,12 @@
 .slide-deck .stage-frame .config-overlay pre i { display: none; }
 /* Inputs across the top of the card, feeding the query or model's code */
 .slide-deck .stage-frame .config-overlay .flow-inputs { list-style: none; margin: 0; padding: 14px 22px 0; display: flex; flex-wrap: wrap; gap: 10px; }
-.slide-deck .stage-frame .config-overlay .flow-inputs li { padding: 6px 12px; border-left: 6px solid; background: #F4F3F5; color: #000; font-size: 19px; }
+.slide-deck .stage-frame .config-overlay .flow-inputs li { padding: 6px 14px; border-left: 6px solid; background: #F4F3F5; color: #000; font-size: 22px; }
 .slide-deck .stage-frame .config-overlay .flow-inputs li.pg { border-color: #C5B4E3; }
 .slide-deck .stage-frame .config-overlay .flow-inputs li.otel { border-color: #8DC8E8; }
 .slide-deck .stage-frame .config-overlay .flow-inputs li.model { border-color: #8DE971; }
 .slide-deck .stage-frame .config-overlay .flow-inputs b { font-weight: 600; }
-.slide-deck .stage-frame .config-overlay .flow-inputs small { display: inline; margin: 0 0 0 8px; font-size: 15px; color: #444; }
+.slide-deck .stage-frame .config-overlay .flow-inputs small { display: block; margin: 0; font-size: 16px; color: #444; }
 .slide-deck .stage-frame .config-overlay .flow-into { margin: 6px 22px 8px; font: 600 19px/1.3 var(--text); color: #2A446F; }
 .slide-deck .stage-frame .config-overlay .flow-into span { font-size: 22px; margin-right: 6px; }
 /* From the card to the panel it populates */

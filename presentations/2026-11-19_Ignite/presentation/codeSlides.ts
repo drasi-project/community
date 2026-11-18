@@ -1,25 +1,22 @@
 // The Drasi configuration behind each Decision Support panel, shown on the projected dashboard
 // beside the highlighted panel (a beat's `config` in notes.ts; Audience.tsx and ConfigSlides.tsx).
 // The text comes from demo/drasi as Drasi runs it: comments dropped, long JSON detail elided.
-// flow: what the panel brings together, as the generated graph wires it (demo/.native/server.json):
-// inputs on the left, then the Drasi components, then the Grafana tile.
-// into: the components the inputs flow through into the code shown; after: those between it and the tile.
-export type Flow = { inputs: { name: string; from: string }[]; into: string; after: string[]; tile: string };
+// flow: what the panel brings together, grouped by where it comes from (as the generated graph wires
+// it, demo/.native/server.json), and what feeds the code shown.
+export type Flow = { inputs: { from: string; items: string }[]; into: string };
 export type ConfigPanel = { tab: string; lines: string[]; hot: string[]; flow: Flow };
-const pg = (name: string) => ({ name, from: "PostgreSQL" });
+const db = (items: string) => ({ from: "AI service database", items });
+const otel = { from: "OpenTelemetry", items: "health checks" };
+const placements = { from: "Drasi policy model", items: "allowed placements" };
 export const flows: Record<ConfigId, Flow> = {
-  "overdue-tasks": { inputs: [pg("ignite_tasks"), pg("ignite_scenario")], into: "overdue-tasks", after: ["tile-overdue"], tile: "Support overdue" },
-  "deployment-health": { inputs: [{ name: "ignite_probe_status", from: "OpenTelemetry" }, pg("ignite_deployments")],
-    into: "deployment-health", after: ["tile-deployments"], tile: "Deployment status" },
-  "tile-workloads": { inputs: [pg("ignite_routes"), pg("ignite_workloads"), { name: "policy-results", from: "Policy model" },
-    { name: "deployment-health", from: "OpenTelemetry" }], into: "tile-workloads", after: [], tile: "Workload status" },
-  policy: { inputs: [pg("ignite_workloads"), pg("ignite_deployments"), pg("ignite_policy_destinations")],
-    into: "policy-input → policy (Rego)", after: ["policy-results", "plan", "tile-action"], tile: "Recommended action" },
-  optimization: { inputs: [{ name: "plan-items, plan-candidates", from: "workloads, routes" }, { name: "plan-bins", from: "capacity + health" },
-    { name: "policy-results", from: "Policy model" }], into: "plan (optimization)", after: ["plan-results", "tile-action"], tile: "Recommended action" },
-  "what-if": { inputs: [{ name: "plan-bins", from: "healthy deployments" }, { name: "plan-items, plan-candidates", from: "workloads, routes" },
-    { name: "policy-results", from: "Policy model" }], into: "plan · loss scenario", after: ["resilience-results", "tile-resilience"], tile: "Failover readiness" },
+  "overdue-tasks": { inputs: [db("requests, their deadlines and answers")], into: "the overdue query" },
+  "deployment-health": { inputs: [otel, db("deployments")], into: "the health query" },
+  "tile-workloads": { inputs: [db("workloads, routes"), placements, otel], into: "the workload status query" },
+  policy: { inputs: [db("workloads, deployments, allowed destinations")], into: "the policy model (Rego)" },
+  optimization: { inputs: [db("workloads, routes, demand, capacity"), otel, placements], into: "the optimization model" },
+  "what-if": { inputs: [db("workloads, routes, demand, capacity"), otel, placements], into: "the optimization model's what-if" },
 };
+
 export type Sources = { overdueQuery: string; healthQuery: string; workloadsQuery: string; rego: string; optimization: object };
 export const configIds = ["overdue-tasks", "deployment-health", "tile-workloads", "policy", "optimization", "what-if"] as const;
 export type ConfigId = typeof configIds[number];
