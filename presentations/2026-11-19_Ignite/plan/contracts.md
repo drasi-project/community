@@ -436,7 +436,7 @@ How Grafana applies this (workstream 5, `observability/grafana`):
 - Deployments (Recovery plan) shows capacity unless the status is 2 (Failed). Throttled and unknown health show capacity (today throttled showed "Failed"); unknown health shows on Deployment status.
 - The application's freshness gate (`ignite_drasi_projection_timestamp_seconds`) goes too: Support queue relies on the collector's 10 s expiry, and the "Model calls failing" alert requires `count(ignite_workload_queue_depth)` (the AI service is reporting).
 - "Support requests overdue (Drasi)": Unknown is NoData, which is Normal; it fires only on a count above 0.
-- Grafana's alerts go only to the probe's webhook; Grafana's environment drops `IGNITE_WORKLOAD_PORT`.
+- Grafana's alerts go to the probe's webhook and, for the AI service's two rules, to #incident-ai-support ([section 16](#16-operations-dashboard)); Grafana's environment drops `IGNITE_WORKLOAD_PORT`.
 - `IGNITE_GRAFANA_TOKEN`: `.env` gets an empty line; `ops/observability-stack.sh up` (when it starts Grafana) runs `ops/observability-env.py grafana-token`, which keeps a token that still has `annotations:write`, or creates the `drasi-annotations` service account (Editor) and a new token. Grafana stores only token hashes, so it cannot be generated before Grafana runs. This is the one edit to `observability-stack.sh`, outside workstream 5's list.
 - Grafana's file provisioning does not notice regenerated dashboards through the podman mount; restart Grafana (`ops/observability-stack.sh restart grafana`) after `dashboards.py`.
 
@@ -916,7 +916,20 @@ fixes the current flicker of the menu.
 | `recommended-action` | 11 | stat | Recommended action | Drasi's proposed change for the current facts: it fits policy and capacity with the fewest moves. Approve it on its card in #incident-ai-support. |
 | `failover-readiness` | 15 | stat | Failover readiness | Drasi's what-if: if any one deployment failed, would every workload still have somewhere allowed to run? |
 
-Layout, colours and sizes are C's (18-row grid as today).
+Layout, colours and sizes are C's (18-row grid as today). As built: AI Deployments
+y 0–10 (five stats h 4, two charts h 6); Decision Support y 11–17: Support overdue,
+Deployment status (one row per deployment) and Change status w 4 h 6, then
+Recommended action over Failover readiness, each w 12 h 3, so the long answers stay
+large. Colours are the Ignite template's: green `#8DE971`, yellow `#FFE399` (needs
+action or waiting), red `#FFB3BB`, grey `#9AA4B0`; chart series blue `#8DC8E8` and
+purple `#C5B4E3`.
+
+**Panel menus.** Grafana 13.3 shows a panel's ⋮ menu only while the pointer is on
+that panel (CSS, no dashboard setting). A transparent HTML text panel, key
+`panel-menus`, id 200, listed **first** in the JSON (so `panels.ts` counts it in no
+row) and placed at y 18 below the last row, carries a `<style>` that keeps every
+panel's menu visible. Grafana renders it only with `GF_PANELS_DISABLE_SANITIZE_HTML=true`
+(compose, A); without it the style is stripped and the menus are hover-only again.
 
 ### Metrics (contract § 9 rows that change)
 
@@ -927,16 +940,23 @@ Layout, colours and sizes are C's (18-row grid as today).
 | Failover readiness | `ignite_drasi_failover_readiness` (replaces `ignite_drasi_safe_if_one_fails`) | `text`, `lost`, `workload` | 1 `Survives losing any one deployment` (green), 0 `At risk: losing EU-B leaves support nowhere to run` (orange), 2 `Already degraded: EU-A down` (grey; Grafana writes the names from `ignite_drasi_deployment_status >= 1`, since the query knows only the count), -1 Unknown | — | `tile-resilience` (`resilience`) |
 
 Grafana shows the `text` label (legend `{{text}}`, text mode name) coloured by
-value. The SSE aliases `tile-action` and `tile-resilience` keep their `value`
+value. As built: `tile-resilience` returns `text` "Already degraded" for 2 (Grafana
+writes "Already degraded: EU-A down" from the one deployment with status ≥ 1, or
+"Already degraded: more than one deployment down", falling back to the query's text);
+with no series at all, both text tiles show an explicit "Unknown" series (text mode
+hides Grafana's no-value text), "At risk: no valid plan even now" when the baseline is
+infeasible, and an empty `workload` (no label) unless at risk; `tile-action` returns
+"Add capacity: no valid plan even now" for 3 without a first failure. The workload
+is taken from the `Resilience` reason (`support`, or `batch` written `summaries`). The SSE aliases `tile-action` and `tile-resilience` keep their `value`
 meanings (the desk reads them); the new columns are additive.
 
 **Change status** (`tile-change`, inputs `postgres` and `plan-results`), first
 match wins: plan `unknown` → -1; latest approval `applied` → 3; `pending` → 2;
 plan feasible with `moves > 0` → 1; latest approval `rejected` → 5; `verified`
-→ 4; otherwise 0 (`declined` falls through). If a single query can't express
-"no approval yet", it returns rows only when a latest approval exists and
-Grafana's missing-while-ready default becomes `1` when Recommended action is 1,
-else `0`.
+→ 4; otherwise 0 (`declined` falls through). As built, `tile-change`
+(`postgres` and `plan-results`, joins `APPROVAL_PLAN` and `APPROVAL_SCENARIO`)
+returns a row only when a latest approval exists, and Grafana's missing-while-ready
+default is `1` when Recommended action is 1, `-1` when it is -1, else `0`.
 
 **Link to the proposal.** Recommended action has a panel link and a data link,
 "Open in #incident-ai-support", to
@@ -953,7 +973,12 @@ stay in the exporter (no consumer); their facts are on the cards.
 Contact point `incident-channel`, type `slack`, `url`
 `${MATTERMOST_ALERT_WEBHOOK_URL}`, username `Grafana`, added beside the probe's
 webhook (both alert rules, firing and resolved). The alert text names the rule
-and links to the dashboard.
+and links to the dashboard. As built (`provisioning/alerting/`): the notification
+policy routes `component=workload` (except Grafana's `DatasourceNoData` and
+`DatasourceError`) to `incident-channel` with `continue`, then everything to the
+probe's webhook; title "Alert firing: {rule}" or "Resolved: {rule}", text the rule's
+summary and "[Open AI service · Operations](…/d/ignite-workload?from=now-5m&to=now&refresh=5s)".
+Each rule carries `__dashboardUid__` `ignite-workload` and its panel.
 
 ## 17. Projected Mattermost view
 

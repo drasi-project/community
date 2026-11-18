@@ -107,7 +107,7 @@ over model output read the models' elements (`PolicyDecision`, `Plan`,
 | Recovery | `recovery-task-context` (label `RecoveryTasks`) | One aggregate row of support tasks at the current revision | `recovery-results` |
 | | `recovery-observation-context` (label `RecoveryObservation`) | The applied approval, its route's `applied_ms` and the support deployment's latest report | `recovery-results` |
 | | `recovery-results` (label `RecoveryResult`) | The two above (`RECOVERY_SUMMARY`), with several `trueLater` | `tile-recovery`, `recovery-verified` |
-| Tiles | `tile-overdue`, `tile-deployments`, `tile-capacity`, `tile-demand`, `tile-recovery`, `tile-action`, `tile-resilience`, `tile-running`, `tile-proposed`, `tile-policy`, `tile-last-approval` | One query per Grafana tile, returning exactly the value shown ([contracts.md › Metric contract](plan/contracts.md#9-metric-contract)) | `metrics`; five also `desk-stream` |
+| Tiles | `tile-overdue`, `tile-deployments`, `tile-change`, `tile-action`, `tile-resilience` (Grafana's Decision Support row); `tile-capacity`, `tile-demand`, `tile-recovery`, `tile-running`, `tile-proposed`, `tile-policy`, `tile-last-approval` (the desk and tests) | One query per tile, returning exactly the value shown; `tile-action` and `tile-resilience` also return the answer's wording as `text` ([contracts.md › Operations dashboard](plan/contracts.md#16-operations-dashboard)) | `metrics`; five also `desk-stream` |
 | Reaction drivers | `approval-valid` | A pending approval whose `candidate_id`, `basis` and `revision` match a feasible `Plan` | `gateway-reaction` (`approve`) |
 | | `approval-stale` | A pending approval that doesn't match the current `Plan`, with the reason | `gateway-reaction` (`reject`) |
 | | `recovery-verified` | A `confirmed` recovery result | `gateway-reaction` (`verified`) |
@@ -141,7 +141,7 @@ Configuration:
 
 | Component | Implementation | Inputs | Delivers |
 |---|---|---|---|
-| `metrics` | `ignite/prometheus-exporter` (`drasi_computation_ignite_prometheus`, written for this demo) | The 11 tile queries | Each row as a gauge on `127.0.0.1:$IGNITE_DRASI_METRICS_PORT/metrics` (mapping in `plugins/prometheus/examples/ignite.json`), plus `drasi_reaction_input_ready{output}`. Prometheus scrapes it every 2 s; an input that isn't loaded exports no series, which Grafana shows as Unknown |
+| `metrics` | `ignite/prometheus-exporter` (`drasi_computation_ignite_prometheus`, written for this demo) | The 12 tile queries | Each row as a gauge on `127.0.0.1:$IGNITE_DRASI_METRICS_PORT/metrics` (mapping in `plugins/prometheus/examples/ignite.json`), plus `drasi_reaction_input_ready{output}`. Prometheus scrapes it every 2 s; an input that isn't loaded exports no series, which Grafana shows as Unknown |
 | `desk-stream` | `drasi.network/sse-sink` | `overdue-tasks`, `plan-results` and five tiles | `GET /events` on `127.0.0.1:$IGNITE_DRASI_SSE_PORT` (heartbeat every 10 s) and `GET /snapshot/{query}`. The desk and projector read it through the web app's `/drasi-stream` proxy |
 | `gateway-reaction` | `drasi.network/http-sink` | `approval-valid`, `approval-stale`, `recovery-verified` | `POST /routes/apply`, `/approvals/{id}/reject` and `/approvals/{id}/verified` on the AI service's gateway configuration API. `failurePolicy: strict`, 10 retries within 30 s |
 | `grafana-annotations` | `drasi.network/http-sink` | `approval-events`, `plan-events` | `POST /api/annotations` (tag `ignite-decision`) with the `env:IGNITE_GRAFANA_TOKEN` service-account token. `failurePolicy: skip`, 3 retries |

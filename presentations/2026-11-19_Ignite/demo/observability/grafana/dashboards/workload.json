@@ -2,7 +2,7 @@
   "uid": "ignite-workload",
   "title": "AI service · Operations",
   "schemaVersion": 39,
-  "version": 28,
+  "version": 34,
   "refresh": "5s",
   "time": {
     "from": "now-5m",
@@ -12,7 +12,7 @@
     "ignite",
     "workload"
   ],
-  "description": "Top: ordinary monitoring, measured from real requests. Bottom: Drasi's answers, computed from changes. Deployments and capacity are simulated.",
+  "description": "AI Deployments: ordinary monitoring, measured from real requests. Decision Support: Drasi's answers, computed from changes. Deployments and capacity are simulated.",
   "annotations": {
     "list": [
       {
@@ -23,7 +23,7 @@
         },
         "enable": true,
         "hide": false,
-        "iconColor": "#52d6a4",
+        "iconColor": "#8DE971",
         "target": {
           "type": "tags",
           "tags": [
@@ -37,11 +37,11 @@
   },
   "links": [
     {
-      "title": "Recovery plan",
-      "url": "/d/ignite-decisions?from=now-5m&to=now&refresh=5s",
+      "title": "#incident-ai-support",
+      "url": "http://localhost:19065/ai-platform/channels/incident-ai-support",
       "type": "link",
       "icon": "external link",
-      "targetBlank": false,
+      "targetBlank": true,
       "asDropdown": false,
       "includeVars": false,
       "keepTime": false,
@@ -53,7 +53,7 @@
       "url": "http://localhost:14001/project/ignite-probe/traces?filter=isRootObservation%3Bboolean%3B%3B%3D%3Btrue",
       "type": "link",
       "icon": "external link",
-      "targetBlank": false,
+      "targetBlank": true,
       "asDropdown": false,
       "includeVars": false,
       "keepTime": false,
@@ -63,9 +63,28 @@
   ],
   "panels": [
     {
+      "id": 200,
+      "key": "panel-menus",
+      "type": "text",
+      "title": "",
+      "transparent": true,
+      "description": "Keeps every panel's menu visible (no content).",
+      "gridPos": {
+        "x": 0,
+        "y": 18,
+        "w": 24,
+        "h": 1
+      },
+      "options": {
+        "mode": "html",
+        "content": "<style>button[data-testid^=\"data-testid Panel menu\"].show-on-hover{opacity:1!important;visibility:visible!important;background:none}[data-viz-panel-key=\"panel-200\"]{pointer-events:none}</style>"
+      }
+    },
+    {
       "id": 100,
+      "key": "ai-deployments",
       "type": "row",
-      "title": "Monitoring · measured from requests",
+      "title": "AI Deployments",
       "collapsed": false,
       "gridPos": {
         "x": 0,
@@ -77,8 +96,10 @@
     },
     {
       "id": 1,
+      "key": "model-calls",
       "type": "stat",
       "title": "Model calls",
+      "description": "Calls to the AI model per second, both workloads, over the last 30 seconds.",
       "gridPos": {
         "x": 0,
         "y": 1,
@@ -107,7 +128,7 @@
               "options": {
                 "-1": {
                   "text": "Unknown",
-                  "color": "gray"
+                  "color": "#9AA4B0"
                 }
               }
             },
@@ -117,7 +138,7 @@
                 "match": "null",
                 "result": {
                   "text": "Unknown",
-                  "color": "gray"
+                  "color": "#9AA4B0"
                 }
               }
             },
@@ -127,7 +148,7 @@
                 "match": "nan",
                 "result": {
                   "text": "No traffic",
-                  "color": "gray"
+                  "color": "#9AA4B0"
                 }
               }
             }
@@ -149,8 +170,8 @@
       "options": {
         "colorMode": "value",
         "graphMode": "none",
-        "orientation": "auto",
         "justifyMode": "center",
+        "orientation": "auto",
         "reduceOptions": {
           "values": false,
           "calcs": [
@@ -169,8 +190,10 @@
     },
     {
       "id": 2,
+      "key": "support-errors",
       "type": "stat",
       "title": "Support errors",
+      "description": "Share of customer-support model calls that failed in the last 30 seconds.",
       "gridPos": {
         "x": 4,
         "y": 1,
@@ -199,7 +222,7 @@
               "options": {
                 "-1": {
                   "text": "Unknown",
-                  "color": "gray"
+                  "color": "#9AA4B0"
                 }
               }
             },
@@ -209,7 +232,7 @@
                 "match": "null",
                 "result": {
                   "text": "Unknown",
-                  "color": "gray"
+                  "color": "#9AA4B0"
                 }
               }
             },
@@ -219,7 +242,7 @@
                 "match": "nan",
                 "result": {
                   "text": "No traffic",
-                  "color": "gray"
+                  "color": "#9AA4B0"
                 }
               }
             }
@@ -228,15 +251,15 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#8DE971",
                 "value": null
               },
               {
-                "color": "orange",
+                "color": "#FFE399",
                 "value": 5
               },
               {
-                "color": "red",
+                "color": "#FFB3BB",
                 "value": 20
               }
             ]
@@ -249,8 +272,8 @@
       "options": {
         "colorMode": "value",
         "graphMode": "none",
-        "orientation": "auto",
         "justifyMode": "center",
+        "orientation": "auto",
         "reduceOptions": {
           "values": false,
           "calcs": [
@@ -269,8 +292,10 @@
     },
     {
       "id": 3,
+      "key": "answer-time",
       "type": "stat",
       "title": "Answer time p95",
+      "description": "95th percentile time from a customer's question to its answer, over the last minute. The target is 15 seconds.",
       "gridPos": {
         "x": 9,
         "y": 1,
@@ -300,7 +325,7 @@
                 "match": "null+nan",
                 "result": {
                   "text": "No answers",
-                  "color": "red"
+                  "color": "#FFB3BB"
                 }
               }
             },
@@ -309,7 +334,7 @@
               "options": {
                 "-1": {
                   "text": "Unknown",
-                  "color": "gray"
+                  "color": "#9AA4B0"
                 }
               }
             },
@@ -319,7 +344,7 @@
                 "match": "null",
                 "result": {
                   "text": "Unknown",
-                  "color": "gray"
+                  "color": "#9AA4B0"
                 }
               }
             },
@@ -329,7 +354,7 @@
                 "match": "nan",
                 "result": {
                   "text": "No traffic",
-                  "color": "gray"
+                  "color": "#9AA4B0"
                 }
               }
             }
@@ -338,15 +363,15 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#8DE971",
                 "value": null
               },
               {
-                "color": "orange",
+                "color": "#FFE399",
                 "value": 10
               },
               {
-                "color": "red",
+                "color": "#FFB3BB",
                 "value": 15
               }
             ]
@@ -359,8 +384,8 @@
       "options": {
         "colorMode": "value",
         "graphMode": "none",
-        "orientation": "auto",
         "justifyMode": "center",
+        "orientation": "auto",
         "reduceOptions": {
           "values": false,
           "calcs": [
@@ -379,8 +404,10 @@
     },
     {
       "id": 4,
+      "key": "support-queue",
       "type": "stat",
       "title": "Support queue",
+      "description": "Customer-support requests waiting for an answer. One or two in flight is normal.",
       "gridPos": {
         "x": 14,
         "y": 1,
@@ -409,7 +436,7 @@
               "options": {
                 "-1": {
                   "text": "Unknown",
-                  "color": "gray"
+                  "color": "#9AA4B0"
                 }
               }
             },
@@ -419,7 +446,7 @@
                 "match": "null",
                 "result": {
                   "text": "Unknown",
-                  "color": "gray"
+                  "color": "#9AA4B0"
                 }
               }
             },
@@ -429,7 +456,7 @@
                 "match": "nan",
                 "result": {
                   "text": "No traffic",
-                  "color": "gray"
+                  "color": "#9AA4B0"
                 }
               }
             }
@@ -438,15 +465,15 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#8DE971",
                 "value": null
               },
               {
-                "color": "orange",
+                "color": "#FFE399",
                 "value": 3
               },
               {
-                "color": "red",
+                "color": "#FFB3BB",
                 "value": 6
               }
             ]
@@ -458,8 +485,8 @@
       "options": {
         "colorMode": "value",
         "graphMode": "none",
-        "orientation": "auto",
         "justifyMode": "center",
+        "orientation": "auto",
         "reduceOptions": {
           "values": false,
           "calcs": [
@@ -478,8 +505,10 @@
     },
     {
       "id": 10,
+      "key": "alerts-firing",
       "type": "stat",
-      "title": "Grafana alerts firing",
+      "title": "Alerts firing",
+      "description": "Grafana alert rules firing: model calls failing, and support requests overdue (an alert on Drasi's answer). Each also posts to #incident-ai-support.",
       "gridPos": {
         "x": 18,
         "y": 1,
@@ -508,7 +537,7 @@
               "options": {
                 "-1": {
                   "text": "Unknown",
-                  "color": "gray"
+                  "color": "#9AA4B0"
                 }
               }
             },
@@ -518,7 +547,7 @@
                 "match": "null",
                 "result": {
                   "text": "Unknown",
-                  "color": "gray"
+                  "color": "#9AA4B0"
                 }
               }
             },
@@ -528,7 +557,7 @@
                 "match": "nan",
                 "result": {
                   "text": "No traffic",
-                  "color": "gray"
+                  "color": "#9AA4B0"
                 }
               }
             }
@@ -537,11 +566,11 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#8DE971",
                 "value": null
               },
               {
-                "color": "red",
+                "color": "#FFB3BB",
                 "value": 1
               }
             ]
@@ -553,8 +582,8 @@
       "options": {
         "colorMode": "value",
         "graphMode": "none",
-        "orientation": "auto",
         "justifyMode": "center",
+        "orientation": "auto",
         "reduceOptions": {
           "values": false,
           "calcs": [
@@ -573,8 +602,10 @@
     },
     {
       "id": 5,
+      "key": "model-calls-chart",
       "type": "timeseries",
-      "title": "Model calls",
+      "title": "Model calls by workload",
+      "description": "Model calls per second, by workload and whether they succeeded. Failed calls are retried.",
       "gridPos": {
         "x": 0,
         "y": 5,
@@ -630,7 +661,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "blue"
+                  "fixedColor": "#8DC8E8"
                 }
               }
             ]
@@ -645,7 +676,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "yellow"
+                  "fixedColor": "#C5B4E3"
                 }
               }
             ]
@@ -660,7 +691,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "red"
+                  "fixedColor": "#FFB3BB"
                 }
               }
             ]
@@ -675,7 +706,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "orange"
+                  "fixedColor": "#FFE399"
                 }
               }
             ]
@@ -695,8 +726,10 @@
     },
     {
       "id": 6,
+      "key": "support-waiting",
       "type": "timeseries",
       "title": "Support requests waiting",
+      "description": "Support requests waiting for an answer, and how many are past their 15-second deadline according to Drasi.",
       "gridPos": {
         "x": 14,
         "y": 5,
@@ -743,7 +776,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "orange"
+                  "fixedColor": "#FFE399"
                 }
               }
             ]
@@ -758,7 +791,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "red"
+                  "fixedColor": "#FFB3BB"
                 }
               }
             ]
@@ -778,8 +811,9 @@
     },
     {
       "id": 101,
+      "key": "decision-support",
       "type": "row",
-      "title": "Drasi's answers · computed from changes",
+      "title": "Decision Support",
       "collapsed": false,
       "gridPos": {
         "x": 0,
@@ -791,13 +825,15 @@
     },
     {
       "id": 7,
+      "key": "support-overdue",
       "type": "stat",
       "title": "Support overdue",
+      "description": "Customer-support requests past their 15-second deadline, from a Drasi continuous query. A request becomes overdue as time passes, with no new event.",
       "gridPos": {
         "x": 0,
         "y": 12,
         "w": 4,
-        "h": 5
+        "h": 6
       },
       "datasource": {
         "uid": "ignite-prometheus",
@@ -821,7 +857,7 @@
               "options": {
                 "-1": {
                   "text": "Unknown",
-                  "color": "gray"
+                  "color": "#9AA4B0"
                 }
               }
             },
@@ -831,7 +867,7 @@
                 "match": "null",
                 "result": {
                   "text": "Unknown",
-                  "color": "gray"
+                  "color": "#9AA4B0"
                 }
               }
             },
@@ -841,7 +877,7 @@
                 "match": "nan",
                 "result": {
                   "text": "No traffic",
-                  "color": "gray"
+                  "color": "#9AA4B0"
                 }
               }
             }
@@ -850,11 +886,11 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#8DE971",
                 "value": null
               },
               {
-                "color": "red",
+                "color": "#FFB3BB",
                 "value": 1
               }
             ]
@@ -866,8 +902,8 @@
       "options": {
         "colorMode": "value",
         "graphMode": "none",
-        "orientation": "auto",
         "justifyMode": "center",
+        "orientation": "auto",
         "reduceOptions": {
           "values": false,
           "calcs": [
@@ -880,19 +916,21 @@
         "showPercentChange": false,
         "text": {
           "titleSize": 15,
-          "valueSize": 40
+          "valueSize": 44
         }
       }
     },
     {
       "id": 8,
+      "key": "deployment-status",
       "type": "stat",
       "title": "Deployment status",
+      "description": "Each deployment's latest health report. Unknown means no report for 8 seconds: Drasi notices silence as time passes.",
       "gridPos": {
         "x": 4,
         "y": 12,
-        "w": 7,
-        "h": 5
+        "w": 4,
+        "h": 6
       },
       "datasource": {
         "uid": "ignite-prometheus",
@@ -917,19 +955,19 @@
               "options": {
                 "-1": {
                   "text": "Unknown",
-                  "color": "gray"
+                  "color": "#9AA4B0"
                 },
                 "0": {
                   "text": "Healthy",
-                  "color": "green"
+                  "color": "#8DE971"
                 },
                 "1": {
                   "text": "Over quota",
-                  "color": "orange"
+                  "color": "#FFE399"
                 },
                 "2": {
                   "text": "Failed",
-                  "color": "red"
+                  "color": "#FFB3BB"
                 }
               }
             },
@@ -939,7 +977,7 @@
                 "match": "null",
                 "result": {
                   "text": "Unknown",
-                  "color": "gray"
+                  "color": "#9AA4B0"
                 }
               }
             },
@@ -949,7 +987,7 @@
                 "match": "nan",
                 "result": {
                   "text": "No traffic",
-                  "color": "gray"
+                  "color": "#9AA4B0"
                 }
               }
             }
@@ -964,8 +1002,8 @@
       "options": {
         "colorMode": "value",
         "graphMode": "none",
-        "orientation": "vertical",
-        "justifyMode": "center",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
         "reduceOptions": {
           "values": false,
           "calcs": [
@@ -974,23 +1012,25 @@
           "fields": ""
         },
         "textMode": "value_and_name",
-        "wideLayout": false,
+        "wideLayout": true,
         "showPercentChange": false,
         "text": {
-          "titleSize": 15,
-          "valueSize": 22
+          "titleSize": 24,
+          "valueSize": 24
         }
       }
     },
     {
       "id": 9,
+      "key": "change-status",
       "type": "stat",
-      "title": "Recovery",
+      "title": "Change status",
+      "description": "Where the current change is: awaiting approval, applying, applied and being verified, verified, or rejected because the facts changed. Verified means the backlog cleared and support is answered on the new route.",
       "gridPos": {
-        "x": 11,
+        "x": 8,
         "y": 12,
         "w": 4,
-        "h": 5
+        "h": 6
       },
       "datasource": {
         "uid": "ignite-prometheus",
@@ -999,7 +1039,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "max((max(ignite_drasi_recovery_state) and on() (drasi_reaction_input_ready{output=\"recovery\"} == 1)) or on() ((drasi_reaction_input_ready{output=\"recovery\"} == 1) * 0 + 2))",
+          "expr": "max((max(ignite_drasi_change_status) and on() (drasi_reaction_input_ready{output=\"change\"} == 1)) or on() (((max((ignite_drasi_recommended_action and on() (drasi_reaction_input_ready{output=\"action\"} == 1))) == 1) or on() (max((ignite_drasi_recommended_action and on() (drasi_reaction_input_ready{output=\"action\"} == 1))) == -1) or on() ((max((ignite_drasi_recommended_action and on() (drasi_reaction_input_ready{output=\"action\"} == 1))) >= 0) * 0)) and on() (drasi_reaction_input_ready{output=\"change\"} == 1)))",
           "instant": true,
           "range": false,
           "interval": "1s"
@@ -1014,19 +1054,31 @@
               "options": {
                 "-1": {
                   "text": "Unknown",
-                  "color": "gray"
+                  "color": "#9AA4B0"
                 },
                 "0": {
-                  "text": "Awaiting evidence",
-                  "color": "orange"
+                  "text": "No change in progress",
+                  "color": "#9AA4B0"
                 },
                 "1": {
-                  "text": "Verified",
-                  "color": "green"
+                  "text": "Awaiting approval",
+                  "color": "#FFE399"
                 },
                 "2": {
-                  "text": "Nothing to verify",
-                  "color": "#9aa4b0"
+                  "text": "Approved, applying",
+                  "color": "#FFE399"
+                },
+                "3": {
+                  "text": "Applied, verifying",
+                  "color": "#FFE399"
+                },
+                "4": {
+                  "text": "Verified",
+                  "color": "#8DE971"
+                },
+                "5": {
+                  "text": "Rejected",
+                  "color": "#FFE399"
                 }
               }
             },
@@ -1036,7 +1088,7 @@
                 "match": "null",
                 "result": {
                   "text": "Unknown",
-                  "color": "gray"
+                  "color": "#9AA4B0"
                 }
               }
             },
@@ -1046,7 +1098,7 @@
                 "match": "nan",
                 "result": {
                   "text": "No traffic",
-                  "color": "gray"
+                  "color": "#9AA4B0"
                 }
               }
             }
@@ -1061,8 +1113,8 @@
       "options": {
         "colorMode": "value",
         "graphMode": "none",
-        "orientation": "auto",
         "justifyMode": "center",
+        "orientation": "auto",
         "reduceOptions": {
           "values": false,
           "calcs": [
@@ -1075,19 +1127,21 @@
         "showPercentChange": false,
         "text": {
           "titleSize": 15,
-          "valueSize": 30
+          "valueSize": 26
         }
       }
     },
     {
       "id": 11,
+      "key": "recommended-action",
       "type": "stat",
-      "title": "Action needed",
+      "title": "Recommended action",
+      "description": "Drasi's proposed change for the current facts: it fits policy and capacity with the fewest moves. Approve it on its card in #incident-ai-support (the link on this panel opens the channel).",
       "gridPos": {
-        "x": 15,
+        "x": 12,
         "y": 12,
-        "w": 4,
-        "h": 5
+        "w": 12,
+        "h": 3
       },
       "datasource": {
         "uid": "ignite-prometheus",
@@ -1096,10 +1150,11 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "(max(ignite_drasi_action_needed) and on() (drasi_reaction_input_ready{output=\"action\"} == 1))",
+          "expr": "((ignite_drasi_recommended_action and on() (drasi_reaction_input_ready{output=\"action\"} == 1))) or on() label_replace(vector(-1), \"text\", \"Unknown\", \"\", \"\")",
           "instant": true,
           "range": false,
-          "interval": "1s"
+          "interval": "1s",
+          "legendFormat": "{{text}}"
         }
       ],
       "fieldConfig": {
@@ -1111,23 +1166,23 @@
               "options": {
                 "-1": {
                   "text": "Unknown",
-                  "color": "gray"
+                  "color": "#9AA4B0"
                 },
                 "0": {
                   "text": "None",
-                  "color": "green"
+                  "color": "#8DE971"
                 },
                 "1": {
-                  "text": "Approve proposed plan",
-                  "color": "orange"
+                  "text": "Change proposed",
+                  "color": "#FFE399"
                 },
                 "2": {
-                  "text": "No valid plan",
-                  "color": "red"
+                  "text": "No change fits",
+                  "color": "#FFB3BB"
                 },
                 "3": {
-                  "text": "At risk",
-                  "color": "orange"
+                  "text": "Add capacity",
+                  "color": "#FFE399"
                 }
               }
             },
@@ -1137,7 +1192,7 @@
                 "match": "null",
                 "result": {
                   "text": "Unknown",
-                  "color": "gray"
+                  "color": "#9AA4B0"
                 }
               }
             },
@@ -1147,7 +1202,7 @@
                 "match": "nan",
                 "result": {
                   "text": "No traffic",
-                  "color": "gray"
+                  "color": "#9AA4B0"
                 }
               }
             }
@@ -1155,15 +1210,22 @@
           "color": {
             "mode": "fixed",
             "fixedColor": "text"
-          }
+          },
+          "links": [
+            {
+              "title": "Open in #incident-ai-support",
+              "url": "http://localhost:19065/ai-platform/channels/incident-ai-support",
+              "targetBlank": true
+            }
+          ]
         },
         "overrides": []
       },
       "options": {
         "colorMode": "value",
         "graphMode": "none",
-        "orientation": "auto",
         "justifyMode": "center",
+        "orientation": "vertical",
         "reduceOptions": {
           "values": false,
           "calcs": [
@@ -1171,24 +1233,33 @@
           ],
           "fields": ""
         },
-        "textMode": "value",
+        "textMode": "name",
         "wideLayout": true,
         "showPercentChange": false,
         "text": {
           "titleSize": 15,
-          "valueSize": 30
+          "valueSize": 22
         }
-      }
+      },
+      "links": [
+        {
+          "title": "Open in #incident-ai-support",
+          "url": "http://localhost:19065/ai-platform/channels/incident-ai-support",
+          "targetBlank": true
+        }
+      ]
     },
     {
       "id": 15,
+      "key": "failover-readiness",
       "type": "stat",
-      "title": "Safe if one fails?",
+      "title": "Failover readiness",
+      "description": "Drasi's what-if: if any one deployment failed, would every workload still have somewhere allowed to run?",
       "gridPos": {
-        "x": 19,
-        "y": 12,
-        "w": 5,
-        "h": 5
+        "x": 12,
+        "y": 15,
+        "w": 12,
+        "h": 3
       },
       "datasource": {
         "uid": "ignite-prometheus",
@@ -1197,19 +1268,19 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "(ignite_drasi_safe_if_one_fails and on() (drasi_reaction_input_ready{output=\"resilience\"} == 1)) != 0",
+          "expr": "(((ignite_drasi_failover_readiness and on() (drasi_reaction_input_ready{output=\"resilience\"} == 1)) != 2) or ((ignite_drasi_failover_readiness and on() (drasi_reaction_input_ready{output=\"resilience\"} == 1)) == 2 unless on() ((label_replace((((ignite_drasi_deployment_status and on() (drasi_reaction_input_ready{output=\"deployments\"} == 1)) >= 1) * 0 + 2) and on() (count(((ignite_drasi_deployment_status and on() (drasi_reaction_input_ready{output=\"deployments\"} == 1)) >= 1)) == 1), \"text\", \"Already degraded: $1 down\", \"deployment\", \"(.+)\") or on() label_replace((count(((ignite_drasi_deployment_status and on() (drasi_reaction_input_ready{output=\"deployments\"} == 1)) >= 1)) > 1) * 0 + 2, \"text\", \"Already degraded: more than one deployment down\", \"\", \"\")) and on() ((ignite_drasi_failover_readiness and on() (drasi_reaction_input_ready{output=\"resilience\"} == 1)) == 2)))) or on() label_replace(vector(-1), \"text\", \"Unknown\", \"\", \"\") unless on() ((label_replace((((ignite_drasi_deployment_status and on() (drasi_reaction_input_ready{output=\"deployments\"} == 1)) >= 1) * 0 + 2) and on() (count(((ignite_drasi_deployment_status and on() (drasi_reaction_input_ready{output=\"deployments\"} == 1)) >= 1)) == 1), \"text\", \"Already degraded: $1 down\", \"deployment\", \"(.+)\") or on() label_replace((count(((ignite_drasi_deployment_status and on() (drasi_reaction_input_ready{output=\"deployments\"} == 1)) >= 1)) > 1) * 0 + 2, \"text\", \"Already degraded: more than one deployment down\", \"\", \"\")) and on() ((ignite_drasi_failover_readiness and on() (drasi_reaction_input_ready{output=\"resilience\"} == 1)) == 2))",
           "instant": true,
           "range": false,
           "interval": "1s",
-          "legendFormat": " "
+          "legendFormat": "{{text}}"
         },
         {
           "refId": "B",
-          "expr": "(ignite_drasi_safe_if_one_fails and on() (drasi_reaction_input_ready{output=\"resilience\"} == 1)) == 0",
+          "expr": "((label_replace((((ignite_drasi_deployment_status and on() (drasi_reaction_input_ready{output=\"deployments\"} == 1)) >= 1) * 0 + 2) and on() (count(((ignite_drasi_deployment_status and on() (drasi_reaction_input_ready{output=\"deployments\"} == 1)) >= 1)) == 1), \"text\", \"Already degraded: $1 down\", \"deployment\", \"(.+)\") or on() label_replace((count(((ignite_drasi_deployment_status and on() (drasi_reaction_input_ready{output=\"deployments\"} == 1)) >= 1)) > 1) * 0 + 2, \"text\", \"Already degraded: more than one deployment down\", \"\", \"\")) and on() ((ignite_drasi_failover_readiness and on() (drasi_reaction_input_ready{output=\"resilience\"} == 1)) == 2))",
           "instant": true,
           "range": false,
           "interval": "1s",
-          "legendFormat": "not if {{lost}} fails"
+          "legendFormat": "{{text}}"
         }
       ],
       "fieldConfig": {
@@ -1221,19 +1292,19 @@
               "options": {
                 "-1": {
                   "text": "Unknown",
-                  "color": "gray"
+                  "color": "#9AA4B0"
                 },
                 "1": {
-                  "text": "Yes",
-                  "color": "green"
+                  "text": "Survives losing one",
+                  "color": "#8DE971"
                 },
                 "0": {
-                  "text": "No",
-                  "color": "orange"
+                  "text": "At risk",
+                  "color": "#FFE399"
                 },
                 "2": {
-                  "text": "Already one down",
-                  "color": "#9aa4b0"
+                  "text": "Already degraded",
+                  "color": "#9AA4B0"
                 }
               }
             },
@@ -1243,7 +1314,7 @@
                 "match": "null",
                 "result": {
                   "text": "Unknown",
-                  "color": "gray"
+                  "color": "#9AA4B0"
                 }
               }
             },
@@ -1253,7 +1324,7 @@
                 "match": "nan",
                 "result": {
                   "text": "No traffic",
-                  "color": "gray"
+                  "color": "#9AA4B0"
                 }
               }
             }
@@ -1268,8 +1339,8 @@
       "options": {
         "colorMode": "value",
         "graphMode": "none",
-        "orientation": "vertical",
         "justifyMode": "center",
+        "orientation": "vertical",
         "reduceOptions": {
           "values": false,
           "calcs": [
@@ -1277,12 +1348,12 @@
           ],
           "fields": ""
         },
-        "textMode": "value_and_name",
-        "wideLayout": false,
+        "textMode": "name",
+        "wideLayout": true,
         "showPercentChange": false,
         "text": {
           "titleSize": 15,
-          "valueSize": 30
+          "valueSize": 22
         }
       }
     }

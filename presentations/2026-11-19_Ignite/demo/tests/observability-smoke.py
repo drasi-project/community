@@ -53,6 +53,28 @@ def wait_for(label, check, timeout=120):
     raise AssertionError(f"{label} not observed in {timeout}s; last transport error: {last_error}")
 
 
+# plan/contracts.md section 16: the projector highlights panels by these keys.
+PANEL_KEYS = ["panel-menus", "ai-deployments", "model-calls", "support-errors", "answer-time", "support-queue", "alerts-firing",
+              "model-calls-chart", "support-waiting", "decision-support", "support-overdue", "deployment-status",
+              "change-status", "recommended-action", "failover-readiness"]
+
+
+def operations_dashboard(auth):
+    """One dashboard with the contract's panel keys, a description on every panel, the Recovery plan
+    dashboard gone, and Grafana's alerts posting to #incident-ai-support."""
+    grafana = settings.url("GRAFANA")
+    panels = get(grafana + "/api/dashboards/uid/ignite-workload", auth)["dashboard"]["panels"]
+    assert [p.get("key") for p in panels] == PANEL_KEYS, [p.get("key") for p in panels]
+    assert all(p.get("description") for p in panels if p["type"] != "row"), "a panel has no description"
+    get(grafana + "/api/dashboards/uid/ignite-decisions", auth, expected=404)
+    receivers = {r["name"]: r for r in get(grafana + "/api/v1/provisioning/contact-points", auth)}
+    channel = receivers.get("incident-channel")
+    assert channel and channel["type"] == "slack" and channel["settings"].get("username") == "Grafana", channel
+    routes = get(grafana + "/api/v1/provisioning/policies", auth).get("routes", [])
+    assert any(r.get("receiver") == "incident-channel" and r.get("continue") for r in routes), routes
+    return {"panels": len(panels), "contact_point": "incident-channel"}
+
+
 def main():
     env = environment()
     grafana_auth = base64.b64encode(f"admin:{env['GRAFANA_ADMIN_PASSWORD']}".encode()).decode()
@@ -67,6 +89,7 @@ def main():
         wait_for(label, lambda url=url: get(url), timeout=240)
     dashboard = get(settings.url("GRAFANA")+"/api/dashboards/uid/ignite-integration-probe", grafana_auth)
     assert dashboard["dashboard"]["uid"] == "ignite-integration-probe"
+    evidence["operations_dashboard"] = operations_dashboard(grafana_auth)
     query = urllib.parse.urlencode({"query": "ignite_probe_http_requests_total"})
     metric_url = settings.url("GRAFANA")+f"/api/datasources/proxy/uid/ignite-prometheus/api/v1/query?{query}"
     # A probe restart resets its counters; wait out old collector/scrape samples.

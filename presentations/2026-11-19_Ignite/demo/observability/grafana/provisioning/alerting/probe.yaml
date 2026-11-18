@@ -9,6 +9,9 @@ contactPoints:
         settings:
           url: http://probe:8888/alerts/grafana
           httpMethod: POST
+# Every alert goes to the probe's webhook (the smoke test reads it); the AI service's
+# alerts (component=workload) also post to #incident-ai-support (workload.yaml), except
+# Grafana's own no-data and query-error alerts, which would repeat a rule's summary.
 policies:
   - orgId: 1
     receiver: ignite-probe-webhook
@@ -16,6 +19,11 @@ policies:
     group_wait: 1s
     group_interval: 5s
     repeat_interval: 1h
+    routes:
+      - receiver: incident-channel
+        object_matchers: [["component", "=", "workload"], ["alertname", "!~", "DatasourceNoData|DatasourceError"]]
+        continue: true
+      - receiver: ignite-probe-webhook
 groups:
   - orgId: 1
     name: integration-probe

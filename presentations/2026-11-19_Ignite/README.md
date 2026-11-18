@@ -124,8 +124,9 @@ just saw.
 ## How the story unfolds on stage
 
 1. **Healthy service.** Real traffic flows. Support runs on EU-A, summaries on
-   EU-B. Grafana's top half is ordinary monitoring; its bottom half is Drasi's
-   answers, including "Safe if one fails? Yes".
+   EU-B. Grafana's AI Deployments row is ordinary monitoring; its Decision
+   Support row is Drasi's answers, including Failover readiness: "Survives
+   losing any one deployment".
 2. **Failure.** EU-A fails. Within seconds Drasi shows EU-A Failed and has a plan
    ready; errors and the queue rise and Grafana alerts. Support requests count as
    overdue the moment each passes its 15-second deadline, with no new event.

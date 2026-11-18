@@ -1,9 +1,25 @@
 apiVersion: 1
-# Grafana's alerts stay in Grafana (the probe's webhook records them for the smoke test);
-# removes the contact point that earlier versions posted to Drasi.
+# The AI service's alerts post to #incident-ai-support through Mattermost's incoming
+# webhook (Slack-compatible), as well as to the probe's webhook (routes in probe.yaml).
+# Removes the contact point that earlier versions posted to Drasi.
 deleteContactPoints:
   - orgId: 1
     uid: drasi-http-source
+contactPoints:
+  - orgId: 1
+    name: incident-channel
+    receivers:
+      - uid: incident-channel
+        type: slack
+        disableResolveMessage: false
+        settings:
+          # http://mattermost:8065/hooks/<id>, written to .env by ops/mattermost.py bootstrap.
+          url: ${MATTERMOST_ALERT_WEBHOOK_URL}
+          username: Grafana
+          title: '{{ if eq .Status "firing" }}Alert firing{{ else }}Resolved{{ end }}: {{ .CommonLabels.alertname }}'
+          text: >-
+            {{ .CommonAnnotations.summary }}
+            [Open AI service · Operations]({{ .ExternalURL }}d/ignite-workload?from=now-5m&to=now&refresh=5s)
 groups:
   - orgId: 1
     name: support-workload
@@ -18,6 +34,8 @@ groups:
         execErrState: Error
         annotations:
           summary: Model-call errors were measured in the last 30 seconds.
+          __dashboardUid__: ignite-workload
+          __panelId__: "5"
         labels:
           component: workload
         data:
@@ -50,7 +68,9 @@ groups:
         noDataState: OK
         execErrState: Error
         annotations:
-          summary: Drasi reports customer-support requests past their 15-second target.
+          summary: Drasi reports customer-support requests past their 15-second deadline.
+          __dashboardUid__: ignite-workload
+          __panelId__: "7"
         labels:
           component: workload
         data:
