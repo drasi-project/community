@@ -55,10 +55,10 @@ export const notes: Record<SceneId, Cue> = {
   normal: {
     summary: "Walk through the healthy dashboard",
     beats: [
-      { show: "ops", do: ["start-traffic"], highlight: ["ignite-workload.monitoring-measured-from-requests"],
+      { show: "ops", do: ["start-traffic"], highlight: ["ignite-workload.ai-deployments"],
         say: "This is the AI service's Grafana dashboard. The top half is ordinary monitoring, measured from real requests: calls, errors, answer time, the support queue and Grafana alerts. OpenTelemetry, Prometheus and Grafana; nothing new.",
         watch: "Charts moving. Support errors 0%, Support queue 0 to 2 (green). (Start demo traffic only if it isn't already running.)" },
-      { show: "ops", highlight: ["ignite-workload.drasi-s-answers-computed-from-changes"],
+      { show: "ops", highlight: ["ignite-workload.decision-support"],
         say: "The bottom half is Drasi's answers, worked out from changes in the AI service's database rather than from metrics. The service records every request and attempt, and checks each deployment's health every second. Drasi turns that into: overdue support requests, each deployment's status, recovery, what action is needed, and whether we'd survive losing any one deployment. A Drasi reaction publishes them as ordinary Prometheus metrics, so you can alert on them like anything else.",
         watch: "Support overdue 0, all deployments Healthy, Recovery Nothing to verify, Action needed None, Safe if one fails? Yes." },
       { show: "drasi-healthy",
