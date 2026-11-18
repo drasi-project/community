@@ -22,7 +22,7 @@ already exists in this branch.
 | [Mattermost](#13-mattermost) | Local Mattermost on `IGNITE_MATTERMOST_PORT` (19065), bootstrapped by `ops/mattermost.py`; team `ai-platform`, channel `incident-ai-support`, bot `drasi`, user `oncall`; secrets in `.env`, IDs in `.native/mattermost.json` | [incident-channel-plan.md](incident-channel-plan.md) |
 | [Approvals from Mattermost](#14-approvals-from-mattermost) | `POST /mattermost/actions` turns a card's button into the existing approval (`id` = `mm-{post_id}`); `POST /mattermost/approve-latest` presses the newest proposal's button for the desk | this file |
 | [Incident cards](#15-incident-cards) | Seven Drasi event queries → `incident-channel` HTTP reaction → Mattermost REST; outcomes reply in the approved card's thread | this file |
-| [Operations dashboard](#16-operations-dashboard) | One dashboard `ignite-workload`, rows AI Deployments and Decision Support, stable panel `key`s; Change status, Recommended action, Failover readiness | this file |
+| [Operations dashboard](#16-operations-dashboard) | One dashboard `ignite-workload`, rows AI Deployments and Decision Support, stable panel `key`s; Workload status, Recommended action (with the change's progress), Failover readiness; Grafana's alert list | this file |
 | [Projected Mattermost view](#17-projected-mattermost-view) | Stage view `incident`, framed from the web app origin, signed in through `/mattermost/sign-in` | this file |
 | [Desk](#18-desk) | One backup button, `approve-change`, calls `approve-latest`; `select-plan` and `approve-plan` go | this file |
 | [Working rules](#19-working-rules-for-the-incident-channel-work) | File ownership for workstreams A–D; one rule for restarting the live stack; no resets without notice | this file |
@@ -383,9 +383,9 @@ name. Prometheus scrapes it every 2 s as job `drasi` at
 ## 9. Metric contract
 
 > **Superseded in part by [section 16](#16-operations-dashboard):** Recovery,
-> Action needed and Safe if one fails? become Change status, Recommended action
-> and Failover readiness, and the Recovery plan dashboard goes. The other rows
-> stand.
+> Action needed and Safe if one fails? become Recommended action (which also
+> shows the change's progress) and Failover readiness, Workload status is added,
+> and the Recovery plan dashboard goes. The other rows stand.
 
 All gauges, from `plugins/prometheus/examples/ignite.json`. **Unknown** is
 either value `-1` (Drasi answered "unknown") or no series. For counts and
@@ -397,7 +397,7 @@ Workload labels stay `support` and `batch`; Grafana relabels `batch` as
 
 | Tile (dashboard) | Metric | Labels | Values | Missing while ready | Query (alias) |
 |---|---|---|---|---|---|
-| Support overdue; Support requests waiting (overdue line); Grafana alerts firing; alert "Support requests overdue (Drasi)" (Operations) | `ignite_drasi_overdue_requests` | `workload` | count | 0 | `tile-overdue` (`overdue`) |
+| Support overdue; Support requests waiting (overdue line); alert "Support requests overdue (Drasi)" (Operations) | `ignite_drasi_overdue_requests` | `workload` | count | 0 | `tile-overdue` (`overdue`) |
 | Deployment status (Operations); Deployments (Recovery plan) | `ignite_drasi_deployment_status` | `deployment` | 0 healthy, 1 throttled ("Over quota"), 2 failed, -1 unknown | — | `tile-deployments` (`deployments`) |
 | Deployments (Recovery plan) | `ignite_drasi_deployment_capacity_tpm` | `deployment` | capacity | — | `tile-deployments` |
 | Capacity · tokens/min (Recovery plan) | `ignite_drasi_capacity_tpm` | `kind` = `total`, `healthy`, `needed` | sum | — | `tile-capacity` (`capacity`: total, healthy), `tile-demand` (`demand`: needed) |
@@ -910,21 +910,22 @@ fixes the current flicker of the menu.
 | `support-errors` | 2 | stat | Support errors | Share of customer-support model calls that failed in the last 30 seconds. |
 | `answer-time` | 3 | stat | Answer time p95 | 95th percentile time from a customer's question to its answer, over the last minute. The target is 15 seconds. |
 | `support-queue` | 4 | stat | Support queue | Customer-support requests waiting for an answer. One or two in flight is normal. |
-| `alerts-firing` | 10 | stat | Alerts firing | Grafana alert rules firing: model calls failing, and support requests overdue (an alert on Drasi's answer). Each also posts to #incident-ai-support. |
+| `alerts-firing` | 10 | alertlist | Alerts firing | Grafana's alert rules that are firing now: Model calls failing, and Support requests overdue (an alert on Drasi's answer). Each also posts to #incident-ai-support. |
 | `model-calls-chart` | 5 | timeseries | Model calls by workload | Model calls per second, by workload and whether they succeeded. Failed calls are retried. |
 | `support-waiting` | 6 | timeseries | Support requests waiting | Support requests waiting for an answer, and how many are past their 15-second deadline according to Drasi. |
 | `decision-support` | 101 | row | Decision Support | — |
 | `support-overdue` | 7 | stat | Support overdue | Customer-support requests past their 15-second deadline, from a Drasi continuous query. A request becomes overdue as time passes, with no new event. |
-| `deployment-status` | 8 | stat | Deployment status | Each deployment's latest health report. Unknown means no report for 8 seconds: Drasi notices silence as time passes. |
-| `change-status` | 9 | stat | Change status | Where the current change is: awaiting approval, applying, applied and being verified, verified, or rejected because the facts changed. Verified means the backlog cleared and support is answered on the new route. |
-| `recommended-action` | 11 | stat | Recommended action | Drasi's proposed change for the current facts: it fits policy and capacity with the fewest moves. Approve it on its card in #incident-ai-support. |
+| `deployment-status` | 8 | stat | Deployment status | Each deployment's health as Drasi derives it from its health-probe telemetry. Unknown means no probe for 8 seconds: Drasi notices silence as time passes. |
+| `workload-status` | 9 | stat | Workload status | Each workload where it runs now, from a Drasi continuous query over its route, the placement policy and its deployment's health: Healthy, Over quota or Failing as its deployment is; Not allowed when policy no longer allows it there; Unknown when its deployment has been silent for 8 seconds. |
+| `recommended-action` | 11 | stat | Recommended action | Drasi's recommended change for the current facts, and where it is: Approve (waiting for approval on its card in #incident-ai-support), Applying, then Verifying, Verified once the backlog has cleared and support is answered on the new route; No change fits; Add capacity. |
 | `failover-readiness` | 15 | stat | Failover readiness | Drasi's what-if: if any one deployment failed, would every workload still have somewhere allowed to run? |
 
 Layout, colours and sizes are C's (18-row grid as today). As built: AI Deployments
-y 0–10 (five stats h 4, two charts h 6); Decision Support y 11–17: Support overdue,
-Deployment status (one row per deployment) and Change status w 4 h 6, then
-Recommended action over Failover readiness, each w 12 h 3, so the long answers stay
-large. Colours are the Ignite template's: green `#8DE971`, yellow `#FFE399` (needs
+y 0–10: four stats w 6 h 4, then Model calls by workload (w 10), Support requests
+waiting (w 8) and Alerts firing (w 6), each h 6; Decision Support y 11–17: Support
+overdue, Deployment status (one row per deployment) and Workload status (one row per
+workload, Support first) w 4 h 6, then Recommended action over Failover readiness,
+each w 12 h 3, so the long answers stay large. Colours are the Ignite template's: green `#8DE971`, yellow `#FFE399` (needs
 action or waiting), red `#FFB3BB`, grey `#9AA4B0`; chart series blue `#8DC8E8` and
 purple `#C5B4E3`.
 
@@ -939,8 +940,9 @@ panel's menu visible. Grafana renders it only with `GF_PANELS_DISABLE_SANITIZE_H
 
 | Tile | Metric | Labels | Values (text, colour) | Missing while ready | Query (alias) |
 |---|---|---|---|---|---|
-| Change status | `ignite_drasi_change_status` | — | 0 No change in progress (grey), 1 Awaiting approval (orange), 2 Approved, applying (orange), 3 Applied, verifying (orange), 4 Verified (green), 5 Rejected (orange), -1 Unknown | 0 | `tile-change` (`change`) |
-| Recommended action | `ignite_drasi_recommended_action` (replaces `ignite_drasi_action_needed`) | `text` | 0 `None` (green), 1 the change, e.g. `Move summaries to US-C and support to EU-B` (orange), 2 `No change fits policy and capacity` (red), 3 `Add capacity: losing EU-B leaves support nowhere to run` (orange), -1 Unknown | — | `tile-action` (`action`) |
+| Recommended action | `ignite_drasi_recommended_action` (replaces `ignite_drasi_action_needed`) | `text` | 0 `None`, 1 the change, e.g. `Move summaries to US-C and support to EU-B`, 2 `No change fits policy and capacity`, 3 `Add capacity: losing EU-B leaves support nowhere to run`, -1 Unknown | — | `tile-action` (`action`) |
+| Recommended action (the change's progress) | `ignite_drasi_change_status` | `text` (the approved change) | 0 none in progress, 1 awaiting approval, 2 approved, applying, 3 applied, verifying, 4 verified, 5 rejected, -1 unknown | no row before this run's first approval | `tile-change` (`change`) |
+| Workload status | `ignite_drasi_workload_status` | `workload`, `name` (`Support`, `Summaries`), `deployment` | 0 Healthy (green), 1 Over quota (yellow), 2 Failing (red), 3 Not allowed (red), -1 Unknown | — | `tile-workloads` (`workloads`) |
 | Failover readiness | `ignite_drasi_failover_readiness` (replaces `ignite_drasi_safe_if_one_fails`) | `text`, `lost`, `workload` | 1 `Survives losing any one deployment` (green), 0 `At risk: losing EU-B leaves support nowhere to run` (orange), 2 `Already degraded: EU-A down` (grey; Grafana writes the names from `ignite_drasi_deployment_status >= 1`, since the query knows only the count), -1 Unknown | — | `tile-resilience` (`resilience`) |
 
 Grafana shows the `text` label (legend `{{text}}`, text mode name) coloured by
@@ -954,13 +956,26 @@ infeasible, and an empty `workload` (no label) unless at risk; `tile-action` ret
 is taken from the `Resilience` reason (`support`, or `batch` written `summaries`). The SSE aliases `tile-action` and `tile-resilience` keep their `value`
 meanings (the desk reads them); the new columns are additive.
 
-**Change status** (`tile-change`, inputs `postgres` and `plan-results`), first
-match wins: plan `unknown` → -1; latest approval `applied` → 3; `pending` → 2;
-plan feasible with `moves > 0` → 1; latest approval `rejected` → 5; `verified`
-→ 4; otherwise 0 (`declined` falls through). As built, `tile-change`
-(`postgres` and `plan-results`, joins `APPROVAL_PLAN` and `APPROVAL_SCENARIO`)
-returns a row only when a latest approval exists, and Grafana's missing-while-ready
-default is `1` when Recommended action is 1, `-1` when it is -1, else `0`.
+**The change's progress** (`tile-change`, inputs `postgres` and `plan-results`,
+joins `APPROVAL_PLAN` and `APPROVAL_SCENARIO`), first match wins: plan `unknown` →
+-1; latest approval `applied` → 3; `pending` → 2; plan feasible with `moves > 0` →
+1; latest approval `rejected` → 5; `verified` → 4; otherwise 0 (`declined` falls
+through). `text` is the approval's `change`. It returns a row only when a latest
+approval exists: Drasi's Cypher has no optional match, so it can't share a query
+with `tile-action`.
+
+**Recommended action** shows the first of these that applies, text and colour:
+-1 → `Unknown` (grey); change 2 → `Applying: <change>` (yellow); change 3 →
+`Verifying: <change>` (yellow); action 1 → `Approve: <change>` (yellow); action 2 →
+`No change fits policy and capacity` (red); action 3 → `Add capacity: …` (yellow);
+change 4 with action 0 → `Verified: <change>` (green); action 0 → `None` (green).
+It is shown only while both inputs (`action`, `change`) are ready.
+
+**Workload status** (`tile-workloads`, inputs `postgres` and `policy-results`;
+with `IGNITE_HEALTH_SOURCE=otel` also `deployment-health`): each workload's route ⋈
+its `PolicyResult` for that deployment ⋈ the deployment's latest health, first
+match wins: policy `unknown` or health expired → -1; policy `denied` → 3; health
+`ok` → 0, `throttled` → 1, `failed` → 2.
 
 **Link to the proposal.** Recommended action has a panel link and a data link,
 "Open in #incident-ai-support", to
@@ -982,7 +997,9 @@ policy routes `component=workload` (except Grafana's `DatasourceNoData` and
 `DatasourceError`) to `incident-channel` with `continue`, then everything to the
 probe's webhook; title "Alert firing: {rule}" or "Resolved: {rule}", text the rule's
 summary and "[Open AI service · Operations](…/d/ignite-workload?from=now-5m&to=now&refresh=5s)".
-Each rule carries `__dashboardUid__` `ignite-workload` and its panel.
+Each rule carries `__dashboardUid__` `ignite-workload` and its panel. The
+**Alerts firing** panel is Grafana's alert list, showing firing (and error) rules
+labelled `component=workload`, without instances.
 
 ## 17. Projected Mattermost view
 
@@ -1020,7 +1037,7 @@ this button as the backup. Tests and the fixture server gain `approve-latest`.
 | C. Grafana | `observability/grafana/`, `drasi/tile-*.cypher`, `plugins/prometheus/examples/ignite.json`, sections 9 and 16 of this file, `tests/observability-*.py` | README.md, DRASI.md |
 | D. Desk and projector | `presentation/Presenter.tsx`, `notes.ts` sections `failure`, `who`, `recovery`, `resilience` and the action ids, `ui/tests/`, `ui/src/` except `settings.ts`, `PRESENTER.md` (generated), STORY.md | `Audience.tsx` (the `incident` iframe only), `scenes.ts` (`StageView`, `viewLabel`, `dashboards` only); the slides session owns the rest of both, `Explanation.tsx`, `slides.css` and the other `notes.ts` sections |
 
-New tile query names are fixed here (`tile-change`, alias `change`), so B wires
+New tile query names are fixed here (`tile-change`, alias `change`; `tile-workloads`, alias `workloads`), so B wires
 them in `ops/config` while C writes them. Anyone who changes a contract section
 says so in their commit and to the delivery session. Commit only your own paths
 (`git add <paths>`, never `git add -A`); on `index.lock`, wait and retry.
