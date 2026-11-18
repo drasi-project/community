@@ -445,13 +445,10 @@ mod tests {
                 ),
             ],
         );
-        // last-approval stays Loading: no series, ready 0.
+        // last-approval and change stay Loading: no series, ready 0.
         assert_eq!(
             exporter.render(),
-            r#"# HELP ignite_drasi_action_needed 0 none, 1 approve proposed plan, 2 no valid plan, 3 at risk, -1 unknown.
-# TYPE ignite_drasi_action_needed gauge
-ignite_drasi_action_needed 1
-# HELP ignite_drasi_capacity_tpm Capacity in tokens per minute: total, on healthy deployments, and needed.
+            r#"# HELP ignite_drasi_capacity_tpm Capacity in tokens per minute: total, on healthy deployments, and needed.
 # TYPE ignite_drasi_capacity_tpm gauge
 ignite_drasi_capacity_tpm{kind="healthy"} 200000
 ignite_drasi_capacity_tpm{kind="needed"} 140000
@@ -466,6 +463,9 @@ ignite_drasi_deployment_capacity_tpm{deployment="US-C"} 100000
 ignite_drasi_deployment_status{deployment="EU-A"} 2
 ignite_drasi_deployment_status{deployment="EU-B"} 0
 ignite_drasi_deployment_status{deployment="US-C"} -1
+# HELP ignite_drasi_failover_readiness Failover readiness, described by the text label: 1 survives losing any one deployment, 0 at risk (lost and workload name the first loss that leaves no plan), 2 already degraded, -1 unknown.
+# TYPE ignite_drasi_failover_readiness gauge
+ignite_drasi_failover_readiness{lost="EU-B",text="",workload=""} 0
 # HELP ignite_drasi_overdue_requests Requests past their deadline and still unanswered, per workload.
 # TYPE ignite_drasi_overdue_requests gauge
 ignite_drasi_overdue_requests{workload="support"} 3
@@ -477,20 +477,21 @@ ignite_drasi_policy_allowed{deployment="US-C",workload="support"} 0
 # TYPE ignite_drasi_proposed_tpm gauge
 ignite_drasi_proposed_tpm{deployment="EU-B",workload="support"} 60000
 ignite_drasi_proposed_tpm{deployment="US-C",workload="batch"} 80000
+# HELP ignite_drasi_recommended_action Recommended action, named by the text label: 0 none, 1 approve the proposed change, 2 no change fits policy and capacity, 3 add capacity (at risk), -1 unknown.
+# TYPE ignite_drasi_recommended_action gauge
+ignite_drasi_recommended_action{text=""} 1
 # HELP ignite_drasi_recovery_state Recovery after an applied plan: 0 awaiting evidence, 1 verified, 2 nothing to verify, -1 unknown.
 # TYPE ignite_drasi_recovery_state gauge
 ignite_drasi_recovery_state 0
-# HELP ignite_drasi_running_tpm Demand of each workload on its configured deployment; negative when policy no longer allows it (held).
+# HELP ignite_drasi_running_tpm Demand of each workload on its configured deployment; negative when policy no longer allows it.
 # TYPE ignite_drasi_running_tpm gauge
 ignite_drasi_running_tpm{deployment="EU-A",workload="support"} 60000
 ignite_drasi_running_tpm{deployment="EU-B",workload="batch"} 80000
-# HELP ignite_drasi_safe_if_one_fails 1 yes, 0 no (lost names the first deployment whose loss leaves no plan), 2 already one down, -1 unknown.
-# TYPE ignite_drasi_safe_if_one_fails gauge
-ignite_drasi_safe_if_one_fails{lost="EU-B"} 0
 # HELP drasi_reaction_input_ready 1 once the output's snapshot is loaded and its changes are applied; 0 otherwise.
 # TYPE drasi_reaction_input_ready gauge
 drasi_reaction_input_ready{output="action"} 1
 drasi_reaction_input_ready{output="capacity"} 1
+drasi_reaction_input_ready{output="change"} 0
 drasi_reaction_input_ready{output="demand"} 1
 drasi_reaction_input_ready{output="deployments"} 1
 drasi_reaction_input_ready{output="last-approval"} 0
