@@ -57,7 +57,6 @@ Remove an item when it is done.
   the desk's select and approve buttons are replaced by Drasi's cards in a real
   Mattermost incident channel (`#incident-ai-support`), approved on the projected
   card. See `plan/incident-channel-plan.md`.
-- Need to make some flow changes to simplify the presentation and clarify the message.
   
 
 
