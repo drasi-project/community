@@ -99,7 +99,7 @@ export function Explanation({ slide, active = false }: { slide: SlideId; active?
           <section>
             <h2>Data Compliance</h2>
             <p><b className="blue">Customer support</b>: restricted data, <strong>Europe only</strong></p>
-            <p><b className="purple">Document summaries</b>: public data, <strong>anywhere</strong></p>
+            <p><b className="purple">Document summaries</b>: public data, <strong>Europe for now</strong></p>
           </section>
           <section>
             <h2>Business requirements</h2>

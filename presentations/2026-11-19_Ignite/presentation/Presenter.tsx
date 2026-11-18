@@ -432,7 +432,7 @@ function BeforeAfter({ live, canAct, run, feedback }: { live: Live; canAct: bool
   const route = (id: string) => health.workloads.find(w => w.id === id)?.deployment ?? "?";
   const batch = health.destinations.batch ?? [];
   const starting = health.deployments.every(e => e.mode === "ok" && e.reporting && e.capacity_tpm === 100000)
-    && route("support") === "EU-A" && route("batch") === "EU-B" && batch.includes("US-C");
+    && route("support") === "EU-A" && route("batch") === "EU-B" && !batch.includes("US-C");
   return <div className="before-after">
     <p className={starting ? "ok" : "warning"}><b>{starting ? "✓ Starting state" : "Not the starting state"}</b> · {health.deployments.map(e => `${e.id} ${modeLabel[e.mode] ?? e.mode} ${e.capacity_tpm / 1000}k`).join(" · ")} · Support → {route("support")} · Summaries → {route("batch")}</p>
     <p>The projector shows the incident channel as the on-call engineer. Once, in this browser: <a href={settings.mattermostSignIn} target="_blank" rel="noreferrer">Sign the projector in to Mattermost</a> (no password is shown), then check <b>Show something on the projector › Mattermost</b>.</p>

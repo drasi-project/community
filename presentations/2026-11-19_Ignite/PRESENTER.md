@@ -170,7 +170,7 @@ proposal: approve the new one.
 | 3:30 | Healthy service | Grafana · Operations | Walk through the healthy dashboard |
 | 6:00 | Failure | Grafana · Operations | Fail EU-A; Drasi's row is ahead of the alert |
 | 9:00 | Who is affected | Mattermost · #incident-ai-support, One late request | The incident channel: Drasi's failure and overdue cards; the query and its live list |
-| 11:30 | Recovery | Mattermost · #incident-ai-support, Grafana · Operations | Approve Drasi's proposed change on its card; optionally show an out-of-date proposal rejected |
+| 11:30 | Recovery | Mattermost · #incident-ai-support, Grafana · Operations | Approve Drasi's proposed change on its card; then see it verified |
 | 17:00 | Healthy but fragile | Grafana · Operations, Mattermost · #incident-ai-support, What Drasi just did | Healthy but fragile: EU-A returns with half its capacity |
 | 20:30 | Close | Close, Session survey | Four takeaways, the session survey, then questions |
 | 22:00 | Questions | Session survey | Take questions |
@@ -204,7 +204,7 @@ Say it in your own words.
 
 1. **A typical scenario.** Let's look at a typical scenario.
 2. **The scenario · deployments.** A company runs two AI workloads on the same limited AI model capacity: an assistant that answers customer-support questions, and a background job that writes document summaries. The capacity is split across three deployments, EU-A and EU-B in Europe and US-C in the United States, each with 100k tokens a minute.
-3. **The scenario · rules.** Two kinds of rule. Data compliance: customer support handles restricted data, so it may only run in Europe; summaries use public data and can run anywhere. Business requirements: customers expect an answer within 15 seconds, and infrastructure changes, like moving work between deployments, require human approval.
+3. **The scenario · rules.** Two kinds of rule. Data compliance: customer support handles restricted data, so it may only run in Europe; summaries use public data, but for now the team has kept them in Europe too. Business requirements: customers expect an answer within 15 seconds, and infrastructure changes, like moving work between deployments, require human approval.
 4. **The scenario · three answers.** When something goes wrong, the business needs three answers: who is affected, what's the fastest fix that stays within policy, and how do we know when it's resolved? You're about to see Drasi answer all three.
 5. **Bringing it together when EU-A fails.** Here's what we'll watch when EU-A fails. Drasi brings together the telemetry, the application's own data and the policy, and works with the tools the team already uses: Grafana for dashboards and alerts, the incident channel for messaging, and the change-approval tool, where a ticketing system would sit. We'll see it answer those three questions, sooner.
 
@@ -225,11 +225,14 @@ Say it in your own words.
 6. **Grafana · Operations.** Workload status joins three things: where each workload runs, what the policy says about that deployment, and that deployment's health. So it tells you whether each workload is being served somewhere it's allowed to run.
    - **Watch for:** Workload status: Support · EU-A and Summaries · EU-B Healthy; the tile-workloads query above it.
 7. **Grafana · Operations.** Recommended action comes from two of Drasi's standard models. First the policy, as these Rego rules: a workload may only use the deployments it's allowed, and restricted data must stay in its region. The allowed destinations are data, so a compliance change is just a change to some rows, and Drasi re-checks every workload and deployment when one changes.
-   - **Watch for:** Recommended action: None (green); the Rego rules above it.
-8. **Grafana · Operations.** Then the optimization model, configured by this file: one yes or no choice per workload and allowed deployment, every workload placed exactly once, each healthy deployment within its capacity, and the fewest moves first. Drasi re-solves whenever health, capacity or policy changes, proposes the result, and follows it through approval, applying and verification. Right now there's nothing to do.
-   - **Watch for:** Recommended action: None (green); the optimization model above it.
-9. **Grafana · Operations.** Failover readiness is a what-if from the same model: the loss scenario solves again without each healthy deployment in turn. If any one failed, would every workload still have somewhere allowed to run? A game-day question, answered all the time. No new tool to watch: the answers arrive where you already look.
-   - **Watch for:** Failover readiness: Survives losing any one deployment; the scenario above it.
+   - **Watch for:** Recommended action: Add capacity: losing EU-A leaves summaries nowhere to run (yellow); the Rego rules above it.
+8. **Grafana · Operations.** Then the optimization model, configured by this file: one yes or no choice per workload and allowed deployment, every workload placed exactly once, each healthy deployment within its capacity, and the fewest moves first. Drasi re-solves whenever health, capacity or policy changes, proposes the result, and follows it through approval, applying and verification. Right now it's asking for capacity; we'll see why in a moment.
+   - **Watch for:** Recommended action: Add capacity (yellow); the optimization model above it.
+9. **Grafana · Operations.** Failover readiness is a what-if from the same model: the loss scenario solves again without each healthy deployment in turn. If any one failed, would every workload still have somewhere allowed to run? A game-day question, answered all the time. And right now the answer is no: everything is healthy, but if EU-A failed, support and summaries would both need EU-B, and it only has 100k.
+   - **Watch for:** Failover readiness: At risk: losing EU-A leaves … nowhere to run (yellow); the scenario above it.
+10. **Grafana · Operations.** This is where compliance meets operations. Summaries use public data; they were only kept in Europe by choice. Compliance agrees they can run in the US. That's one row in the policy data. Drasi re-runs the policy and the what-if at once: summaries could now fail over to US-C, so we'd survive losing any one deployment, and the capacity warning goes away. No new tool to watch: the answers arrive where you already look.
+   - **Press:** Summaries: Europe + US
+   - **Watch for:** Failover readiness: Survives losing any one deployment (green); Recommended action: None. (Drasi also posts Failover restored in the channel; we'll see it there later.)
 
 **If it breaks:** If the charts are empty, traffic isn't running: press Start demo traffic and keep talking.
 
@@ -265,24 +268,15 @@ Say it in your own words.
 1. **Mattermost · #incident-ai-support.** Back to the proposal. On paper there's plenty of room: two healthy deployments with 200k, and we need 140k. But US-C has the free room, and customer support isn't allowed there: restricted data stays in Europe. The planner, an optimizer Drasi re-runs on every change, respects that: move summaries to US-C, which frees EU-B for support. Two moves, both within policy, and the card shows the facts it was based on: that's the Rego policy and the optimization model you saw earlier, re-solved on the new facts.
    - **Click on the projector:** Scroll up to the orange Proposed change card so the whole card shows. 
    - **Watch for:** The orange Proposed change card: Move summaries to US-C and support to EU-B. Why EU-A is down; Policy; Capacity; Based on revision and plan.
-2. **Mattermost · #incident-ai-support (optional).** Before anyone approves it, compliance restricts summaries to Europe too. Drasi re-runs the policy and the planner at once: with EU-A down, support and summaries can't both fit in EU-B, so no change fits now, and Drasi says the proposal is out of date. Dropping work is a decision for a person, not the planner.
-   - **Press:** Summaries: Europe only
-   - **Watch for:** A grey card Out of date: the facts changed, Now: No valid plan. The proposal above it still has its Approve button.
-3. **Mattermost · #incident-ai-support (optional).** Suppose someone approves the proposal anyway. The approval goes to the change-approval tool, and Drasi rejects it: every proposal carries the facts it was based on, and those facts changed. Nothing is changed.
-   - **Click on the projector:** Approve on the orange proposal card, above the grey Out of date card (scroll up a little if needed) (it's meant to be rejected).  Backup on the desk: Approve the proposed change (it presses the same button)
-   - **Watch for:** The card says Approved by @oncall; then, in its thread, Rejected by Drasi: nothing was changed, with Drasi's reason.
-4. **Mattermost · #incident-ai-support (optional).** Compliance allows the US for summaries again, and Drasi posts a new proposal straight away. To Drasi, a policy change is just another change: it re-runs the policy and the planner every time.
-   - **Press:** Summaries: Europe + US
-   - **Watch for:** A new orange Proposed change card at the bottom, with a new plan in Based on.
-5. **Mattermost · #incident-ai-support.** Now I approve the current proposal, here on its card, as the on-call engineer would. The approval goes to the change-approval tool; Drasi checks it still matches its current plan, and its reaction applies the new routes through the gateway's configuration API.
+2. **Mattermost · #incident-ai-support.** Now I approve the current proposal, here on its card, as the on-call engineer would. The approval goes to the change-approval tool; Drasi checks it still matches its current plan, and its reaction applies the new routes through the gateway's configuration API.
    - **Click on the projector:** Approve on the newest orange Proposed change card, at the bottom.  Backup on the desk: Approve the proposed change (it presses the same button)
    - **Watch for:** The card says Approved by @oncall at …; in its thread, blue Applied: Move summaries to US-C and support to EU-B.
-6. **Grafana · Operations.** Look at Recommended action: it says Verifying. Applied isn't the same as fixed: another Drasi query waits until the backlog from before the change has cleared and at least three support requests have been answered on the new route. Only then does it say Verified.
+3. **Grafana · Operations.** Look at Recommended action: it says Verifying. Applied isn't the same as fixed: another Drasi query waits until the backlog from before the change has cleared and at least three support requests have been answered on the new route. Only then does it say Verified.
    - **Watch for:** Recommended action goes from Verifying: … to Verified: … (green), often within 30 seconds of approval. If it's already Verified, say so.
-7. **Grafana · Operations.** The rest of the dashboard agrees: the queue has drained, Support overdue is back to 0 and errors are falling. EU-A is still down: we routed around it, within policy. And in the channel, the proposal's thread now tells the whole story: proposed, approved by the on-call engineer, applied, and verified by Drasi from the evidence. Approving a change isn't the same as fixing the problem; Drasi checked the outcome.
+4. **Grafana · Operations.** The rest of the dashboard agrees: the queue has drained, Support overdue is back to 0 and errors are falling. EU-A is still down: we routed around it, within policy. And in the channel, the proposal's thread now tells the whole story: proposed, approved by the on-call engineer, applied, and verified by Drasi from the evidence. Approving a change isn't the same as fixing the problem; Drasi checked the outcome.
    - **Watch for:** Support errors falling, Support queue back to 0 to 2, Support overdue 0.
 
-**If it breaks:** If Approve on the card doesn't respond, press Approve the proposed change on the desk: it presses the same button. Never approve twice. If Recommended action stays Verifying, say it's applied but not yet verified, and carry on. If the proposal or the policy change doesn't behave as described, press Use recordings from here on.
+**If it breaks:** If Approve on the card doesn't respond, press Approve the proposed change on the desk: it presses the same button. Never approve twice. If Recommended action stays Verifying, say it's applied but not yet verified, and carry on. If the proposal doesn't behave as described, press Use recordings from here on.
 
 ### 8. Healthy but fragile (3½ minutes)
 
@@ -317,7 +311,7 @@ Say it in your own words.
 | Capacity | How much a deployment can handle, in tokens per minute (100k each) |
 | Customer support / document summaries | The two workloads: support needs 60k, summaries 80k |
 | Plan | Where each workload should run. Drasi's planner proposes one; you approve it, and Drasi applies it if it's still current |
-| Policy | The rules: support only in Europe; summaries anywhere |
+| Policy | The rules: support only in Europe; summaries in Europe at the start, then anywhere once the US is allowed |
 | Source | How Drasi hears about changes; here, the database's live list of changes and the health checks' OpenTelemetry metrics |
 | Continuous query | A question whose answer Drasi keeps up to date as data changes and time passes |
 | Continuous model | Logic that Drasi re-runs when its inputs change: here a Rego policy, and an optimizer for the planner and the what-if |

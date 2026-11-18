@@ -71,7 +71,7 @@ deployments, two in Europe and one in the United States (EU-A, EU-B, US-C):
 | | Data | Allowed locations | Normally runs on |
 |---|---|---|---|
 | Customer support | Restricted | Europe only | EU-A (needs 60k tokens/min) |
-| Document summaries | Public | Anywhere | EU-B (needs 80k tokens/min) |
+| Document summaries | Public | Europe at the start; anywhere once compliance allows the US (during the talk) | EU-B (needs 80k tokens/min) |
 
 EU-A, EU-B and US-C each have a capacity of 100k tokens/min. US-C starts idle.
 
@@ -130,18 +130,18 @@ just did** visual shows it.
 
 1. **Healthy service.** Real traffic flows. Support runs on EU-A, summaries on
    EU-B. Grafana's AI Deployments row is ordinary monitoring; its Decision
-   Support row is Drasi's answers, including Failover readiness: "Survives
-   losing any one deployment".
+   Support row is Drasi's answers. Summaries start Europe-only, so Failover
+   readiness is at risk (losing EU-A would leave both workloads needing EU-B).
+   Compliance allows summaries in the US, Drasi re-runs the policy and the
+   what-if, and readiness turns to "Survives losing any one deployment".
 2. **Failure.** EU-A fails. Within seconds Drasi, reading EU-A's health-check
    telemetry, shows it Failed and has a plan ready; errors and the queue rise and Grafana alerts. Support requests count as
    overdue the moment each passes its 15-second deadline, with no new event.
 3. **Who is affected.** Drasi's failure and overdue cards in the incident channel,
    then one of those customers' requests, attempt by attempt.
 4. **Recovery.** Support may not run on US-C, but summaries may. The planner's plan
-   moves summaries to US-C, freeing EU-B for support. Optionally, a policy
-   change while the plan awaits approval leaves no valid plan, and Drasi rejects
-   the earlier approval because its facts changed. The presenter approves the
-   plan; **Verified** appears only once the queue is answered and support
+   moves summaries to US-C, freeing EU-B for support. The presenter approves the
+   plan on its card; **Verified** appears only once the queue is answered and support
    requests succeed on the new route.
 5. **Healthy but fragile.** EU-A comes back with only 50k of capacity. Everything
    is green, but Drasi says we're not safe: if EU-B failed, support would have

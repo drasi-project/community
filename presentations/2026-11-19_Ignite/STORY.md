@@ -11,8 +11,15 @@ So you missed the fun yesterday. Quick rundown.
 model platform: the customer support assistant and the document summaries job.
 Three deployments, 100k tokens a minute each. Support runs on EU-A and needs about
 60k. Summaries run on EU-B and need about 80k. US-C is idle headroom. The catch is
-that support handles restricted customer data, so it's EU only. Summaries can run
-anywhere. And we promise support an answer in 15 seconds.
+that support handles restricted customer data, so it's EU only. Summaries are
+public data, but we'd kept them in Europe too. And we promise support an answer in 15 seconds.
+
+**Earlier that morning.** Failover readiness on the dashboard said we were at
+risk, with everything green: if EU-A went, support and summaries would both need
+EU-B, and it only has 100k. Drasi had posted it in the channel too. Summaries
+didn't need to be in Europe, so compliance signed off on allowing them in the US.
+One change to the policy data, and readiness went straight to "Survives losing
+any one deployment"; Drasi posted "Failover restored".
 
 **What I saw first.** I had the Operations dashboard up. Support errors went from
 0 to 100% almost straight away, answer time went to "No answers", and the support
@@ -35,10 +42,8 @@ overdue line just trails the orange queue line by 15 seconds. The second alert,
 feel.
 
 **Who was hit.** Drasi posted "Support requests overdue" in the channel as soon as
-the first one passed its deadline, with a link to the tile. I opened the overdue
-list behind that tile. It's an actual list
-of the late requests, not a count, with the oldest at the top. I picked the oldest
-one: the customer's question, every retry to EU-A failing with a 503, and the
+the first one passed its deadline, with a link to the tile. Behind that tile is an actual list of the late requests, not a sampled count. I
+picked the oldest one: the customer's question, every retry to EU-A failing with a 503, and the
 point its deadline passed. Same request is a trace in Langfuse if anyone needs the
 detail.
 
@@ -50,17 +55,8 @@ anywhere support is allowed to go.
 
 The proposed change had already worked it out: move summaries to US-C, which frees
 EU-B, then put support on EU-B. Two moves, both within policy, and the card says
-which facts it was based on.
-
-**The bit that caught me out.** While I was reading the proposal, compliance
-tightened the rule so summaries had to stay in Europe as well. Drasi posted "Out of
-date: the facts changed" straight away, with "No valid plan", which is right: with
-EU-A down there's no way to fit both workloads in EU-B. I hadn't scrolled down, and
-pressed Approve on the proposal I was reading. Drasi rejected it in the card's
-thread, with the reason, because the facts it was based on had changed. Good thing
-too, or I'd have pushed summaries to the US against the new rule. Compliance backed
-it out after a few minutes, Drasi posted a new proposal straight away, and I
-approved that one.
+which facts it was based on. That move to US-C was only possible because of
+that morning's compliance change. I pressed Approve on the card.
 
 **The fix.** The approved change was applied through the gateway's config API.
 Drasi replied in the card's thread, "Applied: Move summaries to US-C and support to
@@ -81,7 +77,7 @@ over. We got EU-A back to full capacity, it flipped back to Yes and Drasi posted
 
 **Bottom line.** Grafana told me something was broken. Drasi told me, on the
 dashboard and in the incident channel, who was waiting, where the work was allowed
-to go, what would fit, whether my approval was still valid, whether the fix
+to go, what would fit, whether the fix
 actually worked, and that we were exposed afterwards. It all just updated as
 things changed, without me running queries or re-checking anything.
 
@@ -92,10 +88,10 @@ things changed, without me running queries or re-checking anything.
 | In the story | In the talk | Screen |
 |---|---|---|
 | The setup | The scenario | Slide |
+| Earlier that morning | Healthy service, the last beat | Operations dashboard |
 | What I saw first, the bottom row | Failure | Operations dashboard, then #incident-ai-support |
-| Who was hit | Who is affected | #incident-ai-support, the query slide, then the late request |
+| Who was hit | Who is affected | #incident-ai-support, then the late request |
 | Where to move it | Recovery | #incident-ai-support (the proposal card) |
-| The bit that caught me out | Recovery, optional policy beats | #incident-ai-support |
 | The fix | Recovery | #incident-ai-support (Approve on the card), Operations, then the card's thread |
 | The one I'd have missed | Healthy but fragile | Operations, then #incident-ai-support |
 

@@ -212,12 +212,20 @@ test("keys pressed on the projector (a clicker) drive the desk", async ({ page }
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Title");
 });
 
-test("short on time skips the optional policy beats", async ({ page }) => {
-  await desk(page, "recovery", 0);
+test("short on time skips the optional late request", async ({ page }) => {
+  await desk(page, "who", 1);
   await page.getByLabel("Short on time").check();
   await page.getByRole("button", { name: "Next ▶" }).click();
-  await expect(page.locator(".say")).toContainText("Now I approve the current proposal");
-  await expect(page.locator(".click")).toContainText("Approve on the newest orange Proposed change card");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Recovery");
+});
+
+test("the compliance change is shown on the healthy dashboard, not in Recovery", () => {
+  const last = notes.normal.beats.at(-1)!;
+  expect(last.do).toEqual(["summaries-anywhere"]);
+  expect(last.show).toBe("ops");
+  const shown = Object.values(notes).flatMap(cue => cue.beats.flatMap(beat => beat.do ?? []));
+  expect(shown).not.toContain("summaries-europe");
+  expect(notes.recovery.beats.map(beat => beat.show)).toEqual(["incident", "incident", "ops", "ops"]);
 });
 
 test("the current beat's buttons sit beside its notes, and results appear there", async ({ page, request }) => {
@@ -247,21 +255,17 @@ test("the desk shows how long demo traffic has been running", async ({ page }) =
   await expect(page.locator(".now").getByRole("button", { name: /Start demo traffic/ })).toBeDisabled();
 });
 
-test("approving the out-of-date proposal is rejected by Drasi, and the desk says that's expected", async ({ page, request }) => {
+test("approving an out-of-date proposal is rejected by Drasi, and the desk shows why", async ({ page, request }) => {
   await failEuA(request);
-  await desk(page, "recovery", 1);
+  await desk(page, "recovery", 0);
   await expect.poll(async () => (await posts(request)).map(p => p.props.incident_card)).toEqual(["failed", "proposal"]);
-  await page.locator(".now").getByRole("button", { name: "Summaries: Europe only" }).click();
-  await expect(page.locator(".now").getByRole("button", { name: /Summaries: Europe only/ })).toContainText("✓");
+  // Not part of the talk any more; the controls are still on the desk.
+  await page.locator("summary", { hasText: "All demo controls" }).click();
+  const controls = page.locator(".controls");
+  await controls.getByRole("button", { name: "Summaries: Europe only" }).click();
   await expect.poll(async () => (await posts(request)).at(-1)?.props.attachments[0].title).toBe("Out of date: the facts changed");
-  await page.getByRole("button", { name: "Next ▶" }).click();
-  await expect(page.locator(".now-actions .hint")).toContainText("meant to be rejected");
-  await expect(page.locator(".click")).toContainText("above the grey Out of date card");
-  await expect(page.locator(".now .result").last()).toHaveText("Waiting for Approve on the out-of-date proposal card.");
-  // The desk's backup presses Approve on the newest proposal card, which is the out-of-date one.
-  await page.locator(".now").getByRole("button", { name: "Approve the proposed change" }).click();
-  await expect(page.locator(".now .result.expected")).toContainText("Rejected by Drasi, as intended: The plan changed since it was approved");
-  await expect(page.locator(".now").getByRole("button", { name: /Approve the proposed change/ })).toContainText("✓");
+  // Someone presses Approve on the out-of-date proposal card (the desk keeps its own Approve off when no change fits).
+  await request.post(`${fixture}/mattermost/approve-latest`, { data: { run_epoch: "TEST-FIXTURE-EPOCH" } });
   await expect(page.locator(".approval")).toHaveText("Last approval rejected: The plan changed since it was approved.");
   const state = await (await request.get(`${fixture}/test/state`)).json();
   expect(state.mutations.at(-1)).toEqual({ path: "/mattermost/approve-latest", input: { run_epoch: "TEST-FIXTURE-EPOCH" } });
@@ -269,15 +273,14 @@ test("approving the out-of-date proposal is rejected by Drasi, and the desk says
   expect(state.approvals[0]).toMatchObject({ id: `mm-${proposal.id}`, candidate_id: "TEST-FIXTURE-CANDIDATE-1", basis: "TEST-FIXTURE-BASIS-1", revision: 1, status: "rejected" });
   // Drasi's answer replies in the approved card's thread.
   await expect.poll(async () => (await posts(request)).at(-1)).toMatchObject({ root_id: proposal.id, props: { incident_card: "outcome", attachments: [{ title: "Rejected by Drasi: nothing was changed" }] } });
-  // Once policy allows the US again, a new proposal follows and Next isn't held back.
-  await page.getByRole("button", { name: "Next ▶" }).click();
-  await page.locator(".now").getByRole("button", { name: "Summaries: Europe + US" }).click();
+  // Once policy allows the US again, a new proposal follows.
+  await controls.getByRole("button", { name: "Summaries: Europe + US" }).click();
   await expect.poll(async () => (await posts(request)).filter(p => p.props.incident_card === "proposal")).toHaveLength(2);
 });
 
 test("pressing Approve on the projected card applies the change, and the desk reports Drasi's answer", async ({ page, request }) => {
   await failEuA(request);
-  await desk(page, "recovery", 4);
+  await desk(page, "recovery", 1);
   const projector = await page.context().newPage();
   await stubMattermost(projector);
   await projector.goto("/present");
@@ -349,7 +352,7 @@ test("switching to recordings puts the part's recording on the projector and hid
 
 test("out-of-date evidence disables approval and live buttons", async ({ page, request }) => {
   await failEuA(request);
-  await desk(page, "recovery", 4);
+  await desk(page, "recovery", 1);
   await expect(page.locator(".now").getByRole("button", { name: "Approve the proposed change" })).toBeEnabled();
   await request.post(`${fixture}/test/expire`);
   await expect(page.locator(".now").getByRole("button", { name: "Approve the proposed change" })).toBeDisabled();
@@ -439,7 +442,7 @@ test("the desk shows Drasi's answers from Drasi Server and never asks the AI ser
 
 test("Drasi's stream unavailable means NOT READY", async ({ page }) => {
   await page.route("**/drasi-stream/**", route => route.fulfill({ status: 503, body: "down" }));
-  await desk(page, "recovery", 4);
+  await desk(page, "recovery", 1);
   await expect(page.locator(".badge", { hasText: "NOT READY" })).toBeVisible();
   await expect(page.locator(".now").getByRole("button", { name: "Approve the proposed change" })).toBeDisabled();
   await expect(page.locator(".approval")).toHaveText("Approval status unavailable.");
@@ -517,7 +520,7 @@ test("with the template assets present, the desk doesn't flag them", async ({ pa
 test("the desk fits a laptop screen without scrolling", async ({ browser }) => {
   for (const cue of ["failure", "recovery"] as const) {
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-    await desk(page, cue, cue === "recovery" ? 4 : 0);
+    await desk(page, cue, cue === "recovery" ? 1 : 0);
     const main = await page.locator(".desk-main").boundingBox();
     expect(main!.y + main!.height).toBeLessThanOrEqual(900);
     await page.close();
@@ -640,24 +643,6 @@ test("the incident channel follows the talk: failure, overdue, proposal, out of 
   await shot(3, "proposal");
 
   await next();
-  await press("Summaries: Europe only");
-  await expect(page.locator(".now").getByRole("button", { name: /Summaries: Europe only/ })).toContainText("✓");
-  await expect(card("superseded")).toContainText("Out of date: the facts changed");
-  await shot(4, "out-of-date");
-
-  await next();
-  await card("proposal").first().getByRole("button", { name: "Approve" }).click();
-  await expect(page.locator(".now .result.expected")).toContainText("Rejected by Drasi, as intended");
-  await expect(card("outcome")).toContainText("Rejected by Drasi: nothing was changed");
-  await shot(5, "rejected");
-
-  await next();
-  await press("Summaries: Europe + US");
-  await expect(page.locator(".now").getByRole("button", { name: /Summaries: Europe \+ US/ })).toContainText("✓");
-  await expect(card("proposal")).toHaveCount(2);
-  await shot(6, "new-proposal");
-
-  await next(); await next();
   await expect(page.locator(".click")).toContainText("newest orange Proposed change card");
   await card("proposal").last().getByRole("button", { name: "Approve" }).click();
   await expect(page.locator(".now .result").last()).toHaveText("Done: Drasi checked it and the new routes are applied.");

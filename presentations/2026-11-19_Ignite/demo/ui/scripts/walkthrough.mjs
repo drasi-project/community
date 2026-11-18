@@ -42,21 +42,19 @@ const lastApproval = () => drasi("drasi_last_approval_state");
 // the desk's backup, which presses Approve on the newest proposal card, as a click on it would.
 const waits = {
   "normal/0": async () => until("traffic history", async () => (await api("/health")).traffic?.running, 10).then(() => sleep(15000)),
+  "normal/9": () => until("safe after the US is allowed", async () => await failover() === 1, 30).then(() => sleep(6000)),
   "failure/0": () => until("Recommended action: the change", async () => await action() === 1, 60),
   "failure/2": () => until("errors and alert", async () => await drasi("drasi_requests_overdue", '{workload="support"}') > 0, 60).then(() => sleep(15000)),
   "who/0": () => sleep(5000),
   "who/1": () => sleep(3000),
-  "recovery/1": () => until("no valid plan", async () => await action() === 2, 30).then(() => sleep(6000)),
-  "recovery/2": () => until("rejected", async () => await lastApproval() === 4, 30).then(() => sleep(6000)),
-  "recovery/3": () => until("new proposal", async () => await action() === 1, 30).then(() => sleep(6000)),
-  "recovery/4": () => until("applied", async () => [2, 3].includes(await lastApproval()), 30).then(() => sleep(6000)),
-  "recovery/5": () => until("verified", async () => await drasi("drasi_change_status") === 4, 150).then(() => sleep(6000)),
-  "recovery/6": () => sleep(30000),
+  "recovery/1": () => until("applied", async () => [2, 3].includes(await lastApproval()), 30).then(() => sleep(6000)),
+  "recovery/2": () => until("verified", async () => await drasi("drasi_change_status") === 4, 150).then(() => sleep(6000)),
+  "recovery/3": () => sleep(30000),
   "resilience/0": () => until("not safe", async () => await failover() === 0, 30).then(() => sleep(8000)),
   "resilience/2": () => sleep(4000),
   "resilience/3": () => until("safe again", async () => await failover() === 1, 30).then(() => sleep(8000)),
 };
-const recordings = { failure: ["failure/0", "failure/3"], policy: ["recovery/1", "recovery/3"], recovery: ["recovery/4", "recovery/6"], resilience: ["resilience/0", "resilience/3"] };
+const recordings = { failure: ["failure/0", "failure/3"], policy: ["recovery/-2", "recovery/0"], recovery: ["recovery/1", "recovery/3"], resilience: ["resilience/0", "resilience/3"] };
 
 await fs.mkdir(output, { recursive: true });
 // The projector and recording pages run in background tabs: keep Chromium from throttling their
