@@ -156,6 +156,9 @@ services:
       GF_SECURITY_ALLOW_EMBEDDING: "true"
       GF_AUTH_ANONYMOUS_ENABLED: "true"
       GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      # Workstream C's invisible HTML panel keeps every panel's menu visible in kiosk view
+      # (Grafana 13.3 shows it only on hover). Viewers only; dashboards are provisioned read-only.
+      GF_PANELS_DISABLE_SANITIZE_HTML: "true"
       # Grafana's alerts also post to #incident-ai-support (contact point incident-channel);
       # ops/mattermost.py bootstrap writes the webhook URL to .env and recreates Grafana.
       MATTERMOST_ALERT_WEBHOOK_URL: ${MATTERMOST_ALERT_WEBHOOK_URL:-http://mattermost:8065/hooks/not-configured}
@@ -203,6 +206,10 @@ services:
       MM_SERVICESETTINGS_ENABLELINKPREVIEWS: "false"
       MM_SERVICESETTINGS_ENABLEONBOARDINGFLOW: "false"
       MM_SERVICESETTINGS_ENABLETUTORIAL: "false"
+      # Open the channel straight away (no "View in Browser / Desktop App" page).
+      MM_SERVICESETTINGS_ENABLEDESKTOPLANDINGPAGE: "false"
+      # Drasi's outcome replies (Applied, Verified, Rejected) show inline in the channel.
+      MM_SERVICESETTINGS_COLLAPSEDTHREADS: disabled
       MM_TEAMSETTINGS_ENABLEOPENSERVER: "false"
       MM_EMAILSETTINGS_SENDEMAILNOTIFICATIONS: "false"
       MM_EMAILSETTINGS_REQUIREEMAILVERIFICATION: "false"
