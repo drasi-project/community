@@ -2,16 +2,13 @@ package ignite
 
 import rego.v1
 
-# Placement policy for the Ignite graph, evaluated by ignite/rego-policy for
-# every workload (input.subject) and deployment (input.target).
-# input.parameters holds this workload's rows from ignite_policy_destinations:
-# the deployments the operator currently allows it to use. Changing those rows
+# Placement policy for the Ignite graph, evaluated by drasi.standard/policy
+# once for every workload (input.subject) and deployment (input.target) pair.
+# input.destinations lists the deployments the operator currently allows this
+# workload to use (rows of ignite_policy_destinations). Changing those rows
 # is a data change; changing this module is a configuration change.
 
-allowed_destination if {
-	some row in input.parameters
-	row.deployment == input.target.id
-}
+allowed_destination if input.target.id in input.destinations
 
 region_permitted if input.subject.region_requirement == "any"
 

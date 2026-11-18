@@ -1,9 +1,0 @@
-{
-  "module": "<the text of plugins/policy/ignite.rego; the config generator inlines it>",
-  "rule": "data.ignite.assessment",
-  "subjects": {"key": "id"},
-  "targets": {"key": "id"},
-  "parameters": {"subjectKey": "workload", "targetKey": "deployment"},
-  "epochProperty": "run_epoch",
-  "timeoutMs": 250
-}

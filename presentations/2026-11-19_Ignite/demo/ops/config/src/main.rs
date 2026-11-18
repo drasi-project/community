@@ -1,5 +1,5 @@
 //! Generates this copy's Drasi Server configuration (plan/contracts.md section 4):
-//! PostgreSQL source → context queries → Rego policy → policy-results → optimizer
+//! PostgreSQL source → policy-input → Drasi's Rego policy → policy-results → optimizer
 //! (plan, resilience) → result queries → tile queries → Prometheus reaction, and the
 //! approval, recovery, annotation and score queries → HTTP reactions; the incident
 //! event queries → the `incident-channel` reaction posting cards to Mattermost.
@@ -90,6 +90,7 @@ const JOINS: &[(&str, (&str, &str), (&str, &str))] = &[
     ("WORKLOAD_SCENARIO", ("ignite_workloads", "run_epoch"), ("ignite_scenario", "run_epoch")),
     ("DEPLOYMENT_SCENARIO", ("ignite_deployments", "run_epoch"), ("ignite_scenario", "run_epoch")),
     ("DESTINATION_SCENARIO", ("ignite_policy_destinations", "run_epoch"), ("ignite_scenario", "run_epoch")),
+    ("WORKLOAD_DESTINATION", ("ignite_workloads", "id"), ("ignite_policy_destinations", "workload")),
     ("TASK_SCENARIO", ("ignite_tasks", "run_epoch"), ("ignite_scenario", "run_epoch")),
     ("ATTEMPT_SCENARIO", ("ignite_attempts", "run_epoch"), ("ignite_scenario", "run_epoch")),
     ("APPROVAL_SCENARIO", ("ignite_approvals", "run_epoch"), ("ignite_scenario", "run_epoch")),
@@ -151,9 +152,7 @@ fn queries(health: Health) -> Vec<Query> {
 fn all_queries() -> Vec<Query> {
     vec![
         // Context queries over the scenario tables: the plugins' inputs.
-        query!("policy-workloads", ["postgres"]),
-        query!("policy-deployments", ["postgres"]),
-        query!("policy-destinations", ["postgres"]),
+        query!("policy-input", ["postgres"], "PolicyInput"),
         query!("plan-items", ["postgres"]),
         query!("plan-bins", ["postgres"]),
         // Plugin results.
@@ -212,9 +211,7 @@ fn all_queries() -> Vec<Query> {
 
 /// Edges into the native plugins' named input ports.
 const PLUGIN_INPUTS: &[(&str, &str, &str)] = &[
-    ("policy-workloads", "policy", "subjects"),
-    ("policy-deployments", "policy", "targets"),
-    ("policy-destinations", "policy", "parameters"),
+    ("policy-input", "policy", "in"),
     ("plan-items", "plan", "items"),
     ("plan-bins", "plan", "bins"),
     ("policy-results", "plan", "eligibility"),
@@ -474,7 +471,7 @@ fn main() -> Result<()> {
     let bootstrap = load(directory, "drasi_computation_bootstrap_postgres")?;
     let query_plugin = load(directory, "drasi_computation_transformer_query")?;
     let http_sink = load(directory, "drasi_computation_sink_http")?;
-    let policy = load(directory, "drasi_computation_ignite_policy")?;
+    let policy = load(directory, "drasi_computation_transformer_policy")?;
     let optimizer = load(directory, "drasi_computation_ignite_optimizer")?;
     let prometheus = load(directory, "drasi_computation_ignite_prometheus")?;
     let sse = load(directory, "drasi_computation_sink_sse")?;
@@ -640,13 +637,22 @@ fn main() -> Result<()> {
         );
     }
 
-    // Native plugins: the Rego module and the optimizer's settings are their configuration.
-    let mut rego: Value = serde_json::from_str(include_str!("../../../plugins/policy/examples/ignite.json"))?;
-    rego["module"] = json!(include_str!("../../../plugins/policy/ignite.rego"));
+    // Drasi's Rego policy (drasi.standard/policy) decides each `policy-input` row; the
+    // module and the input and output mappings are its configuration (drasi/policy).
+    let mut rego: Value = serde_json::from_str(include_str!("../../../drasi/policy/policy.json"))?;
+    rego["modules"][0]["source"] = json!(include_str!("../../../drasi/policy/ignite.rego"));
+    rego["stream"] = json!(stream(ids["policy"].as_str())?);
+    let factory = find_factory(&policy, "drasi.standard/policy")?;
+    let mut specification = factory.specification(ids["policy"].clone(), rego)?;
+    // A query keeps its bootstrap to itself: the policy starts from `policy-input`'s snapshot.
+    specification
+        .dependencies
+        .insert("output_snapshots".into(), vec![resource("policy-snapshots")?]);
+    builder = builder.component(ComponentName::try_new("policy")?, specification, factory);
+    // This demo's optimizer: its settings are its configuration.
     let optimizer_config: Value =
         serde_json::from_str(include_str!("../../../plugins/optimizer/examples/ignite.json"))?;
     for (name, plugin, implementation, configuration) in [
-        ("policy", &policy, "ignite/rego-policy", rego),
         ("plan", &optimizer, "ignite/assignment-plan", optimizer_config.clone()),
         ("resilience", &optimizer, "ignite/assignment-resilience", optimizer_config),
     ] {

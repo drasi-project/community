@@ -1,0 +1,30 @@
+{
+  "stream": "policy/out",
+  "modules": [{ "name": "ignite.rego", "source": "<the text of ignite.rego; the config generator inlines it>" }],
+  "query": "data.ignite.assessment",
+  "labels": ["PolicyInput"],
+  "input": {
+    "subject": {
+      "id": "$properties.workload",
+      "data_class": "$properties.data_class",
+      "region_requirement": "$properties.region_requirement",
+      "model": "$properties.workload_model"
+    },
+    "target": {
+      "id": "$properties.deployment",
+      "region": "$properties.region",
+      "model": "$properties.deployment_model"
+    },
+    "destinations": "$properties.destinations"
+  },
+  "output_label": "PolicyDecision",
+  "output_properties": {
+    "id": "$element.properties.id",
+    "subject": "$input.subject.id",
+    "target": "$input.target.id",
+    "run_epoch": "$element.properties.run_epoch",
+    "allowed": "$decision.allowed",
+    "reason": "$decision.reason"
+  },
+  "timeout_ms": 250
+}

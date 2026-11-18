@@ -11,9 +11,9 @@ already exists in this branch.
 | [Settings](#1-settings) | Every port, the compose project, the publication and slot and the storage key come from `demo/ports.env`; this copy uses +1000 ports and project `ignite-native` | `demo/ports.env`, `demo/ports.default.env` |
 | [Build and test](#2-build-and-test) | One crate at a time, shared `ignite-native/.cargo-target`, at most 4 jobs | `demo/.cargo/config.toml` |
 | [Schema](#3-schema) | The JSON model becomes `ignite_workloads`, `ignite_deployments`, `ignite_routes`, `ignite_policy_destinations`, `ignite_approvals`; `ignite_scenario` holds `run_epoch` and `revision` | this file |
-| [Graph](#4-graph) | Context queries → Rego plugin → `policy-results` → optimizer (plan, resilience) → result queries → tile queries → Prometheus reaction; approvals and events → HTTP reactions | this file |
-| [Element contracts](#5-element-contracts) | `PolicyDecision`, `Assignment`, `Plan`, `LossScenario`, `Resilience`, and the rows each plugin reads | this file |
-| [Rego policy plugin](#6-rego-policy-plugin) | `ignite/rego-policy`; the Rego module is configuration, allowed destinations are data | `plugins/policy` |
+| [Graph](#4-graph) | Context queries → Drasi's Rego policy → `policy-results` → optimizer (plan, resilience) → result queries → tile queries → Prometheus reaction; approvals and events → HTTP reactions | this file |
+| [Element contracts](#5-element-contracts) | `PolicyInput`, `PolicyDecision`, `Assignment`, `Plan`, `LossScenario`, `Resilience`, and the rows each plugin reads | this file |
+| [Rego policy](#6-rego-policy) | Drasi's `drasi.standard/policy` decides each `policy-input` row; the Rego module is configuration, allowed destinations are data | `drasi/policy` |
 | [Optimizer plugin](#7-optimizer-plugin) | `ignite/assignment-plan` and `ignite/assignment-resilience` over `good_lp` (microlp) | `plugins/optimizer` |
 | [Prometheus reaction](#8-prometheus-reaction) | `ignite/prometheus-exporter`: current rows of each tile query as gauges on `/metrics` | `plugins/prometheus` |
 | [Metric contract](#9-metric-contract) | One metric per Grafana tile, `-1` or no series means Unknown | `plugins/prometheus/examples/ignite.json` |
@@ -79,7 +79,7 @@ in `lib.rs`. Run from `demo/`:
 | Workstream | Build | Test |
 |---|---|---|
 | 1. Data model and AI service | `cargo build --locked -p ignite-workloads` | `cargo test --locked -p ignite-workloads`, `cargo test --locked -p ignite-settings --lib`; database tests against this copy's PostgreSQL (`python3 ops/native-runtime.py sql`) |
-| 2. Rego policy plugin | `cargo build --locked -p ignite-policy --lib --features ignite-policy/dynamic-plugin` | `cargo test --locked -p ignite-policy --lib` |
+| 2. Rego policy | `drasi-computation-transformer-policy` from drasi-core, built by `ops/native-build.sh` | `cargo test --locked -p drasi-computation-transformer-policy` in drasi-core; the demo's rule and queries: `plan/spikes/official-policy-plugin` in the `community` checkout |
 | 3. Optimizer plugin | `cargo build --locked -p ignite-optimizer --lib --features ignite-optimizer/dynamic-plugin` | `cargo test --locked -p ignite-optimizer --lib` |
 | 4. Prometheus reaction | `cargo build --locked -p ignite-prometheus --lib --features ignite-prometheus/dynamic-plugin` | `cargo test --locked -p ignite-prometheus --lib` |
 | 5. Grafana | `python3 observability/grafana/dashboards.py` | `python3 observability/grafana/fixture.py [state]` serves fixture `/metrics` on 19423 (which Prometheus already scrapes; only while Drasi Server is not running); `POST /state/<state>` switches state |
@@ -132,10 +132,8 @@ component IDs. Context queries filter to the current run by joining
 
 ```mermaid
 flowchart LR
-  PG[(postgres)] --> W[policy-workloads] & D[policy-deployments] & PD[policy-destinations] & PI[plan-items] & PB[plan-bins]
-  W -->|subjects| P[policy · ignite/rego-policy]
-  D -->|targets| P
-  PD -->|parameters| P
+  PG[(postgres)] --> PIN[policy-input] & PI[plan-items] & PB[plan-bins]
+  PIN --> P[policy · drasi.standard/policy]
   P --> PR[policy-results]
   PI -->|items| A[plan · assignment-plan] & R[resilience · assignment-resilience]
   PB -->|bins| A & R
@@ -159,7 +157,8 @@ Implementation notes (workstream 7, `ops/config/src/main.rs`, `drasi/`):
 - **Joins** are synthetic relationships declared per query in `JOINS` and
   written as directed patterns (`(a)-[:NAME]->(b)`, first label to second);
   an undirected pattern matches each join twice and duplicates rows.
-- **Result labels** for query-to-query edges: `PolicyResult`, `PlanResult`,
+- **Result labels** for query-to-query edges: `PolicyInput` (read by the
+  policy), `PolicyResult`, `PlanResult`,
   `AssignmentResult`, `ResilienceResult`, `RecoveryTasks`,
   `RecoveryObservation`, `RecoveryResult`. A downstream query receives only its
   upstream query's changes, not its bootstrap rows, so tiles over static rows
@@ -200,30 +199,33 @@ canonical JSON (sorted keys, no whitespace).
 
 | Query | Port | Columns |
 |---|---|---|
-| `policy-workloads` | policy `subjects` | `id`, `run_epoch`, `data_class`, `region_requirement`, `model`, `demand_tpm` |
-| `policy-deployments` | policy `targets` | `id`, `run_epoch`, `region`, `model`, `capacity_tpm` |
-| `policy-destinations` | policy `parameters` | `id`, `run_epoch`, `workload`, `deployment` |
+| `policy-input` (label `PolicyInput`) | policy `in` | `id` (`{workload}/{deployment}`), `run_epoch`, `workload`, `data_class`, `region_requirement`, `workload_model`, `deployment`, `region`, `deployment_model`, `destinations` (`[deployment]` when the pair's `ignite_policy_destinations` row exists, else `[]`) |
 | `plan-items` | optimizer `items` | `id` (workload), `run_epoch`, `revision` (scenario), `demand_tpm`, `deployment` (current route) |
 | `plan-bins` | optimizer `bins` | `id`, `run_epoch`, `capacity_tpm`, `status` (`ok`, `failed`, `throttled`, or `unknown` once the latest report expires, via `drasi.trueLater`) |
 | `policy-results` | optimizer `eligibility` | `id`, `subject`, `target`, `state`, `allowed`, `reason`, `policy_hash`, `basis`, `run_epoch` |
 
-### `PolicyDecision` (Rego plugin)
+### `PolicyDecision` (Drasi's Rego policy)
 
-One node per subject × target, `id` = `{subject}/{target}`.
+One node per `policy-input` row (one per workload × deployment). Its identity
+is the row's; `id` = `{subject}/{target}`.
 
 | Property | Meaning |
 |---|---|
-| `subject`, `target` | Keys of the pair |
-| `state` | `allowed`, `denied` or `unknown` |
-| `allowed` | `true` only when `state` = `allowed`; otherwise `false` |
-| `reason` | The rule's reason, or why the result is unknown |
-| `policy_hash` | SHA-256 of rule and module |
-| `basis` | SHA-256 of `policy_hash`, the subject row, the target row and the subject's parameter rows |
-| `run_epoch` | Copied from the subject row |
+| `id`, `subject`, `target`, `run_epoch` | From the `policy-input` row |
+| `allowed`, `reason` | The rule's `assessment`; absent unless the rule decided |
+| `policy_status` | `decided`, `undefined` (no result) or `error` |
+| `policy_error` | Only for errors |
+| `policy_hash` | `sha256:` hash of the Rego version, module, query and data |
+| `policy_input_fingerprint` | `sha256:` hash of the Rego input |
 
-Emitted only when one of these properties changes; deleted when its subject or
-target row is deleted. Nothing is emitted until all three ports have loaded their
-snapshots.
+Emitted only when one of these properties changes; retracted when its row is
+deleted.
+
+`policy-results` (label `PolicyResult`) maps these onto the columns the
+optimizer, tiles and cards read. `state` is `allowed` or `denied` only for a
+decided boolean `allowed`, otherwise `unknown`. `allowed` is `true` only for
+`allowed`. `reason` is the rule's, or why the result is unknown. `basis` is
+`policy_input_fingerprint`.
 
 ### `Plan` and `Assignment` (plan factory)
 
@@ -269,56 +271,40 @@ a bin's health is outside the configured healthy and unhealthy values, an
 `revision` or `run_epoch`, or evaluation or solving errors or exceeds its time
 limit.
 
-## 6. Rego policy plugin
+## 6. Rego policy
 
-Factory `ignite/rego-policy` (`plugins/policy`), transformer, ports
-`subjects`, `targets`, `parameters` (inputs) and `out`. Configuration
-(`plugins/policy/examples/ignite.json`):
+Drasi's native Rego transformer, `drasi.standard/policy`
+(`drasi-computation-transformer-policy`, drasi-core). It evaluates the rule once
+for each `policy-input` row. Configuration: `drasi/policy/policy.json`. The
+config generator inlines `drasi/policy/ignite.rego` and sets `stream` to
+`{component id}/out`.
 
-| Field | Type | Meaning |
-|---|---|---|
-| `module` | string, required | Rego source. The config generator inlines `plugins/policy/ignite.rego`. Changing it is a configuration update |
-| `rule` | string, required | Rule evaluated per pair, e.g. `data.ignite.assessment`; must return `{"allowed": bool, "reason": string}` |
-| `subjects.key` | string, required | Key property of subject rows |
-| `targets.key` | string, required | Key property of target rows |
-| `parameters.subjectKey`, `.targetKey` | string, required | Properties of a parameter row naming its subject and target |
-| `epochProperty` | string, default `run_epoch` | Copied from the subject |
-| `timeoutMs` | integer 1–10000, default 250 | Bound on one evaluation |
+- **Input:** `policy-input` produces one row per workload × deployment in the
+  current run. It collects the pair's own destination row, so each row lists at
+  most one value and its content never changes order. It filters out empty
+  groups (`count(d) … WHERE matches > 0`), so a reset retracts the previous
+  run's pairs.
+- **Rule:** `data.ignite.assessment` returns `{allowed, reason}` from
+  `input.subject` (workload), `input.target` (deployment) and
+  `input.destinations`. Support may use EU-A and EU-B, never US-C (restricted
+  data stays in the EU). Batch may use all three. Removing EU-B from support's
+  destinations denies it.
+- **The talk's policy edit** is a data change to `ignite_policy_destinations`.
+  Only that pair's decision is emitted. Demand and capacity edits emit nothing.
+  A rule change is a managed in-place update: retained inputs are
+  re-evaluated, and only changed decisions are emitted, with a new
+  `policy_hash`.
+- **Unknown** is never allowed. An undefined rule, a runtime error, a timeout
+  (`timeout_ms` 250) or a result without a boolean `allowed` all read as
+  `state = unknown` in `policy-results`.
+- **Startup:** the policy binds `output_snapshots` to `policy-input`, reads
+  that snapshot at start and emits its decisions through the startup
+  continuation. A query never sends its own bootstrap rows downstream. It
+  skips live envelopes the snapshot covers and re-reads `policy-input` when
+  that query restarts. Its `out` snapshot serves `policy-results`.
 
-Rego input per pair: `{"subject": row, "target": row, "parameters": [the
-subject's parameter rows]}`. The example module (`plugins/policy/ignite.rego`)
-reproduces the original demo's placement policy (the unit test `evaluate::tests` proves the four cases):
-support may use EU-A and EU-B, never US-C (restricted data stays in the EU);
-batch may use all three; removing EU-B from support's destinations denies it.
-The talk's policy edit is a data change to `ignite_policy_destinations`; a rule
-change is a component configuration update.
-
-Implementation (workstream 2, done): `evaluate` (Rego, host-free), `decide`
-(pairs, basis, unknown rules, changed-only diff, host-free) and the component
-in `lib.rs`. Behaviour beyond the table above:
-
-- **Ports and edges:** each port takes any number of edges; rows are keyed by
-  edge and record identity. A port with no edge, or an edge whose snapshot has
-  not loaded, means nothing is emitted. An edge added after start is read from
-  its snapshot at once; a removed edge drops its rows.
-- **Upstream restart:** an envelope from a new producer epoch makes the plugin
-  re-read that edge's snapshot (no component failure).
-- **Unknown** (and `allowed = false`) also when: a row has no key property or
-  cannot be decoded (every pair); distinct rows share a subject or target key;
-  subject, target or parameter rows carry different `run_epoch` values; the
-  rule's result is undefined or not `{allowed: bool, reason: string}`.
-- **Time bound:** regorus's execution timer (`timeoutMs`) stops iteration; a
-  single long builtin call runs to completion and is then reported as unknown.
-- **Invalid module** (does not compile) fails construction, so a bad rule
-  update is rejected rather than turning every decision unknown.
-- **Output:** stream and element namespace `{component id}/out`; changes are
-  `Insert`/`Replace`/`Delete` nodes in sorted `id` order, one envelope per
-  input envelope. The plugin also serves an output snapshot on `out`
-  (`output_snapshots: [out]`), ready once all three ports have loaded, so a
-  downstream query can bootstrap from it.
-- **Basis** hashes canonical JSON of `{policy_hash, subject, target,
-  parameters}` with parameter rows sorted and de-duplicated, so row order never
-  changes it. A settled decision is reused while its basis is unchanged.
+Evidence: `plan/official-policy-plugin.md` (in the `community` checkout)
+compares every pair with the earlier `ignite/rego-policy` decisions.
 
 ## 7. Optimizer plugin
 
@@ -613,7 +599,7 @@ No gap blocks workstreams 1–7. To watch:
 | Workstream | Owns | Must not edit |
 |---|---|---|
 | 1 | `database/`, `workloads/`, `domain/` (remove `decision.rs` when unused), `ops/workload.py`, `ops/native-runtime.py` | `ports.env`, root `Cargo.toml` |
-| 2 | `plugins/policy` | shared files |
+| 2 | `drasi/policy`, `drasi/policy-input.cypher`, `drasi/policy-results.cypher` | shared files |
 | 3 | `plugins/optimizer` | shared files |
 | 4 | `plugins/prometheus` | shared files, `observability/prometheus.yaml` (done) |
 | 5 | `observability/grafana`, `ops/observability-env.py` (service-account token) | `compose.yaml` except Grafana's environment |
