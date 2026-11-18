@@ -307,6 +307,21 @@ test("pressing Approve on the projected card applies the change, and the desk re
   expect((await request.post(`${fixture}/mattermost/approve-latest`, { data: { run_epoch: "TEST-FIXTURE-EPOCH" } })).status()).toBe(404);
 });
 
+test("after a reset the projected channel reloads, so deleted posts don't linger as placeholders", async ({ page }) => {
+  await stubMattermost(page);
+  let epoch = "EPOCH-1";
+  await page.route("**/api/health", async route => {
+    const health = await (await route.fetch()).json();
+    await route.fulfill({ json: { ...health, run_epoch: epoch } });
+  });
+  await page.goto("/present?view=incident");
+  const frame = page.locator("iframe.stage-incident");
+  await expect(frame).toHaveAttribute("data-generation", "0");
+  await page.waitForTimeout(2500);
+  epoch = "EPOCH-2";
+  await expect(frame).toHaveAttribute("data-generation", "1", { timeout: 10000 });
+});
+
 test("the projected incident view frames the channel above the caption line, kept loaded once shown", async ({ page, request }) => {
   await stubGrafana(page);
   await stubMattermost(page);

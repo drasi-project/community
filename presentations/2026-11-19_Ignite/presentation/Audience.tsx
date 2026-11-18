@@ -35,6 +35,33 @@ function useFit() {
   return scale;
 }
 
+// The demo run, for reloading the framed incident channel after a reset. A reset deletes the
+// channel's posts through Mattermost's API, and an open Mattermost client keeps a "(message
+// deleted)" placeholder for each until it reloads; so once the run changes, and the deletes have
+// had time to finish, the frame loads the channel afresh.
+function useChannelGeneration(active: boolean) {
+  const [generation, setGeneration] = useState(0);
+  useEffect(() => {
+    if (!active) return;
+    let epoch: string | null = null, timer: ReturnType<typeof setTimeout> | undefined, live = true;
+    const check = async () => {
+      try {
+        const response = await fetch("/api/health", { cache: "no-store" });
+        const next = response.ok ? String((await response.json()).run_epoch ?? "") : "";
+        if (live && next && epoch && next !== epoch) {
+          clearTimeout(timer);
+          timer = setTimeout(() => setGeneration(n => n + 1), 4000);
+        }
+        if (next) epoch = next;
+      } catch { /* the demo is down: keep the frame as it is */ }
+    };
+    void check();
+    const interval = setInterval(check, 2000);
+    return () => { live = false; clearInterval(interval); clearTimeout(timer); };
+  }, [active]);
+  return generation;
+}
+
 // The projected stage. The presenter desk decides what it shows; keys pressed here
 // (a clicker, or arrows) are passed to the desk.
 export function Audience({ control, preview }: { control: StageControl; preview: boolean }) {
@@ -54,6 +81,7 @@ export function Audience({ control, preview }: { control: StageControl; preview:
   // Dashboards and the channel stay loaded once shown, so switching back is instant.
   const [loaded, setLoaded] = useState<Set<string>>(new Set());
   useEffect(() => { if (framed && !loaded.has(framed)) setLoaded(new Set([...loaded, framed])); }, [framed, loaded]);
+  const channelGeneration = useChannelGeneration(!preview && loaded.has("incident"));
   useEffect(() => {
     if (!element.current) return;
     const reveal = new Reveal(element.current, {
@@ -94,7 +122,7 @@ export function Audience({ control, preview }: { control: StageControl; preview:
           // ("Decision events") stops refreshing. It ends at the caption line.
           style={{ width: frame.width / zoom, height: frame.captionTop / zoom, transform: `scale(${zoom})`,
             visibility: !!replay || dashboard !== id ? "hidden" : "visible" }} />)}
-      {loaded.has("incident") && <iframe className="stage-dashboard stage-incident" title="Mattermost · #incident-ai-support"
+      {loaded.has("incident") && <iframe key={`incident-${channelGeneration}`} data-generation={channelGeneration} className="stage-dashboard stage-incident" title="Mattermost · #incident-ai-support"
         src={incidentChannel} aria-hidden={!!replay || view !== "incident"}
         // Signed in as oncall through the AI service's /mattermost/sign-in (contracts.md §17).
         style={{ width: frame.width / incidentZoom, height: frame.captionTop / incidentZoom, transform: `scale(${incidentZoom})`,
