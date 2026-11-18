@@ -43,8 +43,9 @@ of live demo:
    affected, what's the fastest fix within policy, and how do we know when it's
    resolved? Then what Drasi brings together (telemetry, application data,
    policy) and the tools it works with (Grafana, messaging, change management).
-4. **Live demo** in Grafana, with the continuous query behind "who is affected"
-   and one late customer request on the way.
+4. **Live demo** in Grafana and the team's incident channel, with the Drasi
+   configuration behind each Decision Support panel and one late customer
+   request on the way.
 5. **Close:** keep your monitoring tools, add change-driven computation; then
    the Ignite session survey during questions.
 
@@ -134,9 +135,8 @@ just did** visual shows it.
 2. **Failure.** EU-A fails. Within seconds Drasi, reading EU-A's health-check
    telemetry, shows it Failed and has a plan ready; errors and the queue rise and Grafana alerts. Support requests count as
    overdue the moment each passes its 15-second deadline, with no new event.
-3. **Who is affected.** The actual continuous query behind "overdue", with Drasi's
-   live list of late requests, then one of those customers' requests, attempt by
-   attempt.
+3. **Who is affected.** Drasi's failure and overdue cards in the incident channel,
+   then one of those customers' requests, attempt by attempt.
 4. **Recovery.** Support may not run on US-C, but summaries may. The planner's plan
    moves summaries to US-C, freeing EU-B for support. Optionally, a policy
    change while the plan awaits approval leaves no valid plan, and Drasi rejects

@@ -6,7 +6,6 @@ import { scenes, slides, recaps, allSlides, dashboards, incidentChannel, frame }
 import { notes } from "../../../presentation/notes";
 import { presenterScript } from "../../../presentation/script";
 import { replayClips } from "../../../presentation/replay";
-import { displayQuery } from "../../../presentation/QuerySlide";
 import { buildConfig, configIds } from "../../../presentation/codeSlides";
 import { unknownKeys, type Dashboard } from "../../../presentation/panels";
 import fs from "node:fs";
@@ -47,7 +46,7 @@ test("the talk is 22 minutes and every beat says something and shows something",
     expect(cue.ifBroken.trim()).not.toBe("");
   }
   for (const recap of recaps) expect(Object.values(notes).some(cue => cue.beats.some(beat => beat.show === recap.id))).toBe(true);
-  expect(slides.map(s => s.id)).toEqual(["walkin", "title", "ecosystem", "ecosystem-2", "ecosystem-3", "answers", "drasi", "scenario", "concepts", "concepts-rules", "concepts-questions", "setup", "query", "closing", "survey"]);
+  expect(slides.map(s => s.id)).toEqual(["walkin", "title", "ecosystem", "ecosystem-2", "ecosystem-3", "answers", "drasi", "scenario", "concepts", "concepts-rules", "concepts-questions", "setup", "closing", "survey"]);
   // The walk-in opens the talk, the scenario reveals a section per beat, and the survey is last.
   const shown = scenes.flatMap(scene => notes[scene.id].beats.map(beat => beat.show));
   expect(shown[0]).toBe("walkin");
@@ -170,12 +169,6 @@ test("the configuration shown beside each panel is the real files', text, and ev
   expect(new Set(used)).toEqual(new Set(configIds));
   // Each panel's configuration is shown while that panel is highlighted.
   for (const beat of notes.normal.beats.filter(beat => beat.config)) expect(beat.highlight?.length).toBe(1);
-});
-
-test("the query slide shows exactly the query Drasi runs", () => {
-  const file = fs.readFileSync(new URL("../../drasi/overdue-tasks.cypher", import.meta.url), "utf8");
-  const words = (text: string) => text.replace(/\s+/g, " ").trim();
-  expect(words(displayQuery.map(([line]) => line).join(" "))).toBe(words(file));
 });
 
 test("Next on the desk moves through beats and changes what the projector shows", async ({ page, request }) => {
@@ -452,15 +445,6 @@ test("Drasi's stream unavailable means NOT READY", async ({ page }) => {
   await expect(page.locator(".approval")).toHaveText("Approval status unavailable.");
 });
 
-test("the query slide lists late requests live from Drasi", async ({ page, request }) => {
-  await request.post(`${fixture}/test/query`, { data: { query: "overdue-tasks", rows: {
-    a: { id: "a", run_epoch: "TEST-FIXTURE-EPOCH", workload: "support", trace_id: "abcdef1234567890", deadline_ms: Date.now() - 4000 },
-    b: { id: "b", run_epoch: "TEST-FIXTURE-EPOCH", workload: "batch", trace_id: "ffff", deadline_ms: Date.now() - 4000 } } } });
-  await page.goto("/present?view=query");
-  await expect(page.locator(".query-live")).toContainText("1 support request is late right now");
-  await expect(page.locator(".query-live")).toContainText("trace abcdef12");
-});
-
 // Where an element sits on the template's 1920x1080 slide, whatever the window size.
 async function onSlide(page: Page, selector: string) {
   return page.evaluate(selector => {
@@ -546,7 +530,7 @@ test("the oldest late request is shown on the projector with its attempts", asyn
   await page.route("**/api/tasks/TEST-TASK", route => route.fulfill({ json: {
     task: { id: "TEST-TASK", content: "My order hasn't arrived.", created_ms: Date.now() - 20000, deadline_ms: Date.now() - 5000, completed_ms: null, trace_id: "abcdef123456" },
     attempts: [503, 503, 503].map((status, i) => ({ endpoint: "EU-A", status, started_ms: Date.now() - 18000 + i * 3000 })) } }));
-  await desk(page, "who", 2);
+  await desk(page, "who", 1);
   const projector = await page.context().newPage();
   await projector.route("**/api/tasks/TEST-TASK", route => route.fulfill({ json: {
     task: { id: "TEST-TASK", content: "My order hasn't arrived.", created_ms: Date.now() - 20000, deadline_ms: Date.now() - 5000, completed_ms: null, trace_id: "abcdef123456" },

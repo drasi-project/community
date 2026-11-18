@@ -1,7 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import QRCode from "qrcode";
 import { products, recaps, session, speaker, type SlideId } from "./scenes";
-import { QuerySlide } from "./QuerySlide";
 import "./slides.css";
 
 // Keep deployment names such as EU-A, and the incident channel's name, on one line.
@@ -61,7 +60,6 @@ export function Explanation({ slide, active = false }: { slide: SlideId; active?
     <Artwork files={["survey-qr.png"]} className="survey-qr" alt="QR code for the event survey" />
   </div>;
 
-  if (slide === "query") return <QuerySlide live={active} />;
 
   const recap = recaps.find(r => r.id === slide);
   if (recap) {

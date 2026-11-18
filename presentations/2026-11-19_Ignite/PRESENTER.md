@@ -169,7 +169,7 @@ proposal: approve the new one.
 | 2:00 | The scenario | A typical scenario, The scenario · deployments, The scenario · rules, The scenario · three answers, Bringing it together when EU-A fails | A typical scenario: two workloads, the rules, three questions; then what Drasi brings together |
 | 3:30 | Healthy service | Grafana · Operations | Walk through the healthy dashboard |
 | 6:00 | Failure | Grafana · Operations | Fail EU-A; Drasi's row is ahead of the alert |
-| 9:00 | Who is affected | Mattermost · #incident-ai-support, Who is affected: the continuous query, One late request | The incident channel: Drasi's failure and overdue cards; the query and its live list |
+| 9:00 | Who is affected | Mattermost · #incident-ai-support, One late request | The incident channel: Drasi's failure and overdue cards; the query and its live list |
 | 11:30 | Recovery | Mattermost · #incident-ai-support, Grafana · Operations | Approve Drasi's proposed change on its card; optionally show an out-of-date proposal rejected |
 | 17:00 | Healthy but fragile | Grafana · Operations, Mattermost · #incident-ai-support, What Drasi just did | Healthy but fragile: EU-A returns with half its capacity |
 | 20:30 | Close | Close, Session survey | Four takeaways, the session survey, then questions |
@@ -218,7 +218,7 @@ Say it in your own words.
    - **Watch for:** Support errors 0%, Support queue 0 to 2 (green).
 3. **Grafana · Operations.** The bottom row, Decision Support, is Drasi's answers, worked out from changes as they happen: changes in the AI service's database, where it records every request, route, policy and approval, and its health checks, which arrive as ordinary OpenTelemetry metrics every second. A Drasi reaction publishes each answer as a Prometheus metric, so Grafana draws it and you can alert on it like anything else; another posts to the team's incident channel when something needs them. Let's take them one at a time.
    - **Watch for:** The whole Decision Support row outlined.
-4. **Grafana · Operations.** Support overdue: customer requests past their 15-second deadline. Above it is the query that drives it: every request not yet answered or cancelled, and drasi.trueLater, which becomes true at the request's deadline. Drasi re-checks just that request at that moment, so it joins the list with no new event, and leaves it when it's answered.
+4. **Grafana · Operations.** Support overdue: customer requests past their 15-second deadline. Above it is the query that drives it: every request not yet answered or cancelled, and drasi.trueLater, which becomes true at the request's deadline. Drasi re-checks just that request at that moment, so it joins the list with no new event, and leaves it when it's answered. The result is the exact list of late requests, with their traces, kept current request by request: not a sampled gauge or a rule evaluated every so often. The tile shows the count; the incident channel card links back here.
    - **Watch for:** Support overdue 0; the overdue-tasks query above it, the trueLater line highlighted.
 5. **Grafana · Operations.** Deployment status: each deployment's latest health check. Every second the AI service probes each deployment and exports the result as an ordinary OpenTelemetry metric; the Collector forwards it to Drasi's OpenTelemetry source, and this query keeps the latest probe per deployment: 2 means failed. Each reading is good for 8 seconds, so if the probes stop, the status turns Unknown as time passes.
    - **Watch for:** Deployment status: EU-A, EU-B, US-C Healthy; the deployment-health query above it.
@@ -252,15 +252,13 @@ Say it in your own words.
 1. **Mattermost · #incident-ai-support.** The team doesn't live on a dashboard, though. This is their incident channel in Mattermost. Drasi posted here as soon as EU-A failed, with its proposed change already waiting and an Approve button. Look at the times: Drasi's cards came before Grafana's alert, which posts here too. We'll come back to the proposal.
    - **Click on the projector:** If Drasi's red Deployment failed: EU-A card isn't in view, scroll up to it. 
    - **Watch for:** Red card Deployment failed: EU-A, then the orange Proposed change card with Approve and Reject; Grafana's alert after them.
-2. **Mattermost · #incident-ai-support.** Which customers are affected? Drasi posted that too: Support requests overdue, as soon as the first support request passed its deadline, with a link to the tile on the dashboard. A count tells you it's bad. Let's see who.
+2. **Mattermost · #incident-ai-support.** Which customers are affected? Drasi posted that too: Support requests overdue, as soon as the first support request passed its deadline, with a link to the tile on the dashboard. And behind that count is the exact list of late requests, so we can see who.
    - **Click on the projector:** If the red Support requests overdue card isn't in view, scroll to it. 
    - **Watch for:** Red card Support requests overdue, with the count when posted and a link to Operations › Support overdue.
-3. **Who is affected: the continuous query.** This is the Support overdue query from earlier, now with its live result: not just a count, but the exact list of late requests with their traces, kept current request by request. With Prometheus you'd get a number from a gauge or a rule evaluated every so often; here it's the set itself, from one query
-   - **Watch for:** Under the query: how many support requests are late, and the oldest few with their traces.
-4. **One late request (optional).** Here's one of those customers: their question, every attempt to send it to EU-A failing, and the moment its deadline passed and Drasi listed it. The same request is a trace in Langfuse, so whoever picks it up has the detail.
+3. **One late request (optional).** Here's the oldest of them: their question, every attempt to send it to EU-A failing, and the moment its deadline passed and Drasi listed it. The same request is a trace in Langfuse, so whoever picks it up has the detail.
    - **Watch for:** The oldest late request, with its attempts and the moment Drasi listed it.
 
-**If it breaks:** If the channel shows no cards, say Drasi posts them there and go on to the query. If the list is empty, traffic has stopped: say what it would show. The request beat is skipped automatically when nothing is late.
+**If it breaks:** If the channel shows no cards, say Drasi posts them there and go on to the late request. If the list is empty, traffic has stopped: say what it would show. The request beat is skipped automatically when nothing is late.
 
 ### 7. Recovery (5½ minutes)
 

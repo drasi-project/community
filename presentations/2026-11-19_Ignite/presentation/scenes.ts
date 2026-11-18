@@ -40,7 +40,6 @@ export const slides = [
   { id: "concepts-rules", title: "The scenario · rules" },
   { id: "concepts-questions", title: "The scenario · three answers" },
   { id: "setup", title: "Bringing it together when EU-A fails" },
-  { id: "query", title: "Who is affected: the continuous query" },
   { id: "closing", title: "Close" },
   { id: "survey", title: "Session survey" },
 ] as const;

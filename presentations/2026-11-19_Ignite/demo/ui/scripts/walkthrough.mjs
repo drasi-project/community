@@ -46,7 +46,6 @@ const waits = {
   "failure/2": () => until("errors and alert", async () => await drasi("drasi_requests_overdue", '{workload="support"}') > 0, 60).then(() => sleep(15000)),
   "who/0": () => sleep(5000),
   "who/1": () => sleep(3000),
-  "who/2": () => sleep(3000),
   "recovery/1": () => until("no valid plan", async () => await action() === 2, 30).then(() => sleep(6000)),
   "recovery/2": () => until("rejected", async () => await lastApproval() === 4, 30).then(() => sleep(6000)),
   "recovery/3": () => until("new proposal", async () => await action() === 1, 30).then(() => sleep(6000)),
