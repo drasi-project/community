@@ -15,7 +15,16 @@ export function ConfigOverlay({ ids }: { ids: readonly ConfigId[] }) {
   return <div className="config-overlay">{panels.map(panel =>
     <div key={panel.tab} className="code-panel">
       <p className="code-tab">{panel.tab}</p>
-      <pre aria-label={panel.tab}>{panel.lines.map((line, i) =>
-        <span key={i} className={panel.hot.some(text => line.includes(text)) ? "hot" : undefined}><i aria-hidden="true" />{line}{"\n"}</span>)}</pre>
+      <div className="config-body">
+        <ol className="flow-diagram" aria-label="What this brings together">
+          <li className="flow-inputs">{panel.flow.inputs.map(input =>
+            <span key={input.name} className={input.from === "OpenTelemetry" ? "otel" : input.from === "PostgreSQL" ? "pg" : "model"}>
+              <b>{input.name}</b><small>{input.from}</small></span>)}</li>
+          {panel.flow.via.map(step => <li key={step} className="flow-step">{step}</li>)}
+          <li className="flow-tile">{panel.flow.tile}</li>
+        </ol>
+        <pre aria-label={panel.tab}>{panel.lines.map((line, i) =>
+          <span key={i} className={panel.hot.some(text => line.includes(text)) ? "hot" : undefined}><i aria-hidden="true" />{line}{"\n"}</span>)}</pre>
+      </div>
     </div>)}</div>;
 }

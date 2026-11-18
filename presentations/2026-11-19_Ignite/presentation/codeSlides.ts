@@ -1,7 +1,24 @@
 // The Drasi configuration behind each Decision Support panel, shown on the projected dashboard
 // beside the highlighted panel (a beat's `config` in notes.ts; Audience.tsx and ConfigSlides.tsx).
 // The text comes from demo/drasi as Drasi runs it: comments dropped, long JSON detail elided.
-export type ConfigPanel = { tab: string; lines: string[]; hot: string[] };
+// flow: what the panel brings together, as the generated graph wires it (demo/.native/server.json):
+// inputs on the left, then the Drasi components, then the Grafana tile.
+export type Flow = { inputs: { name: string; from: string }[]; via: string[]; tile: string };
+export type ConfigPanel = { tab: string; lines: string[]; hot: string[]; flow: Flow };
+const pg = (name: string) => ({ name, from: "PostgreSQL" });
+export const flows: Record<ConfigId, Flow> = {
+  "overdue-tasks": { inputs: [pg("ignite_tasks"), pg("ignite_scenario")], via: ["overdue-tasks · tile-overdue"], tile: "Support overdue" },
+  "deployment-health": { inputs: [{ name: "ignite_probe_status", from: "OpenTelemetry" }, pg("ignite_deployments")],
+    via: ["deployment-health", "tile-deployments"], tile: "Deployment status" },
+  "tile-workloads": { inputs: [pg("ignite_routes"), pg("ignite_workloads"), { name: "policy-results", from: "Policy model" },
+    { name: "deployment-health", from: "OpenTelemetry" }], via: ["tile-workloads"], tile: "Workload status" },
+  policy: { inputs: [pg("ignite_workloads"), pg("ignite_deployments"), pg("ignite_policy_destinations")],
+    via: ["policy-input", "policy (Rego)", "policy-results → plan"], tile: "Recommended action" },
+  optimization: { inputs: [{ name: "plan-items, plan-candidates", from: "workloads, routes" }, { name: "plan-bins", from: "capacity + health" },
+    { name: "policy-results", from: "Policy model" }], via: ["plan (optimization)", "plan-results · tile-action"], tile: "Recommended action" },
+  "what-if": { inputs: [{ name: "plan-bins", from: "healthy deployments" }, { name: "plan-items, plan-candidates", from: "workloads, routes" },
+    { name: "policy-results", from: "Policy model" }], via: ["plan · loss scenario", "resilience-results · tile-resilience"], tile: "Failover readiness" },
+};
 export type Sources = { overdueQuery: string; healthQuery: string; workloadsQuery: string; rego: string; optimization: object };
 export const configIds = ["overdue-tasks", "deployment-health", "tile-workloads", "policy", "optimization", "what-if"] as const;
 export type ConfigId = typeof configIds[number];
@@ -25,7 +42,7 @@ export function buildConfig({ overdueQuery, healthQuery, workloadsQuery, rego, o
   const part = (name: "variables" | "constraints" | "objectives") =>
     [`"${name}": [`, ...model[name].map((item, i, all) => `  ${entry(item)}${i < all.length - 1 ? "," : " ],"}`)];
   const regoLines = withoutComments(rego, "#").filter(line => !/^(package|import) /.test(line));
-  return {
+  const panels: Record<ConfigId, Omit<ConfigPanel, "flow">> = {
     "overdue-tasks": { tab: "Continuous query · overdue-tasks → Support overdue", hot: ["drasi.trueLater"],
       lines: withoutComments(overdueQuery, "//") },
     "deployment-health": { tab: "Continuous query · deployment-health, from the OpenTelemetry source → Deployment status", hot: ["CASE toInteger(m.value)", "+ 8000"],
@@ -43,4 +60,5 @@ export function buildConfig({ overdueQuery, healthQuery, workloadsQuery, rego, o
         `  ${entry(model.sets.find(set => set.name === "healthy")!, false)}, … ],`,
         '"scenarios": [', ...model.scenarios.map(item => `  ${entry(item)} ],`)] },
   };
+  return Object.fromEntries(configIds.map(id => [id, { ...panels[id], flow: flows[id] }])) as Record<ConfigId, ConfigPanel>;
 }
