@@ -4,7 +4,8 @@
 - `metrics()` / `metric_until()`: the Prometheus reaction's `/metrics` (`ignite/prometheus-exporter`).
 - `prometheus()`: the same series after Prometheus scraped them (what Grafana reads).
 - `Attachment`: Server's query results (`/queries/{name}/attach`) for queries outside the desk stream.
-- `approval()`, `routes()`, annotations and scores: the effects of Drasi's HTTP reactions.
+- `approval()`, `routes()`, annotations, scores and `incident_cards()`: the effects of Drasi's HTTP
+  reactions (the last are the `incident-channel` reaction's posts in Mattermost's #incident-ai-support).
 
 The AI service is used only as what it is in the demo: the application (`/tasks`), the simulated
 external systems (`/control`), the approval tool (`POST /approvals`) and the demo driver
@@ -168,6 +169,25 @@ def scores(trace_id, name):
 
 _SAMPLE = re.compile(r'^([a-zA-Z_:][a-zA-Z0-9_:]*)(?:\{(.*)\})?\s+(\S+)$')
 _LABEL = re.compile(r'([a-zA-Z_][a-zA-Z0-9_]*)="((?:[^"\\]|\\.)*)"')
+
+
+def mattermost(path, token="MATTERMOST_ADMIN_TOKEN", body=None):
+    request = urllib.request.Request(f"http://127.0.0.1:{settings.port('MATTERMOST')}/api/v4{path}",
+        data=None if body is None else json.dumps(body).encode(),
+        headers={"Authorization": "Bearer " + ENV[token], "Content-Type": "application/json"})
+    with urllib.request.urlopen(request, timeout=10) as response:
+        return json.load(response)
+
+
+def incident_cards():
+    """The `incident-channel` reaction's posts in #incident-ai-support, oldest first: every post by
+    the `drasi` bot, as {id, root_id, create_at, card, ignite_id, run_epoch, attachment}."""
+    ids = json.loads((DEMO / ".native/mattermost.json").read_text())
+    posts = mattermost(f"/channels/{ids['channel_id']}/posts?per_page=200")["posts"].values()
+    return [{"id": p["id"], "root_id": p.get("root_id", ""), "create_at": p["create_at"],
+             "card": p["props"].get("ignite_card"), "ignite_id": p["props"].get("ignite_id"),
+             "run_epoch": p["props"].get("ignite_run_epoch"), "attachment": p["props"]["attachments"][0]}
+            for p in sorted(posts, key=lambda p: p["create_at"]) if p["user_id"] == ids["bot_user_id"]]
 
 
 def metrics():

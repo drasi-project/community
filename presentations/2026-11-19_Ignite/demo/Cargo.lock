@@ -1361,11 +1361,15 @@ name = "ignite-config"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "drasi-core",
+ "drasi-functions-cypher",
  "drasi-host-sdk",
  "drasi-lib",
+ "drasi-query-cypher",
  "ignite-settings",
  "serde",
  "serde_json",
+ "tokio",
 ]
 
 [[package]]

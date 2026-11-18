@@ -11,3 +11,10 @@ serde.workspace = true
 ignite-settings = { path = "../../settings" }
 drasi-lib = { path = "../../../../../../drasi-core/lib" }
 drasi-host-sdk = { path = "../../../../../../drasi-core/components/host-sdk" }
+
+[dev-dependencies]
+# The incident card queries run through drasi-core in src/incident_tests.rs.
+drasi-core = { path = "../../../../../../drasi-core/core" }
+drasi-functions-cypher = { path = "../../../../../../drasi-core/functions-cypher" }
+drasi-query-cypher = { path = "../../../../../../drasi-core/query-cypher" }
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }

@@ -888,6 +888,24 @@ Drasi can reply in a thread only where an approval recorded the card's post ID;
 a retried post whose response was lost, or a Server restart within 60 s of an
 event, can post a card twice.
 
+### As implemented (workstream B)
+
+Verified on the live stack with the real Mattermost (`tests/incident-channel-integration.py`)
+and in `cargo test --locked -p ignite-config` (templates, and every card query run
+through drasi-core with a test clock). Where it differs from the above:
+
+| Item | Implemented |
+|---|---|
+| Card rows | Each card query is non-aggregating and returns one row per card; the reaction posts on `added`. Aggregates reach sinks as updates, so the three facts the cards need come from helper queries with result labels: `incident-overdue-count` (`SupportOverdue`), `incident-deployments` (`DeploymentFacts`: Why and healthy capacity), `incident-policy` (`PolicyFacts`: Policy and demand) |
+| Restarts and resets | Besides the 60 s window, a card needs the state before it, seen by this Server (`drasi.previousDistinctValue`): a healthy report before a failure, a clear queue before overdue, a known plan or resilience state of the same run before a proposal, Out of date, at risk or restored. A state standing at a restart or a reset is not posted |
+| `at_ms` | failed: the last healthy report; overdue: the deadline that started the episode; proposal, Out of date, at risk, restored: the plan's `solved_ms`; outcome: `decided_ms`. At risk and restored close 60 s after the state began (`trueFor(…, 63000)`) |
+| Proposal debounce | 5 s, not 2 s, so the failure card (3 s after the first failed report) comes first and an Out of date card (2 s) precedes the proposal that replaces it. Out of date is posted only for a proposal that stood 5 s (its card was posted), and not after an apply (new plan with no moves and the same assignments) |
+| Outcome | Posted 1 s after the status change. Colour, and the second field (`Routes` for applied, `Change` otherwise), come from the query; Approved by is `requested_by` or `desk` |
+| Out of date text | A third case: "No change is needed now: {plan reason}." (Now: `No change needed`) when the facts recover before an approval |
+| Policy and Capacity | Kept. Lists are sorted; the queries name the workloads `support` and `batch` (at most three items per list) |
+| Apostrophes | Texts use ’ (Drasi's Cypher has no escaped quote) |
+| `approval-events` | `declined` → "Rejected by {requested_by}" |
+
 ## 16. Operations dashboard
 
 ### Panels (workstream C, `dashboards.py`)

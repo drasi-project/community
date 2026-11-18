@@ -33,7 +33,7 @@ def main():
                            workload=workload, deployment=deployment)
         stream.until("tile-resilience", lambda r: r and r[0]["value"] == 1)
         stream.until("tile-action", lambda r: r and r[0]["value"] == 0)
-        d.metric_until("ignite_drasi_safe_if_one_fails", lambda v: v == 1)
+        d.metric_until("ignite_drasi_failover_readiness", lambda v: v == 1, text="Survives losing any one deployment")
         d.metric_until("ignite_drasi_running_tpm", lambda v: v == 60000, workload="support", deployment="EU-A")
         d.metric_until("ignite_drasi_running_tpm", lambda v: v == 80000, workload="batch", deployment="EU-B")
         checks.append("baseline: Rego decisions, the optimizer's plan (no moves) and resilience (safe) "
@@ -60,7 +60,7 @@ def main():
         denied = stream.until("plan-results", lambda r: r and r[0]["state"] == "infeasible")[0]
         assert denied["basis"] != plan["basis"]
         stream.until("tile-action", lambda r: r and r[0]["value"] == 2)
-        d.metric_until("ignite_drasi_action_needed", lambda v: v == 2)
+        d.metric_until("ignite_drasi_recommended_action", lambda v: v == 2, text="No change fits policy and capacity")
         evidence["infeasible_plan"] = denied
         checks.append("policy parameter edit (support may run only on EU-A) is data: Rego denies EU-B, "
                       "the plan becomes infeasible with a new basis, action 'no valid plan'")
@@ -75,7 +75,7 @@ def main():
         d.configure(capacity={"EU-A": 50000})
         stream.until("tile-resilience", lambda r: r and r[0]["value"] == 0 and r[0]["lost"] == "EU-B")
         stream.until("tile-action", lambda r: r and r[0]["value"] == 3)
-        d.metric_until("ignite_drasi_safe_if_one_fails", lambda v: v == 0, lost="EU-B")
+        d.metric_until("ignite_drasi_failover_readiness", lambda v: v == 0, lost="EU-B", workload="support")
         losses.until(lambda rows: rows.get("EU-B", {}).get("state") == "infeasible")
         evidence["at_risk"] = {"approval": d.approval(approval), "losses": dict(losses.rows)}
         checks.append("after recovery with EU-A at 50k: all healthy, but 'not if EU-B fails' (at risk), "
@@ -91,7 +91,7 @@ def main():
         stream.until("plan-results", lambda r: r and r[0]["state"] == "unknown", 25)
         stream.until("tile-action", lambda r: r and r[0]["value"] == -1)
         stream.until("tile-resilience", lambda r: r and r[0]["value"] == -1)
-        d.metric_until("ignite_drasi_action_needed", lambda v: v == -1)
+        d.metric_until("ignite_drasi_recommended_action", lambda v: v == -1)
         d.control("resume-reports", "EU-B")
         stream.until("tile-action", lambda r: r and r[0]["value"] == 0, 25)
         checks.append("EU-B stops reporting: Drasi's timer expires its last report, the deployment, plan and "

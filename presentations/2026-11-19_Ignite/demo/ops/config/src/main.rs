@@ -1,7 +1,8 @@
 //! Generates this copy's Drasi Server configuration (plan/contracts.md section 4):
 //! PostgreSQL source → context queries → Rego policy → policy-results → optimizer
 //! (plan, resilience) → result queries → tile queries → Prometheus reaction, and the
-//! approval, recovery, annotation and score queries → HTTP reactions.
+//! approval, recovery, annotation and score queries → HTTP reactions; the incident
+//! event queries → the `incident-channel` reaction posting cards to Mattermost.
 use anyhow::{Context, Result};
 use drasi_host_sdk::computation::{NativeBootstrapNodeFactory, NativeFactory, NativePlugin};
 use drasi_lib::computation::v1::*;
@@ -59,6 +60,14 @@ const JOINS: &[(&str, (&str, &str), (&str, &str))] = &[
     ("APPROVAL_PLAN", ("ignite_approvals", "run_epoch"), ("PlanResult", "run_epoch")),
     ("PLAN_RESILIENCE", ("PlanResult", "run_epoch"), ("ResilienceResult", "run_epoch")),
     ("RECOVERY_SUMMARY", ("RecoveryObservation", "run_epoch"), ("RecoveryTasks", "run_epoch")),
+    // Incident cards (contracts.md section 15).
+    ("ROUTE_SCENARIO", ("ignite_routes", "run_epoch"), ("ignite_scenario", "run_epoch")),
+    ("PLAN_SCENARIO", ("PlanResult", "run_epoch"), ("ignite_scenario", "run_epoch")),
+    ("RESILIENCE_SCENARIO", ("ResilienceResult", "run_epoch"), ("ignite_scenario", "run_epoch")),
+    ("OVERDUE_SCENARIO", ("SupportOverdue", "run_epoch"), ("ignite_scenario", "run_epoch")),
+    ("DEPLOYMENT_FACTS_SCENARIO", ("DeploymentFacts", "run_epoch"), ("ignite_scenario", "run_epoch")),
+    ("POLICY_FACTS_SCENARIO", ("PolicyFacts", "run_epoch"), ("ignite_scenario", "run_epoch")),
+    ("POLICY_WORKLOAD", ("PolicyResult", "subject"), ("ignite_workloads", "id")),
 ];
 
 struct Query {
@@ -114,6 +123,7 @@ fn queries() -> Vec<Query> {
         query!("tile-capacity", ["postgres"]),
         query!("tile-demand", ["postgres"]),
         query!("tile-recovery", ["recovery-results"]),
+        query!("tile-change", ["postgres", "plan-results"]),
         query!("tile-action", ["plan-results", "resilience-results"]),
         query!("tile-resilience", ["resilience-results"]),
         query!("tile-running", ["postgres", "policy-results"]),
@@ -127,6 +137,18 @@ fn queries() -> Vec<Query> {
         query!("approval-events", ["postgres"]),
         query!("plan-events", ["plan-results"]),
         query!("recovery-scores", ["postgres"]),
+        // Incident cards (contracts.md section 15): helper rows the cards read...
+        query!("incident-overdue-count", ["postgres"], "SupportOverdue"),
+        query!("incident-deployments", ["postgres"], "DeploymentFacts"),
+        query!("incident-policy", ["postgres", "policy-results"], "PolicyFacts"),
+        // ...and one event query per card. Each row is one card: it appears once per event.
+        query!("incident-failed", ["postgres"]),
+        query!("incident-overdue", ["postgres", "incident-overdue-count"]),
+        query!("incident-proposal", ["postgres", "plan-results", "incident-deployments", "incident-policy"]),
+        query!("incident-superseded", ["postgres", "plan-results"]),
+        query!("incident-outcome", ["postgres"]),
+        query!("incident-at-risk", ["postgres", "plan-results", "resilience-results"]),
+        query!("incident-restored", ["postgres", "plan-results", "resilience-results"]),
     ]
 }
 
@@ -150,6 +172,7 @@ const TILES: &[(&str, &str)] = &[
     ("capacity", "tile-capacity"),
     ("demand", "tile-demand"),
     ("recovery", "tile-recovery"),
+    ("change", "tile-change"),
     ("action", "tile-action"),
     ("resilience", "tile-resilience"),
     ("running", "tile-running"),
@@ -175,7 +198,96 @@ const REACTIONS: &[(&str, &[(&str, &str)])] = &[
         &[("approval-events", "approval-events"), ("plan-events", "plan-events")],
     ),
     ("langfuse-scores", &[("scores", "recovery-scores")]),
+    (
+        "incident-channel",
+        &[
+            ("failed", "incident-failed"),
+            ("overdue", "incident-overdue"),
+            ("proposal", "incident-proposal"),
+            ("superseded", "incident-superseded"),
+            ("outcome", "incident-outcome"),
+            ("at-risk", "incident-at-risk"),
+            ("restored", "incident-restored"),
+        ],
+    ),
 ];
+
+/// Card colours (contracts.md section 15).
+const RED: &str = "#d44a3a";
+const ORANGE: &str = "#f2a33a";
+const GREEN: &str = "#2fa66a";
+const GREY: &str = "#9aa4b0";
+
+/// One attachment field: (title, column, short). A title starting with `{{` is a template.
+fn fields(list: &[(&str, &str, bool)]) -> String {
+    list.iter()
+        .map(|(title, column, short)| {
+            let title = if title.starts_with("{{") { title.to_string() } else { json!(title).to_string() };
+            format!(r#"{{"title":{title},"value":{{{{json after.{column}}}}},"short":{short}}}"#)
+        })
+        .collect::<Vec<_>>()
+        .join(",")
+}
+
+/// The body of `POST /api/v4/posts` for one card. Every string comes from the query;
+/// the template only places it (`{{json …}}`).
+fn card(channel: &str, card: &str, query: &str, color: &str, fields: &str, actions: &str) -> String {
+    let color = if color.starts_with("{{") { color.to_string() } else { json!(color).to_string() };
+    let actions = if actions.is_empty() { String::new() } else { format!(r#","actions":{actions}"#) };
+    format!(
+        r#"{{"channel_id":{channel},"root_id":{{{{json after.root_id}}}},"message":"","props":{{"ignite_card":{card},"ignite_id":{{{{json after.id}}}},"ignite_run_epoch":{{{{json after.run_epoch}}}},"attachments":[{{"fallback":{{{{json after.title}}}},"color":{color},"title":{{{{json after.title}}}},"text":{{{{json after.text}}}},"fields":[{fields}],"footer":{footer}{actions}}}]}}}}"#,
+        channel = json!(channel),
+        card = json!(card),
+        footer = json!(format!("Drasi · {query}")),
+    )
+}
+
+/// The proposal card's Approve and Reject buttons: Mattermost calls the AI service's
+/// action endpoint from its container (contracts.md section 14).
+fn proposal_actions(url: &str) -> String {
+    let button = |id: &str, name: &str, style: &str, action: &str| {
+        format!(
+            r#"{{"id":{id},"name":{name},"type":"button","style":{style},"integration":{{"url":{url},"context":{{"action":{action},"candidate_id":{{{{json after.candidate_id}}}},"basis":{{{{json after.basis}}}},"revision":{{{{json after.revision}}}},"run_epoch":{{{{json after.run_epoch}}}},"change":{{{{json after.change}}}}}}}}}}"#,
+            id = json!(id), name = json!(name), style = json!(style), url = json!(url), action = json!(action),
+        )
+    };
+    format!("[{},{}]", button("approve", "Approve", "primary", "approve"), button("decline", "Reject", "danger", "decline"))
+}
+
+/// The `incident-channel` routes: every card is `added` → `POST /api/v4/posts`.
+fn incident_routes(channel: &str, grafana_port: u16, workload_port: u16) -> Value {
+    let dashboard = format!("[Operations › Support overdue](http://localhost:{grafana_port}/d/ignite-workload)");
+    let actions = proposal_actions(&format!("http://host.containers.internal:{workload_port}/mattermost/actions"));
+    json!({
+        "failed":http_route("POST", "/api/v4/posts", &card(channel, "failed", "incident-failed", RED,
+            &fields(&[("Region", "region", true), ("Capacity", "capacity", true), ("Runs here", "runs", true)]), ""), false),
+        "overdue":http_route("POST", "/api/v4/posts", &card(channel, "overdue", "incident-overdue", RED,
+            &(fields(&[("Overdue when posted", "overdue", true), ("Deadline", "deadline", true)])
+                + &format!(r#",{{"title":"Dashboard","value":{},"short":true}}"#,
+                    json!(dashboard))), ""), false),
+        "proposal":http_route("POST", "/api/v4/posts", &card(channel, "proposal", "incident-proposal", ORANGE,
+            &fields(&[("Why", "why", true), ("Peak use after", "peak", true), ("Policy", "policy", false),
+                ("Capacity", "capacity", false), ("Based on", "based_on", true)]),
+            &actions), false),
+        "superseded":http_route("POST", "/api/v4/posts", &card(channel, "superseded", "incident-superseded", GREY,
+            &fields(&[("Was", "was", false), ("Now", "now", false)]), ""), false),
+        "outcome":http_route("POST", "/api/v4/posts", &card(channel, "outcome", "incident-outcome", "{{json after.color}}",
+            &fields(&[("Approved by", "approved_by", true), ("{{json after.detail_title}}", "detail", false)]), ""), false),
+        "at-risk":http_route("POST", "/api/v4/posts", &card(channel, "at-risk", "incident-at-risk", ORANGE,
+            &fields(&[("Would fail", "lost", true), ("Affects", "affects", true)]), ""), false),
+        "restored":http_route("POST", "/api/v4/posts", &card(channel, "restored", "incident-restored", GREEN,
+            &fields(&[]), ""), false),
+    })
+}
+
+/// IDs the Mattermost bootstrap wrote (`ops/mattermost.py`), read when the configuration is generated.
+fn mattermost_channel() -> Result<String> {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.native/mattermost.json");
+    let text = std::fs::read_to_string(&path)
+        .with_context(|| format!("read {} (run ./ops/observability-stack.sh up first)", path.display()))?;
+    let ids: Value = serde_json::from_str(&text)?;
+    Ok(ids["channel_id"].as_str().context("channel_id in mattermost.json")?.to_string())
+}
 
 // Shared by the live source and its bootstrap provider so they bind one slot.
 // Database and user are fixed by compose.yaml and ops/observability-env.py;
@@ -481,10 +593,13 @@ fn main() -> Result<()> {
         .insert("output_snapshots".into(), vec![resource("desk-stream-snapshots")?]);
     builder = builder.component(ComponentName::try_new("desk-stream")?, specification, factory);
 
-    // HTTP reactions: the gateway configuration API, Grafana annotations, Langfuse scores.
+    // HTTP reactions: the gateway configuration API, Grafana annotations, Langfuse scores,
+    // and the incident cards in Mattermost's #incident-ai-support.
     let workload = settings.url("WORKLOAD")?;
     let grafana = format!("http://127.0.0.1:{}", settings.port("GRAFANA")?);
     let langfuse = format!("http://127.0.0.1:{}", settings.port("LANGFUSE")?);
+    let mattermost = format!("http://127.0.0.1:{}", settings.port("MATTERMOST")?);
+    let channel = mattermost_channel()?;
     let annotation = r#"{"time":{{after.at_ms}},"tags":["ignite-decision","{{after.id}}"],"text":{{json after.text}}}"#;
     let plan_annotation = r#"{"tags":["ignite-decision","{{after.id}}"],"text":{{json after.text}}}"#;
     let reaction_configs: BTreeMap<&str, (Value, Vec<(&str, ConfigurationValue)>)> = BTreeMap::from([
@@ -511,11 +626,18 @@ fn main() -> Result<()> {
                     r#"{"id":{{json after.id}},"traceId":{{json after.trace_id}},"name":"drasi_recovery","value":1,"dataType":"NUMERIC","comment":{{json after.comment}}}"#, false),
             }},
         }), vec![("secretHeaders", reference("env-json:IGNITE_LANGFUSE_HEADERS")?)])),
+        ("incident-channel", (json!({
+            "baseUrl":mattermost, "failurePolicy":"skip", "maxRetries":3, "timeoutMs":5000,
+            "successStatusCodes":[201],
+            "outputTemplates":{"routes":incident_routes(&channel, settings.port("GRAFANA")?, settings.port("WORKLOAD")?)},
+        }), vec![("token", reference("env:IGNITE_MATTERMOST_BOT_TOKEN")?)])),
     ]);
     let sink_factory = find_factory(&http_sink, "drasi.network/http-sink")?;
     for (name, aliases) in REACTIONS {
         let (mut configuration, secrets) = reaction_configs[name].clone();
-        configuration["successStatusCodes"] = json!([200]);
+        if configuration.get("successStatusCodes").is_none() {
+            configuration["successStatusCodes"] = json!([200]);
+        }
         // Each route lists the operations it acts on; other changes send nothing.
         configuration["unroutedChanges"] = json!("ignore");
         configuration["outputs"] = Value::Object(
@@ -615,3 +737,148 @@ fn main() -> Result<()> {
     );
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Renders the sink's `{{json after.x}}` placeholders, the only helper the card templates use.
+    fn render(template: &str, row: &Value) -> Value {
+        let mut out = String::new();
+        let mut rest = template;
+        while let Some(start) = rest.find("{{") {
+            out.push_str(&rest[..start]);
+            let end = rest[start..].find("}}").expect("closed placeholder") + start;
+            let column = rest[start + 2..end]
+                .strip_prefix("json after.")
+                .unwrap_or_else(|| panic!("only {{{{json after.…}}}} is used: {}", &rest[start..end + 2]));
+            out.push_str(&row.get(column).unwrap_or_else(|| panic!("no column {column}")).to_string());
+            rest = &rest[end + 2..];
+        }
+        out.push_str(rest);
+        serde_json::from_str(&out).expect("a card renders to JSON")
+    }
+
+    fn row(extra: Value) -> Value {
+        let mut row = json!({"id":"card-1","run_epoch":"run-1","root_id":"","title":"Title","text":"Text."});
+        for (k, v) in extra.as_object().unwrap() {
+            row[k] = v.clone();
+        }
+        row
+    }
+
+    fn cards() -> Value {
+        incident_routes("channel-1", 14000, 19500)
+    }
+
+    fn attachment(card: &str, extra: Value) -> (Value, Value) {
+        let route = &cards()[card]["added"];
+        assert_eq!(route["method"], "POST");
+        assert_eq!(route["url"], "/api/v4/posts");
+        let body = render(route["template"].as_str().unwrap(), &row(extra));
+        let attachment = body["props"]["attachments"][0].clone();
+        (body, attachment)
+    }
+
+    fn field_titles(attachment: &Value) -> Vec<String> {
+        attachment["fields"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|f| f["title"].as_str().unwrap().to_string())
+            .collect()
+    }
+
+    #[test]
+    fn every_card_is_a_post_in_the_channel_with_its_query_footer() {
+        for (alias, query) in REACTIONS.iter().find(|(name, _)| *name == "incident-channel").unwrap().1 {
+            let route = &cards()[alias];
+            assert!(route.get("updated").is_none() && route.get("deleted").is_none(), "{alias}: only additions post");
+            let template = route["added"]["template"].as_str().unwrap();
+            let text = queries().into_iter().find(|q| q.name == *query).unwrap().text;
+            for column in template.split("{{json after.").skip(1).map(|r| r.split("}}").next().unwrap()) {
+                assert!(
+                    text.contains(&format!(" AS {column}")) || text.contains(&format!(" {column},")) || text.contains(&format!(" {column}\n")) || text.trim_end().ends_with(column),
+                    "{query} returns no column {column}"
+                );
+            }
+            let row = row(json!({"region":"EU","capacity":"100k tokens/min","runs":"support","overdue":"3","deadline":"15 s",
+                "why":"EU-A is down","peak":"80%","policy":"p","based_on":"revision 1 · plan c","candidate_id":"c","basis":"b",
+                "revision":1,"change":"Move summaries to US-C","was":"w","now":"n","color":"#2fa66a","approved_by":"@oncall",
+                "detail_title":"Change","detail":"d","lost":"EU-B","affects":"support"}));
+            let body = render(template, &row);
+            assert_eq!(body["channel_id"], "channel-1");
+            assert_eq!(body["message"], "");
+            assert_eq!(body["props"]["ignite_card"], *alias);
+            assert_eq!(body["props"]["ignite_id"], "card-1");
+            assert_eq!(body["props"]["ignite_run_epoch"], "run-1");
+            let attachment = &body["props"]["attachments"][0];
+            assert_eq!(attachment["fallback"], "Title");
+            assert_eq!(attachment["title"], "Title");
+            assert_eq!(attachment["text"], "Text.");
+            assert_eq!(attachment["footer"], format!("Drasi · {query}"));
+        }
+    }
+
+    #[test]
+    fn cards_have_the_contract_colours_and_fields() {
+        let (_, a) = attachment("failed", json!({"region":"EU","capacity":"100k tokens/min","runs":"support"}));
+        assert_eq!((a["color"].as_str().unwrap(), field_titles(&a)), (RED, vec!["Region".into(), "Capacity".into(), "Runs here".into()]));
+        assert_eq!(a["fields"][2], json!({"title":"Runs here","value":"support","short":true}));
+        let (_, a) = attachment("overdue", json!({"overdue":"3","deadline":"15 s"}));
+        assert_eq!(a["color"], RED);
+        assert_eq!(field_titles(&a), ["Overdue when posted", "Deadline", "Dashboard"]);
+        assert_eq!(a["fields"][2]["value"], "[Operations › Support overdue](http://localhost:14000/d/ignite-workload)");
+        let (_, a) = attachment("superseded", json!({"was":"Move summaries to US-C","now":"No valid plan"}));
+        assert_eq!((a["color"].as_str().unwrap(), field_titles(&a)), (GREY, vec!["Was".into(), "Now".into()]));
+        assert_eq!(a["fields"][0]["short"], false);
+        let (_, a) = attachment("at-risk", json!({"lost":"EU-B","affects":"support"}));
+        assert_eq!((a["color"].as_str().unwrap(), field_titles(&a)), (ORANGE, vec!["Would fail".into(), "Affects".into()]));
+        let (_, a) = attachment("restored", json!({}));
+        assert_eq!((a["color"].as_str().unwrap(), a["fields"].clone()), (GREEN, json!([])));
+        assert!(a.get("actions").is_none());
+    }
+
+    #[test]
+    fn outcomes_reply_in_the_approved_cards_thread() {
+        let (body, a) = attachment("outcome", json!({"root_id":"post-7","color":"#3d8bd9","approved_by":"@oncall",
+            "detail_title":"Routes","detail":"support → EU-B · summaries → US-C"}));
+        assert_eq!(body["root_id"], "post-7");
+        assert_eq!(a["color"], "#3d8bd9");
+        assert_eq!(a["fields"], json!([{"title":"Approved by","value":"@oncall","short":true},
+            {"title":"Routes","value":"support → EU-B · summaries → US-C","short":false}]));
+    }
+
+    #[test]
+    fn the_proposal_card_has_approve_and_reject_buttons_for_its_plan() {
+        let (body, a) = attachment("proposal", json!({"why":"EU-A is down","peak":"80%","policy":"p","capacity":"c",
+            "based_on":"revision 7 · plan abcdef12","candidate_id":"cand","basis":"bas","revision":7,
+            "change":"Move summaries to US-C and support to EU-B"}));
+        assert_eq!(body["root_id"], "");
+        assert_eq!(a["color"], ORANGE);
+        assert_eq!(field_titles(&a), ["Why", "Peak use after", "Policy", "Capacity", "Based on"]);
+        let shorts: Vec<bool> = a["fields"].as_array().unwrap().iter().map(|f| f["short"].as_bool().unwrap()).collect();
+        assert_eq!(shorts, [true, true, false, false, true]);
+        let context = json!({"candidate_id":"cand","basis":"bas","revision":7,"run_epoch":"run-1",
+            "change":"Move summaries to US-C and support to EU-B"});
+        for (i, (id, name, style)) in [("approve", "Approve", "primary"), ("decline", "Reject", "danger")].into_iter().enumerate() {
+            let button = &a["actions"][i];
+            assert_eq!((button["id"].as_str(), button["name"].as_str(), button["type"].as_str(), button["style"].as_str()),
+                (Some(id), Some(name), Some("button"), Some(style)));
+            assert_eq!(button["integration"]["url"], "http://host.containers.internal:19500/mattermost/actions");
+            let mut expected = context.clone();
+            expected["action"] = json!(id);
+            assert_eq!(button["integration"]["context"], expected);
+        }
+    }
+
+    #[test]
+    fn card_queries_and_their_helpers_use_declared_joins() {
+        for query in queries().iter().filter(|q| q.name.starts_with("incident-")) {
+            joins(query.text).unwrap_or_else(|e| panic!("{}: {e}", query.name));
+        }
+    }
+}
+
+#[cfg(test)]
+mod incident_tests;

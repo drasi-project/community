@@ -34,11 +34,13 @@ simulated.
    produces the **plan** and the **what-if** (is there still a plan if any one
    healthy deployment fails?). Further queries turn the results into one answer
    per Grafana tile, decide whether a pending approval still matches the current
-   plan, and decide whether recovery is verified.
+   plan, and decide whether recovery is verified. Seven event queries
+   (`drasi/incident-*.cypher`) turn changes into incident cards: one row per card.
 3. Drasi's **reactions** deliver the answers: a Prometheus endpoint that
    Prometheus scrapes for Grafana's tiles and alert; HTTP calls to the gateway
    configuration API (apply, reject, verified), Grafana's annotations API and
-   Langfuse's scores API; and an SSE stream for the presenter desk.
+   Langfuse's scores API; an SSE stream for the presenter desk; and the
+   incident cards, posted to Mattermost's REST API as the `drasi` bot.
 4. The AI service also sends its own **telemetry** through the OpenTelemetry
    Collector to Prometheus (metrics) and Langfuse (traces). **Grafana** shows
    both and raises the alerts, which also post to **Mattermost**'s
@@ -85,7 +87,7 @@ All paths are under `demo/` unless noted.
 | `plugins/optimizer` | Plan and what-if models, `ignite/assignment-plan` and `ignite/assignment-resilience` (crate `ignite-optimizer`, `good_lp` with `microlp`) |
 | `plugins/prometheus` | Prometheus reaction, `ignite/prometheus-exporter` (crate `ignite-prometheus`) |
 | `plugins/*/examples/ignite.json` | Each plugin's configuration in this graph |
-| `drasi/*.cypher` | The 34 continuous queries |
+| `drasi/*.cypher` | The 45 continuous queries; `incident-*` build the incident cards |
 | `ops/config/` | Generates Drasi Server's configuration (`.native/server.json`): every source, query, model, reaction and connection |
 | `database/` | PostgreSQL schema (`schema.sql`, `workload.sql`) and scenario seed (`reset.sql`) |
 | `observability/` | Container configuration: Collector, Prometheus, Grafana dashboards, alerts and data source, and an integration test probe |
@@ -175,6 +177,7 @@ only the one you changed, then reload the desk.
 |---|---|---|
 | A continuous query | `drasi/<name>.cypher` | Rebuild; restart Server |
 | Which components exist or how they connect | `ops/config/src/main.rs` | Rebuild; restart Server |
+| An incident card's text or trigger | `drasi/incident-<card>.cypher` (every string is built there); its colour, field titles and buttons are `incident_routes` in `ops/config/src/main.rs` | `cargo test --locked -p ignite-config`; rebuild; restart Server |
 | Policy rules | `plugins/policy/ignite.rego` | Rebuild; restart Server |
 | The optimizer's inputs, constraints or objective | `plugins/optimizer/examples/ignite.json` | Rebuild; restart Server |
 | Which tile rows become which metrics | `plugins/prometheus/examples/ignite.json` (and Grafana, below) | Rebuild; restart Server |
@@ -218,7 +221,7 @@ drasi-core or drasi-server.
 | Prometheus reaction | `cargo build --locked -p ignite-prometheus --lib --features ignite-prometheus/dynamic-plugin` | `cargo test --locked -p ignite-prometheus --lib` |
 | AI service | `cargo build --locked -p ignite-workloads` | `cargo test --locked -p ignite-workloads`; its database tests reset this copy's scenario and are ignored by default: `cargo test --locked -p ignite-workloads -- --ignored --test-threads=1` |
 | Settings | | `cargo test --locked -p ignite-settings --lib` |
-| Config generator | `cargo check --locked -p ignite-config` | `./ops/native-build.sh` runs it and `drasi-server validate` on its output |
+| Config generator and incident cards | `cargo check --locked -p ignite-config` | `cargo test --locked -p ignite-config`: the card templates render to the contract's Mattermost posts, and every `incident-*` query runs through drasi-core with a test clock (debounce, one card per event, the 60 s window, nothing after a restart or a reset). `./ops/native-build.sh` runs the generator and `drasi-server validate` on its output |
 
 Each plugin keeps its logic in plain modules with host-free tests (Rego
 evaluation, the solver, the Prometheus text format) and has one SDK-level test of
@@ -242,6 +245,7 @@ query results), never from the AI service.
 | `python3 tests/workload-telemetry.py` | The application's metrics and Langfuse traces, Drasi's overdue metric, and Grafana's alerts on both | Yes |
 | `python3 tests/decision-integration.py` | Policy, plan and what-if | Yes |
 | `python3 tests/mattermost-actions.py` | Mattermost's card buttons reach the approval tool (approve, reject, an earlier run's card), the desk's backup press, the projector sign-in | Yes: adds approvals Drasi rejects (made-up plans); deletes its cards |
+| `python3 tests/incident-channel-integration.py` | Drasi's incident cards in #incident-ai-support through the talk: failure, proposal, overdue, Out of date and the rejected stale approval, approve → Applied → Verified in the card's thread, at risk, restored; each posted once | Yes; resets at the start and the end (clears the channel) |
 | `python3 tests/recovery-integration.py` | Approval checked by Drasi, routes changed by its gateway reaction, stale rejection, verified recovery, annotations and scores | Yes |
 | `node ui/scripts/walkthrough.mjs capture <folder>` | The whole talk through the desk, beat by beat, as a presenter would; saves the projector and the desk at every beat (about 12 minutes) | Yes; resets at the start and the end |
 | `node ui/scripts/walkthrough.mjs record` | The same, and re-records the four fallback recordings at 1920×1080 (16:9) | Yes; resets at the start and the end |
@@ -292,14 +296,16 @@ here, except where [Known issues](#known-issues) says so.
 | Issue | Effect | Status |
 |---|---|---|
 | A query fed by another query receives only that query's changes, not its bootstrap rows | Query-to-query edges are used only where the upstream's rows arrive live after startup: the models' results and the recovery chain (`recovery-task-context` and `recovery-observation-context` → `recovery-results`, a workaround: it should bootstrap from their snapshots). Tiles over rows that rarely change read PostgreSQL directly instead of an upstream query: `tile-capacity` joins the deployment and report tables itself rather than reading `plan-bins`. These queries rebuild only when the whole graph starts, so restart all of Server, never one query | Open. Queries now have a `snapshot` output; try bootstrap edges from upstream queries in `ops/config/src/main.rs` |
-| Drasi Server's API lists no reactions (`GET …/instances/ignite/reactions` is empty) | The Server UI shows the queries and sources but none of the five native sinks; see `.native/server.json` | Drasi Server issue, not yet filed |
+| Drasi Server's API lists no reactions (`GET …/instances/ignite/reactions` is empty) | The Server UI shows the queries and sources but none of the six native sinks; see `.native/server.json` | Drasi Server issue, not yet filed |
 | Drasi Server UI requests component details by ID, but the API now expects names | The UI shows no query text or configuration | Drasi Server issue, not yet filed |
 | Drasi Server's expanded query view uses 14 px text | Too small to read on a projector; use browser zoom | Drasi Server issue, not yet filed |
 | Grafana's annotations API has no idempotency key | A retried post whose response was lost, or a Server restart within 30 s of an approval event, can add the same decision event twice (same tag) | Accepted for the demo |
 | A macOS linker release leaves some plugin libraries unloadable ("mis-aligned LINKEDIT string pool") | `ops/macho-align.py` repairs them during the build | Apple toolchain bug |
 | The fallback recordings are long (failure about 2 minutes, recovery about 4) | The presenter talks over a lot of footage in recording mode | Open; trim with a video tool, or shorten the waits in `ui/scripts/walkthrough.mjs` and re-record |
 | Retries have no limit | A deployment left failed or throttled for hours creates tens of thousands of attempts; a reset can exceed Drasi's 64 MB message limit, and Server startup slows to minutes | Open; avoid leaving faults on. A reset followed by a restart clears it, because startup deletes earlier runs' rows |
-| Each of the 21 queries that read PostgreSQL snapshots the tables in turn at startup | Startup time grows with the current tables: about 20 seconds after a reset, minutes with a long run's history | `ops/native-runtime.py run` deletes earlier runs' rows first, and the instance's activation timeout is 20 minutes |
+| Incident cards are posted, not updated | Mattermost assigns post IDs and the sink ignores responses, so only approval outcomes can reply in a thread (the approval records the card's post ID). A retried post whose response was lost, or a Server restart within 60 s of an approval outcome, can post a card twice. A state standing at a restart (EU-A already failed, a proposal) is not posted again; the next change is | Accepted for the demo |
+| The incident card queries name the two workloads | `incident-policy` and the failure and outcome cards read the `support` and `batch` rows by name (`batch` is written "summaries"); sorted lists assume at most three items | Accepted for the demo; a third workload needs those queries extended |
+| Each of the 32 queries that read PostgreSQL snapshots the tables in turn at startup | Startup time grows with the current tables: about 20 seconds after a reset, minutes with a long run's history | `ops/native-runtime.py run` deletes earlier runs' rows first, and the instance's activation timeout is 20 minutes |
 
 ## Data and safety
 
