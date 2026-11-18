@@ -12,18 +12,19 @@ use drasi_functions_cypher::CypherFunctionSet;
 use drasi_query_cypher::CypherParser;
 use serde_json::{json, Value};
 
-use super::{queries, JOINS};
+use super::{queries, Health, HEALTH, HEALTH_LABEL, JOINS};
 
-async fn build(name: &str) -> ContinuousQuery {
-    let text = queries().into_iter().find(|q| q.name == name).expect("query").text;
+/// `name` as the generator configures it for `health`: its text and its join labels.
+async fn build_in(name: &str, health: Health) -> ContinuousQuery {
+    let text = queries(health).into_iter().find(|q| q.name == name).expect("query").text.into_owned();
     let registry = Arc::new(FunctionRegistry::new()).with_cypher_function_set();
     let joins = JOINS
         .iter()
         .map(|(id, (l1, p1), (l2, p2))| QueryJoin {
             id: id.to_string(),
             keys: vec![
-                QueryJoinKey { label: l1.to_string(), property: p1.to_string() },
-                QueryJoinKey { label: l2.to_string(), property: p2.to_string() },
+                QueryJoinKey { label: health.label(l1).to_string(), property: p1.to_string() },
+                QueryJoinKey { label: health.label(l2).to_string(), property: p2.to_string() },
             ],
         })
         .collect();
@@ -39,6 +40,7 @@ async fn build(name: &str) -> ContinuousQuery {
 /// helper query's rows in, as a query-to-query edge does (changes only, no bootstrap).
 struct Sim {
     name: &'static str,
+    health: Health,
     query: ContinuousQuery,
     now: u64,
     store: BTreeMap<(String, String), Value>,
@@ -49,7 +51,17 @@ struct Sim {
 
 impl Sim {
     async fn new(name: &'static str) -> Self {
-        Sim { name, query: build(name).await, now: 0, store: BTreeMap::new(), added: vec![], upstream: None, forwarded: vec![] }
+        Sim::new_in(name, Health::Postgres).await
+    }
+    async fn new_in(name: &'static str, health: Health) -> Self {
+        let query = build_in(name, health).await;
+        Sim { name, health, query, now: 0, store: BTreeMap::new(), added: vec![], upstream: None, forwarded: vec![] }
+    }
+    /// `name` reading deployment health from telemetry, fed by `deployment-health`.
+    async fn from_telemetry(name: &'static str) -> Self {
+        let mut sim = Sim::new_in(name, Health::Otel).await;
+        sim.upstream = Some((Box::new(Sim::new_in(HEALTH, Health::Otel).await), HEALTH_LABEL));
+        sim
     }
     async fn with_upstream(name: &'static str, upstream: &'static str, label: &'static str) -> Self {
         let mut sim = Sim::new(name).await;
@@ -107,7 +119,20 @@ impl Sim {
                     merged[k] = v.clone();
                 }
                 let existed = self.store.insert(key, merged.clone()).is_some();
-                let element = Element::Node { metadata, properties: ElementPropertyMap::from(merged) };
+                // `__from`/`__to` (label:id of the end nodes) make a relation.
+                let element = match (merged["__from"].as_str(), merged["__to"].as_str()) {
+                    (Some(from), Some(to)) => {
+                        let mut properties = merged.clone();
+                        properties.as_object_mut().unwrap().retain(|k, _| !k.starts_with("__"));
+                        Element::Relation {
+                            metadata,
+                            in_node: ElementReference::new("pg", from),
+                            out_node: ElementReference::new("pg", to),
+                            properties: ElementPropertyMap::from(properties),
+                        }
+                    }
+                    _ => Element::Node { metadata, properties: ElementPropertyMap::from(merged) },
+                };
                 if existed {
                     SourceChange::Update { element, removed_properties: Default::default() }
                 } else {
@@ -145,16 +170,19 @@ impl Sim {
     }
     /// A Server restart: every query starts again from the tables; model and helper
     /// results arrive again only as they change.
+    /// The OTel source's state is volatile: after a restart its elements return only as
+    /// the next probes arrive.
     async fn restart(&mut self) {
+        let volatile = |label: &str| ["Service", "Metric", "REPORTS"].contains(&label);
         let tables: Vec<_> = self.store.iter().filter(|((l, _), _)| l.starts_with("ignite_")).map(|(k, v)| (k.clone(), v.clone())).collect();
-        let models: Vec<_> = self.store.iter().filter(|((l, _), _)| !l.starts_with("ignite_")).map(|(k, v)| (k.clone(), v.clone())).collect();
+        let models: Vec<_> = self.store.iter().filter(|((l, _), _)| !l.starts_with("ignite_") && !volatile(l)).map(|(k, v)| (k.clone(), v.clone())).collect();
         let label = self.upstream.as_ref().map(|(_, l)| *l);
-        self.query = build(self.name).await;
+        self.query = build_in(self.name, self.health).await;
         self.store.clear();
         if let Some((up, _)) = self.upstream.as_mut() {
-            up.query = build(up.name).await;
+            up.query = build_in(up.name, up.health).await;
             let upstore = std::mem::take(&mut up.store);
-            for ((l, id), v) in upstore {
+            for ((l, id), v) in upstore.into_iter().filter(|((l, _), _)| !volatile(l)) {
                 up.change(&l, &id, Some(v)).await;
             }
             up.forwarded.clear();
@@ -165,6 +193,17 @@ impl Sim {
         for ((l, id), v) in models.into_iter().filter(|((l, _), _)| Some(l.as_str()) != label) {
             self.change(&l, &id, Some(v)).await;
         }
+    }
+    /// The query's current rows, from the changes it emitted.
+    fn rows(&self) -> Vec<Value> {
+        let mut rows = BTreeMap::new();
+        for (_, signature, row) in &self.forwarded {
+            match row {
+                Some(row) => rows.insert(*signature, row.clone()),
+                None => rows.remove(signature),
+            };
+        }
+        rows.into_values().collect()
     }
     fn cards(&self) -> Vec<(u64, String)> {
         self.added.iter().map(|(t, row)| (*t, row["id"].as_str().unwrap().to_string())).collect()
@@ -209,8 +248,27 @@ impl World {
         for (id, status) in statuses {
             self.sequence += 1;
             let now = self.sim.now;
+            if self.sim.health == Health::Otel {
+                self.probe(id, status, now).await;
+                continue;
+            }
             let props = json!({"id":id,"run_epoch":self.run,"observed_ms":now,"expires_ms":now + 8000,"status":status,"sequence":self.sequence});
             self.put("ignite_reports", id, props).await;
+        }
+    }
+    /// One health probe as Drasi's OTel source projects it (drasi-core PR 1030, DESIGN.md):
+    /// the Service, its `ignite_probe_status` Metric per deployment and run, and REPORTS.
+    async fn probe(&mut self, deployment: &str, status: &str, now: u64) {
+        let service = "svc:ignite-workload";
+        let metric = format!("metric:{service}:ignite_probe_status:deployment={deployment},run_epoch={}", self.run);
+        let code = match status { "ok" => 0.0, "throttled" => 1.0, "failed" => 2.0, _ => 3.0 };
+        let at = iso(now);
+        self.put("Service", service, json!({"name":"ignite-workload","lastSeen":at})).await;
+        self.put("Metric", &metric, json!({"name":"ignite_probe_status","unit":"","value":code,"observedAt":at,"receivedAt":at})).await;
+        let reports = format!("reports:{metric}");
+        if !self.sim.store.contains_key(&("REPORTS".to_string(), reports.clone())) {
+            let ends = json!({"__from":format!("Service:{service}"),"__to":format!("Metric:{metric}")});
+            self.put("REPORTS", &reports, ends).await;
         }
     }
     /// Runs the clock to `t`, with a health report from every deployment each second.
@@ -242,6 +300,12 @@ impl World {
         self.run = "run-2".into();
         self.put("ignite_scenario", "singleton", json!({"run_epoch":"run-2","revision":1})).await;
     }
+}
+
+/// RFC 3339 for a test clock in milliseconds since the epoch (under a day).
+fn iso(ms: u64) -> String {
+    let s = ms / 1000;
+    format!("1970-01-01T{:02}:{:02}:{:02}.{:03}+00:00", s / 3600, s / 60 % 60, s % 60, ms % 1000)
 }
 
 fn ids(cards: &[(u64, String)]) -> Vec<(u64, &str)> {
@@ -473,4 +537,84 @@ async fn proposal_facts_are_sorted_and_complete() {
     let last = &w.sim.forwarded.last().unwrap().2.clone().unwrap();
     assert_eq!(last["policy"], "support: EU-A, EU-B (restricted data, EU only) · summaries: EU-A, EU-B, US-C");
     assert_eq!(last["needed"], "support 60k, summaries 80k");
+}
+
+/// Health from telemetry: the same timeline as `failed_card_once_per_failure_after_3_s_and_never_after_a_restart`
+/// with probes through Drasi's OTel source instead of `ignite_reports`, and the same cards.
+#[tokio::test]
+async fn failed_card_from_telemetry_is_the_failed_card_from_reports() {
+    let mut w = World::new(Sim::from_telemetry("incident-failed").await).await;
+    w.until(10500).await;
+    w.status.insert("EU-A", "failed");
+    w.tick().await;
+    w.until(20000).await;
+    w.status.insert("EU-A", "ok");
+    w.tick().await;
+    w.until(25000).await;
+    w.status.insert("EU-A", "failed");
+    w.tick().await;
+    w.until(27000).await;
+    w.status.insert("EU-A", "ok");
+    w.tick().await;
+    w.until(30000).await;
+    w.route("support", "EU-B").await;
+    w.route("batch", "US-C").await;
+    w.status.insert("EU-B", "failed");
+    w.tick().await;
+    w.until(40000).await;
+    w.sim.restart().await;
+    w.until(50000).await;
+    assert_eq!(ids(&w.sim.cards()), [(13500, "failed-EU-A-10000"), (33000, "failed-EU-B-30000")]);
+    assert_eq!(w.sim.added[0].1["text"], "EU-A has reported Failed for 3 seconds. Support runs there, so its requests are failing.");
+}
+
+fn statuses(sim: &Sim, column: &str) -> Vec<(String, Value)> {
+    let mut rows: Vec<_> = sim.rows().into_iter().map(|r| (r[column].as_str().unwrap().to_string(), r["status"].clone())).collect();
+    rows.sort_by(|a, b| a.0.cmp(&b.0));
+    rows
+}
+
+/// Healthy, Failed, Unknown after 8 s of silence, recovery, and a reset, from probes alone.
+#[tokio::test]
+async fn deployment_tile_from_telemetry_detects_failure_silence_and_recovery() {
+    let mut w = World::new(Sim::from_telemetry("tile-deployments").await).await;
+    w.until(5000).await;
+    assert_eq!(statuses(&w.sim, "deployment"), [("EU-A".into(), json!(0)), ("EU-B".into(), json!(0)), ("US-C".into(), json!(0))]);
+    w.status.insert("EU-A", "failed");
+    w.status.insert("US-C", "throttled");
+    w.tick().await;
+    w.until(7000).await;
+    assert_eq!(statuses(&w.sim, "deployment"), [("EU-A".into(), json!(2)), ("EU-B".into(), json!(0)), ("US-C".into(), json!(1))]);
+    // EU-B's reporting pauses: no probes, so Unknown (-1) once its last probe expires.
+    w.status.remove("EU-B");
+    w.until(14500).await;
+    assert_eq!(statuses(&w.sim, "deployment")[1], ("EU-B".into(), json!(0)), "within 8 s of its last probe");
+    w.until(16000).await;
+    assert_eq!(statuses(&w.sim, "deployment")[1], ("EU-B".into(), json!(-1)));
+    w.status.insert("EU-B", "ok");
+    w.status.insert("EU-A", "ok");
+    w.tick().await;
+    w.until(18000).await;
+    assert_eq!(statuses(&w.sim, "deployment")[..2], [("EU-A".into(), json!(0)), ("EU-B".into(), json!(0))]);
+    // A new run: the last run's probes no longer count; the new run's do.
+    w.reset().await;
+    w.put("ignite_deployments", "EU-A", json!({"run_epoch":"run-2"})).await;
+    w.until(20000).await;
+    let rows = statuses(&w.sim, "deployment");
+    assert_eq!(rows, [("EU-A".into(), json!(0))], "only EU-A belongs to run-2 here");
+}
+
+/// The planner's bins: status from telemetry, Unknown after silence.
+#[tokio::test]
+async fn plan_bins_from_telemetry() {
+    let mut w = World::new(Sim::from_telemetry("plan-bins").await).await;
+    w.until(3000).await;
+    w.status.insert("EU-A", "failed");
+    w.status.remove("US-C");
+    w.tick().await;
+    w.until(13000).await;
+    assert_eq!(
+        statuses(&w.sim, "id"),
+        [("EU-A".into(), json!("failed")), ("EU-B".into(), json!("ok")), ("US-C".into(), json!("unknown"))]
+    );
 }

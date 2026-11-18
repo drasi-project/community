@@ -33,6 +33,13 @@ for package in drasi-computation-source-postgres drasi-computation-bootstrap-pos
     cargo build --locked --manifest-path "$CORE/Cargo.toml" -p "$package" --lib --features "$package/dynamic-plugin"
     install_plugin "$CARGO_TARGET_DIR/debug/lib${package//-/_}.$extension"
 done
+# Drasi's native OpenTelemetry source (drasi-core PR 1030), once drasi-core has it. The
+# generator wires it only when IGNITE_HEALTH_SOURCE=otel (plan/otel-detection-plan.md).
+if [ -f "$CORE/components/computation-plugins/sources/otel/Cargo.toml" ]; then
+    package=drasi-computation-source-otel
+    cargo build --locked --manifest-path "$CORE/Cargo.toml" -p "$package" --lib --features "$package/dynamic-plugin"
+    install_plugin "$CARGO_TARGET_DIR/debug/lib${package//-/_}.$extension"
+fi
 # This demo's native plugins: Rego policy, good_lp optimizer (plan and resilience), Prometheus reaction.
 for package in ignite-policy ignite-optimizer ignite-prometheus; do
     cargo build --locked -p "$package" --lib --features "$package/dynamic-plugin"

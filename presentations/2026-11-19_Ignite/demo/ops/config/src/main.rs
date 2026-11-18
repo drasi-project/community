@@ -3,6 +3,8 @@
 //! (plan, resilience) → result queries → tile queries → Prometheus reaction, and the
 //! approval, recovery, annotation and score queries → HTTP reactions; the incident
 //! event queries → the `incident-channel` reaction posting cards to Mattermost.
+//! With IGNITE_HEALTH_SOURCE=otel, deployment health comes from the health probes instead:
+//! OTel source → `deployment-health` → the queries that read `ignite_reports` today.
 use anyhow::{Context, Result};
 use drasi_host_sdk::computation::{NativeBootstrapNodeFactory, NativeFactory, NativePlugin};
 use drasi_lib::computation::v1::*;
@@ -31,6 +33,46 @@ fn reference(key: &str) -> Result<ConfigurationValue> {
 }
 
 const PG: &str = "postgres";
+/// Drasi's native OpenTelemetry source (IGNITE_HEALTH_SOURCE=otel).
+const OTEL: &str = "otel";
+/// The query turning the health probes into report-shaped rows, and their label.
+const HEALTH: &str = "deployment-health";
+const HEALTH_LABEL: &str = "DeploymentHealth";
+
+/// Where Drasi learns deployment health (`IGNITE_HEALTH_SOURCE` in ports.env).
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum Health {
+    /// `ignite_reports` rows the health monitor writes, through the PostgreSQL source.
+    Postgres,
+    /// The health monitor's probe metrics, through the Collector and the OTel source.
+    Otel,
+}
+
+impl Health {
+    fn from_settings() -> Result<Self> {
+        // A settings file without the key predates the switch: PostgreSQL.
+        match ignite_settings::get().get("IGNITE_HEALTH_SOURCE") {
+            Err(_) | Ok("postgres") => Ok(Health::Postgres),
+            Ok("otel") => Ok(Health::Otel),
+            Ok(other) => anyhow::bail!("IGNITE_HEALTH_SOURCE must be postgres or otel, not {other:?}"),
+        }
+    }
+    /// The PostgreSQL tables the source replicates: not `ignite_reports` when health comes
+    /// from telemetry, so no health reaches Drasi through PostgreSQL.
+    fn tables(self) -> Vec<&'static str> {
+        TABLES
+            .into_iter()
+            .filter(|table| self == Health::Postgres || *table != "ignite_reports")
+            .collect()
+    }
+    /// A synthetic relationship's label as the queries see it in this mode.
+    fn label(self, label: &'static str) -> &'static str {
+        match (self, label) {
+            (Health::Otel, "ignite_reports") => HEALTH_LABEL,
+            _ => label,
+        }
+    }
+}
 const TABLES: [&str; 9] = [
     "ignite_scenario",
     "ignite_workloads",
@@ -72,9 +114,9 @@ const JOINS: &[(&str, (&str, &str), (&str, &str))] = &[
 
 struct Query {
     name: &'static str,
-    text: &'static str,
+    text: std::borrow::Cow<'static, str>,
     /// Upstream components feeding `in`; `postgres` also bootstraps the query.
-    inputs: &'static [&'static str],
+    inputs: Vec<&'static str>,
     /// Label of this query's result rows as seen by downstream queries.
     label: Option<&'static str>,
 }
@@ -83,14 +125,30 @@ macro_rules! query {
     ($name:literal, [$($input:literal),*] $(, $label:literal)?) => {
         Query {
             name: $name,
-            text: include_str!(concat!("../../../drasi/", $name, ".cypher")),
-            inputs: &[$($input),*],
+            text: std::borrow::Cow::Borrowed(include_str!(concat!("../../../drasi/", $name, ".cypher"))),
+            inputs: vec![$($input),*],
             label: { #[allow(unused_mut, unused_assignments)] let mut label = None; $(label = Some($label);)? label },
         }
     };
 }
 
-fn queries() -> Vec<Query> {
+/// The queries for `health`. From telemetry, `deployment-health` turns the probes into rows
+/// shaped like `ignite_reports`, and every query reading reports reads those rows instead.
+fn queries(health: Health) -> Vec<Query> {
+    let mut queries = all_queries();
+    if health == Health::Otel {
+        for query in &mut queries {
+            if query.text.contains("ignite_reports") {
+                query.text = query.text.replace("ignite_reports", HEALTH_LABEL).into();
+                query.inputs.push(HEALTH);
+            }
+        }
+        queries.insert(0, query!("deployment-health", ["otel"], "DeploymentHealth"));
+    }
+    queries
+}
+
+fn all_queries() -> Vec<Query> {
     vec![
         // Context queries over the scenario tables: the plugins' inputs.
         query!("policy-workloads", ["postgres"]),
@@ -292,24 +350,27 @@ fn mattermost_channel() -> Result<String> {
 // Shared by the live source and its bootstrap provider so they bind one slot.
 // Database and user are fixed by compose.yaml and ops/observability-env.py;
 // port, publication and slot come from ports.env.
-fn postgres_settings() -> Result<Value> {
+fn postgres_settings(health: Health) -> Result<Value> {
     let settings = ignite_settings::get();
     Ok(json!({
         "host":"127.0.0.1", "port":settings.port("POSTGRES")?, "database":"ignite", "user":"ignite",
-        "sslMode":"disable", "publication":settings.get("IGNITE_PG_PUBLICATION")?, "tables":TABLES,
+        "sslMode":"disable", "publication":settings.get("IGNITE_PG_PUBLICATION")?, "tables":health.tables(),
         "slotOwnership":"external", "slotName":settings.get("IGNITE_PG_SLOT")?,
         "maxTransactionChanges":4096, "maxTransactionBytes":8388608,
         "maxTransactionDurationMs":30000, "maxProtocolBytes":8388608,
         "ioTimeoutMs":10000, "feedbackIntervalMs":1000, "reconnectBudgetMs":60000,
     }))
 }
-fn bootstrap_configuration(source: &ComponentId) -> Result<BTreeMap<Arc<str>, ConfigurationValue>> {
+fn bootstrap_configuration(
+    source: &ComponentId,
+    health: Health,
+) -> Result<BTreeMap<Arc<str>, ConfigurationValue>> {
     let mut configuration = BTreeMap::from([
         ("source".into(), literal(source.as_str())?),
         ("stream".into(), literal(stream(PG)?)?),
         ("password".into(), reference("env:IGNITE_POSTGRES_PASSWORD")?),
     ]);
-    for (key, value) in postgres_settings()?.as_object().context("settings")? {
+    for (key, value) in postgres_settings(health)?.as_object().context("settings")? {
         configuration.insert(key.as_str().into(), literal(value)?);
     }
     Ok(configuration)
@@ -351,7 +412,21 @@ fn find_factory(plugin: &NativePlugin, name: &str) -> Result<Arc<NativeFactory>>
         .cloned()
         .with_context(|| format!("factory {name}"))
 }
-fn joins(text: &str) -> Result<Vec<Value>> {
+/// The health probes as Drasi's OTel source sees them: `ignite_probe_status` per deployment
+/// and run (`deployment-health` reads the identity attributes from the Metric's id).
+fn otel_configuration() -> Result<Value> {
+    Ok(json!({
+        "stream":stream(OTEL)?, "host":"127.0.0.1", "protocols":["grpc"],
+        "grpcPort":ignite_settings::get().port("DRASI_OTLP")?,
+        "metricAllowlist":["ignite_probe_status"],
+        "metricIdentityAttributes":["deployment", "run_epoch"],
+        // Metrics never expire and each run adds one per deployment.
+        "maxMetrics":1000000,
+        // Only probes reach the source: no dependencies or log events.
+        "destinationAttributes":[],
+    }))
+}
+fn joins(text: &str, health: Health) -> Result<Vec<Value>> {
     let used: BTreeSet<_> = text
         .split(":")
         .skip(1)
@@ -364,6 +439,7 @@ fn joins(text: &str) -> Result<Vec<Value>> {
                 .iter()
                 .find(|(join, ..)| *join == name)
                 .with_context(|| format!("unknown relationship {name}"))?;
+            let (l1, l2) = (health.label(l1), health.label(l2));
             Ok(json!({"id":name, "keys":[{"label":l1,"property":p1},{"label":l2,"property":p2}]}))
         })
         .collect()
@@ -383,6 +459,14 @@ fn main() -> Result<()> {
         .context("usage: ignite-config <plugin-directory>")?;
     let directory = Path::new(&directory);
     let settings = ignite_settings::get();
+    let health = Health::from_settings()?;
+    let otel = match health {
+        Health::Postgres => None,
+        Health::Otel => Some(
+            load(directory, "drasi_computation_source_otel")
+                .context("IGNITE_HEALTH_SOURCE=otel needs the native OTel source plugin")?,
+        ),
+    };
     let pg = load(directory, "drasi_computation_source_postgres")?;
     let bootstrap = load(directory, "drasi_computation_bootstrap_postgres")?;
     let query_plugin = load(directory, "drasi_computation_transformer_query")?;
@@ -400,7 +484,7 @@ fn main() -> Result<()> {
         .context("PostgreSQL shared-row bootstrap")?;
     let bootstrap = Arc::new(NativeBootstrapNodeFactory::new(bootstrap));
     let query_factory = query_plugin.query_factory()?;
-    let queries = queries();
+    let queries = queries(health);
     let fed_by_postgres: Vec<&str> = queries
         .iter()
         .filter(|q| q.inputs.contains(&PG))
@@ -410,6 +494,7 @@ fn main() -> Result<()> {
     let plugins = ["policy", "plan", "resilience"];
     let ids: BTreeMap<&str, ComponentId> = [PG, "postgres-bootstrap", "query-results", "metrics", "desk-stream"]
         .into_iter()
+        .chain(otel.as_ref().map(|_| OTEL))
         .chain(plugins)
         .chain(REACTIONS.iter().map(|(name, _)| *name))
         .chain(queries.iter().map(|q| q.name))
@@ -478,7 +563,7 @@ fn main() -> Result<()> {
     }
 
     // PostgreSQL source and its bootstrap provider.
-    let mut configuration = postgres_settings()?;
+    let mut configuration = postgres_settings(health)?;
     configuration["stream"] = json!(stream(PG)?);
     configuration["persistent"] = json!(false);
     let mut source = source_factory.specification(ids[PG].clone(), configuration)?;
@@ -497,7 +582,7 @@ fn main() -> Result<()> {
         completion: None,
         implementation: bootstrap.descriptor().implementation.clone(),
         configuration_version: bootstrap.descriptor().configuration_version,
-        configuration: bootstrap_configuration(&ids[PG])?,
+        configuration: bootstrap_configuration(&ids[PG], health)?,
         dependencies: BTreeMap::from([(
             "source_progress".into(),
             fed_by_postgres
@@ -507,6 +592,14 @@ fn main() -> Result<()> {
         )]),
     };
     builder = builder.component(ComponentName::try_new("postgres-bootstrap")?, provider, bootstrap);
+
+    // OpenTelemetry source: the health probes, from the Collector. No bootstrap: its state
+    // is volatile and the probes arrive every second.
+    if let Some(otel) = &otel {
+        let factory = find_factory(otel, "drasi.network/otel-source")?;
+        let specification = factory.specification(ids[OTEL].clone(), otel_configuration()?)?;
+        builder = builder.component(ComponentName::try_new(OTEL)?, specification, factory);
+    }
 
     // Queries.
     for query in &queries {
@@ -518,7 +611,7 @@ fn main() -> Result<()> {
             ids[query.name].clone(),
             json!({
                 "query":query.text, "stream":stream(query.name)?, "outbox_capacity":128,
-                "execution":{"joins":joins(query.text)?, "result":result},
+                "execution":{"joins":joins(&query.text, health)?, "result":result},
             }),
         )?;
         specification.dependencies = BTreeMap::from([
@@ -668,10 +761,10 @@ fn main() -> Result<()> {
         ..RelationshipPolicy::default()
     };
     for query in &queries {
-        for input in query.inputs {
+        for input in &query.inputs {
             let edge = EdgeDefinition::new(endpoint(input, "out")?, endpoint(query.name, "in")?);
             builder = builder.connect(edge.clone(), pipe(32));
-            if *input != PG && !plugins.contains(input) {
+            if *input != PG && *input != OTEL && !plugins.contains(input) {
                 builder = builder.relationship_policy(edge, requires_running());
             }
         }
@@ -715,7 +808,10 @@ fn main() -> Result<()> {
             pipe(8),
         );
     }
-    for name in std::iter::once(PG).chain(queries.iter().map(|q| q.name)) {
+    for name in std::iter::once(PG)
+        .chain(otel.as_ref().map(|_| OTEL))
+        .chain(queries.iter().map(|q| q.name))
+    {
         builder = builder.bind_stream(endpoint(name, "out")?, stream(name)?);
     }
     // The plugins name their output stream after their component ID.
@@ -795,7 +891,7 @@ mod tests {
             let route = &cards()[alias];
             assert!(route.get("updated").is_none() && route.get("deleted").is_none(), "{alias}: only additions post");
             let template = route["added"]["template"].as_str().unwrap();
-            let text = queries().into_iter().find(|q| q.name == *query).unwrap().text;
+            let text = queries(Health::Postgres).into_iter().find(|q| q.name == *query).unwrap().text;
             for column in template.split("{{json after.").skip(1).map(|r| r.split("}}").next().unwrap()) {
                 assert!(
                     text.contains(&format!(" AS {column}")) || text.contains(&format!(" {column},")) || text.contains(&format!(" {column}\n")) || text.trim_end().ends_with(column),
@@ -874,9 +970,73 @@ mod tests {
 
     #[test]
     fn card_queries_and_their_helpers_use_declared_joins() {
-        for query in queries().iter().filter(|q| q.name.starts_with("incident-")) {
-            joins(query.text).unwrap_or_else(|e| panic!("{}: {e}", query.name));
+        for health in [Health::Postgres, Health::Otel] {
+            for query in queries(health).iter().filter(|q| q.name.starts_with("incident-")) {
+                joins(&query.text, health).unwrap_or_else(|e| panic!("{}: {e}", query.name));
+            }
         }
+    }
+
+    const HEALTH_QUERIES: [&str; 6] = [
+        "plan-bins", "recovery-observation-context", "tile-deployments", "tile-capacity",
+        "incident-deployments", "incident-failed",
+    ];
+
+    #[test]
+    fn health_from_postgres_is_the_graph_of_today() {
+        let queries = queries(Health::Postgres);
+        assert!(queries.iter().all(|q| q.name != HEALTH && !q.inputs.contains(&HEALTH) && !q.inputs.contains(&OTEL)));
+        assert!(queries.iter().all(|q| matches!(q.text, std::borrow::Cow::Borrowed(_))), "query files unchanged");
+        let readers: Vec<_> = queries.iter().filter(|q| q.text.contains("ignite_reports")).map(|q| q.name).collect();
+        assert_eq!(readers.len(), HEALTH_QUERIES.len());
+        assert!(HEALTH_QUERIES.iter().all(|name| readers.contains(name)), "{readers:?}");
+        assert_eq!(Health::Postgres.tables(), TABLES);
+        let report = joins("(d)-[:DEPLOYMENT_REPORT]->(r)", Health::Postgres).unwrap();
+        assert_eq!(report[0]["keys"][1]["label"], "ignite_reports");
+    }
+
+    #[test]
+    fn health_from_telemetry_reads_probe_rows_instead_of_reports() {
+        let queries = queries(Health::Otel);
+        let adapter = queries.iter().find(|q| q.name == HEALTH).expect("deployment-health");
+        assert_eq!((adapter.inputs.as_slice(), adapter.label), (&[OTEL][..], Some(HEALTH_LABEL)));
+        let readers: Vec<_> = queries.iter().filter(|q| q.name != HEALTH && q.text.contains("ignite_reports")).map(|q| q.name).collect();
+        assert!(readers.is_empty(), "no query reads reports: {readers:?}");
+        for name in HEALTH_QUERIES {
+            let query = queries.iter().find(|q| q.name == name).unwrap();
+            assert!(query.text.contains(HEALTH_LABEL), "{name}");
+            assert_eq!(query.inputs, [PG, HEALTH], "{name}");
+        }
+        let others = queries.iter().filter(|q| q.name != HEALTH && !HEALTH_QUERIES.contains(&q.name));
+        assert!(others.into_iter().all(|q| !q.inputs.contains(&HEALTH) && !q.inputs.contains(&OTEL)));
+        assert!(!Health::Otel.tables().contains(&"ignite_reports"));
+        assert_eq!(Health::Otel.tables().len(), TABLES.len() - 1);
+        for (text, join) in [("(d)-[:DEPLOYMENT_REPORT]->(r)", "DEPLOYMENT_REPORT"), ("(rt)-[:ROUTE_REPORT]->(r)", "ROUTE_REPORT")] {
+            let keys = &joins(text, Health::Otel).unwrap()[0];
+            assert_eq!((keys["id"].as_str(), keys["keys"][1]["label"].as_str()), (Some(join), Some(HEALTH_LABEL)));
+        }
+    }
+
+    /// Fields documented for drasi.network/otel-source configuration version 1
+    /// (drasi-core PR 1030, CONFIGURATION.md); the source refuses unknown keys.
+    #[test]
+    fn otel_source_configuration_uses_documented_fields() {
+        const FIELDS: &[&str] = &[
+            "stream", "host", "protocols", "grpcPort", "httpPort", "timeoutMs", "ingressCapacity",
+            "maxMessageBytes", "maxConnections", "headerReadTimeoutMs", "authToken", "authTokenSecondary",
+            "allowUnauthenticated", "rateLimitPerSecond", "rateLimitBurst", "tlsCertificatePem",
+            "tlsPrivateKeyPem", "tlsClientCaPem", "metricAllowlist", "metricIdentityAttributes",
+            "destinationAttributes", "spanKinds", "heartbeatMetric", "heartbeatEventName", "logMinSeverity",
+            "logEventNameAllowlist", "logEventTtlSecs", "dependencyTtlSecs", "maxServices", "maxMetrics",
+            "maxDependencies", "maxLogEvents", "rejectDerived",
+        ];
+        let configuration = otel_configuration().unwrap();
+        for key in configuration.as_object().unwrap().keys() {
+            assert!(FIELDS.contains(&key.as_str()), "undocumented field {key}");
+        }
+        // Loopback needs no token; the Collector reaches it through host.containers.internal.
+        assert_eq!(configuration["host"], "127.0.0.1");
+        assert_eq!(configuration["metricIdentityAttributes"], json!(["deployment", "run_epoch"]));
     }
 }
 
