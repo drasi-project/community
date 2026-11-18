@@ -18,9 +18,9 @@ Builds go to `ignite-native/.cargo-target-next`, so the running demo's build fol
 |---|---|
 | Drasi Server binary | Builds (`cargo build -p drasi-server`) |
 | Demo plugin (`ignite-prometheus`) | Builds and passes its tests. Drasi's `drasi.standard/policy` and `drasi.standard/optimization` replace `ignite-policy` and `ignite-optimizer` |
-| Config generator (`ignite-config`) | Adapted. Its tests pass, and `drasi-server validate` accepts the current graph: 57 components, 9 plugins |
-| Build and run scripts | Point at the `-next` checkouts and build folder |
-| Live switch | Not done. It needs the user's go-ahead (see [Switch-over](#switch-over)) |
+| Config generator (`ignite-config`) | Adapted. Its tests pass, and `drasi-server validate` accepts the graph with 9 plugins: 56 components (PostgreSQL health) or 58 (OTel health) |
+| Build and run scripts | Point at the `-next` checkouts and build folder. `ops/native-build.sh` runs end to end, including `validate` and `stamp` |
+| Live switch | Ready, not done. It needs the user's go-ahead (see [Switch-over](#switch-over)) |
 
 Two stacks can't run at once (Podman memory), so the live switch is one short,
 reversible window: stop the native processes, start the same processes from
@@ -73,14 +73,14 @@ Origin `0e039e5` already does what the demo needs:
 | 1 | `drasi-core-next`: HTTP sink `unroutedChanges` | this workstream | Done |
 | 2 | Demo plugins and `ignite-config` build and test against drasi-core-next | this workstream | Done |
 | 3 | Drasi Server builds from `drasi-server-next` | this workstream | Done |
-| 4 | Generated graph passes `drasi-server validate` | this workstream | Done (Postgres health source) |
+| 4 | Generated graph passes `drasi-server validate` | this workstream | Done: both health sources |
 | 5 | Official policy plugin replaces `ignite-policy` (generator, queries, `native-build.sh`) | policy workstream | Done: `7d0cd2d`. `native-build.sh` builds `drasi-computation-transformer-policy` and removes the old `ignite_policy` library |
-| 6 | Official optimization plugin replaces `ignite-optimizer` | optimization workstream | In progress. `native-build.sh` builds `drasi-computation-transformer-optimization` and removes the old `ignite_optimizer` library |
-| 7 | Native OTel source path (`IGNITE_HEALTH_SOURCE=otel`): the generator's `REPORTS` join fix (`fc035a1`), then validate | OTel workstream | In progress |
-| 8 | Full `ops/native-build.sh` in community-next: UI, Server, all plugins, generator, `validate`, `stamp` | this workstream | Re-run after items 5–7 |
-| 9 | Re-run every crate's tests: `cargo test -p ignite-prometheus`, `-p ignite-config`, `-p ignite-workloads`, plus the replacement plugins' | all | After items 5–7 |
-| 10 | `community-next/.../demo/.env` and `.native/mattermost.json` copied from the running demo (both ignored by git) | switch operator | `mattermost.json` copied. Copy `.env` in the window's preparation |
-| 11 | Presenter UI: `npm ci && npm run build` in `community-next/.../demo/ui` | switch operator | Not done |
+| 6 | Official optimization plugin replaces `ignite-optimizer` | optimization workstream | Done: `e3d5fbe`, `bbe44f0` |
+| 7 | Native OTel source path (`IGNITE_HEALTH_SOURCE=otel`): the generator's `REPORTS` join fix (`fc035a1`), then validate | OTel workstream | Done: validates with 58 components |
+| 8 | Full `ops/native-build.sh` in community-next: UI, Server, all plugins, generator, `validate`, `stamp` | this workstream | Done at `e3d5fbe`. Re-run after any later change |
+| 9 | Re-run every crate's tests: `cargo test -p ignite-prometheus`, `-p ignite-config`, `-p ignite-workloads`, plus the replacement plugins' | all | Done at `e3d5fbe`: 15, 20 and 19 passed (1 ignored) |
+| 10 | `community-next/.../demo/.env` and `.native/mattermost.json` copied from the running demo (both ignored by git) | switch operator | Done. Copy them again if the running demo's files change |
+| 11 | Presenter UI: `npm ci && npm run build` in `community-next/.../demo/ui` | switch operator | Done at `e3d5fbe` |
 | 12 | DEVELOPERS.md and SETUP.md: branch names, `.cargo-target-next`, the dependency table | this workstream | After the switch is accepted |
 | 13 | Upstream: propose `unroutedChanges` to drasi-core, so the local commit can go | later | Not proposed |
 
@@ -99,9 +99,10 @@ Prometheus, Collector, Langfuse) keep running and keep their volumes.
 2. Compare what the containers mount:
    `git -C community-next diff agentofreality-ignite-native -- presentations/2026-11-19_Ignite/demo/observability presentations/2026-11-19_Ignite/demo/compose.yaml presentations/2026-11-19_Ignite/demo/compose.health-otel.yaml`.
    If that prints anything, step 3 of the window recreates the containers.
-   Otherwise they stay as they are.
+   Otherwise they stay as they are. At `e3d5fbe` it prints nothing.
 3. Compare the schema: `git -C community-next diff agentofreality-ignite-native -- presentations/2026-11-19_Ignite/demo/database`.
-   If that prints anything, step 4 of the window applies the new schema.
+   If that prints anything, step 4 of the window applies the new schema. At
+   `e3d5fbe` it prints nothing.
 
 ### Window (a few minutes, after the user's go-ahead)
 
