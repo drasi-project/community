@@ -130,7 +130,8 @@
           "subject",
           "target",
           "current",
-          "demand_tpm"
+          "demand_tpm",
+          "run_epoch"
         ]
       }
     },

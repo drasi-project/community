@@ -11,10 +11,10 @@ already exists in this branch.
 | [Settings](#1-settings) | Every port, the compose project, the publication and slot and the storage key come from `demo/ports.env`; this copy uses +1000 ports and project `ignite-native` | `demo/ports.env`, `demo/ports.default.env` |
 | [Build and test](#2-build-and-test) | One crate at a time, shared `ignite-native/.cargo-target`, at most 4 jobs | `demo/.cargo/config.toml` |
 | [Schema](#3-schema) | The JSON model becomes `ignite_workloads`, `ignite_deployments`, `ignite_routes`, `ignite_policy_destinations`, `ignite_approvals`; `ignite_scenario` holds `run_epoch` and `revision` | this file |
-| [Graph](#4-graph) | Context queries → Drasi's Rego policy → `policy-results` → optimizer (plan, resilience) → result queries → tile queries → Prometheus reaction; approvals and events → HTTP reactions | this file |
-| [Element contracts](#5-element-contracts) | `PolicyInput`, `PolicyDecision`, `Assignment`, `Plan`, `LossScenario`, `Resilience`, and the rows each plugin reads | this file |
+| [Graph](#4-graph) | Context queries → Drasi's Rego policy → `policy-results` → Drasi's optimization (plan) → result queries → tile queries → Prometheus reaction; approvals and events → HTTP reactions | this file |
+| [Element contracts](#5-element-contracts) | `PolicyInput`, `PolicyDecision`, the plan result queries, and the rows each plugin reads | this file |
 | [Rego policy](#6-rego-policy) | Drasi's `drasi.standard/policy` decides each `policy-input` row; the Rego module is configuration, allowed destinations are data | `drasi/policy` |
-| [Optimizer plugin](#7-optimizer-plugin) | `ignite/assignment-plan` and `ignite/assignment-resilience` over `good_lp` (microlp) | `plugins/optimizer` |
+| [Optimizer](#7-optimizer) | Drasi's `drasi.standard/optimization`: the placement model, its single-loss what-if and its preconditions are configuration | `drasi/optimization` |
 | [Prometheus reaction](#8-prometheus-reaction) | `ignite/prometheus-exporter`: current rows of each tile query as gauges on `/metrics` | `plugins/prometheus` |
 | [Metric contract](#9-metric-contract) | One metric per Grafana tile, `-1` or no series means Unknown | `plugins/prometheus/examples/ignite.json` |
 | [Reaction contract](#10-reaction-contract) | Drasi HTTP sinks call the gateway configuration API, Grafana annotations and Langfuse scores; idempotent on `x-drasi-delivery-id` and approval state, compare-and-set on revision | this file |
@@ -80,7 +80,7 @@ in `lib.rs`. Run from `demo/`:
 |---|---|---|
 | 1. Data model and AI service | `cargo build --locked -p ignite-workloads` | `cargo test --locked -p ignite-workloads`, `cargo test --locked -p ignite-settings --lib`; database tests against this copy's PostgreSQL (`python3 ops/native-runtime.py sql`) |
 | 2. Rego policy | `drasi-computation-transformer-policy` from drasi-core, built by `ops/native-build.sh` | `cargo test --locked -p drasi-computation-transformer-policy` in drasi-core; the demo's rule and queries: `plan/spikes/official-policy-plugin` in the `community` checkout |
-| 3. Optimizer plugin | `cargo build --locked -p ignite-optimizer --lib --features ignite-optimizer/dynamic-plugin` | `cargo test --locked -p ignite-optimizer --lib` |
+| 3. Optimizer | `drasi-computation-transformer-optimization` from drasi-core, built by `ops/native-build.sh` | `cargo test --locked -p drasi-computation-transformer-optimization` in drasi-core (`placement_*` are this demo's outcomes); the result queries: `cargo test --locked -p ignite-config` |
 | 4. Prometheus reaction | `cargo build --locked -p ignite-prometheus --lib --features ignite-prometheus/dynamic-plugin` | `cargo test --locked -p ignite-prometheus --lib` |
 | 5. Grafana | `python3 observability/grafana/dashboards.py` | `python3 observability/grafana/fixture.py [state]` serves fixture `/metrics` on 19423 (which Prometheus already scrapes; only while Drasi Server is not running); `POST /state/<state>` switches state |
 | 6. Desk and projector | `cd ui && npx tsc --noEmit` | `cd ui && npm test` (fixture server on `IGNITE_UI_FIXTURE_PORT`) |
@@ -132,14 +132,12 @@ component IDs. Context queries filter to the current run by joining
 
 ```mermaid
 flowchart LR
-  PG[(postgres)] --> PIN[policy-input] & PI[plan-items] & PB[plan-bins]
+  PG[(postgres)] --> PIN[policy-input] & PC[plan-context, plan-items, plan-bins, plan-candidates]
   PIN --> P[policy · drasi.standard/policy]
   P --> PR[policy-results]
-  PI -->|items| A[plan · assignment-plan] & R[resilience · assignment-resilience]
-  PB -->|bins| A & R
-  PR -->|eligibility| A & R
-  A --> PLR[plan-results] & AR[assignment-results]
-  R --> RR[resilience-results]
+  PC --> A[plan · drasi.standard/optimization]
+  PR --> A
+  A --> PLR[plan-results] & AR[assignment-results] & RR[resilience-results] & LR[loss-results]
   PLR & AR & RR & PR & PG --> T[tile-* queries] --> X[metrics · ignite/prometheus-exporter]
   PG & PLR --> AV[approval-valid] & AS[approval-stale] --> GW[gateway-reaction · http-sink]
   PG --> RV[recovery-results] --> GW
@@ -200,9 +198,11 @@ canonical JSON (sorted keys, no whitespace).
 | Query | Port | Columns |
 |---|---|---|
 | `policy-input` (label `PolicyInput`) | policy `in` | `id` (`{workload}/{deployment}`), `run_epoch`, `workload`, `data_class`, `region_requirement`, `workload_model`, `deployment`, `region`, `deployment_model`, `destinations` (`[deployment]` when the pair's `ignite_policy_destinations` row exists, else `[]`) |
-| `plan-items` | optimizer `items` | `id` (workload), `run_epoch`, `revision` (scenario), `demand_tpm`, `deployment` (current route) |
-| `plan-bins` | optimizer `bins` | `id`, `run_epoch`, `capacity_tpm`, `status` (`ok`, `failed`, `throttled`, or `unknown` once the latest report expires, via `drasi.trueLater`) |
-| `policy-results` | optimizer `eligibility` | `id`, `subject`, `target`, `state`, `allowed`, `reason`, `policy_hash`, `basis`, `run_epoch` |
+| `plan-context` (label `PlanContext`) | plan `in` | `run_epoch`, `revision` (the one `ignite_scenario` row) |
+| `plan-items` (label `PlanItem`) | plan `in` | `id` (workload), `run_epoch`, `revision` (scenario), `demand_tpm`, `deployment` (current route) |
+| `plan-bins` (label `PlanBin`) | plan `in` | `id`, `run_epoch`, `capacity_tpm`, `health` (`healthy` for `ok`; `unhealthy` for `failed` or `throttled`; `unknown` otherwise or once the latest report expires, via `drasi.trueLater`) |
+| `plan-candidates` (label `PlanCandidate`) | plan `in` | one row per workload × deployment in the current run: `subject`, `target`, `run_epoch`, `demand_tpm`, `current` (route), `capacity_tpm` |
+| `policy-results` (label `PolicyResult`) | plan `in` | `id`, `subject`, `target`, `state`, `allowed`, `reason`, `policy_hash`, `basis`, `run_epoch` |
 
 ### `PolicyDecision` (Drasi's Rego policy)
 
@@ -227,49 +227,54 @@ decided boolean `allowed`, otherwise `unknown`. `allowed` is `true` only for
 `allowed`. `reason` is the rule's, or why the result is unknown. `basis` is
 `policy_input_fingerprint`.
 
-### `Plan` and `Assignment` (plan factory)
+### Plan results (queries over Drasi's optimization)
 
-`Plan`, one node, `id` = `plan`:
+The `plan` component publishes a status row (`PlanStatus`), one `Assignment`
+per placed workload while optimal, and one `LossScenario` per healthy
+deployment (section 7). The result queries keep the columns below.
 
-| Property | Meaning |
+`plan-results` (label `PlanResult`), one row, `id` = `plan`:
+
+| Column | Meaning |
 |---|---|
-| `state` | `feasible`, `infeasible` or `unknown` |
-| `candidate_id` | SHA-256 of `basis` and `assignments`; `""` unless feasible |
-| `basis` | SHA-256 of the exact items, bins (with health) and eligibility solved |
-| `revision` | The items' scenario revision (all items must agree, else `unknown`) |
-| `assignments` | JSON text object `{item: bin}`; `"{}"` unless feasible |
-| `moves` | Items whose bin differs from `current` |
-| `peak_utilisation` | Largest assigned demand / capacity over bins used (0–1) |
-| `reason` | Plain-English explanation |
-| `run_epoch`, `solved_ms` | Run; solve time |
+| `state` | `feasible` (status `optimal`), `infeasible`, or `unknown` (a precondition does not hold, or a time limit or error) |
+| `candidate_id` | The solution's `solutionSignature` (16-hex FNV-1a over the published Assignment rows); `""` unless feasible |
+| `basis` | The status `signature`: 16-hex FNV-1a over the configuration and every input set member solved |
+| `revision`, `run_epoch` | From the `plan-context` row (`provenance`) |
+| `assignments` | JSON text `{workload: deployment}` from `summaries.assignments`; `"{}"` unless feasible |
+| `moves`, `peak_utilisation` | `objectives.moves`, `objectives.peak` (0–1) |
+| `reason` | Plain English, built from `summaries.moved` and the status `detail` |
+| `solved_ms` | The status row's change time (`drasi.changeDateTime`) |
 
-`Assignment`, one node per item while the plan is feasible (deleted otherwise),
-`id` = item key: `item`, `bin`, `current`, `moved` (bool), `demand_tpm`,
-`candidate_id`, `run_epoch`.
+`assignment-results` (label `AssignmentResult`), one row per placed workload
+while feasible: `id` = `item` (workload), `bin`, `current`, `moved`,
+`demand_tpm`, `run_epoch`.
 
-### `LossScenario` and `Resilience` (resilience factory)
+`loss-results`, one row per healthy deployment, `id` = `lost`: `state`
+(`feasible`, `infeasible`, `unknown`), `reason` (the scenario's `detail`),
+`basis` (= the plan's), `run_epoch`.
 
-`LossScenario`, one per healthy bin, `id` = the lost bin: `lost`, `state`
-(`feasible`, `infeasible`, `unknown`), `assignments` (JSON text), `reason`,
-`basis`, `run_epoch`.
+`resilience-results` (label `ResilienceResult`), one row, `id` = `resilience`:
 
-`Resilience`, one node, `id` = `resilience`:
-
-| Property | Meaning |
+| Column | Meaning |
 |---|---|
-| `state` | `safe` (every single loss leaves a feasible plan), `at_risk` (some loss or the baseline is infeasible), `unknown` |
-| `first_failure` | Lowest-sorted bin whose loss leaves no plan; `""` if none |
-| `baseline` | Plan state with no loss |
-| `unhealthy_bins` | Bins whose health is unhealthy now |
-| `basis`, `run_epoch` | As for `Plan` |
+| `state` | `safe` (every single loss leaves a plan), `at_risk` (some loss, or the baseline, leaves none), `unknown` |
+| `first_failure` | Lowest-sorted deployment whose loss leaves no plan (`head(scenarios.loss.failures)`); `""` if none |
+| `baseline` | The plan's state |
+| `unhealthy_bins` | `setSizes.unhealthy` |
+| `reason`, `basis`, `revision`, `run_epoch` | As for the plan |
 
 ### Unknown, never a guess
 
-A plugin emits `unknown` (and no `Assignment`) when an input has not loaded,
-a bin's health is outside the configured healthy and unhealthy values, an
-(item, bin) pair has no eligibility or eligibility `unknown`, items disagree on
-`revision` or `run_epoch`, or evaluation or solving errors or exceeds its time
-limit.
+The optimization does not solve, and reports `unknown` with no Assignment or
+LossScenario rows, when one of its preconditions does not hold:
+
+- an input has not loaded;
+- a deployment's health is `unknown`;
+- a policy decision is not `allowed`/`denied`, or a candidate pair has no decision;
+- workloads or deployments belong to another revision or run.
+
+A solve that exceeds its time limit is `unknown` too.
 
 ## 6. Rego policy
 
@@ -306,56 +311,51 @@ config generator inlines `drasi/policy/ignite.rego` and sets `stream` to
 Evidence: `plan/official-policy-plugin.md` (in the `community` checkout)
 compares every pair with the earlier `ignite/rego-policy` decisions.
 
-## 7. Optimizer plugin
+## 7. Optimizer
 
-Factories `ignite/assignment-plan` and `ignite/assignment-resilience`
-(`plugins/optimizer`), transformers, ports `items`, `bins`, `eligibility` and
-`out`, using `good_lp` 1.15 with `microlp`. Configuration
-(`plugins/optimizer/examples/ignite.json`):
+Drasi's native optimization transformer, `drasi.standard/optimization`
+(`drasi-computation-transformer-optimization`, drasi-core). It is a declarative
+mixed-integer model over its input rows, solved with `good_lp`/`microlp`.
+Configuration: `drasi/optimization/optimization.json`. The config generator
+sets `stream` to `{component id}/out`.
 
-| Field | Meaning |
-|---|---|
-| `items` | `key`, `demand` (integer ≥ 0), `current` (bin now), `revision` |
-| `bins` | `key`, `capacity` (integer ≥ 0), `health.property`, `health.healthy` (values that are usable), `health.unhealthy` |
-| `eligibility` | `itemKey`, `binKey`, `state`, `allowed` |
-| `constraints` | Must include `assignEachItemOnce` (nothing is shed) and `binCapacity` |
-| `objective` | Lexicographic: `fewestMoves`, then `lowestPeakUtilisation`; remaining ties broken by sorted item and bin keys, so results are deterministic |
-| `epochProperty` | Default `run_epoch` |
-| `coalesceMs` | Default 100; changes inside the window are solved together |
-| `timeLimitMs` | Default 2000; then `unknown` |
+- **Inputs:** `plan-context`, `plan-items`, `plan-bins`, `plan-candidates` and
+  `policy-results` → port `in`. Sets select rows by result label.
+- **Model:**
+  - binary `assign` over candidates that are allowed, on a healthy deployment,
+    with `capacity_tpm ≥ demand_tpm`;
+  - each workload exactly once (nothing is shed), and capacity per healthy
+    deployment;
+  - lexicographic objectives: fewest moves from the current route, then the
+    lowest peak utilisation. Ties are deterministic (sets are in key order).
+- **What-if:** scenario `loss` re-solves without each healthy deployment. The
+  status row's `scenarios.loss.failures` lists every loss that leaves no plan,
+  in deployment order.
+- **Preconditions:** see "Unknown, never a guess" above.
+- **Timing:** `debounceMs` 100, `maxDelayMs` 1000, `timeLimitMs` 2000. Solving
+  runs on a background thread. The previous answer stays published until the
+  new solve completes, and the loss roll-up stays until the next analysis.
+- **Startup:** the plan binds `output_snapshots` to its five input queries. At
+  start it reads their snapshots, solves and publishes before any live input.
+  It skips live envelopes the snapshots cover, and re-reads an input query that
+  restarts.
 
-Solving runs off the async runtime on one bounded worker per plugin; a result
-for superseded inputs is discarded. Only healthy bins receive items; resilience
-removes each healthy bin in turn.
-
-Required outcomes (unit tests in `solve.rs`, from today's `domain/src/decision.rs` tests; the talk's capacity beat, "not if … fails", must also match the walkthrough):
+Required outcomes, shown by SDK-harness tests in drasi-core
+(`placement_*`), by `ignite-config`'s
+`plan_and_resilience_results_from_the_optimization_status`, and on a
+throwaway Server (seed, failure, policy edit, recovery, expired report,
+capacity beat, Server restart):
 
 | Inputs | Plan | Resilience |
 |---|---|---|
 | Seed, all healthy | feasible, 0 moves | safe |
 | EU-A failed | support → EU-B, batch → US-C (2 moves) | at_risk, first failure EU-B |
 | EU-A failed, then EU-B removed from support's destinations | infeasible | at_risk |
-| Healthy, batch on US-C, EU-B capacity 50 000 | feasible | at_risk, first failure EU-A |
+| Healthy, support on EU-B, batch on US-C, EU-A capacity 50 000 | feasible | at_risk, first failure EU-B (support) |
 | US-C failed | feasible | at_risk, first failure EU-A |
 | A report expired | unknown | unknown |
 
-Implementation notes (workstream 3, done): `solve` (lexicographic `good_lp`
-model, exact integer re-check), `model` (rows → problem → elements, hashes) and
-`component` (snapshot bootstrap, coalescing, one solver thread per component,
-watchdog at `timeLimitMs` + 500 ms) with host-free and SDK-level tests. Precise
-where the tables above leave room:
-
-- `basis` hashes the run, the revision, and each item (key, demand, current),
-  bin (key, capacity, health as `healthy`/`unhealthy`) and eligibility
-  (`allowed`/`denied`) that was solved; `failed` ↔ `throttled` does not change it.
-- `unhealthy_bins` is a count. `Resilience` also carries `reason` and `revision`
-  (additive). The `Assignment` demand property is named by `items.demand`
-  (`demand_tpm` here).
-- Until a changed input's solve finishes (`coalesceMs` plus solve time), the
-  previous answer stays published; a superseded result is never emitted.
-- With the baseline infeasible, `first_failure` is the lowest-sorted healthy bin
-  (every loss leaves no plan). When the inputs are unknown, no `LossScenario`
-  is emitted.
+Evidence: `plan/official-optimization-plugin.md`.
 
 ## 8. Prometheus reaction
 
@@ -600,7 +600,7 @@ No gap blocks workstreams 1–7. To watch:
 |---|---|---|
 | 1 | `database/`, `workloads/`, `domain/` (remove `decision.rs` when unused), `ops/workload.py`, `ops/native-runtime.py` | `ports.env`, root `Cargo.toml` |
 | 2 | `drasi/policy`, `drasi/policy-input.cypher`, `drasi/policy-results.cypher` | shared files |
-| 3 | `plugins/optimizer` | shared files |
+| 3 | `drasi/optimization`, `drasi/plan-*.cypher`, `drasi/assignment-results.cypher`, `drasi/resilience-results.cypher`, `drasi/loss-results.cypher` | shared files |
 | 4 | `plugins/prometheus` | shared files, `observability/prometheus.yaml` (done) |
 | 5 | `observability/grafana`, `ops/observability-env.py` (service-account token) | `compose.yaml` except Grafana's environment |
 | 6 | `../presentation`, `ui/` | `ui/settings.mjs` |

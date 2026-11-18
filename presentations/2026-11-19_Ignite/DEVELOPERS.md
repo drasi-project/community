@@ -84,10 +84,10 @@ All paths are under `demo/` unless noted.
 | `workloads/` | The AI service (`ignite-workloads`): gateway and retries (`main.rs`), simulated deployments and health monitor (`main.rs`), traffic (`traffic.rs`), demo controls and reset (`scenario.rs`), the approval tool and gateway configuration API (`external.rs`), telemetry (`telemetry.rs`) |
 | `settings/` | Crate `ignite-settings`: reads `ports.env` for every Rust program |
 | `drasi/policy/` | The placement rules (`ignite.rego`) and the configuration (`policy.json`) of Drasi's Rego policy, `drasi.standard/policy` (drasi-core crate `drasi-computation-transformer-policy`) |
-| `plugins/optimizer` | Plan and what-if models, `ignite/assignment-plan` and `ignite/assignment-resilience` (crate `ignite-optimizer`, `good_lp` with `microlp`) |
+| `drasi/optimization/` | The placement model, its single-loss what-if and its preconditions: the configuration (`optimization.json`) of Drasi's optimization, `drasi.standard/optimization` (drasi-core crate `drasi-computation-transformer-optimization`, `good_lp` with `microlp`) |
 | `plugins/prometheus` | Prometheus reaction, `ignite/prometheus-exporter` (crate `ignite-prometheus`) |
 | `plugins/*/examples/ignite.json` | Each plugin's configuration in this graph |
-| `drasi/*.cypher` | The 45 continuous queries; `incident-*` build the incident cards |
+| `drasi/*.cypher` | The 46 continuous queries; `incident-*` build the incident cards |
 | `ops/config/` | Generates Drasi Server's configuration (`.native/server.json`): every source, query, model, reaction and connection |
 | `database/` | PostgreSQL schema (`schema.sql`, `workload.sql`) and scenario seed (`reset.sql`) |
 | `observability/` | Container configuration: Collector, Prometheus, Grafana dashboards, alerts and data source, and an integration test probe |
@@ -179,7 +179,7 @@ only the one you changed, then reload the desk.
 | Which components exist or how they connect | `ops/config/src/main.rs` | Rebuild; restart Server |
 | An incident card's text or trigger | `drasi/incident-<card>.cypher` (every string is built there); its colour, field titles and buttons are `incident_routes` in `ops/config/src/main.rs` | `cargo test --locked -p ignite-config`; rebuild; restart Server |
 | Policy rules | `drasi/policy/ignite.rego` (its input and output mapping: `drasi/policy/policy.json`; what it decides: `drasi/policy-input.cypher`) | Rebuild; restart Server |
-| The optimizer's inputs, constraints or objective | `plugins/optimizer/examples/ignite.json` | Rebuild; restart Server |
+| The optimizer's inputs, constraints, objectives, what-if or preconditions | `drasi/optimization/optimization.json` (its inputs: `drasi/plan-*.cypher`; its results: `plan-`, `assignment-`, `resilience-` and `loss-results.cypher`) | `cargo test --locked -p ignite-config`; rebuild; restart Server |
 | Which tile rows become which metrics | `plugins/prometheus/examples/ignite.json` (and Grafana, below) | Rebuild; restart Server |
 | A plugin's code | `plugins/<name>/src/` | Test the crate (below); rebuild; restart Server |
 | Gateway, traffic, simulations, approval tool or gateway configuration API | `workloads/src/` | Rebuild; restart the AI service |
@@ -216,7 +216,6 @@ drasi-core or drasi-server.
 
 | Crate | Build | Test |
 |---|---|---|
-| Optimizer | `cargo build --locked -p ignite-optimizer --lib --features ignite-optimizer/dynamic-plugin` | `cargo test --locked -p ignite-optimizer --lib` |
 | Prometheus reaction | `cargo build --locked -p ignite-prometheus --lib --features ignite-prometheus/dynamic-plugin` | `cargo test --locked -p ignite-prometheus --lib` |
 | AI service | `cargo build --locked -p ignite-workloads` | `cargo test --locked -p ignite-workloads`; its database tests reset this copy's scenario and are ignored by default: `cargo test --locked -p ignite-workloads -- --ignored --test-threads=1` |
 | Settings | | `cargo test --locked -p ignite-settings --lib` |
