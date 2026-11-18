@@ -59,7 +59,6 @@ Remove an item when it is done.
   card. See `plan/incident-channel-plan.md`.
 - Grafana Dashboard
   - Can you combine the 'Recommended Action and Change Status Widgets?
-  - When i first show the Drasi Decision Support dashboard, I should clarify what each control is doing and how it works, where it is getting is data from. Before i crash EU-A
 - When i go to Mattermost is see 2 Deployment Failed cards from Drasi
 - in the dashboard, it would be good to be able to see what alerts grafana is firing
 - THe Dashboard shows a panel with Deployment Status. This is useful and it would also be useful to see the Workload Status shown in the same way.
