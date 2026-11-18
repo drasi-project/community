@@ -2,7 +2,7 @@ import { settings, url, port } from "../settings.mjs";
 import { test, expect, type Page } from "@playwright/test";
 import { applyFrame, applyChanges } from "../src/live";
 import { healthSchema, readPlan } from "../src/contracts";
-import { scenes, slides, recaps, allSlides, dashboards } from "../../../presentation/scenes";
+import { scenes, slides, recaps, allSlides, dashboards, frame } from "../../../presentation/scenes";
 import { notes } from "../../../presentation/notes";
 import { presenterScript } from "../../../presentation/script";
 import { replayClips } from "../../../presentation/replay";
@@ -35,7 +35,12 @@ test("the talk is 22 minutes and every beat says something and shows something",
     expect(cue.ifBroken.trim()).not.toBe("");
   }
   for (const recap of recaps) expect(Object.values(notes).some(cue => cue.beats.some(beat => beat.show === recap.id))).toBe(true);
-  expect(slides.map(s => s.id)).toEqual(["title", "concepts", "drasi", "query", "closing"]);
+  expect(slides.map(s => s.id)).toEqual(["walkin", "title", "concepts", "drasi", "demo", "query", "closing", "survey"]);
+  // The walk-in opens the talk, the live demo starts on the demo divider, and the survey is last.
+  const shown = scenes.flatMap(scene => notes[scene.id].beats.map(beat => beat.show));
+  expect(shown[0]).toBe("walkin");
+  expect(notes.normal.beats[0].show).toBe("demo");
+  expect(shown.at(-1)).toBe("survey");
 });
 
 test("PRESENTER.md matches the presenter desk notes", () => {
@@ -63,15 +68,19 @@ test("Next on the desk moves through beats and changes what the projector shows"
   const projector = await page.context().newPage();
   await stubGrafana(projector);
   await projector.goto("/present");
+  await expect(projector.locator(".walkin-slide")).toBeVisible();
+  await page.getByRole("button", { name: "Next ▶" }).click();
   await expect(projector.locator(".title-slide")).toBeVisible();
   await page.getByRole("button", { name: "Next ▶" }).click();
   await expect(projector.locator('[data-slide="concepts"]')).toBeVisible();
   for (let i = 0; i < 5; i++) await page.getByRole("button", { name: "Next ▶" }).click();
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Healthy service");
+  await expect(projector.locator('[data-slide="demo"]')).toBeVisible();
+  await page.getByRole("button", { name: "Next ▶" }).click();
   await expect(projector.locator("iframe.stage-dashboard").first()).toBeVisible();
   await expect(projector.locator("iframe.stage-dashboard").first()).toHaveAttribute("src", dashboards.ops);
   await page.getByRole("button", { name: "◀ Back" }).click();
-  await expect(projector.locator('[data-slide="drasi"]')).toBeVisible();
+  await expect(projector.locator('[data-slide="demo"]')).toBeVisible();
   // Off-screen dashboards stay rendered (visibility, not display:none) so Grafana keeps refreshing them.
   await expect(projector.locator("iframe.stage-dashboard").first()).toBeHidden();
   await expect(projector.locator("iframe.stage-dashboard").first()).toHaveCSS("display", "block");
@@ -82,6 +91,8 @@ test("keys pressed on the projector (a clicker) drive the desk", async ({ page }
   await desk(page, "title");
   const projector = await page.context().newPage();
   await projector.goto("/present");
+  await projector.keyboard.press("PageDown");
+  await expect(projector.locator(".title-slide")).toBeVisible();
   await projector.keyboard.press("PageDown");
   await expect(page.getByRole("heading", { level: 1 })).toContainText("The scenario");
   await expect(projector.locator('[data-slide="concepts"]')).toBeVisible();
@@ -105,7 +116,7 @@ test("the current beat's buttons sit beside its notes, and results appear there"
 });
 
 test("traffic starts only through an explicit action", async ({ page, request }) => {
-  await desk(page, "normal");
+  await desk(page, "normal", 1);
   expect(await mutations(request)).toEqual([]);
   await page.locator(".now").getByRole("button", { name: "Start demo traffic" }).click();
   await expect(page.locator(".now").getByRole("button", { name: /Start demo traffic/ })).toBeDisabled();
@@ -179,7 +190,7 @@ test("reset needs a confirmation, and moving between beats sends no writes", asy
 test("the projector preview can't reach private notes or controls", async ({ page, request }) => {
   await page.goto("/presenter?preview=1");
   await expect(page.getByText("PRESENTER DESK", { exact: false })).toHaveCount(0);
-  await expect(page.locator(".title-slide")).toBeVisible();
+  await expect(page.locator(".walkin-slide")).toBeVisible();
   expect(await mutations(request)).toEqual([]);
 });
 
@@ -261,19 +272,74 @@ test("the query slide lists late requests live from Drasi", async ({ page, reque
   await expect(page.locator(".query-live")).toContainText("trace abcdef12");
 });
 
+// Where an element sits on the template's 1920x1080 slide, whatever the window size.
+async function onSlide(page: Page, selector: string) {
+  return page.evaluate(selector => {
+    const stage = document.querySelector(".stage-frame")!.getBoundingClientRect();
+    const scale = stage.width / 1920;
+    return [...document.querySelectorAll(selector)].map(element => {
+      const box = element.getBoundingClientRect();
+      return { name: `${element.tagName}.${element.className}`, left: (box.left - stage.left) / scale, top: (box.top - stage.top) / scale,
+        right: (box.right - stage.left) / scale, bottom: (box.bottom - stage.top) / scale, width: box.width, height: box.height };
+    }).filter(box => box.width > 0 && box.height > 0);
+  }, selector);
+}
+
 for (const size of [{ width: 1280, height: 720 }, { width: 1920, height: 1080 }]) {
-  test(`every slide and visual fits ${size.width}x${size.height}`, async ({ page }) => {
+  test(`every slide and visual fits ${size.width}x${size.height}, inside the margins and above the captions`, async ({ page }) => {
     await page.setViewportSize(size);
     for (const slide of allSlides) {
       await page.goto(`/present?view=${slide.id}&preview=1`);
       const content = page.locator(`[data-slide="${slide.id}"] > div`);
       await expect(content).toBeVisible();
-      const fits = await content.evaluate(element => element.scrollHeight <= element.clientHeight + 2 && element.scrollWidth <= element.clientWidth + 2);
+      const fits = await content.evaluate(element => element.scrollHeight <= element.clientHeight + 2 && element.scrollWidth <= element.clientWidth + 2
+        && [...element.querySelectorAll(".body")].every(body => body.scrollHeight <= body.clientHeight + 2));
       expect(fits, slide.id).toBe(true);
+      // Template artwork is full bleed; everything else stays inside the 92 px margins and above y 1002.
+      for (const box of await onSlide(page, `[data-slide="${slide.id}"] > div *:not(.artwork):not(svg *)`)) {
+        expect(box.bottom, `${slide.id} ${box.name}`).toBeLessThanOrEqual(frame.captionTop + 1);
+        expect(box.left, `${slide.id} ${box.name}`).toBeGreaterThanOrEqual(92 - 1);
+        expect(box.right, `${slide.id} ${box.name}`).toBeLessThanOrEqual(frame.width - 92 + 1);
+      }
       await page.screenshot({ path: `evidence/audience-${size.width}-${slide.id}.png` });
     }
   });
 }
+
+test("the stage is the template's 16:9 slide, 1:1 at 1920x1080, and dashboards stop at the caption line", async ({ page }) => {
+  await stubGrafana(page);
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await page.goto("/present?view=ops&preview=1");
+  expect(await page.locator(".stage-frame").boundingBox()).toEqual({ x: 0, y: 0, width: 1920, height: 1080 });
+  const dashboard = (await page.locator("iframe.stage-dashboard").first().boundingBox())!;
+  for (const [measured, expected] of [[dashboard.x, 0], [dashboard.y, 0], [dashboard.width, 1920], [dashboard.height, frame.captionTop]])
+    expect(measured).toBeCloseTo(expected, 1);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect.poll(async () => (await page.locator(".stage-frame").boundingBox())!.width).toBeCloseTo(1440, 0);
+  const letterboxed = (await page.locator(".stage-frame").boundingBox())!;
+  expect(letterboxed.width / letterboxed.height).toBeCloseTo(16 / 9, 3);
+  expect(letterboxed.y).toBeCloseTo((900 - 810) / 2, 0);
+});
+
+test("without the template assets the stage still works, and the desk says they're missing", async ({ page }) => {
+  await page.route("**/template/**", route => route.fulfill({ status: 404, body: "missing" }));
+  await page.goto("/present?view=survey&preview=1");
+  await expect(page.locator(".survey-copy h1")).toHaveText("How did we do?");
+  await expect(page.locator("img.survey-qr")).toHaveCount(0);
+  await page.goto("/present?view=walkin&preview=1");
+  await expect(page.locator(".walkin-name")).toContainText("Ignite");
+  await desk(page, "title");
+  await expect(page.locator(".badge", { hasText: "Ignite template assets missing" })).toBeVisible();
+});
+
+test("with the template assets present, the desk doesn't flag them", async ({ page }) => {
+  await page.route("**/template/manifest.json", route => route.fulfill({ json: { required: ["walkin.svg", "survey-qr.png"] } }));
+  await page.route("**/template/*.{svg,png}", route => route.fulfill({ status: 200, contentType: "image/svg+xml", body: "<svg xmlns='http://www.w3.org/2000/svg'/>" }));
+  await desk(page, "title");
+  await page.getByText("Before and after the talk").click();
+  await expect(page.getByText("Ignite template assets present")).toBeVisible();
+  await expect(page.locator(".badge", { hasText: "Ignite template assets missing" })).toHaveCount(0);
+});
 
 test("the desk fits a laptop screen without scrolling", async ({ browser }) => {
   for (const cue of ["failure", "recovery"] as const) {
@@ -314,7 +380,7 @@ test("Next warns once when the beat's button hasn't been pressed", async ({ page
 });
 
 test("recording mode shows each live part's recording as the presenter presses Next", async ({ page, request }) => {
-  await desk(page, "normal", 2);
+  await desk(page, "normal", 3);
   const projector = await page.context().newPage();
   await projector.goto("/present");
   await page.getByRole("button", { name: "Use recordings from here on" }).click();
@@ -345,13 +411,13 @@ test("a rejected approval clears the selection, and the first Next starts the ta
 test("with no desk open, the clicker still steps through the slides", async ({ page }) => {
   await stubGrafana(page);
   await page.goto("/present");
-  await expect(page.locator(".title-slide")).toBeVisible();
+  await expect(page.locator(".walkin-slide")).toBeVisible();
   await page.keyboard.press("ArrowRight");
-  await expect(page.locator('[data-slide="concepts"]')).toBeVisible();
+  await expect(page.locator(".title-slide")).toBeVisible();
   await page.keyboard.press("PageDown");
-  await expect(page.locator('[data-slide="drasi"]')).toBeVisible();
-  await page.keyboard.press("PageUp");
   await expect(page.locator('[data-slide="concepts"]')).toBeVisible();
+  await page.keyboard.press("PageUp");
+  await expect(page.locator(".title-slide")).toBeVisible();
 });
 
 test("a slow click on a desk button still works while the desk refreshes", async ({ page, request }) => {

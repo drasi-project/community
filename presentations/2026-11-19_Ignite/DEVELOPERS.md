@@ -99,9 +99,9 @@ All paths are under `demo/` unless noted.
 | `scenes.ts` | The slides and "What Drasi just did" visuals, the talk's parts and timings, dashboard and product URLs |
 | `notes.ts` | The script: each part's beats (what the projector shows, what to say, which buttons, what to watch for), the glossary and the questions to expect. The single source for the desk and `PRESENTER.md` |
 | `script.ts` | Generates `PRESENTER.md`'s run of show, script, glossary and questions from `notes.ts` |
-| `Audience.tsx` | The projected stage: slides, the two dashboards embedded in Grafana kiosk mode at 1.5×, the late request view and recordings. Keys pressed here (a clicker) are passed to the desk; if no desk answers within half a second, the stage steps through the talk's views on its own |
+| `Audience.tsx` | The projected stage: always the Ignite template's 1920×1080 slide, scaled to fit the window. Slides, the two dashboards embedded in Grafana kiosk mode at 1.35× and ending at the caption line (y 1002), the late request view and recordings. Keys pressed here (a clicker) are passed to the desk; if no desk answers within half a second, the stage steps through the talk's views on its own |
 | `Presenter.tsx`, `desk.css` | The presenter desk: the current beat with its buttons, a mirror of Drasi's answers, the live demo and recovery plan, and the collapsible extras. **Next** moves to the next beat and switches the projector, warning once if the beat's button wasn't pressed. Recording mode (`fallback` in the stage state) shows each live part's recording instead |
-| `Explanation.tsx`, `slides.css` | Slide content and styles |
+| `Explanation.tsx`, `slides.css` | Slide content and styles. `slides.css` holds the Ignite template's dark theme: its colours, Segoe UI, and the layout grid in pixels on a 1920×1080 slide (92 px side margins, titles at y 72, body from y 226, nothing below y 1002, the closed-caption clear space). Template artwork and fonts load from `/template/` (see `ops/template-assets.py` below) |
 | `QuerySlide.tsx` | The continuous query slide: `demo/drasi/overdue-tasks.cypher` laid out for the projector (a test checks it matches the file), and Drasi's live list of late requests |
 | `RequestView.tsx` | One late request: its question, attempts and the moment Drasi listed it, from the AI service's `/tasks/{id}` |
 | `replay.ts` | The recorded fallback clips |
@@ -123,6 +123,7 @@ beat, what's shown) and stores it in `localStorage`.
 | `settings.py` | Reads `ports.env` for Python and shell (`eval "$(python3 ops/settings.py)"`) |
 | `macho-align.py` | Works around a macOS linker bug (see Known issues). Like `native-build.sh`, it replaces plugin files rather than rewriting them in place, because macOS kills a process that loads a library changed in place |
 | `release.py` | Automated cycles, soak test, preflight, release stamp and verify |
+| `template-assets.py` | Extracts the Ignite template's artwork, the session survey slide and Segoe UI into `ui/public/template/` (git-ignored, never committed: they are Microsoft's). See SETUP.md |
 
 ### Ports
 
@@ -176,7 +177,8 @@ only the one you changed, then reload the desk.
 | Slides | `presentation/Explanation.tsx`, `slides.css` (the query slide: `QuerySlide.tsx`, which a test keeps in step with `drasi/overdue-tasks.cypher`) | `cd ui && npm run build` |
 | Desk or app behaviour | `presentation/Presenter.tsx`, `ui/src/` | `cd ui && npm run build`; update `PRESENTER.md` if a desk label changes |
 | Database schema | `database/workload.sql` | `python3 ops/native-runtime.py migrate` with Server and the AI service stopped |
-| The diagrams | `presentation/diagrams/*.svg` | Re-render each PNG at 3840×2160 |
+| The diagrams | `presentation/diagrams/*.svg` (template colours and Segoe UI, as the slides) | `node ui/scripts/render-diagrams.mjs` re-renders each PNG at 3840×2160 |
+| Template artwork, survey QR code, fonts | Not in the repository: `ops/template-assets.py` extracts them to `ui/public/template/` (git-ignored; see SETUP.md). `vite.config.ts` serves that folder at `/template/` as it is | Run the script again |
 
 Reload Grafana's alerting without restarting:
 
@@ -214,7 +216,7 @@ infeasible after the policy edit, "not if EU-B fails" at EU-A 50k).
 
 | Command | Checks |
 |---|---|
-| `cd ui && npm test` | Slides and desk against a test fixture, at 1280×720 and 1920×1080; and that `PRESENTER.md`'s script matches `notes.ts` |
+| `cd ui && npm test` | Slides and desk against a test fixture, at 1280×720 and 1920×1080: every slide inside the template's margins and above the caption line, dashboards ending at it, and the stage still working without the template assets; and that `PRESENTER.md`'s script matches `notes.ts`. Builds into `ui/dist-test`, so it never replaces what a running demo serves |
 | `python3 observability/grafana/fixture.py [state]` | Serves sample `/metrics` for each tile state on the reaction's port, for checking Grafana; only while Drasi Server is stopped |
 | `python3 tests/release-test.py`, `python3 tests/native-runtime-test.py` | Release and bundle guards |
 
@@ -230,7 +232,7 @@ query results), never from the AI service.
 | `python3 tests/decision-integration.py` | Policy, plan and what-if | Yes |
 | `python3 tests/recovery-integration.py` | Approval checked by Drasi, routes changed by its gateway reaction, stale rejection, verified recovery, annotations and scores | Yes |
 | `node ui/scripts/walkthrough.mjs capture <folder>` | The whole talk through the desk, beat by beat, as a presenter would; saves the projector and the desk at every beat (about 12 minutes) | Yes; resets at the start and the end |
-| `node ui/scripts/walkthrough.mjs record` | The same, and re-records the four fallback recordings | Yes; resets at the start and the end |
+| `node ui/scripts/walkthrough.mjs record` | The same, and re-records the four fallback recordings at 1920×1080 (16:9) | Yes; resets at the start and the end |
 
 After `record`, run `cd ui && npm run build` so the app serves the new clips.
 Tests that change data must not run while someone else is using the demo.

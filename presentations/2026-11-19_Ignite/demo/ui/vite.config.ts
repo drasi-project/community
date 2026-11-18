@@ -1,6 +1,8 @@
 import { defineConfig, type Plugin, type ViteDevServer, type PreviewServer } from "vite";
 import react from "@vitejs/plugin-react";
 import { fileURLToPath } from "node:url";
+import fs from "node:fs";
+import path from "node:path";
 import { settings, url, port } from "./settings.mjs";
 
 const proxy = {
@@ -38,8 +40,29 @@ function localActions(): Plugin {
   return { name: "local-presenter-actions", configureServer: middleware, configurePreviewServer: middleware };
 }
 
+// The Ignite template's artwork and fonts (ops/template-assets.py, git-ignored), served from
+// public/template as they are now, so they work without a rebuild; a missing file is a 404.
+function templateAssets(): Plugin {
+  const folder = fileURLToPath(new URL("./public/template/", import.meta.url));
+  const types: Record<string, string> = { ".svg": "image/svg+xml", ".jpg": "image/jpeg", ".png": "image/png", ".woff": "font/woff", ".json": "application/json" };
+  const middleware = (server: ViteDevServer | PreviewServer) => {
+    server.middlewares.use("/template", (request, response) => {
+      const name = path.basename(decodeURIComponent((request.url ?? "").split("?")[0]));
+      const file = path.join(folder, name);
+      if (!name || !(path.extname(name) in types) || !fs.existsSync(file)) {
+        response.writeHead(404, { "Content-Type": "text/plain" });
+        response.end("Template asset missing: run python3 ops/template-assets.py");
+        return;
+      }
+      response.writeHead(200, { "Content-Type": types[path.extname(name)], "Cache-Control": "no-cache" });
+      fs.createReadStream(file).pipe(response);
+    });
+  };
+  return { name: "template-assets", configureServer: middleware, configurePreviewServer: middleware };
+}
+
 export default defineConfig({
-  plugins: [localActions(), react()],
+  plugins: [localActions(), templateAssets(), react()],
   // ports.env, read by src/settings.ts. It holds no secrets.
   define: { "globalThis.__IGNITE_SETTINGS__": JSON.stringify(settings) },
   resolve: { dedupe: ["react", "react-dom", "reveal.js", "qrcode"] },

@@ -9,6 +9,7 @@ export default defineConfig({
   reporter: [["list"]],
   webServer: [
     { command: "node tests/fixture-server.mjs", port: port("UI_FIXTURE"), reuseExistingServer: false },
-    { command: "npm run build && npm exec vite -- preview --config vite.fixture.config.ts", url: url("UI_TEST"), reuseExistingServer: false, timeout: 60000 },
+    // Built into dist-test, so tests never replace the dist the running demo serves.
+    { command: "npx tsc --noEmit && npm exec vite -- build --config vite.fixture.config.ts && npm exec vite -- preview --config vite.fixture.config.ts", url: url("UI_TEST"), reuseExistingServer: false, timeout: 60000 },
   ],
 });

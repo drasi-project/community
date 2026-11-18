@@ -21,7 +21,7 @@ export function RequestView({ taskId }: { taskId: string | null }) {
     const timer = setInterval(load, 2000);
     return () => { active = false; clearInterval(timer); };
   }, [taskId]);
-  if (!taskId || !data) return <div className="request-slide"><span className="eyebrow">Who is affected · one late request</span><h1>Loading the request…</h1></div>;
+  if (!taskId || !data) return <div className="content-slide request-slide"><h1>One late request</h1><div className="body"><p className="lead">Loading the request…</p></div></div>;
   const { task, attempts } = data;
   const created = Number(task.created_ms), deadline = Number(task.deadline_ms);
   const completed = typeof task.completed_ms === "number" ? task.completed_ms : null;
@@ -33,18 +33,19 @@ export function RequestView({ taskId }: { taskId: string | null }) {
     else groups.push({ endpoint, outcome: result, count: 1, first: at });
   }
   const waited = Math.round(((completed ?? now) - created) / 1000);
-  return <div className="request-slide">
-    <span className="eyebrow">Who is affected · one late request</span>
+  return <div className="content-slide request-slide">
     <h1>{completed ? `Answered after ${ago(waited)}` : `A customer has been waiting ${ago(waited)}`}</h1>
-    <blockquote className="question">“{String(task.content)}”</blockquote>
-    <ol className="timeline">
-      {[
-        { at: created, className: "", text: "Request received" },
-        ...groups.map(group => ({ at: group.first, className: group.outcome === "answered" ? "ok" : group.outcome === "in progress" ? "" : "bad",
-          text: `Sent to ${group.endpoint}: ${group.outcome}${group.count > 1 ? ` × ${group.count}` : ""}` })),
-        { at: deadline, className: "drasi", text: "15-second deadline passed: Drasi added it to the overdue list" },
-      ].sort((a, b) => a.at - b.at).map((item, i) => <li key={i} className={item.className}><span>{clock(item.at)}</span><b>{item.text}</b></li>)}
-    </ol>
-    <p className="source">From the AI service's records. The same request is trace <code>{String(task.trace_id).slice(0, 8)}</code> in Langfuse.</p>
+    <div className="body">
+      <blockquote className="question">“{String(task.content)}”</blockquote>
+      <ol className="timeline">
+        {[
+          { at: created, className: "", text: "Request received" },
+          ...groups.map(group => ({ at: group.first, className: group.outcome === "answered" ? "ok" : group.outcome === "in progress" ? "" : "bad",
+            text: `Sent to ${group.endpoint}: ${group.outcome}${group.count > 1 ? ` × ${group.count}` : ""}` })),
+          { at: deadline, className: "drasi", text: "15-second deadline passed: Drasi added it to the overdue list" },
+        ].sort((a, b) => a.at - b.at).map((item, i) => <li key={i} className={item.className}><span>{clock(item.at)}</span><b>{item.text}</b></li>)}
+      </ol>
+      <p className="source">One late request, from the AI service's records. The same request is trace <code>{String(task.trace_id).slice(0, 8)}</code> in Langfuse.</p>
+    </div>
   </div>;
 }

@@ -58,6 +58,27 @@ function approvalFeedback(feedback: Feedback, live: Live): Feedback {
   return { ...feedback, tone: "ok", message: "Sent to the approval tool. Waiting for Drasi's check…" };
 }
 
+// The Ignite template's artwork and fonts (ops/template-assets.py), checked once when the desk
+// opens: without them the projector falls back to a plain background and the system font.
+function useTemplateAssets() {
+  const [missing, setMissing] = useState<string[] | null>(null);
+  useEffect(() => {
+    void (async () => {
+      try {
+        const response = await fetch("/template/manifest.json", { cache: "no-store" });
+        if (!response.ok) throw new Error("no manifest");
+        const manifest = await response.json() as { required?: unknown };
+        const required = Array.isArray(manifest.required) ? manifest.required.map(String) : [];
+        const present = await Promise.all(required.map(file =>
+          fetch(`/template/${file}`, { method: "HEAD", cache: "no-store" }).then(r => r.ok, () => false)));
+        setMissing(required.filter((_, i) => !present[i]));
+      } catch { setMissing(["all"]); }
+    })();
+  }, []);
+  return missing;
+}
+const templateHelp = "Run python3 ops/template-assets.py in demo/ (see SETUP.md)";
+
 // The projector window opened from the desk, so the desk can show whether it's still open.
 let projector: Window | null = null;
 
@@ -70,6 +91,7 @@ export default function Presenter({ live, now, control }: { live: Live; now: num
   const feedback = sent?.approval ? approvalFeedback(sent, live) : sent;
   const [awaiting, setAwaiting] = useState<{ run_epoch: string; revision: number } | null>(null);
   const [connected, setConnected] = useState(false);
+  const templateMissing = useTemplateAssets();
   // Set when Next is pressed before the beat's buttons: a second Next moves on anyway.
   const [nudged, setNudged] = useState<string | null>(null);
   const modelObserved = !awaiting || (health?.run_epoch === awaiting.run_epoch && health.revision >= awaiting.revision);
@@ -232,6 +254,7 @@ export default function Presenter({ live, now, control }: { live: Live; now: num
       <span className={`badge ${ready ? "ok" : "bad"}`}>{ready ? "READY" : "NOT READY"}</span>
       <span className={`badge ${connected ? "ok" : "warn"}`}>{connected ? "Projector window connected" : "Projector window not opened from this desk"}</span>
       {!connected && <button onClick={openProjector}>Open projector window</button>}
+      {!!templateMissing?.length && <span className="badge warn" title={templateHelp}>Ignite template assets missing</span>}
       <Clock now={now} />
     </header>
     {!ready && !stage.fallback && <p className="desk-alert">Drasi's answers are unavailable or out of date, so live buttons are off. <button onClick={() => control.update({ fallback: true })}>Use recordings for the rest of the talk</button></p>}
@@ -326,6 +349,9 @@ export default function Presenter({ live, now, control }: { live: Live; now: num
       </details>
       <details><summary>Before and after the talk</summary>
         <BeforeAfter live={live} canAct={canAct} run={run} feedback={feedback} />
+        <p className={templateMissing?.length ? "warning" : "muted"}>{templateMissing === null ? "Checking the Ignite template assets…"
+          : templateMissing.length ? `Ignite template assets missing (${templateMissing.join(", ")}): the projector shows a plain background and the system font. ${templateHelp}.`
+          : "✓ Ignite template assets present: artwork, survey QR code and Segoe UI."}</p>
       </details>
     </div>
   </div>;

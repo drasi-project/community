@@ -26,9 +26,10 @@ and as time passes, and puts them in the tools the team already uses.
 
 ## The talk
 
-A few slides frame about 17 minutes of live demo:
+A few slides, in the Microsoft Ignite session template, frame about 17 minutes
+of live demo:
 
-1. **Title:** Monitoring without polling.
+1. **Title:** Monitoring without polling (after the Ignite walk-in slide).
 2. **The scenario:** two AI workloads sharing limited AI capacity across three
    deployments, the rules they must follow, and three business questions for when
    EU-A fails: who is affected, what's the fastest fix within policy, and how do
@@ -38,7 +39,8 @@ A few slides frame about 17 minutes of live demo:
    what "without polling" means.
 4. **Live demo** in Grafana, with the continuous query behind "who is affected"
    and one late customer request on the way.
-5. **Close:** keep your monitoring tools, add change-driven computation.
+5. **Close:** keep your monitoring tools, add change-driven computation; then
+   the Ignite session survey during questions.
 
 The presenter drives everything from a private presenter desk; the projector
 follows. See [PRESENTER.md](PRESENTER.md).

@@ -39,7 +39,7 @@ const lastApproval = () => drasi("ignite_drasi_last_approval_state");
 
 // What each beat waits for before its screenshot, keyed by "<part>/<beat>".
 const waits = {
-  "normal/0": async () => until("traffic history", async () => (await api("/health")).traffic?.running, 10).then(() => sleep(15000)),
+  "normal/1": async () => until("traffic history", async () => (await api("/health")).traffic?.running, 10).then(() => sleep(15000)),
   "failure/0": () => until("Action needed: Approve", async () => await action() === 1, 60),
   "failure/2": () => until("errors and alert", async () => await drasi("ignite_drasi_overdue_requests", '{workload="support"}') > 0, 60).then(() => sleep(15000)),
   "who/1": () => sleep(3000),
@@ -59,9 +59,10 @@ await fs.mkdir(output, { recursive: true });
 // timers, so Grafana keeps refreshing as it would in a visible projector window.
 const browser = await chromium.launch({ args: ["--disable-background-timer-throttling",
   "--disable-backgrounding-occluded-windows", "--disable-renderer-backgrounding"] });
-// One browser context, so the desk and the projector windows can talk to each other.
+// One browser context, so the desk and the projector windows can talk to each other. The projector
+// and its recordings are 1920x1080 (16:9), the size Ignite asks for.
 const context = await browser.newContext({ viewport: { width: 1920, height: 1080 },
-  ...(mode === "record" ? { recordVideo: { dir: path.join(output, "raw"), size: { width: 1280, height: 720 } } } : {}) });
+  ...(mode === "record" ? { recordVideo: { dir: path.join(output, "raw"), size: { width: 1920, height: 1080 } } } : {}) });
 const desk = await context.newPage();
 await desk.setViewportSize({ width: 1440, height: 900 });
 const shots = [];

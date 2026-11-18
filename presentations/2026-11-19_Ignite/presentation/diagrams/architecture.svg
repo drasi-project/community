@@ -1,28 +1,28 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080" font-family="Aptos, 'Segoe UI', Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080" font-family="'Segoe UI', 'Segoe UI Web', 'Helvetica Neue', Arial, sans-serif">
   <title>Ignite demo architecture</title>
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M0,0 L10,5 L0,10 z" fill="#bdc5d3"/>
+      <path d="M0,0 L10,5 L0,10 z" fill="#D9D9D6"/>
     </marker>
     <marker id="arrow-accent" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M0,0 L10,5 L0,10 z" fill="#9ee8d7"/>
+      <path d="M0,0 L10,5 L0,10 z" fill="#8DC8E8"/>
     </marker>
     <style>
-      .box { fill: #1a202b; stroke: #3a4351; stroke-width: 2; }
-      .group { fill: none; stroke: #3a4351; stroke-width: 2; stroke-dasharray: 8 8; }
-      .drasi { fill: #142a2b; stroke: #9ee8d7; stroke-width: 3; }
-      .title { fill: #eeeef2; font-size: 26px; font-weight: 700; }
-      .sub { fill: #bdc5d3; font-size: 18px; }
-      .glabel { fill: #bdc5d3; font-size: 15px; font-weight: 700; letter-spacing: 2px; }
-      .edge { fill: #bdc5d3; font-size: 15px; }
-      .edge-accent { fill: #9ee8d7; font-size: 15px; }
-      .accent { fill: #9ee8d7; font-size: 20px; font-weight: 700; }
-      .flow { fill: none; stroke: #bdc5d3; stroke-width: 2.5; marker-end: url(#arrow); }
-      .answer { fill: none; stroke: #9ee8d7; stroke-width: 2.5; stroke-dasharray: 9 7; marker-end: url(#arrow-accent); }
+      .box { fill: #091F2C; fill-opacity: .45; stroke: #D9D9D6; stroke-opacity: .45; stroke-width: 2; }
+      .group { fill: none; stroke: #D9D9D6; stroke-opacity: .5; stroke-width: 2; stroke-dasharray: 8 8; }
+      .drasi { fill: #091F2C; fill-opacity: .6; stroke: #8DC8E8; stroke-width: 3; }
+      .title { fill: #FFFFFF; font-size: 26px; font-weight: 600; }
+      .sub { fill: #D9D9D6; font-size: 18px; }
+      .glabel { fill: #D9D9D6; font-size: 15px; font-weight: 600; letter-spacing: 2px; }
+      .edge { fill: #D9D9D6; font-size: 15px; }
+      .edge-accent { fill: #8DC8E8; font-size: 15px; }
+      .accent { fill: #8DC8E8; font-size: 20px; font-weight: 600; }
+      .flow { fill: none; stroke: #D9D9D6; stroke-width: 2.5; marker-end: url(#arrow); }
+      .answer { fill: none; stroke: #8DC8E8; stroke-width: 2.5; stroke-dasharray: 9 7; marker-end: url(#arrow-accent); }
     </style>
   </defs>
-  <rect width="1920" height="1080" fill="#10141c"/>
-  <text x="60" y="82" fill="#eeeef2" font-size="44" font-weight="700">Demo architecture</text>
+  <rect width="1920" height="1080" fill="#2A446F"/>
+  <text x="60" y="82" fill="#FFFFFF" font-size="48" font-weight="600" font-family="'Segoe Sans Display', 'Segoe UI', Arial, sans-serif">Demo architecture</text>
   <text x="60" y="122" class="sub">A local AI service, the observability tools teams already run, and Drasi</text>
   <text x="60" y="238" class="glabel">CLIENTS</text>
   <rect x="405" y="208" width="540" height="482" rx="18" class="group"/>

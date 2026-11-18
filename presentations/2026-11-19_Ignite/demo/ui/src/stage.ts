@@ -19,7 +19,7 @@ const showSchema = z.object({ type: z.literal("stage"), view: viewSchema, trace:
 const keySchema = z.object({ type: z.literal("key"), key: z.string(), id: z.string() });
 const ackSchema = z.object({ type: z.literal("key-ack"), id: z.string() });
 export type Stage = z.infer<typeof schema>;
-const initial: Stage = { cue: 0, beat: 0, view: "title", trace: null, replay: null, selection: null, short: false, fallback: false };
+const initial: Stage = { cue: 0, beat: 0, view: "walkin", trace: null, replay: null, selection: null, short: false, fallback: false };
 const key = settings.storageKey;
 
 // The view requested in the address (?view=… or ?slide=…), if any.
@@ -31,7 +31,7 @@ function requestedView() {
 export function useStage(preview: boolean, presenter = false) {
   const requested = requestedView();
   const [stage, setStage] = useState<Stage>(() => {
-    if (!presenter || preview) return { ...initial, view: requested.success ? requested.data : "title" };
+    if (!presenter || preview) return { ...initial, view: requested.success ? requested.data : "walkin" };
     try { return schema.parse(JSON.parse(localStorage.getItem(key) ?? "{}")); }
     catch { return initial; }
   });

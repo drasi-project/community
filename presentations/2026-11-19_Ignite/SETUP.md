@@ -119,6 +119,38 @@ npm run build
 cd ..
 ```
 
+### 8. Add the Ignite template artwork and fonts
+
+The slides follow the Microsoft Ignite session template, but its artwork, the
+session survey's QR code and the Segoe UI fonts can't be in this public
+repository. Extract them on the presenting machine:
+
+```sh
+python3 ops/template-assets.py
+```
+
+It reads three things, by default from these places (pass `--template`,
+`--survey` or `--fonts` to use others):
+
+| What | Default |
+|---|---|
+| The Ignite session template | `~/Downloads/Microsoft Ignite FY27_16-9 Event-template_v05.potx` |
+| The session survey slides | `~/Downloads/Session Survey Slides.pptx` |
+| Segoe UI (`segoeui-*.woff`) | Microsoft PowerPoint's font cache: `/Applications/Microsoft PowerPoint.app/Contents/Resources/sdx/FA000000002/OfflineFiles` |
+
+It writes the walk-in slide, the title and demo backgrounds, the survey slide's
+background, frame and QR code, Segoe UI and a `manifest.json` to
+`ui/public/template/` (git-ignored), which the web app serves at `/template/`
+straight away: no rebuild or restart. The walk-in slide is rendered from the
+template with LibreOffice and PyMuPDF (`brew install --cask libreoffice`,
+`pip install pymupdf`); without them you get its background only, and the script
+says so. Run it again whenever the template or the survey slides change.
+
+Without these files the talk still works: slides use the template's plain Dark
+Blue background and the system font, the walk-in shows a plain Microsoft Ignite
+title, and the survey slide has no QR code. The presenter desk's header then
+says **Ignite template assets missing**.
+
 Setup is done. Continue with [Start the demo](#start-the-demo).
 
 ## Start the demo

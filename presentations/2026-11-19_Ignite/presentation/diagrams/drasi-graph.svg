@@ -1,31 +1,32 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080" font-family="Aptos, 'Segoe UI', Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080" font-family="'Segoe UI', 'Segoe UI Web', 'Helvetica Neue', Arial, sans-serif">
   <title>Inside Drasi: the demo's computation graph</title>
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M0,0 L10,5 L0,10 z" fill="#bdc5d3"/>
+      <path d="M0,0 L10,5 L0,10 z" fill="#D9D9D6"/>
     </marker>
     <symbol id="clock" viewBox="0 0 20 20">
-      <circle cx="10" cy="10" r="8" fill="none" stroke="#ffd48a" stroke-width="2"/>
-      <path d="M10,5 V10 L13.5,12.5" fill="none" stroke="#ffd48a" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="10" cy="10" r="8" fill="none" stroke="#FFE399" stroke-width="2"/>
+      <path d="M10,5 V10 L13.5,12.5" fill="none" stroke="#FFE399" stroke-width="2" stroke-linecap="round"/>
     </symbol>
     <style>
-      .box { fill: #1a202b; stroke: #3a4351; stroke-width: 2; }
-      .model { fill: #142a2b; stroke: #9ee8d7; stroke-width: 2.5; }
-      .group { fill: none; stroke: #9ee8d7; stroke-width: 2; stroke-dasharray: 7 6; }
-      .out { fill: #1a202b; stroke: #9ee8d7; stroke-width: 2; }
-      .name { fill: #eeeef2; font-size: 19px; font-weight: 700; }
-      .desc { fill: #bdc5d3; font-size: 15px; }
-      .title { fill: #eeeef2; font-size: 24px; font-weight: 700; }
-      .sub { fill: #bdc5d3; font-size: 17px; }
-      .accent { fill: #9ee8d7; font-size: 15px; }
-      .note { fill: #bdc5d3; font-size: 14px; font-style: italic; }
-      .head { fill: #bdc5d3; font-size: 15px; font-weight: 700; letter-spacing: 2px; }
-      .flow { fill: none; stroke: #bdc5d3; stroke-width: 2.2; marker-end: url(#arrow); }
-      .line { fill: none; stroke: #bdc5d3; stroke-width: 2.2; }
+      .box { fill: #091F2C; fill-opacity: .45; stroke: #D9D9D6; stroke-opacity: .45; stroke-width: 2; }
+      .model { fill: #091F2C; fill-opacity: .6; stroke: #8DE971; stroke-width: 2.5; }
+      .group { fill: none; stroke: #8DE971; stroke-width: 2; stroke-dasharray: 7 6; }
+      .out { fill: #091F2C; fill-opacity: .6; stroke: #D4EC8E; stroke-width: 2; }
+      .name { fill: #FFFFFF; font-size: 19px; font-weight: 600; }
+      .desc { fill: #D9D9D6; font-size: 15px; }
+      .title { fill: #FFFFFF; font-size: 24px; font-weight: 600; }
+      .sub { fill: #D9D9D6; font-size: 17px; }
+      .accent { fill: #D4EC8E; font-size: 15px; }
+      .accent-model { fill: #8DE971; font-size: 15px; }
+      .note { fill: #D9D9D6; font-size: 14px; font-style: italic; }
+      .head { fill: #D9D9D6; font-size: 15px; font-weight: 600; letter-spacing: 2px; }
+      .flow { fill: none; stroke: #D9D9D6; stroke-width: 2.2; marker-end: url(#arrow); }
+      .line { fill: none; stroke: #D9D9D6; stroke-width: 2.2; }
     </style>
   </defs>
-  <rect width="1920" height="1080" fill="#10141c"/>
-  <text x="60" y="82" fill="#eeeef2" font-size="44" font-weight="700">Inside Drasi: the demo's computation graph</text>
+  <rect width="1920" height="1080" fill="#2A446F"/>
+  <text x="60" y="82" fill="#FFFFFF" font-size="48" font-weight="600" font-family="'Segoe Sans Display', 'Segoe UI', Arial, sans-serif">Inside Drasi: the demo's computation graph</text>
   <text x="60" y="122" class="sub" font-size="22">Changes flow left to right. Every answer stays current as data changes and as time passes, and reactions deliver it.</text>
   <text x="60" y="205" class="head">SOURCE</text>
   <text x="330" y="205" class="head">CONTINUOUS QUERIES</text>
@@ -82,7 +83,7 @@
   <path d="M785,330 V348" class="flow"/>
   <path d="M785,394 V418" class="flow"/>
   <rect x="660" y="420" width="250" height="180" rx="14" class="group"/>
-  <text x="676" y="446" class="accent">Optimizer · good_lp</text>
+  <text x="676" y="446" class="accent-model">Optimizer · good_lp</text>
   <rect x="676" y="458" width="218" height="62" rx="10" class="model"/>
   <text x="694" y="484" class="name">plan</text>
   <text x="694" y="506" class="desc">Best complete plan</text>

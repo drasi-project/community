@@ -7,7 +7,7 @@ export function presenterScript() {
     const views = [...new Set(notes[scene.id].beats.map(beat => viewLabel(beat.show)))].join(", ");
     return `| ${timeLabel(scene.start)} | ${scene.title} | ${views} | ${notes[scene.id].summary} |`;
   });
-  const run = ["| Time | Part | Projector shows | You |", "|---|---|---|---|", ...rows, "| 22:00 | Questions | Close | Take questions |"].join("\n");
+  const run = ["| Time | Part | Projector shows | You |", "|---|---|---|---|", ...rows, "| 22:00 | Questions | Session survey | Take questions |"].join("\n");
   const cues = scenes.map((scene, index) => {
     const cue = notes[scene.id];
     const beats = cue.beats.map((beat, n) => {

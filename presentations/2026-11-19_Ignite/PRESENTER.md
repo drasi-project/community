@@ -58,6 +58,12 @@ the demo changes. Open the desk to give the talk.
 3. On the desk, press **Open projector window**. Drag that window onto the
    projector and make it full screen (Ctrl ⌘ F). The desk's header then says
    **Projector window connected**.
+   Set the projector to **1920×1080 at 100% scaling** (macOS: Displays ›
+   1920×1080; Windows: Display › Scale 100%), as Ignite asks for live demos. The
+   projected stage is the Ignite template's 16:9 slide, drawn at exactly
+   1920×1080 there; on any other screen it is scaled to fit, with black bars if
+   the shape differs. Nothing is shown in the bottom 78 px, which Ignite keeps
+   clear for closed captions.
 4. Keep the desk on your laptop screen. Turn on Do Not Disturb, quit chat apps,
    and plug in power.
 
@@ -75,9 +81,12 @@ once using only the recordings (see [When something goes wrong](#when-something-
 3. [Set up your screens](#set-up-your-screens).
 4. On the desk, open **Before and after the talk** and check it says
    **✓ Starting state**. If not, press **Reset scenario…** then **Confirm reset**.
-5. Check the header says **READY**.
+5. Check the header says **READY**, and doesn't say **Ignite template assets
+   missing** (if it does, see [SETUP.md › Add the Ignite template artwork and
+   fonts](SETUP.md#8-add-the-ignite-template-artwork-and-fonts)).
 6. Step through a few beats with your clicker to check it moves the projector,
-   then go back to the first beat (**Jump to a part** › 1. Title).
+   then go back to the first beat (**Jump to a part** › 1. Title). The projector
+   then shows the Ignite walk-in slide until you start.
 
 **5 minutes before:** press **Start demo traffic** (All demo controls), so the
 charts have history when you get to them. Traffic stops by itself after 90
@@ -94,7 +103,7 @@ Top to bottom:
 
 | Part | What it's for |
 |---|---|
-| Header | **READY** or **NOT READY**, whether the projector window is connected, and the talk timer. It starts by itself on your first **Next** and turns amber at 22 minutes; tick **Short on time** if you're past about 11:30 when Recovery starts |
+| Header | **READY** or **NOT READY**, whether the projector window is connected, **Ignite template assets missing** if they are, and the talk timer. It starts by itself on your first **Next** and turns amber at 22 minutes; tick **Short on time** if you're past about 11:30 when Recovery starts |
 | **The current beat** (left) | Part number and name, dots for the beats in this part, **◀ Back / Next ▶** and **what the projector shows** (always in the same place), the beat's buttons and their result, what to say, what to watch for, a preview of the next beat, what to do if it breaks (with **Use recordings from here on**), and how to undo a wrong button |
 | **Drasi's answers** (right) | The same answers the audience sees: Support overdue, Action needed, Recovery, Safe if one fails? |
 | **Live demo** (right) | Each deployment's health and capacity; whether traffic is running; where the summaries may run |
@@ -104,7 +113,7 @@ Top to bottom:
 | Show something on the projector | Put any slide, dashboard or visual on the projector without changing your place |
 | Recordings (fallback) | Show one recording on the projector, or switch to recording mode for the rest of the talk |
 | Questions to expect, and glossary | The same as in this guide |
-| Before and after the talk | Starting-state check, reset, full settings |
+| Before and after the talk | Starting-state check, reset, full settings, and whether the Ignite template assets are present |
 
 **Buttons:** the button for the current beat is bright. A ✓ means it's already
 done (traffic running, plan selected, EU-A failed). Grey dashed means it can't be
@@ -132,16 +141,16 @@ after a rejected approval: select the plan again before approving.
 
 | Time | Part | Projector shows | You |
 |---|---|---|---|
-| 0:00 | Title | Title | Introduce yourself and the talk |
+| 0:00 | Title | Walk-in, Title | Walk-in slide while people arrive; then introduce yourself and the talk |
 | 0:30 | The scenario | The scenario | Set up the scenario and the three questions |
 | 2:00 | Drasi in one picture | Drasi in one picture | Explain Drasi's parts and what is built in |
-| 3:30 | Healthy service | Grafana · Operations, What Drasi just did | Walk through the healthy dashboard |
+| 3:30 | Healthy service | Demo, Grafana · Operations, What Drasi just did | Start the live demo; walk through the healthy dashboard |
 | 6:00 | Failure | Grafana · Operations, What Drasi just did | Fail EU-A |
 | 9:00 | Who is affected | Who is affected: the continuous query, One late request | Show who is affected: the query and its live list |
 | 11:30 | Recovery | Grafana · Recovery plan, What Drasi just did, Grafana · Operations | Approve the proposed plan; optionally show a stale approval rejected |
 | 17:00 | Healthy but fragile | Grafana · Recovery plan, Grafana · Operations, What Drasi just did | Healthy but fragile: EU-A returns with half its capacity |
-| 20:30 | Close | Close | Four takeaways, then questions |
-| 22:00 | Questions | Close | Take questions |
+| 20:30 | Close | Close, Session survey | Four takeaways, the session survey, then questions |
+| 22:00 | Questions | Session survey | Take questions |
 
 ## The script
 
@@ -151,7 +160,8 @@ Say it in your own words.
 
 ### 1. Title (30 seconds)
 
-1. **Title.** Introduce yourself. Your monitoring tells you something is wrong. This talk is about getting the next answers too: who is affected, what to do, and whether it worked, worked out the moment things change, in the tools you already use.
+1. **Walk-in.** Before the session: the Ignite walk-in slide stays up while people arrive. Press Next when you start talking; that starts the talk timer.
+2. **Title.** Introduce yourself. Your monitoring tells you something is wrong. This talk is about getting the next answers too: who is affected, what to do, and whether it worked, worked out the moment things change, in the tools you already use.
 
 **If it breaks:** The slides don't depend on the demo. Carry on.
 
@@ -172,12 +182,13 @@ Say it in your own words.
 
 ### 4. Healthy service (2½ minutes)
 
-1. **Grafana · Operations.** This is the AI service's Grafana dashboard. The top half is ordinary monitoring, measured from real requests: calls, errors, answer time, the support queue and Grafana alerts. OpenTelemetry, Prometheus and Grafana; nothing new.
+1. **Demo.** Let's see it live: one incident, end to end, with real requests.
+2. **Grafana · Operations.** This is the AI service's Grafana dashboard. The top half is ordinary monitoring, measured from real requests: calls, errors, answer time, the support queue and Grafana alerts. OpenTelemetry, Prometheus and Grafana; nothing new.
    - **Press:** Start demo traffic
    - **Watch for:** Charts moving. Support errors 0%, Support queue 0 to 2 (green). (Start demo traffic only if it isn't already running.)
-2. **Grafana · Operations.** The bottom half is Drasi's answers, worked out from changes in the AI service's database rather than from metrics. The service records every request and attempt, and checks each deployment's health every second. Drasi turns that into: overdue support requests, each deployment's status, recovery, what action is needed, and whether we'd survive losing any one deployment. A Drasi reaction publishes them as ordinary Prometheus metrics, so you can alert on them like anything else.
+3. **Grafana · Operations.** The bottom half is Drasi's answers, worked out from changes in the AI service's database rather than from metrics. The service records every request and attempt, and checks each deployment's health every second. Drasi turns that into: overdue support requests, each deployment's status, recovery, what action is needed, and whether we'd survive losing any one deployment. A Drasi reaction publishes them as ordinary Prometheus metrics, so you can alert on them like anything else.
    - **Watch for:** Support overdue 0, all deployments Healthy, Recovery Nothing to verify, Action needed None, Safe if one fails? Yes.
-3. **What Drasi just did.** So far Drasi has read every change in the database, kept its queries current, run the policy, planner and what-if, and its reaction has published the answers for Grafana. Nothing new to watch: the answers sit where you already look.
+4. **What Drasi just did.** So far Drasi has read every change in the database, kept its queries current, run the policy, planner and what-if, and its reaction has published the answers for Grafana. Nothing new to watch: the answers sit where you already look.
 
 **If it breaks:** If the charts are empty, traffic isn't running: press Start demo traffic and keep talking.
 
@@ -247,8 +258,10 @@ Say it in your own words.
 
 ### 9. Close (1½ minutes)
 
-1. **Close.** Keep your monitoring tools, and add change-driven computation next to them. Drasi turned changing facts (requests, health, capacity, policy, approvals and time) into live answers: who is late, what fits the rules, whether the fix worked, and whether we're safe from the next failure. To learn more, go to drasi.io, on screen. Thank you. Questions?
-2. **Close.** After questions, stop the demo traffic.
+1. **Close.** Keep your monitoring tools, and add change-driven computation next to them. Drasi turned changing facts (requests, health, capacity, policy, approvals and time) into live answers: who is late, what fits the rules, whether the fix worked, and whether we're safe from the next failure. To learn more, go to drasi.io, on screen.
+2. **Session survey.** Thank you. Please scan the code and tell us how we did in the session survey. Questions?
+   - **Watch for:** The survey slide with its QR code stays up during questions.
+3. **Session survey.** After questions, stop the demo traffic. Leave the survey slide up.
    - **Press:** Stop demo traffic
 
 **If it breaks:** Summarize in words. Never project the desk.

@@ -21,8 +21,11 @@ export type Cue = { summary: string; beats: Beat[]; ifBroken: string; recording?
 
 export const notes: Record<SceneId, Cue> = {
   title: {
-    summary: "Introduce yourself and the talk",
+    summary: "Walk-in slide while people arrive; then introduce yourself and the talk",
     beats: [{
+      show: "walkin",
+      say: "Before the session: the Ignite walk-in slide stays up while people arrive. Press Next when you start talking; that starts the talk timer.",
+    }, {
       show: "title",
       say: "Introduce yourself. Your monitoring tells you something is wrong. This talk is about getting the next answers too: who is affected, what to do, and whether it worked, worked out the moment things change, in the tools you already use.",
     }],
@@ -46,8 +49,9 @@ export const notes: Record<SceneId, Cue> = {
     ifBroken: "Carry on.",
   },
   normal: {
-    summary: "Walk through the healthy dashboard",
+    summary: "Start the live demo; walk through the healthy dashboard",
     beats: [
+      { show: "demo", say: "Let's see it live: one incident, end to end, with real requests." },
       { show: "ops", do: ["start-traffic"],
         say: "This is the AI service's Grafana dashboard. The top half is ordinary monitoring, measured from real requests: calls, errors, answer time, the support queue and Grafana alerts. OpenTelemetry, Prometheus and Grafana; nothing new.",
         watch: "Charts moving. Support errors 0%, Support queue 0 to 2 (green). (Start demo traffic only if it isn't already running.)" },
@@ -123,10 +127,12 @@ export const notes: Record<SceneId, Cue> = {
     ifBroken: "If Safe if one fails? doesn't change, press Use recordings from here on.",
   },
   closing: {
-    summary: "Four takeaways, then questions",
+    summary: "Four takeaways, the session survey, then questions",
     beats: [
-      { show: "closing", say: "Keep your monitoring tools, and add change-driven computation next to them. Drasi turned changing facts (requests, health, capacity, policy, approvals and time) into live answers: who is late, what fits the rules, whether the fix worked, and whether we're safe from the next failure. To learn more, go to drasi.io, on screen. Thank you. Questions?" },
-      { show: "closing", do: ["stop-traffic"], say: "After questions, stop the demo traffic." },
+      { show: "closing", say: "Keep your monitoring tools, and add change-driven computation next to them. Drasi turned changing facts (requests, health, capacity, policy, approvals and time) into live answers: who is late, what fits the rules, whether the fix worked, and whether we're safe from the next failure. To learn more, go to drasi.io, on screen." },
+      { show: "survey", say: "Thank you. Please scan the code and tell us how we did in the session survey. Questions?",
+        watch: "The survey slide with its QR code stays up during questions." },
+      { show: "survey", do: ["stop-traffic"], say: "After questions, stop the demo traffic. Leave the survey slide up." },
     ],
     ifBroken: "Summarize in words. Never project the desk.",
   },

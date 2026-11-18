@@ -16,15 +16,23 @@ export const products = {
 // Dashboards as projected: kiosk mode (no Grafana toolbar), embedded in the stage.
 export const dashboards = { ops: grafana("ignite-workload", true), plan: grafana("ignite-decisions", true) } as const;
 
-// Shown on the title slide when set.
+// Shown on the title slide when set (bold name, then role, as in the Ignite template).
 export const speaker = { name: "", role: "" };
+export const session = { event: "Microsoft Ignite 2026", code: "THR1029" };
+
+// The Ignite template's 16:9 slide, in pixels. Projected content stays above captionTop: the
+// bottom 78 px are kept clear for closed captions, on slides and on the projected dashboards.
+export const frame = { width: 1920, height: 1080, captionTop: 1002 } as const;
 
 export const slides = [
+  { id: "walkin", title: "Walk-in" },
   { id: "title", title: "Title" },
   { id: "concepts", title: "The scenario" },
   { id: "drasi", title: "Drasi in one picture" },
+  { id: "demo", title: "Demo" },
   { id: "query", title: "Who is affected: the continuous query" },
   { id: "closing", title: "Close" },
+  { id: "survey", title: "Session survey" },
 ] as const;
 
 // "What Drasi just did" visuals, shown after each part of the live demo.

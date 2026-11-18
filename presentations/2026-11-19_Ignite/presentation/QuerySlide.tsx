@@ -24,9 +24,9 @@ function LiveResult() {
   const live = useDrasiStream(overdueOnly).queries["overdue-tasks"];
   const late = live.rows.filter(row => row.workload === "support")
     .sort((a, b) => Number(a.deadline_ms) - Number(b.deadline_ms));
-  if (!live.attached) return <div className="query-live"><p><b>Live from Drasi:</b> connecting…</p></div>;
-  return <div className="query-live">
-    <p><b>Live from Drasi:</b> {late.length === 0 ? "no support requests are late right now"
+  if (!live.attached) return <div className="query-live callout"><p><b>Live from Drasi</b> connecting…</p></div>;
+  return <div className="query-live callout">
+    <p><b>Live from Drasi</b> {late.length === 0 ? "no support requests are late right now"
       : `${late.length} support request${late.length === 1 ? " is" : "s are"} late right now`}</p>
     {late.length > 0 && <ol>{late.slice(0, 4).map(row => <li key={String(row.id)}>
       <span>late by {Math.max(0, Math.round((Date.now() - Number(row.deadline_ms)) / 1000))} s</span>
@@ -37,14 +37,16 @@ function LiveResult() {
 
 // The live result connects to Drasi's SSE reaction only while this slide is showing.
 export function QuerySlide({ live }: { live: boolean }) {
-  return <div className="query-slide">
-    <span className="eyebrow">Who is affected · a continuous query</span>
+  return <div className="content-slide query-slide">
     <h1>The query behind "Support overdue"</h1>
-    <div className="query-body">
-      <pre aria-label="overdue-tasks query">{displayQuery.map(([line, n], i) =>
-        <span key={i} className={n === 3 ? "hot" : undefined}>{n ? <i>{n}</i> : <i aria-hidden="true" />}{line}{"\n"}</span>)}</pre>
+    <div className="body">
+      <div className="code-panel">
+        <p className="code-tab">Continuous query · overdue-tasks</p>
+        <pre aria-label="overdue-tasks query">{displayQuery.map(([line, n], i) =>
+          <span key={i} className={n === 3 ? "hot" : undefined}>{n ? <i>{n}</i> : <i aria-hidden="true" />}{line}{"\n"}</span>)}</pre>
+      </div>
       <ol className="query-notes">{notes.map(note => <li key={note}>{note}</li>)}</ol>
+      {live ? <LiveResult /> : <div className="query-live callout"><p><b>Live from Drasi</b></p></div>}
     </div>
-    {live ? <LiveResult /> : <div className="query-live"><p><b>Live from Drasi</b></p></div>}
   </div>;
 }
