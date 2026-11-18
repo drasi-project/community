@@ -45,3 +45,33 @@ Remove an item when it is done.
   the expanded query view.
 - **Podman memory.** The Podman VM has 7.45 GiB; running both stacks at once ran
   out of memory. Give it more memory (the Mac has 32 GB) before running both again.
+
+## Things to Change in the Presentation
+
+- **1. Title Slide**
+  - change "Answers that update the moment things change, beside the monitoring you already use" to "???"
+- **2. The scenario**
+  - The title should be "The Scenario - Keep Customer Support Running" and "Keep customer support running." can be removed from the first sentence.
+  - The presenter deck has 3 sections that map to the 3 sections on the slide, reveal the appropriate section when the presenter advances.
+  - The text "When EU‑A fails, the business needs three answers." should be "When something goes wrong, the business needs three answers"
+  - get rid of "Simulated AI models and capacity · real requests, monitoring and Drasi"
+  - add another slide that has a simplified architecture diagram showing europe with 2 deployments and usa with a third deployment. say something like 'we are going to see what happens when EU-A fails and how Drasi integrates with and augments your existing obsevration infrastructure to respond intelligently to events quicker.
+- **3. Drasi in one picture**
+  - Just call the slide "Drasi - change-driven computation"
+  - Just have 3 boxes: Sources, Continuos Models (Query, Policy, Optimization), Reactions
+  - Get rid of other text
+- **4. Healthy Service**
+  - Get rid of the 'Demo' slide, its not needed.
+  - The section headings should be more generic and typical of a dashboard like "AI Deployments" and "Decision Support" or something like that
+  - THere used to be little (i) icons that gave extra info, they have gone and should return. The current 3 dots in top right disappear as you move the mouse across them making them not useful.
+- **5. Failure**
+  - When i first hit Fail EU-A, in the 'Drasi' section of the dashboard multiple things are poorly expressed and are meanignless:
+    - 'Recovery' says Nothing to verify, which makes no sense, it is meaningless.
+    - Action needed says 'Approve proposed plan'. it is a call to action with no way to take action. Wouldnt the dashboard say the proposal or give a way to get to the proposal.
+    - 'Safe if one fails?' is a very stupid and meaningless title and when it says 'already one down' it makes even less sense.
+  - The presenter panel has multiple sections that talks about the dashbaord elements. how possible is it to highlight screen elements on the dashboard to coincide with what is being talked about?
+- **7. Recovery**
+  - what does this screen even represent? it is a poorly organized hodge podge of made up panels. Is there a way to present this in a way that a real infra support person might have access to? Its really a dashboard for the demo process, not a real operational demo
+  - in the presenter screen 2 of section 7, there is a button to "Select proposed plan" at this point i am just confused. What plan is it talking about? And when i click it, the presenter button shows a green tick, but i have no idea what just happened and i dont see anything on the presentation screen.
+
+
