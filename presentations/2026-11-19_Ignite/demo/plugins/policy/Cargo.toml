@@ -18,7 +18,7 @@ serde_json.workspace = true
 async-trait = "0.1"
 futures-util = "0.3"
 sha2 = "0.10"
-drasi-core-types = { path = "../../../../../../drasi-core/core-types" }
-drasi-computation-contracts = { path = "../../../../../../drasi-core/components/computation-contracts" }
-drasi-computation-plugin-sdk = { path = "../../../../../../drasi-core/components/computation-plugin-sdk" }
+drasi-core-types = { path = "../../../../../../drasi-core-next/core-types" }
+drasi-computation-contracts = { path = "../../../../../../drasi-core-next/components/computation-contracts" }
+drasi-computation-plugin-sdk = { path = "../../../../../../drasi-core-next/components/computation-plugin-sdk" }
 regorus = { version = "=0.12.0", default-features = false, features = ["std", "arc"] }

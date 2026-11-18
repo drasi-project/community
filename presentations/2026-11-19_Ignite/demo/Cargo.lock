@@ -591,6 +591,7 @@ dependencies = [
  "drasi-core-types",
  "futures-core",
  "futures-util",
+ "log",
  "rmp-serde",
  "serde",
  "serde_bytes",

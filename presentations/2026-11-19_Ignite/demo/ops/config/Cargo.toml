@@ -9,12 +9,12 @@ anyhow.workspace = true
 serde_json.workspace = true
 serde.workspace = true
 ignite-settings = { path = "../../settings" }
-drasi-lib = { path = "../../../../../../drasi-core/lib" }
-drasi-host-sdk = { path = "../../../../../../drasi-core/components/host-sdk" }
+drasi-lib = { path = "../../../../../../drasi-core-next/lib" }
+drasi-host-sdk = { path = "../../../../../../drasi-core-next/components/host-sdk" }
 
 [dev-dependencies]
 # The incident card queries run through drasi-core in src/incident_tests.rs.
-drasi-core = { path = "../../../../../../drasi-core/core" }
-drasi-functions-cypher = { path = "../../../../../../drasi-core/functions-cypher" }
-drasi-query-cypher = { path = "../../../../../../drasi-core/query-cypher" }
+drasi-core = { path = "../../../../../../drasi-core-next/core" }
+drasi-functions-cypher = { path = "../../../../../../drasi-core-next/functions-cypher" }
+drasi-query-cypher = { path = "../../../../../../drasi-core-next/query-cypher" }
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
