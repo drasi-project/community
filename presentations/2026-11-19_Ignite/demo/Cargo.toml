@@ -1,9 +1,10 @@
 [workspace]
 members = [
     "settings", "ops/config", "workloads",
-    # This demo's native plugins (plan/contracts.md): good_lp optimizer, Prometheus reaction.
-    # The Rego policy is Drasi's drasi.standard/policy (drasi/policy).
-    "plugins/optimizer", "plugins/prometheus",
+    # This demo's native plugin (plan/contracts.md): the Prometheus reaction. The Rego
+    # policy and the optimizer are Drasi's drasi.standard/policy and
+    # drasi.standard/optimization (drasi/policy, drasi/optimization).
+    "plugins/prometheus",
 ]
 resolver = "2"
 

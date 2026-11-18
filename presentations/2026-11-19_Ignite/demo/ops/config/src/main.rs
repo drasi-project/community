@@ -1,6 +1,6 @@
 //! Generates this copy's Drasi Server configuration (plan/contracts.md section 4):
-//! PostgreSQL source → policy-input → Drasi's Rego policy → policy-results → optimizer
-//! (plan, resilience) → result queries → tile queries → Prometheus reaction, and the
+//! PostgreSQL source → policy-input → Drasi's Rego policy → policy-results → Drasi's
+//! optimization (plan, with its single-loss what-if) → result queries → tile queries → Prometheus reaction, and the
 //! approval, recovery, annotation and score queries → HTTP reactions; the incident
 //! event queries → the `incident-channel` reaction posting cards to Mattermost.
 //! With IGNITE_HEALTH_SOURCE=otel, deployment health comes from the health probes instead:
@@ -153,14 +153,16 @@ fn all_queries() -> Vec<Query> {
     vec![
         // Context queries over the scenario tables: the plugins' inputs.
         query!("policy-input", ["postgres"], "PolicyInput"),
-        query!("plan-items", ["postgres"]),
-        query!("plan-bins", ["postgres"]),
+        query!("plan-context", ["postgres"], "PlanContext"),
+        query!("plan-items", ["postgres"], "PlanItem"),
+        query!("plan-bins", ["postgres"], "PlanBin"),
+        query!("plan-candidates", ["postgres"], "PlanCandidate"),
         // Plugin results.
         query!("policy-results", ["policy"], "PolicyResult"),
         query!("plan-results", ["plan"], "PlanResult"),
         query!("assignment-results", ["plan"], "AssignmentResult"),
-        query!("resilience-results", ["resilience"], "ResilienceResult"),
-        query!("loss-results", ["resilience"]),
+        query!("resilience-results", ["plan"], "ResilienceResult"),
+        query!("loss-results", ["plan"]),
         // The application's requests.
         query!("overdue-tasks", ["postgres"]),
         query!("task-context", ["postgres"]),
@@ -212,12 +214,11 @@ fn all_queries() -> Vec<Query> {
 /// Edges into the native plugins' named input ports.
 const PLUGIN_INPUTS: &[(&str, &str, &str)] = &[
     ("policy-input", "policy", "in"),
-    ("plan-items", "plan", "items"),
-    ("plan-bins", "plan", "bins"),
-    ("policy-results", "plan", "eligibility"),
-    ("plan-items", "resilience", "items"),
-    ("plan-bins", "resilience", "bins"),
-    ("policy-results", "resilience", "eligibility"),
+    ("plan-context", "plan", "in"),
+    ("plan-items", "plan", "in"),
+    ("plan-bins", "plan", "in"),
+    ("plan-candidates", "plan", "in"),
+    ("policy-results", "plan", "in"),
 ];
 
 /// Prometheus reaction aliases (plugins/prometheus/examples/ignite.json) → tile query.
@@ -472,7 +473,7 @@ fn main() -> Result<()> {
     let query_plugin = load(directory, "drasi_computation_transformer_query")?;
     let http_sink = load(directory, "drasi_computation_sink_http")?;
     let policy = load(directory, "drasi_computation_transformer_policy")?;
-    let optimizer = load(directory, "drasi_computation_ignite_optimizer")?;
+    let optimization = load(directory, "drasi_computation_transformer_optimization")?;
     let prometheus = load(directory, "drasi_computation_ignite_prometheus")?;
     let sse = load(directory, "drasi_computation_sink_sse")?;
     let source_factory = find_factory(&pg, "drasi.postgres/shared-changes")?;
@@ -491,7 +492,7 @@ fn main() -> Result<()> {
         .map(|q| q.name)
         .collect();
 
-    let plugins = ["policy", "plan", "resilience"];
+    let plugins = ["policy", "plan"];
     let ids: BTreeMap<&str, ComponentId> = [PG, "postgres-bootstrap", "query-results", "metrics", "desk-stream"]
         .into_iter()
         .chain(otel.as_ref().map(|_| OTEL))
@@ -649,20 +650,18 @@ fn main() -> Result<()> {
         .dependencies
         .insert("output_snapshots".into(), vec![resource("policy-snapshots")?]);
     builder = builder.component(ComponentName::try_new("policy")?, specification, factory);
-    // This demo's optimizer: its settings are its configuration.
-    let optimizer_config: Value =
-        serde_json::from_str(include_str!("../../../plugins/optimizer/examples/ignite.json"))?;
-    for (name, plugin, implementation, configuration) in [
-        ("plan", &optimizer, "ignite/assignment-plan", optimizer_config.clone()),
-        ("resilience", &optimizer, "ignite/assignment-resilience", optimizer_config),
-    ] {
-        let factory = find_factory(plugin, implementation)?;
-        let mut specification = factory.specification(ids[name].clone(), configuration)?;
-        specification
-            .dependencies
-            .insert("output_snapshots".into(), vec![resource(&format!("{name}-snapshots"))?]);
-        builder = builder.component(ComponentName::try_new(name)?, specification, factory);
-    }
+    // Drasi's optimization (drasi.standard/optimization): the placement model, its
+    // single-loss what-if and its preconditions are its configuration (drasi/optimization).
+    let mut model: Value =
+        serde_json::from_str(include_str!("../../../drasi/optimization/optimization.json"))?;
+    model["stream"] = json!(stream(ids["plan"].as_str())?);
+    let factory = find_factory(&optimization, "drasi.standard/optimization")?;
+    let mut specification = factory.specification(ids["plan"].clone(), model)?;
+    // It starts from its input queries' snapshots.
+    specification
+        .dependencies
+        .insert("output_snapshots".into(), vec![resource("plan-snapshots")?]);
+    builder = builder.component(ComponentName::try_new("plan")?, specification, factory);
 
     // Prometheus reaction: every tile query's rows as gauges.
     let mut metrics: Value =

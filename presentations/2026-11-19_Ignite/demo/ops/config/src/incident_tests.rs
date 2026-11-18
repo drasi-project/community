@@ -604,17 +604,91 @@ async fn deployment_tile_from_telemetry_detects_failure_silence_and_recovery() {
     assert_eq!(rows, [("EU-A".into(), json!(0))], "only EU-A belongs to run-2 here");
 }
 
-/// The planner's bins: status from telemetry, Unknown after silence.
+/// The planner's bins: health from telemetry (failed and throttled are unhealthy),
+/// unknown after silence.
 #[tokio::test]
 async fn plan_bins_from_telemetry() {
     let mut w = World::new(Sim::from_telemetry("plan-bins").await).await;
     w.until(3000).await;
     w.status.insert("EU-A", "failed");
+    w.status.insert("EU-B", "throttled");
     w.status.remove("US-C");
     w.tick().await;
     w.until(13000).await;
+    let mut rows: Vec<_> = w.sim.rows().into_iter().map(|r| (r["id"].as_str().unwrap().to_string(), r["health"].clone())).collect();
+    rows.sort_by(|a, b| a.0.cmp(&b.0));
     assert_eq!(
-        statuses(&w.sim, "id"),
-        [("EU-A".into(), json!("failed")), ("EU-B".into(), json!("ok")), ("US-C".into(), json!("unknown"))]
+        rows,
+        [("EU-A".into(), json!("unhealthy")), ("EU-B".into(), json!("unhealthy")), ("US-C".into(), json!("unknown"))]
     );
+}
+
+/// A `drasi.standard/optimization` status row as the `plan` component publishes it
+/// (drasi/optimization): EU-A failed, support and batch moved, losing EU-B leaves no plan.
+fn plan_status(extra: Value) -> Value {
+    let mut row = json!({
+        "status": "optimal", "detail": "all objectives are optimal", "objective": 0.8,
+        "objectives": {"moves": 2.0, "peak": 0.8}, "signature": "00aa", "solutionSignature": "11bb",
+        "variables": 4, "constraints": 6, "members": 20, "setSizes": {"unhealthy": 1},
+        "provenance": {"run_epoch": "run-1", "revision": 3}, "precondition": null,
+        "summaries": {
+            "assignments": [{"subject": "batch", "target": "US-C", "value": 1}, {"subject": "support", "target": "EU-B", "value": 1}],
+            "moved": [{"subject": "batch", "target": "US-C", "value": 1}, {"subject": "support", "target": "EU-B", "value": 1}]},
+        "scenarios": {"loss": {"values": 2, "feasible": 0, "failures": [
+            {"value": "EU-B", "status": "infeasible", "detail": "constraint assign-once[support] has no eligible variables and cannot hold"},
+            {"value": "US-C", "status": "infeasible", "detail": "no assignment satisfies every constraint"}]}},
+        "scenariosSignature": "00aa"});
+    for (k, v) in extra.as_object().unwrap() {
+        row[k] = v.clone();
+    }
+    row
+}
+
+async fn plan_row(query: &'static str, status: Value) -> Value {
+    let mut sim = Sim::new(query).await;
+    sim.change("PlanStatus", "status", Some(status)).await;
+    let rows = sim.rows();
+    assert_eq!(rows.len(), 1, "{query}: {rows:?}");
+    rows[0].clone()
+}
+
+/// The result queries read the official optimizer's status row with today's columns.
+#[tokio::test]
+async fn plan_and_resilience_results_from_the_optimization_status() {
+    let p = plan_row("plan-results", plan_status(json!({}))).await;
+    assert_eq!(p["state"], "feasible");
+    assert_eq!(p["candidate_id"], "11bb");
+    assert_eq!(p["basis"], "00aa");
+    assert_eq!(p["revision"], 3);
+    assert_eq!(p["run_epoch"], "run-1");
+    assert_eq!(p["moves"], 2);
+    assert_eq!(p["assignments"], r#"{"batch":"US-C","support":"EU-B"}"#);
+    assert_eq!(p["reason"], "Move batch to US-C and support to EU-B (2 moves, peak use 80%)");
+    let r = plan_row("resilience-results", plan_status(json!({}))).await;
+    assert_eq!((r["state"].clone(), r["first_failure"].clone()), (json!("at_risk"), json!("EU-B")));
+    assert_eq!(r["unhealthy_bins"], 1);
+    assert_eq!(r["reason"], "Losing EU-B leaves no plan: No allowed, healthy destination with room for support");
+
+    let seed = json!({"objectives": {"moves": 0.0, "peak": 0.8}, "setSizes": {"unhealthy": 0},
+        "summaries": {"assignments": [{"subject": "batch", "target": "EU-B", "value": 1}, {"subject": "support", "target": "EU-A", "value": 1}], "moved": []},
+        "scenarios": {"loss": {"values": 3, "feasible": 3, "failures": []}}});
+    let p = plan_row("plan-results", plan_status(seed.clone())).await;
+    assert_eq!(p["moves"], 0);
+    assert!(p["reason"].as_str().unwrap().starts_with("Everything already runs"));
+    assert_eq!(plan_row("resilience-results", plan_status(seed)).await["state"], "safe");
+
+    let infeasible = json!({"status": "infeasible", "objectives": {}, "objective": null,
+        "detail": "constraint assign-once[support] has no eligible variables and cannot hold",
+        "solutionSignature": null, "summaries": null});
+    let p = plan_row("plan-results", plan_status(infeasible.clone())).await;
+    assert_eq!((p["state"].clone(), p["candidate_id"].clone(), p["assignments"].clone()), (json!("infeasible"), json!(""), json!("{}")));
+    assert_eq!(p["reason"], "No allowed, healthy destination with room for support");
+    assert_eq!(plan_row("resilience-results", plan_status(infeasible)).await["state"], "at_risk");
+
+    let unknown = json!({"status": "unknown", "precondition": "health-known", "objectives": {}, "objective": null,
+        "detail": "precondition health-known does not hold: 1 member of bins matches, expected at most 0: [EU-B]",
+        "solutionSignature": null, "summaries": null, "scenarios": null, "scenariosSignature": null});
+    let p = plan_row("plan-results", plan_status(unknown.clone())).await;
+    assert_eq!((p["state"].clone(), p["reason"].clone()), (json!("unknown"), json!("Health of EU-B is unknown")));
+    assert_eq!(plan_row("resilience-results", plan_status(unknown)).await["state"], "unknown");
 }

@@ -1,3 +1,4 @@
 MATCH (l:LossScenario)
-RETURN l.lost AS id, l.lost AS lost, l.state AS state, l.assignments AS assignments,
-       l.reason AS reason, l.basis AS basis, l.run_epoch AS run_epoch
+RETURN l.value AS id, l.value AS lost,
+       CASE WHEN l.feasible = true THEN 'feasible' WHEN l.feasible = false THEN 'infeasible' ELSE 'unknown' END AS state,
+       l.detail AS reason, l.signature AS basis, l.provenance.run_epoch AS run_epoch

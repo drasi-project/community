@@ -1,0 +1,394 @@
+{
+  "debounceMs": 100,
+  "maxDelayMs": 1000,
+  "timeLimitMs": 2000,
+  "statusLabel": "PlanStatus",
+  "scenarioLabel": "LossScenario",
+  "sets": [
+    {
+      "name": "context",
+      "label": "PlanContext",
+      "key": [
+        "run_epoch"
+      ]
+    },
+    {
+      "name": "items",
+      "label": "PlanItem",
+      "key": [
+        "id"
+      ]
+    },
+    {
+      "name": "bins",
+      "label": "PlanBin",
+      "key": [
+        "id"
+      ]
+    },
+    {
+      "name": "healthy",
+      "label": "PlanBin",
+      "key": [
+        "id"
+      ],
+      "where": [
+        {
+          "property": "health",
+          "op": "==",
+          "value": "healthy"
+        }
+      ]
+    },
+    {
+      "name": "unhealthy",
+      "label": "PlanBin",
+      "key": [
+        "id"
+      ],
+      "where": [
+        {
+          "property": "health",
+          "op": "==",
+          "value": "unhealthy"
+        }
+      ]
+    },
+    {
+      "name": "decisions",
+      "label": "PolicyResult",
+      "key": [
+        "subject",
+        "target"
+      ]
+    },
+    {
+      "name": "allowed",
+      "label": "PolicyResult",
+      "key": [
+        "subject",
+        "target"
+      ],
+      "where": [
+        {
+          "property": "state",
+          "op": "==",
+          "value": "allowed"
+        },
+        {
+          "property": "allowed",
+          "op": "==",
+          "value": true
+        }
+      ]
+    },
+    {
+      "name": "candidates",
+      "label": "PlanCandidate",
+      "key": [
+        "subject",
+        "target"
+      ]
+    },
+    {
+      "name": "pairs",
+      "label": "PlanCandidate",
+      "key": [
+        "subject",
+        "target"
+      ],
+      "where": [
+        {
+          "inSet": "allowed",
+          "match": {
+            "subject": "subject",
+            "target": "target"
+          }
+        },
+        {
+          "inSet": "healthy",
+          "match": {
+            "target": "id"
+          }
+        },
+        {
+          "property": "capacity_tpm",
+          "op": ">=",
+          "valueProperty": "demand_tpm"
+        }
+      ]
+    }
+  ],
+  "variables": [
+    {
+      "name": "assign",
+      "type": "binary",
+      "over": "pairs",
+      "output": {
+        "label": "Assignment",
+        "properties": [
+          "subject",
+          "target",
+          "current",
+          "demand_tpm"
+        ]
+      }
+    },
+    {
+      "name": "peak",
+      "type": "continuous",
+      "lower": 0,
+      "output": {
+        "emit": false
+      }
+    }
+  ],
+  "constraints": [
+    {
+      "name": "assign-once",
+      "forEach": "items",
+      "terms": [
+        {
+          "variable": "assign",
+          "match": {
+            "subject": "id"
+          }
+        }
+      ],
+      "op": "==",
+      "rhs": 1
+    },
+    {
+      "name": "capacity",
+      "forEach": "healthy",
+      "terms": [
+        {
+          "variable": "assign",
+          "match": {
+            "target": "id"
+          },
+          "coefficient": {
+            "property": "demand_tpm"
+          }
+        }
+      ],
+      "op": "<=",
+      "rhs": {
+        "property": "capacity_tpm"
+      }
+    },
+    {
+      "name": "peak-use",
+      "forEach": "healthy",
+      "where": [
+        {
+          "property": "capacity_tpm",
+          "op": ">",
+          "value": 0
+        }
+      ],
+      "terms": [
+        {
+          "variable": "assign",
+          "match": {
+            "target": "id"
+          },
+          "coefficient": {
+            "property": "demand_tpm"
+          }
+        },
+        {
+          "variable": "peak",
+          "coefficient": {
+            "property": "capacity_tpm",
+            "of": "group",
+            "scale": -1
+          }
+        }
+      ],
+      "op": "<=",
+      "rhs": 0
+    }
+  ],
+  "objectives": [
+    {
+      "name": "moves",
+      "sense": "minimize",
+      "terms": [
+        {
+          "variable": "assign",
+          "where": [
+            {
+              "property": "target",
+              "op": "!=",
+              "valueProperty": "current"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "peak",
+      "sense": "minimize",
+      "terms": [
+        {
+          "variable": "peak"
+        }
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "name": "loss",
+      "set": "healthy",
+      "property": "id"
+    }
+  ],
+  "provenance": {
+    "set": "context",
+    "properties": [
+      "run_epoch",
+      "revision"
+    ]
+  },
+  "preconditions": [
+    {
+      "name": "context-loaded",
+      "set": "context",
+      "min": 1,
+      "max": 1
+    },
+    {
+      "name": "items-loaded",
+      "set": "items",
+      "min": 1
+    },
+    {
+      "name": "bins-loaded",
+      "set": "bins",
+      "min": 1
+    },
+    {
+      "name": "health-known",
+      "set": "bins",
+      "max": 0,
+      "where": [
+        {
+          "property": "health",
+          "op": "notIn",
+          "value": [
+            "healthy",
+            "unhealthy"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "policy-known",
+      "set": "decisions",
+      "max": 0,
+      "where": [
+        {
+          "property": "state",
+          "op": "notIn",
+          "value": [
+            "allowed",
+            "denied"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "candidates-loaded",
+      "set": "items",
+      "max": 0,
+      "where": [
+        {
+          "notInSet": "candidates",
+          "match": {
+            "id": "subject"
+          }
+        }
+      ]
+    },
+    {
+      "name": "policy-complete",
+      "set": "candidates",
+      "max": 0,
+      "where": [
+        {
+          "notInSet": "decisions",
+          "match": {
+            "subject": "subject",
+            "target": "target"
+          }
+        }
+      ]
+    },
+    {
+      "name": "same-revision",
+      "set": "items",
+      "max": 0,
+      "where": [
+        {
+          "notInSet": "context",
+          "match": {
+            "run_epoch": "run_epoch",
+            "revision": "revision"
+          }
+        }
+      ]
+    },
+    {
+      "name": "same-run",
+      "set": "bins",
+      "max": 0,
+      "where": [
+        {
+          "notInSet": "context",
+          "match": {
+            "run_epoch": "run_epoch"
+          }
+        }
+      ]
+    },
+    {
+      "name": "same-run-policy",
+      "set": "decisions",
+      "max": 0,
+      "where": [
+        {
+          "notInSet": "context",
+          "match": {
+            "run_epoch": "run_epoch"
+          }
+        }
+      ]
+    }
+  ],
+  "summaries": [
+    {
+      "name": "assignments",
+      "variable": "assign",
+      "properties": [
+        "subject",
+        "target"
+      ]
+    },
+    {
+      "name": "moved",
+      "variable": "assign",
+      "properties": [
+        "subject",
+        "target"
+      ],
+      "where": [
+        {
+          "property": "target",
+          "op": "!=",
+          "valueProperty": "current"
+        }
+      ]
+    }
+  ]
+}
