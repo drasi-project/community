@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import overdueQuery from "../demo/drasi/overdue-tasks.cypher?raw";
 import healthQuery from "../demo/drasi/deployment-health.cypher?raw";
 import workloadsQuery from "../demo/drasi/tile-workloads.cypher?raw";
-import rego from "../demo/drasi/policy/ignite.rego?raw";
+import rego from "../demo/drasi/policy/placement.rego?raw";
 import optimization from "../demo/drasi/optimization/optimization.json";
 import { buildConfig, type ConfigId } from "./codeSlides";
 import type { Rect } from "./panels";

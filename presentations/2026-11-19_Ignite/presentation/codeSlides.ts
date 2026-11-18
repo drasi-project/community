@@ -25,8 +25,8 @@ const withoutComments = (text: string, comment: string) => text.split("\n")
   .filter(line => line.trim() && !line.trim().startsWith(comment)).map(line => line.replace(/\t/g, "    "));
 
 // With health from telemetry the config generator points the health queries at deployment-health's
-// rows (label DeploymentHealth) instead of the ignite_reports table (demo/ops/config/src/main.rs).
-const relabel = (lines: string[]) => lines.map(line => line.replace(/:ignite_reports\b/g, ":DeploymentHealth"));
+// rows (label DeploymentHealth) instead of the deployment_health_reports table (demo/ops/config/src/main.rs).
+const relabel = (lines: string[]) => lines.map(line => line.replace(/:deployment_health_reports\b/g, ":DeploymentHealth"));
 
 // optimization.json's parts, one entry per line; nested detail ("terms", "where", "output") elided.
 const elided = new Set(["terms", "where", "output", "match"]);
@@ -45,9 +45,9 @@ export function buildConfig({ overdueQuery, healthQuery, workloadsQuery, rego, o
       lines: withoutComments(overdueQuery, "//") },
     "deployment-health": { tab: "Continuous query · deployment-health, from the OpenTelemetry source", hot: ["CASE toInteger(m.value)", "+ 8000"],
       lines: withoutComments(healthQuery, "//") },
-    "tile-workloads": { tab: "Continuous query · tile-workloads", hot: ["ROUTE_POLICY", "ROUTE_REPORT"],
+    "tile-workloads": { tab: "Continuous query · tile-workloads", hot: ["ROUTE_POLICY", "ROUTE_HEALTH"],
       lines: relabel(withoutComments(workloadsQuery, "//")) },
-    policy: { tab: "Continuous model · policy · drasi.standard/policy · ignite.rego (rules)",
+    policy: { tab: "Continuous model · policy · drasi.standard/policy · placement.rego (rules)",
       hot: ["allowed_destination if", "region_permitted if input.subject.region_requirement == input.target.region"],
       lines: regoLines.slice(0, regoLines.findIndex(line => line.startsWith("reasons contains"))).concat(regoLines.filter(line => line.startsWith("assessment"))) },
     optimization: { tab: "Continuous model · plan · drasi.standard/optimization · optimization.json (excerpt)",

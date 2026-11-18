@@ -31,7 +31,7 @@ const stubMattermost = (page: Page) => page.route(`http://localhost:${port("MATT
   await route.fulfill({ response: await route.fetch({ url: target }) });
 });
 const posts = async (request: import("@playwright/test").APIRequestContext) =>
-  (await (await request.get(`${fixture}/test/mattermost/posts`)).json()) as { id: string; root_id: string; props: { ignite_card: string; attachments: { title: string; actions?: unknown[] }[] } }[];
+  (await (await request.get(`${fixture}/test/mattermost/posts`)).json()) as { id: string; root_id: string; props: { incident_card: string; attachments: { title: string; actions?: unknown[] }[] } }[];
 const failEuA = (request: import("@playwright/test").APIRequestContext) =>
   request.post(`${fixture}/control`, { data: { run_epoch: "TEST-FIXTURE-EPOCH", deployment: "EU-A", action: "fail" } });
 
@@ -159,7 +159,7 @@ test("a beat's highlight outlines its dashboard panels on the projector, above t
 test("the configuration shown beside each panel is the real files', text, and every beat's config exists", () => {
   const read = (path: string) => fs.readFileSync(new URL(`../../drasi/${path}`, import.meta.url), "utf8");
   const config = buildConfig({ overdueQuery: read("overdue-tasks.cypher"), healthQuery: read("deployment-health.cypher"),
-    workloadsQuery: read("tile-workloads.cypher"), rego: read("policy/ignite.rego"), optimization: JSON.parse(read("optimization/optimization.json")) });
+    workloadsQuery: read("tile-workloads.cypher"), rego: read("policy/placement.rego"), optimization: JSON.parse(read("optimization/optimization.json")) });
   expect(config["deployment-health"].lines[0]).toBe(read("deployment-health.cypher").split("\n").find(line => line.startsWith("MATCH")));
   expect(config["overdue-tasks"].lines.join("\n")).toContain("drasi.trueLater(true, t.deadline_ms)");
   expect(config["tile-workloads"].lines.join("\n")).toContain("(h:DeploymentHealth)");
@@ -257,7 +257,7 @@ test("the desk shows how long demo traffic has been running", async ({ page }) =
 test("approving the out-of-date proposal is rejected by Drasi, and the desk says that's expected", async ({ page, request }) => {
   await failEuA(request);
   await desk(page, "recovery", 1);
-  await expect.poll(async () => (await posts(request)).map(p => p.props.ignite_card)).toEqual(["failed", "proposal"]);
+  await expect.poll(async () => (await posts(request)).map(p => p.props.incident_card)).toEqual(["failed", "proposal"]);
   await page.locator(".now").getByRole("button", { name: "Summaries: Europe only" }).click();
   await expect(page.locator(".now").getByRole("button", { name: /Summaries: Europe only/ })).toContainText("✓");
   await expect.poll(async () => (await posts(request)).at(-1)?.props.attachments[0].title).toBe("Out of date: the facts changed");
@@ -272,14 +272,14 @@ test("approving the out-of-date proposal is rejected by Drasi, and the desk says
   await expect(page.locator(".approval")).toHaveText("Last approval rejected: The plan changed since it was approved.");
   const state = await (await request.get(`${fixture}/test/state`)).json();
   expect(state.mutations.at(-1)).toEqual({ path: "/mattermost/approve-latest", input: { run_epoch: "TEST-FIXTURE-EPOCH" } });
-  const proposal = (await posts(request)).find(p => p.props.ignite_card === "proposal")!;
+  const proposal = (await posts(request)).find(p => p.props.incident_card === "proposal")!;
   expect(state.approvals[0]).toMatchObject({ id: `mm-${proposal.id}`, candidate_id: "TEST-FIXTURE-CANDIDATE-1", basis: "TEST-FIXTURE-BASIS-1", revision: 1, status: "rejected" });
   // Drasi's answer replies in the approved card's thread.
-  await expect.poll(async () => (await posts(request)).at(-1)).toMatchObject({ root_id: proposal.id, props: { ignite_card: "outcome", attachments: [{ title: "Rejected by Drasi: nothing was changed" }] } });
+  await expect.poll(async () => (await posts(request)).at(-1)).toMatchObject({ root_id: proposal.id, props: { incident_card: "outcome", attachments: [{ title: "Rejected by Drasi: nothing was changed" }] } });
   // Once policy allows the US again, a new proposal follows and Next isn't held back.
   await page.getByRole("button", { name: "Next ▶" }).click();
   await page.locator(".now").getByRole("button", { name: "Summaries: Europe + US" }).click();
-  await expect.poll(async () => (await posts(request)).filter(p => p.props.ignite_card === "proposal")).toHaveLength(2);
+  await expect.poll(async () => (await posts(request)).filter(p => p.props.incident_card === "proposal")).toHaveLength(2);
 });
 
 test("pressing Approve on the projected card applies the change, and the desk reports Drasi's answer", async ({ page, request }) => {
@@ -383,7 +383,7 @@ test("the projector preview can't reach private notes or controls", async ({ pag
 
 test("local proxy rejects cross-origin commands and Server admin writes", async ({ request }) => {
   expect((await request.post("/api/reset", { headers: { Origin: "https://not-local.example" }, data: {} })).status()).toBe(403);
-  expect((await request.post("/server/api/v1/instances/ignite/queries", { data: {} })).status()).toBe(403);
+  expect((await request.post("/server/api/v1/instances/ai-ops/queries", { data: {} })).status()).toBe(403);
 });
 
 test("snapshot-first reducer preserves explicit delta semantics", () => {

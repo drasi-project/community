@@ -8,9 +8,8 @@ const grafana = (uid: string, kiosk = false) =>
   `${settings.grafana}/d/${uid}?from=now-5m&to=now&refresh=5s${kiosk ? "&kiosk&_dash.hideTimePicker&_dash.hideLinks&_dash.hideVariables" : ""}`;
 export const products = {
   grafana: grafana("ai-operations"),
-  decisions: grafana("ignite-decisions"),
   langfuse: `${settings.langfuse}/project/ignite-probe/traces?filter=isRootObservation%3Bboolean%3B%3B%3D%3Btrue`,
-  server: `${settings.server}/ui/?instance=ignite`,
+  server: `${settings.server}/ui/?instance=ai-ops`,
   drasi: "https://drasi.io/",
 };
 // Dashboards as projected: kiosk mode (no Grafana toolbar), embedded in the stage.

@@ -43,17 +43,18 @@
   <text x="82" y="352" class="sub">replication slot; each</text>
   <text x="82" y="374" class="sub">query starts from a</text>
   <text x="82" y="396" class="sub">snapshot (bootstrap)</text>
-  <text x="82" y="438" class="desc">scenario · workloads</text>
+  <text x="82" y="438" class="desc">routing config · workloads</text>
   <text x="82" y="457" class="desc">deployments · routes</text>
-  <text x="82" y="476" class="desc">policy · approvals</text>
-  <text x="82" y="495" class="desc">tasks · attempts</text>
+  <text x="82" y="476" class="desc">residency policy</text>
+  <text x="82" y="495" class="desc">approvals · AI requests</text>
   <rect x="60" y="530" width="210" height="200" rx="16" class="box"/>
   <text x="82" y="568" class="title">OpenTelemetry</text>
   <text x="82" y="596" class="title">source</text>
   <text x="82" y="630" class="sub">Health probes from</text>
   <text x="82" y="652" class="sub">the AI service, every</text>
   <text x="82" y="674" class="sub">second, via the Collector</text>
-  <text x="82" y="708" class="desc">ignite_probe_status</text>
+  <text x="82" y="700" class="desc">deployment_health_</text>
+  <text x="82" y="718" class="desc">probe_status</text>
   <rect x="310" y="230" width="290" height="65" rx="12" class="box"/>
   <text x="332" y="260" class="name">Policy input</text>
   <text x="332" y="285" class="desc">policy-input</text>
