@@ -57,11 +57,6 @@ Remove an item when it is done.
   the desk's select and approve buttons are replaced by Drasi's cards in a real
   Mattermost incident channel (`#incident-ai-support`), approved on the projected
   card. See `plan/incident-channel-plan.md`.
-- Grafana Dashboard
-  - Can you combine the 'Recommended Action and Change Status Widgets?
-- When i go to Mattermost is see 2 Deployment Failed cards from Drasi
-- in the dashboard, it would be good to be able to see what alerts grafana is firing
-- THe Dashboard shows a panel with Deployment Status. This is useful and it would also be useful to see the Workload Status shown in the same way.
 
 
 

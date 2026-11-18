@@ -64,7 +64,7 @@ approved that one.
 
 **The fix.** The approved change was applied through the gateway's config API.
 Drasi replied in the card's thread, "Applied: Move summaries to US-C and support to
-EU-B", and Change status said "Applied, verifying" for a bit. It won't call it
+EU-B", and Recommended action said "Verifying" for a bit. It won't call it
 fixed just because the routes changed. It waits until the backlog from before the
 change has drained and new support requests are being answered on the new route.
 Then it went to Verified, and the same thread got "Verified: support has

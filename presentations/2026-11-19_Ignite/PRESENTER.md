@@ -356,13 +356,13 @@ what it shows.
 | | Support errors | Share of support calls failing, last 30 seconds |
 | | Answer time p95 | 95th-percentile time from a customer's question to its answer. **No answers** during the outage |
 | | Support queue | Support requests waiting for an answer. One or two in flight is normal (green) |
-| | Alerts firing | Grafana alert rules firing: "Model calls failing", and "Support requests overdue", an alert on Drasi's answer. Each also posts to #incident-ai-support |
 | | Model calls by workload (chart) | Answered and failed calls for each workload |
 | | Support requests waiting (chart) | Orange: waiting. Red: overdue, from Drasi. The red line trails the orange one by the 15-second deadline |
+| | Alerts firing | Grafana's own list of its alert rules firing now, with how long: "Model calls failing", and "Support requests overdue (Drasi)", an alert on Drasi's answer. Each also posts to #incident-ai-support |
 | Decision Support (bottom: Drasi) | Support overdue | Support requests past their 15-second deadline |
 | | Deployment status | Each deployment's health as Drasi derives it from its health-probe telemetry: Healthy, Over quota or Failed; Unknown if its probes have been silent for 8 seconds |
-| | Change status | No change in progress; Awaiting approval; Approved, applying; Applied, verifying; Verified (the backlog cleared and support is answered on the new route); Rejected (the facts changed) |
-| | Recommended action | None; the proposed change, for example **Move summaries to US-C and support to EU-B** (approve it on its card in #incident-ai-support); **No change fits policy and capacity**; **Add capacity: losing EU-B leaves support nowhere to run** |
+| | Workload status | Each workload where it runs now, for example **Support · EU-A**: Healthy, Over quota or Failing as its deployment is; Not allowed when policy no longer allows it there; Unknown if its deployment has been silent for 8 seconds |
+| | Recommended action | Drasi's recommended change and where it is: **None**; **Approve: Move summaries to US-C and support to EU-B** (approve it on its card in #incident-ai-support); **Applying: …**, then **Verifying: …** until the backlog has cleared and support is answered on the new route; **Verified: …** (green); **No change fits policy and capacity**; **Add capacity: losing EU-B leaves support nowhere to run** |
 | | Failover readiness | If any one deployment failed, would every workload still have somewhere allowed to run? **No** names the deployment whose loss would hurt. **Already one down** while a deployment has failed |
 
 The deadlines (15-second target, 8-second silence) are shortened for the demo.
@@ -424,7 +424,7 @@ without it.
 | Charts are empty, or Traffic: stopped | Press **Start demo traffic** (All demo controls) and keep talking |
 | Tiles show Unknown | Drasi's answer is out of date. Say so; never call it healthy. Press **Use recordings from here on** |
 | Nothing happens 30 seconds after Fail EU-A | Press **Use recordings from here on** |
-| Change status stays Applied, verifying | Say it's applied but not yet verified; keep going. Never approve twice |
+| Recommended action stays at Verifying | Say it's applied but not yet verified; keep going. Never approve twice |
 | Approve on the card does nothing | Press **Approve the proposed change** on the desk: it presses the same button |
 | The channel shows Mattermost's sign-in page | Press **Sign the projector in to Mattermost** (Before and after the talk), then show the channel again |
 | The channel shows its sign-in page again, or "session expired" after signing in | The desk must be open at `http://localhost:19580`, not `127.0.0.1` (Mattermost's cookies only reach the projected channel from `localhost`). The web app moves `127.0.0.1` to `localhost` by itself; if the address bar still says `127.0.0.1`, open http://localhost:19580/presenter and reopen the projector window |

@@ -117,7 +117,7 @@ set -a; . ./.env; set +a
 The first build takes 20–40 minutes; later builds are much faster. It builds
 Drasi Server and every plugin from the same drasi-core (they must match
 exactly), installs the plugins in `.native/plugins`, and ends by validating the
-generated configuration: `Summary: 1 instance(s), 58 computation component(s) — all valid`.
+generated configuration: `Summary: 1 instance(s), 59 computation component(s) — all valid`.
 
 ### 6. Create the demo database
 

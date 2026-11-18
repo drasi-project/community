@@ -18,7 +18,7 @@ Builds go to `ignite-native/.cargo-target-next`, so the running demo's build fol
 |---|---|
 | Drasi Server binary | Builds (`cargo build -p drasi-server`) |
 | Demo plugin (`ignite-prometheus`) | Builds and passes its tests. Drasi's `drasi.standard/policy` and `drasi.standard/optimization` replace `ignite-policy` and `ignite-optimizer` |
-| Config generator (`ignite-config`) | Adapted. Its tests pass, and `drasi-server validate` accepts the graph with 9 plugins: 56 components (PostgreSQL health) or 58 (OTel health) |
+| Config generator (`ignite-config`) | Adapted. Its tests pass, and `drasi-server validate` accepts the graph with 9 plugins: 57 components (PostgreSQL health) or 59 (OTel health) |
 | Build and run scripts | Point at the `-next` checkouts and build folder. `ops/native-build.sh` runs end to end, including `validate` and `stamp` |
 | Live switch | Done 2026-11-18 06:09–06:13 PST, with health from telemetry (`IGNITE_HEALTH_SOURCE=otel`). See [Switch record](#switch-record) |
 
@@ -157,6 +157,13 @@ from telemetry.
 - **Collector:** recreated alone with the drasi overlay
   (`./ops/observability-stack.sh up -d --wait --no-deps collector`, otel mode).
   Every other container kept running.
+- **Grafana:** recreated from `community-next`
+  (`./ops/observability-stack.sh up -d --wait --no-deps grafana`) when the
+  dashboard changed. Until then it kept mounting the old folder's dashboards and
+  alert provisioning: a container mounts files from the folder it was created
+  from. Prometheus, Mattermost and the other containers still mount `community`
+  files, which are identical on both branches. Recreate them from `community-next`
+  if a change touches their files.
 - **Started** detached from `community-next` (binaries in `.cargo-target-next`):
   Server 53843, AI service 53853, UI 53931. Logs are in `.native/`. The API
   answered 200 about 2 minutes after start.

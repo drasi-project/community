@@ -93,7 +93,7 @@ All paths are under `demo/` unless noted.
 | `drasi/optimization/` | The placement model, its single-loss what-if and its preconditions: the configuration (`optimization.json`) of Drasi's optimization, `drasi.standard/optimization` (drasi-core crate `drasi-computation-transformer-optimization`, `good_lp` with `microlp`) |
 | `plugins/prometheus` | Prometheus reaction, `ignite/prometheus-exporter` (crate `ignite-prometheus`) |
 | `plugins/prometheus/examples/ignite.json` | The Prometheus reaction's metric mapping in this graph |
-| `drasi/*.cypher` | The 46 continuous queries; `incident-*` build the incident cards |
+| `drasi/*.cypher` | The 47 continuous queries; `incident-*` build the incident cards |
 | `ops/config/` | Generates Drasi Server's configuration (`.native/server.json`): every source, query, model, reaction and connection |
 | `database/` | PostgreSQL schema (`schema.sql`, `workload.sql`) and scenario seed (`reset.sql`) |
 | `observability/` | Container configuration: Collector, Prometheus, Grafana dashboards, alerts and data source, and an integration test probe |
@@ -194,7 +194,7 @@ only the one you changed, then reload the desk.
 | Mattermost's settings | `MM_*` variables of the `mattermost` service in `compose.yaml` | `./ops/observability-stack.sh up -d --wait mattermost` (recreates it; data stays in the `mattermost-data` volume and the `mattermost` database) |
 | Mattermost's users, team, channel, bot, tokens, webhook | `ops/mattermost.py` | `python3 ops/mattermost.py bootstrap` (idempotent; secrets to `.env`, IDs to `.native/mattermost.json`). If the channel was recreated, rebuild (`ops/native-build.sh`): the config generator writes its ID into Server's configuration. `python3 ops/mattermost.py clear` empties the channel, as the desk's Reset does |
 | Grafana dashboards | `observability/grafana/dashboards.py` | Run it from `demo/`, then `./ops/observability-stack.sh restart grafana` (Grafana doesn't notice regenerated files through the Podman mount) |
-| Grafana alerts | `observability/grafana/provisioning/alerting/` | Reload Grafana (below). Both rules also post to #incident-ai-support (contact point `incident-channel`). The **Alerts firing** tile in `dashboards.py` repeats the rules' conditions (so it can be coloured); change both together |
+| Grafana alerts | `observability/grafana/provisioning/alerting/` | Reload Grafana (below). Both rules also post to #incident-ai-support (contact point `incident-channel`). The **Alerts firing** panel is Grafana's own alert list, showing rules labelled `component: workload`; give a new rule that label to list it |
 | The script, beats or timings | `presentation/notes.ts`, `scenes.ts` | `cd ui && npm run sync-presenter` (updates `PRESENTER.md`), then `npm run build` |
 | Slides | `presentation/Explanation.tsx`, `slides.css` (the query slide: `QuerySlide.tsx`, which a test keeps in step with `drasi/overdue-tasks.cypher`) | `cd ui && npm run build` |
 | Desk or app behaviour | `presentation/Presenter.tsx`, `ui/src/` | `cd ui && npm run build`; update `PRESENTER.md` if a desk label changes |
@@ -325,9 +325,9 @@ these commits beyond their upstream branch:
 | A macOS linker release leaves some plugin libraries unloadable ("mis-aligned LINKEDIT string pool") | `ops/macho-align.py` repairs them during the build | Apple toolchain bug |
 | The fallback recordings are long (failure about 2 minutes, recovery about 4) | The presenter talks over a lot of footage in recording mode | Open; trim with a video tool, or shorten the waits in `ui/scripts/walkthrough.mjs` and re-record |
 | Retries have no limit | A deployment left failed or throttled for hours creates tens of thousands of attempts; a reset can exceed Drasi's 64 MB message limit, and Server startup slows to minutes | Open; avoid leaving faults on. A reset followed by a restart clears it, because startup deletes earlier runs' rows |
-| Incident cards are posted, not updated | Mattermost assigns post IDs and the sink ignores responses, so only approval outcomes can reply in a thread (the approval records the card's post ID). A retried post whose response was lost, or a Server restart within 60 s of an approval outcome, can post a card twice. A state standing at a restart (EU-A already failed, a proposal) is not posted again; the next change is | Accepted for the demo |
+| Incident cards are posted, not updated | Mattermost assigns post IDs and the sink ignores responses, so only approval outcomes can reply in a thread (the approval records the card's post ID). Each post carries `pending_post_id` (run and card id), and Mattermost returns the existing post for a repeated one within its de-duplication window (about 30 s), so a retried delivery doesn't post a card twice; a Server restart within 60 s of an approval outcome still can. A state standing at a restart (EU-A already failed, a proposal) is not posted again; the next change is | Accepted for the demo |
 | The incident card queries name the two workloads | `incident-policy` and the failure and outcome cards read the `support` and `batch` rows by name (`batch` is written "summaries"); sorted lists assume at most three items | Accepted for the demo; a third workload needs those queries extended |
-| Each of the 32 queries that read PostgreSQL snapshots the tables in turn at startup | Startup time grows with the current tables: about 20 seconds after a reset, minutes with a long run's history | `ops/native-runtime.py run` deletes earlier runs' rows first, and the instance's activation timeout is 20 minutes |
+| Each of the 33 queries that read PostgreSQL snapshots the tables in turn at startup | Startup time grows with the current tables: about 20 seconds after a reset, minutes with a long run's history | `ops/native-runtime.py run` deletes earlier runs' rows first, and the instance's activation timeout is 20 minutes |
 
 ## Data and safety
 
