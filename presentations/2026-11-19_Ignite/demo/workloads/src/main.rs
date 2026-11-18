@@ -8,6 +8,7 @@ mod db_tests;
 mod external;
 mod mattermost;
 mod model;
+mod probe;
 mod scenario;
 mod telemetry;
 mod traffic;
@@ -533,15 +534,43 @@ async fn dispatch_once(app: &App, workload: &str) -> Result<bool> {
     Ok(status == 200)
 }
 
-/// The simulated health monitor: checks each deployment every second and records what it saw.
-/// A deployment whose reporting is paused stays silent, so its last report expires.
+/// Where Drasi learns deployment health (`IGNITE_HEALTH_SOURCE` in ports.env).
+#[derive(Debug, PartialEq)]
+enum HealthSource {
+    /// The monitor writes `ignite_reports`, read by Drasi's PostgreSQL source.
+    Postgres,
+    /// Drasi derives health from the probe metrics alone; `ignite_reports` is not written.
+    Otel,
+}
+
+fn parse_health_source(value: &str) -> Result<HealthSource> {
+    match value {
+        "postgres" => Ok(HealthSource::Postgres),
+        "otel" => Ok(HealthSource::Otel),
+        other => anyhow::bail!("IGNITE_HEALTH_SOURCE must be postgres or otel, not {other:?}"),
+    }
+}
+
+fn health_source() -> Result<HealthSource> {
+    // A settings file without the key predates the switch: PostgreSQL.
+    ignite_settings::get()
+        .get("IGNITE_HEALTH_SOURCE")
+        .map_or(Ok(HealthSource::Postgres), parse_health_source)
+}
+
+/// The simulated health monitor: checks each deployment every second and records what it saw,
+/// as probe metrics (always) and as `ignite_reports` rows (when health comes from PostgreSQL).
+/// A deployment whose reporting is paused stays silent: its last report expires and its probe
+/// metrics stop.
 async fn report_once(app: &App) -> Result<()> {
     let mut client = db().await?;
     let tx = client.transaction().await?;
     tx.batch_execute("SELECT pg_advisory_xact_lock_shared(190619)")
         .await?;
     let (epoch, _) = scenario::current(&tx).await?;
+    let write_reports = health_source()? == HealthSource::Postgres;
     for id in scenario::DEPLOYMENTS {
+        let started = std::time::Instant::now();
         let value: Value = app
             .http
             .get(format!("http://127.0.0.1:{}/health", port(id)?))
@@ -560,6 +589,15 @@ async fn report_once(app: &App) -> Result<()> {
         let status = value["status"]
             .as_str()
             .context("missing deployment status")?;
+        app.telemetry.probes.record(
+            id,
+            &epoch,
+            probe::status_code(status).context("unknown deployment status")?,
+            started.elapsed(),
+        );
+        if !write_reports {
+            continue;
+        }
         let observed = now();
         tx.execute("UPDATE ignite_reports SET observed_ms=$1,expires_ms=$2,status=$3,sequence=sequence+1 WHERE id=$4 AND run_epoch=$5",
             &[&observed,&(observed+8_000),&status,&id,&epoch]).await?;
@@ -714,6 +752,7 @@ async fn main() -> Result<()> {
             }
         });
     }
+    health_source()?;
     let reports = app.clone();
     jobs.spawn(async move {
         // A missed report just ages; Drasi turns it Unknown if reports stay missing.
@@ -768,5 +807,12 @@ mod tests {
             .err()
             .expect("nothing listens on port 1");
         assert_eq!(Error::from(error).status, StatusCode::SERVICE_UNAVAILABLE);
+    }
+
+    #[test]
+    fn health_source_is_postgres_or_otel() {
+        assert_eq!(parse_health_source("postgres").unwrap(), HealthSource::Postgres);
+        assert_eq!(parse_health_source("otel").unwrap(), HealthSource::Otel);
+        assert!(parse_health_source("OTEL").is_err());
     }
 }

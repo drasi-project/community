@@ -27,6 +27,9 @@ pub struct Telemetry {
     pub answer: Histogram<f64>,
     pub queue: Gauge<u64>,
     pub failure: Gauge<u64>,
+    /// The health monitor's readings, exported as `ignite_probe_*` gauges.
+    pub probes: crate::probe::Probes,
+    _probe_gauges: crate::probe::Gauges,
 }
 
 impl Telemetry {
@@ -55,6 +58,8 @@ impl Telemetry {
             .build();
         use opentelemetry::metrics::MeterProvider;
         let meter = metrics.meter("ignite.workload");
+        let probes = crate::probe::Probes::default();
+        let probe_gauges = probes.register(&meter);
         Ok(Self {
             tracer: traces.tracer("ignite.workload"),
             requests: meter.u64_counter("ignite_workload_requests").build(),
@@ -81,6 +86,8 @@ impl Telemetry {
             failure: meter
                 .u64_gauge("ignite_workload_last_request_failed")
                 .build(),
+            probes,
+            _probe_gauges: probe_gauges,
             traces,
             metrics,
         })
