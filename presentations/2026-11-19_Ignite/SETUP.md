@@ -47,18 +47,20 @@ podman machine start
 
 ### 2. Get the code
 
-Put the three repositories side by side in one folder, on these branches:
+Put the three repositories side by side in one folder, on these branches and
+with these folder names. The demo finds Drasi Core and Server as
+`drasi-core-next` and `drasi-server-next` beside the community repository:
 
 ```sh
 mkdir ignite-native && cd ignite-native
-git clone -b agentofreality-ignite-native https://github.com/drasi-project/community.git
-git clone -b agentofreality-ignite-native https://github.com/drasi-project/drasi-core.git
-git clone -b agentofreality-ignite-native https://github.com/drasi-project/drasi-server.git
+git clone -b agentofreality-ignite-native-next https://github.com/drasi-project/community.git
+git clone -b agentofreality-ignite-native-next https://github.com/drasi-project/drasi-core.git drasi-core-next
+git clone -b agentofreality-ignite-native-next https://github.com/drasi-project/drasi-server.git drasi-server-next
 ```
 
-The drasi-core and drasi-server branches carry fixes the demo needs (see
+The drasi-core and drasi-server branches carry changes the demo needs (see
 [DEVELOPERS.md](DEVELOPERS.md#dependencies-on-drasi-core-and-server)). Builds
-go to `.cargo-target` in this top folder.
+go to `.cargo-target-next` in this top folder.
 
 All remaining commands run from the demo folder:
 
@@ -107,12 +109,15 @@ release archive the first time; that needs a network connection.
 ### 5. Build Drasi Server, the plugins and the AI service
 
 ```sh
-npm --prefix ../../../../drasi-server/ui ci
+npm --prefix ../../../../drasi-server-next/ui ci
 set -a; . ./.env; set +a
 ./ops/native-build.sh
 ```
 
-The first build takes 20–40 minutes; later builds are much faster.
+The first build takes 20–40 minutes; later builds are much faster. It builds
+Drasi Server and every plugin from the same drasi-core (they must match
+exactly), installs the plugins in `.native/plugins`, and ends by validating the
+generated configuration: `Summary: 1 instance(s), 58 computation component(s) — all valid`.
 
 ### 6. Create the demo database
 
@@ -156,7 +161,10 @@ background, frame and QR code, Segoe UI and a `manifest.json` to
 straight away: no rebuild or restart. The walk-in slide is rendered from the
 template with LibreOffice and PyMuPDF (`brew install --cask libreoffice`,
 `pip install pymupdf`); without them you get its background only, and the script
-says so. Run it again whenever the template or the survey slides change.
+says so. Run it again whenever the template or the survey slides change, and in
+every new checkout of the demo: the files are git-ignored, so a new clone or
+worktree starts without them (you can also copy `ui/public/template/` from
+another checkout).
 
 Without these files the talk still works: slides use the template's plain Dark
 Blue background and the system font, the walk-in shows a plain Microsoft Ignite
@@ -274,6 +282,29 @@ all read it. An exported variable of the same name overrides a line, and
 After changing a port, rebuild (`./ops/native-build.sh` and `npm run build` in
 `ui`), restart the containers, and regenerate Grafana's dashboards
 (`python3 observability/grafana/dashboards.py`) if the Langfuse port changed.
+
+### Health source
+
+`IGNITE_HEALTH_SOURCE` in `ports.env` says how Drasi learns deployment health:
+
+- `otel` (the default here): the AI service's health monitor exports its
+  probes as OpenTelemetry metrics, the Collector forwards them to Drasi's
+  OpenTelemetry source on `IGNITE_DRASI_OTLP_PORT`, and Drasi derives Healthy,
+  Over quota, Failed and Unknown itself.
+- `postgres` (the fallback): the health monitor writes `ignite_reports` rows,
+  and Drasi reads them through its PostgreSQL source.
+
+To change it, stop terminals 1 and 2, edit the line, then:
+
+```sh
+set -a; . ./.env; set +a
+./ops/native-build.sh
+./ops/observability-stack.sh up -d --wait --no-deps collector
+```
+
+The `up` recreates only the Collector, with or without its Drasi pipeline.
+Start terminals 1 and 2 again, then reset the scenario
+(`python3 ops/workload.py reset`) so health starts fresh.
 
 ### Running beside the original demo
 

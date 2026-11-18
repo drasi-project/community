@@ -81,7 +81,7 @@ Origin `0e039e5` already does what the demo needs:
 | 9 | Re-run every crate's tests: `cargo test -p ignite-prometheus`, `-p ignite-config`, `-p ignite-workloads`, plus the replacement plugins' | all | Done at `e3d5fbe`: 15, 20 and 19 passed (1 ignored) |
 | 10 | `community-next/.../demo/.env` and `.native/mattermost.json` copied from the running demo (both ignored by git) | switch operator | Done. Copy them again if the running demo's files change |
 | 11 | Presenter UI: `npm ci && npm run build` in `community-next/.../demo/ui` | switch operator | Done at `e3d5fbe` |
-| 11a | Git-ignored assets the demo needs: the slide template (`demo/ui/public/template`, from `python3 ops/template-assets.py` or copied from the running demo; then rebuild the UI so `dist/template` has them) and the probe image's wheels (`demo/observability/probe/wheels`) | switch operator | Missed at the 2026-11-18 switch, so the deck lost its styling. Copied in afterwards |
+| 11a | Git-ignored assets the demo needs: the slide template (`demo/ui/public/template`, from `python3 ops/template-assets.py` or copied from the running demo; the web app serves that folder directly, with no rebuild) and the probe image's wheels (`demo/observability/probe/wheels`) | switch operator | Missed at the 2026-11-18 switch, so the deck lost its styling. Copied in afterwards |
 | 12 | DEVELOPERS.md and SETUP.md: branch names, `.cargo-target-next`, the dependency table | this workstream | After the switch is accepted |
 | 13 | Upstream: propose `unroutedChanges` to drasi-core, so the local commit can go | later | Not proposed |
 
@@ -100,7 +100,7 @@ Prometheus, Collector, Langfuse) keep running and keep their volumes.
    - Check the git-ignored files too: `git ls-files -o -i --exclude-standard --directory`
      in both demo folders must list the same runtime inputs. That is `.env`,
      `.native/mattermost.json`, `ui/public/template` (run `ops/template-assets.py`
-     or copy it, then rebuild the UI) and `observability/probe/wheels`.
+     or copy it) and `observability/probe/wheels`.
    - Test evidence folders aren't needed.
 2. Compare what the containers mount:
    `git -C community-next diff agentofreality-ignite-native -- presentations/2026-11-19_Ignite/demo/observability presentations/2026-11-19_Ignite/demo/compose.yaml presentations/2026-11-19_Ignite/demo/compose.health-otel.yaml`.
