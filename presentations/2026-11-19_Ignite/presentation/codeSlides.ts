@@ -3,21 +3,22 @@
 // The text comes from demo/drasi as Drasi runs it: comments dropped, long JSON detail elided.
 // flow: what the panel brings together, as the generated graph wires it (demo/.native/server.json):
 // inputs on the left, then the Drasi components, then the Grafana tile.
-export type Flow = { inputs: { name: string; from: string }[]; via: string[]; tile: string };
+// into: the components the inputs flow through into the code shown; after: those between it and the tile.
+export type Flow = { inputs: { name: string; from: string }[]; into: string; after: string[]; tile: string };
 export type ConfigPanel = { tab: string; lines: string[]; hot: string[]; flow: Flow };
 const pg = (name: string) => ({ name, from: "PostgreSQL" });
 export const flows: Record<ConfigId, Flow> = {
-  "overdue-tasks": { inputs: [pg("ignite_tasks"), pg("ignite_scenario")], via: ["overdue-tasks · tile-overdue"], tile: "Support overdue" },
+  "overdue-tasks": { inputs: [pg("ignite_tasks"), pg("ignite_scenario")], into: "overdue-tasks", after: ["tile-overdue"], tile: "Support overdue" },
   "deployment-health": { inputs: [{ name: "ignite_probe_status", from: "OpenTelemetry" }, pg("ignite_deployments")],
-    via: ["deployment-health", "tile-deployments"], tile: "Deployment status" },
+    into: "deployment-health", after: ["tile-deployments"], tile: "Deployment status" },
   "tile-workloads": { inputs: [pg("ignite_routes"), pg("ignite_workloads"), { name: "policy-results", from: "Policy model" },
-    { name: "deployment-health", from: "OpenTelemetry" }], via: ["tile-workloads"], tile: "Workload status" },
+    { name: "deployment-health", from: "OpenTelemetry" }], into: "tile-workloads", after: [], tile: "Workload status" },
   policy: { inputs: [pg("ignite_workloads"), pg("ignite_deployments"), pg("ignite_policy_destinations")],
-    via: ["policy-input", "policy (Rego)", "policy-results → plan"], tile: "Recommended action" },
+    into: "policy-input → policy (Rego)", after: ["policy-results", "plan", "tile-action"], tile: "Recommended action" },
   optimization: { inputs: [{ name: "plan-items, plan-candidates", from: "workloads, routes" }, { name: "plan-bins", from: "capacity + health" },
-    { name: "policy-results", from: "Policy model" }], via: ["plan (optimization)", "plan-results · tile-action"], tile: "Recommended action" },
+    { name: "policy-results", from: "Policy model" }], into: "plan (optimization)", after: ["plan-results", "tile-action"], tile: "Recommended action" },
   "what-if": { inputs: [{ name: "plan-bins", from: "healthy deployments" }, { name: "plan-items, plan-candidates", from: "workloads, routes" },
-    { name: "policy-results", from: "Policy model" }], via: ["plan · loss scenario", "resilience-results · tile-resilience"], tile: "Failover readiness" },
+    { name: "policy-results", from: "Policy model" }], into: "plan · loss scenario", after: ["resilience-results", "tile-resilience"], tile: "Failover readiness" },
 };
 export type Sources = { overdueQuery: string; healthQuery: string; workloadsQuery: string; rego: string; optimization: object };
 export const configIds = ["overdue-tasks", "deployment-health", "tile-workloads", "policy", "optimization", "what-if"] as const;
@@ -43,19 +44,19 @@ export function buildConfig({ overdueQuery, healthQuery, workloadsQuery, rego, o
     [`"${name}": [`, ...model[name].map((item, i, all) => `  ${entry(item)}${i < all.length - 1 ? "," : " ],"}`)];
   const regoLines = withoutComments(rego, "#").filter(line => !/^(package|import) /.test(line));
   const panels: Record<ConfigId, Omit<ConfigPanel, "flow">> = {
-    "overdue-tasks": { tab: "Continuous query · overdue-tasks → Support overdue", hot: ["drasi.trueLater"],
+    "overdue-tasks": { tab: "Continuous query · overdue-tasks", hot: ["drasi.trueLater"],
       lines: withoutComments(overdueQuery, "//") },
-    "deployment-health": { tab: "Continuous query · deployment-health, from the OpenTelemetry source → Deployment status", hot: ["CASE toInteger(m.value)", "+ 8000"],
+    "deployment-health": { tab: "Continuous query · deployment-health, from the OpenTelemetry source", hot: ["CASE toInteger(m.value)", "+ 8000"],
       lines: withoutComments(healthQuery, "//") },
-    "tile-workloads": { tab: "Continuous query · tile-workloads → Workload status", hot: ["ROUTE_POLICY", "ROUTE_REPORT"],
+    "tile-workloads": { tab: "Continuous query · tile-workloads", hot: ["ROUTE_POLICY", "ROUTE_REPORT"],
       lines: relabel(withoutComments(workloadsQuery, "//")) },
-    policy: { tab: "Continuous model · policy · drasi.standard/policy · ignite.rego (rules) → Recommended action",
+    policy: { tab: "Continuous model · policy · drasi.standard/policy · ignite.rego (rules)",
       hot: ["allowed_destination if", "region_permitted if input.subject.region_requirement == input.target.region"],
       lines: regoLines.slice(0, regoLines.findIndex(line => line.startsWith("reasons contains"))).concat(regoLines.filter(line => line.startsWith("assessment"))) },
-    optimization: { tab: "Continuous model · plan · drasi.standard/optimization · optimization.json (excerpt) → Recommended action",
+    optimization: { tab: "Continuous model · plan · drasi.standard/optimization · optimization.json (excerpt)",
       hot: ['"name": "assign-once"', '"name": "capacity"', '"name": "moves"'],
       lines: [...part("variables"), ...part("constraints"), ...part("objectives")] },
-    "what-if": { tab: "Continuous model · plan · optimization.json (excerpt): the what-if → Failover readiness", hot: ['"name": "loss"'],
+    "what-if": { tab: "Continuous model · plan · optimization.json (excerpt): the what-if", hot: ['"name": "loss"'],
       lines: [`"atomicScenarios": ${JSON.stringify(model.atomicScenarios)},`, '"sets": [ …',
         `  ${entry(model.sets.find(set => set.name === "healthy")!, false)}, … ],`,
         '"scenarios": [', ...model.scenarios.map(item => `  ${entry(item)} ],`)] },

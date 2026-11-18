@@ -6,7 +6,7 @@ import { notes } from "./notes";
 import { RequestView } from "./RequestView";
 import { replayClips } from "./replay";
 import { Explanation } from "./Explanation";
-import { PanelHighlight } from "./Highlight";
+import { PanelHighlight, highlightRects } from "./Highlight";
 import { ConfigOverlay } from "./ConfigSlides";
 import type { ConfigId } from "./codeSlides";
 import type { StageControl } from "../demo/ui/src/stage";
@@ -100,7 +100,7 @@ export function Audience({ control, preview }: { control: StageControl; preview:
         style={{ width: frame.width / incidentZoom, height: frame.captionTop / incidentZoom, transform: `scale(${incidentZoom})`,
           visibility: !!replay || view !== "incident" ? "hidden" : "visible" }} />}
       {dashboard && !replay && <PanelHighlight src={dashboards[dashboard]} keys={highlight} zoom={zoom} />}
-      {dashboard && !replay && <ConfigOverlay ids={config} />}
+      {dashboard && !replay && <ConfigOverlay ids={config} target={highlightRects(dashboards[dashboard], highlight, zoom)[0] ?? null} />}
       {framed && !replay && <div className="caption-zone" />}
       {view === "request" && !replay && <section className="stage-request"><RequestView taskId={trace} /></section>}
       {replay && <section className="replay-screen">

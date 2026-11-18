@@ -5,6 +5,12 @@ import { panelRects, type Dashboard } from "./panels";
 const files = import.meta.glob("../demo/observability/grafana/dashboards/*.json", { eager: true, import: "default" });
 const byUid = new Map(Object.values(files).map(value => [(value as Dashboard).uid, value as Dashboard]));
 
+// Where the named panels sit on the stage, for the configuration overlay's arrow.
+export function highlightRects(src: string, keys: readonly string[], zoom: number) {
+  const dashboard = byUid.get(/\/d\/([^/?]+)/.exec(src)?.[1] ?? "");
+  return dashboard ? panelRects(dashboard, keys, frame, zoom) : [];
+}
+
 // Dims the rest of the projected dashboard and outlines the panels being talked about.
 export function PanelHighlight({ src, keys, zoom }: { src: string; keys: readonly string[]; zoom: number }) {
   const dashboard = byUid.get(/\/d\/([^/?]+)/.exec(src)?.[1] ?? "");

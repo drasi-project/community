@@ -191,23 +191,24 @@
 .slide-deck .stage-frame .config-overlay { position: absolute; left: 92px; top: 24px; max-width: 1736px; max-height: 584px; display: grid; gap: 16px;
   pointer-events: none; box-shadow: 0 12px 40px rgba(0, 0, 0, .55); animation: panel-highlight .4s ease-out; }
 .slide-deck .stage-frame .config-overlay .code-tab { font-size: 22px; padding: 8px 22px 12px; }
-.slide-deck .stage-frame .config-overlay pre { font-size: 20px; line-height: 1.45; padding: 12px 22px 16px; }
+.slide-deck .stage-frame .config-overlay pre { font-size: 19px; line-height: 1.4; padding: 10px 22px 14px; }
 .slide-deck .stage-frame .config-overlay pre span { padding-left: 0; }
 .slide-deck .stage-frame .config-overlay pre i { display: none; }
-.slide-deck .stage-frame .config-body { display: grid; grid-template-columns: 360px auto; align-items: start; }
-/* What the panel brings together: inputs, then Drasi's components, then the tile */
-.slide-deck .stage-frame .flow-diagram { list-style: none; margin: 0; padding: 14px 0 16px 18px; display: grid; gap: 20px; font-size: 17px; line-height: 1.2; color: #000; }
-.slide-deck .stage-frame .flow-diagram > li { position: relative; }
-.slide-deck .stage-frame .flow-diagram > li:not(:last-child)::after { content: "↓"; position: absolute; left: 50%; bottom: -21px; transform: translateX(-50%); font-size: 18px; color: #555; }
-.slide-deck .stage-frame .flow-inputs { display: grid; grid-template-columns: 1fr; gap: 5px; }
-.slide-deck .stage-frame .flow-inputs span { padding: 5px 8px; border-left: 5px solid; background: #F4F3F5; }
-.slide-deck .stage-frame .flow-inputs span.pg { border-color: #C5B4E3; }
-.slide-deck .stage-frame .flow-inputs span.otel { border-color: #8DC8E8; }
-.slide-deck .stage-frame .flow-inputs span.model { border-color: #8DE971; }
-.slide-deck .stage-frame .flow-inputs b { font-weight: 600; }
-.slide-deck .stage-frame .flow-inputs small { display: inline; margin: 0 0 0 8px; font-size: 14px; color: #444; }
-.slide-deck .stage-frame .flow-step { padding: 7px 10px; background: #2A446F; color: #FFFFFF; font-weight: 600; text-align: center; }
-.slide-deck .stage-frame .flow-tile { padding: 7px 10px; border: 3px solid #FFE399; background: #091F2C; color: #FFE399; font-weight: 600; text-align: center; }
+/* Inputs across the top of the card, feeding the query or model's code */
+.slide-deck .stage-frame .config-overlay .flow-inputs { list-style: none; margin: 0; padding: 14px 22px 0; display: flex; flex-wrap: wrap; gap: 10px; }
+.slide-deck .stage-frame .config-overlay .flow-inputs li { padding: 6px 12px; border-left: 6px solid; background: #F4F3F5; color: #000; font-size: 19px; }
+.slide-deck .stage-frame .config-overlay .flow-inputs li.pg { border-color: #C5B4E3; }
+.slide-deck .stage-frame .config-overlay .flow-inputs li.otel { border-color: #8DC8E8; }
+.slide-deck .stage-frame .config-overlay .flow-inputs li.model { border-color: #8DE971; }
+.slide-deck .stage-frame .config-overlay .flow-inputs b { font-weight: 600; }
+.slide-deck .stage-frame .config-overlay .flow-inputs small { display: inline; margin: 0 0 0 8px; font-size: 15px; color: #444; }
+.slide-deck .stage-frame .config-overlay .flow-into { margin: 6px 22px 8px; font: 600 19px/1.3 var(--text); color: #2A446F; }
+.slide-deck .stage-frame .config-overlay .flow-into span { font-size: 22px; margin-right: 6px; }
+/* From the card to the panel it populates */
+.slide-deck .stage-frame .config-arrow { position: absolute; left: 0; top: 0; pointer-events: none; overflow: visible; animation: panel-highlight .4s ease-out; }
+.slide-deck .stage-frame .config-arrow path { fill: none; stroke: var(--light-yellow); stroke-width: 5; }
+.slide-deck .stage-frame .config-arrow marker path { fill: var(--light-yellow); stroke: none; }
+.slide-deck .stage-frame .config-arrow text { fill: var(--light-yellow); font: 600 22px var(--text); stroke: #091F2C; stroke-width: 8px; stroke-linejoin: round; paint-order: stroke; }
 
 /* Close */
 .slide-deck .stage-frame .closing-slide .body { flex-direction: row; gap: 96px; }

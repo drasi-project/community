@@ -89,6 +89,18 @@ test("each Decision Support beat shows its configuration above the highlighted p
     expect(overlay.bottom, beat.config!.join()).toBeLessThan(outlines[0].top);
     expect(overlay.left).toBeGreaterThanOrEqual(92 - 1);
     expect(overlay.right).toBeLessThanOrEqual(frame.width - 92 + 1);
+    // The arrow leaves the card and its tip lands just above the highlighted panel, within its width.
+    const arrow = page.locator(".config-arrow");
+    const [startX, startY] = (await arrow.getAttribute("data-start"))!.split(",").map(Number);
+    const [tipX, tipY] = (await arrow.getAttribute("data-tip"))!.split(",").map(Number);
+    expect(Math.abs(startY - overlay.bottom)).toBeLessThanOrEqual(1);
+    expect(startX).toBeGreaterThanOrEqual(overlay.left);
+    expect(startX).toBeLessThanOrEqual(overlay.right);
+    const panel = outlines[0];
+    expect(tipX).toBeGreaterThan(panel.left);
+    expect(tipX).toBeLessThan(panel.right);
+    expect(tipY).toBeLessThan(panel.top + 6 + 1);
+    expect(tipY).toBeGreaterThan(panel.top - 30);
     await page.screenshot({ path: `evidence/config-${beat.config!.join("-")}.png` });
   }
 });
