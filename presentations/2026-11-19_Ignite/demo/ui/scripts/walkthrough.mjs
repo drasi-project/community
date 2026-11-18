@@ -50,11 +50,9 @@ const waits = {
   "recovery/1": () => until("applied", async () => [2, 3].includes(await lastApproval()), 30).then(() => sleep(6000)),
   "recovery/2": () => until("verified", async () => await drasi("drasi_change_status") === 4, 150).then(() => sleep(6000)),
   "recovery/3": () => sleep(30000),
-  "resilience/0": () => until("not safe", async () => await failover() === 0, 30).then(() => sleep(8000)),
-  "resilience/2": () => sleep(4000),
-  "resilience/3": () => until("safe again", async () => await failover() === 1, 30).then(() => sleep(8000)),
+  "resilience/0": () => until("safe again", async () => await failover() === 1, 60).then(() => sleep(6000)),
 };
-const recordings = { failure: ["failure/0", "failure/3"], policy: ["recovery/-2", "recovery/0"], recovery: ["recovery/1", "recovery/3"], resilience: ["resilience/0", "resilience/3"] };
+const recordings = { failure: ["failure/0", "failure/3"], recovery: ["recovery/1", "recovery/3"], resilience: ["resilience/0", "resilience/0"] };
 
 await fs.mkdir(output, { recursive: true });
 // The projector and recording pages run in background tabs: keep Chromium from throttling their

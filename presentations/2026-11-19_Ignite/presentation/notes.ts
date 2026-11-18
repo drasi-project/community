@@ -7,7 +7,7 @@ import type { ConfigId } from "./codeSlides";
 
 // Buttons the desk shows next to a beat. Each changes the live demo.
 export type ActionId = "start-traffic" | "stop-traffic" | "fail-eu-a" | "approve-change"
-  | "summaries-europe" | "summaries-anywhere" | "eu-a-half" | "eu-a-full";
+  | "summaries-europe" | "summaries-anywhere" | "eu-a-half" | "eu-a-full" | "restore-eu-a";
 
 export type Beat = {
   show: StageView;     // what the projector shows during this beat (Next switches it)
@@ -154,28 +154,19 @@ export const notes: Record<SceneId, Cue> = {
     ifBroken: "If Approve on the card doesn't respond, press Approve the proposed change on the desk: it presses the same button. Never approve twice. If Recommended action stays Verifying, say it's applied but not yet verified, and carry on. If the proposal doesn't behave as described, press Use recordings from here on.",
   },
   resilience: {
-    summary: "Healthy but fragile: EU-A returns with half its capacity",
+    summary: "EU-A comes back at full capacity: everything healthy, and safe again",
     recording: "resilience",
     beats: [
-      { show: "ops", do: ["eu-a-half"], highlight: ["ai-operations.deployment-status", "ai-operations.failover-readiness"],
-        say: "Later that day EU-A is fixed, but it comes back with only 50k of capacity. Nothing is broken: every deployment is healthy, every service-health signal is green. But Failover readiness says No.",
-        watch: "Deployment status all Healthy, EU-A 50k. Failover readiness: No, not if EU-B fails. Recommended action: Add capacity: losing EU-B leaves support nowhere to run." },
-      { show: "ops", highlight: ["ai-operations.failover-readiness"],
-        say: "That's the what-if model: for each deployment, would every workload still fit somewhere allowed if that one failed? It re-asks whenever anything changes. A game-day question, answered all the time. And it's a metric, so you can alert on it." },
-      { show: "incident",
-        say: "Drasi posted it in the channel, while everything is green. Support now runs on EU-B. If EU-B failed, support would need 60k in Europe, and EU-A has only 50k. Nobody would notice until EU-B fell over.",
-        watch: "Orange card Failover at risk: losing EU-B leaves support nowhere to run." },
-      { show: "incident", do: ["eu-a-full"],
-        say: "Give EU-A its full capacity back, and Drasi says we're safe again, without any outage.",
-        watch: "Green card Failover restored. (On the dashboard, Failover readiness: Yes, and Recommended action: None.)" },
-      { show: "drasi-resilience", say: "One capacity change, and Drasi re-checked every what-if. Are we safe from the next failure? Answered before it happens." },
+      { show: "ops", do: ["restore-eu-a"], highlight: ["ai-operations.decision-support"],
+        say: "Later, EU-A is fixed and back at full capacity. Drasi sees its health checks pass and everything updates on its own: every deployment Healthy, and we'd survive losing any one deployment again. Support stays on EU-B and summaries on US-C, and Recommended action still shows the verified change: Drasi only proposes a move when the facts call for one.",
+        watch: "Deployment status: EU-A, EU-B, US-C Healthy. Workload status: Support · EU-B, Summaries · US-C Healthy. Recommended action still Verified: Move summaries to US-C and support to EU-B (green). Failover readiness: Already degraded, then Survives losing any one deployment, within a few seconds. No new channel card." },
     ],
-    ifBroken: "If Failover readiness doesn't change, press Use recordings from here on. If the channel shows no card, stay on the dashboard: it shows the same answer.",
+    ifBroken: "If EU-A doesn't turn Healthy within about 10 seconds, say it's on its way back and move on to the close.",
   },
   closing: {
-    summary: "Four takeaways, the session survey, then questions",
+    summary: "Richer context without an integration project; the session survey, then questions",
     beats: [
-      { show: "closing", say: "Keep your monitoring tools, and add change-driven computation next to them. Drasi turned changing facts (requests, health, capacity, policy, approvals and time) into live answers: who is late, what fits the rules, whether the fix worked, and whether we're safe from the next failure. To learn more, go to drasi.io, on screen." },
+      { show: "closing", say: "So what did Drasi add? Richer context, by bringing together data that already existed in different places: the application's database, the OpenTelemetry health checks, the policy and the approvals. And it did that without an integration project: we connected the sources, configured continuous models, as queries, a policy and an optimization model, and connected reactions into Grafana and the incident channel. No new application to watch, and apart from one small reaction plugin for Prometheus, it's all configuration. To learn more, go to drasi.io, on screen." },
       { show: "survey", say: "Thank you. Please scan the code and tell us how we did in the session survey. Questions?",
         watch: "The survey slide with its QR code stays up during questions." },
       { show: "survey", do: ["stop-traffic"], say: "After questions, stop the demo traffic. Leave the survey slide up." },
@@ -216,5 +207,5 @@ export const actionLabels: Record<ActionId, string> = {
   "start-traffic": "Start demo traffic", "stop-traffic": "Stop demo traffic", "fail-eu-a": "Fail EU-A",
   "approve-change": "Approve the proposed change",
   "summaries-europe": "Summaries: Europe only", "summaries-anywhere": "Summaries: Europe + US",
-  "eu-a-half": "EU-A back at 50k", "eu-a-full": "EU-A back to 100k",
+  "eu-a-half": "EU-A back at 50k", "eu-a-full": "EU-A back to 100k", "restore-eu-a": "Restore EU-A",
 };

@@ -123,8 +123,8 @@ its answers current. It has four kinds of component, all working in this demo:
 | **Reactions** | Deliver every change in an answer: as Prometheus metrics for Grafana; to the gateway's configuration API, applying an approved plan only if it still matches Drasi's current plan and otherwise rejecting it; as Grafana annotations and Langfuse scores; as incident cards in Mattermost; and to the presenter desk | Yes: the HTTP and SSE reactions. The Prometheus reaction was written for this demo |
 
 During the talk, the presenter says which of these components produced what
-the audience just saw; after the healthy-but-fragile part, a short **What Drasi
-just did** visual shows it.
+the audience just saw, with the configuration behind each Decision Support panel
+shown beside it on the dashboard.
 
 ## How the story unfolds on stage
 
@@ -143,10 +143,9 @@ just did** visual shows it.
    moves summaries to US-C, freeing EU-B for support. The presenter approves the
    plan on its card; **Verified** appears only once the queue is answered and support
    requests succeed on the new route.
-5. **Healthy but fragile.** EU-A comes back with only 50k of capacity. Everything
-   is green, but Drasi says we're not safe: if EU-B failed, support would have
-   nowhere allowed to go. Restoring EU-A to 100k flips the answer back, with no
-   outage.
+5. **Back to normal.** EU-A comes back at full capacity. Every deployment is
+   Healthy and Failover readiness says "Survives losing any one deployment".
+   Nothing moves back: the approved routes still fit, so Drasi proposes nothing.
 
 ## What is real and what is simulated
 

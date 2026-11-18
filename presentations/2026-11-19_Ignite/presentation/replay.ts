@@ -5,8 +5,7 @@ export type ReplayClip = {
 const scenes: readonly ReplayClip[] = [
   { scene: "failure", title: "HTTP failure and unchanged-task deadline", src: null, capturedAt: null, runEpoch: null, provenance: "Unavailable: no qualified recording captured." },
   { scene: "recovery", title: "Approved allocation and observed recovery", src: null, capturedAt: null, runEpoch: null, provenance: "Unavailable: no qualified recording captured." },
-  { scene: "policy", title: "Obsolete approval rejected", src: null, capturedAt: null, runEpoch: null, provenance: "Unavailable: no qualified recording captured." },
-  { scene: "resilience", title: "Healthy but fragile, then restored headroom", src: null, capturedAt: null, runEpoch: null, provenance: "Unavailable: no qualified recording captured." },
+  { scene: "resilience", title: "EU-A restored: back to normal", src: null, capturedAt: null, runEpoch: null, provenance: "Unavailable: no qualified recording captured." },
 ];
 export const replayClips: readonly ReplayClip[] = scenes.map(clip => {
   const recorded: readonly (Omit<ReplayClip, "title"> & { surface?: string })[] = captures;

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { settings } from "../demo/ui/src/settings";
-import { scenes, slides, recaps, products, incidentChannel, duration, viewLabel, type StageView } from "./scenes";
+import { scenes, slides, products, incidentChannel, duration, viewLabel, type StageView } from "./scenes";
 import "./desk.css";
 import { notes, actionLabels, glossary, questions, type ActionId, type Beat } from "./notes";
 import { replayClips } from "./replay";
@@ -213,6 +213,8 @@ export default function Presenter({ live, now, control }: { live: Live; now: num
       press: () => health && void run("start-traffic", [{ path: "/traffic", body: { run_epoch: health.run_epoch, running: true } }]) },
     "stop-traffic": { enabled: !!health?.traffic?.running,
       press: () => health && void run("stop-traffic", [{ path: "/traffic", body: { run_epoch: health.run_epoch, running: false } }]) },
+    "restore-eu-a": { enabled: !!euA && euA.mode !== "ok",
+      press: () => health && void run("restore-eu-a", [{ path: "/control", body: { run_epoch: health.run_epoch, deployment: "EU-A", action: "restore" } }]) },
     "fail-eu-a": { enabled: euA?.mode === "ok", danger: true,
       press: () => health && void run("fail-eu-a", [{ path: "/control", body: { run_epoch: health.run_epoch, deployment: "EU-A", action: "fail" } }]) },
     // The backup for Approve on the projected card: it presses that same button (contracts.md §18).
@@ -240,6 +242,7 @@ export default function Presenter({ live, now, control }: { live: Live; now: num
       case "summaries-anywhere": return batch.includes("US-C");
       case "eu-a-half": return euA?.capacity_tpm === 50000 && euA.mode === "ok";
       case "eu-a-full": return euA?.capacity_tpm === 100000 && euA.mode === "ok";
+      case "restore-eu-a": return euA?.mode === "ok";
     }
   }
   // Plain functions, not components: a component defined in here would be a new type on every
@@ -302,7 +305,7 @@ export default function Presenter({ live, now, control }: { live: Live; now: num
         {nextItem && <p className="up-next">Next: <b>{viewLabel(notes[scenes[nextItem.c].id].beats[nextItem.b].show)}</b> · {notes[scenes[nextItem.c].id].beats[nextItem.b].say.slice(0, 90)}…</p>}
         <p className="if-broken"><b>If it breaks</b> {notes[cue.id].ifBroken}
           {!stage.fallback && <button onClick={() => control.update({ fallback: true, replay: beat.recording ?? recording ?? null })}>Use recordings from here on</button>}</p>
-        <p className="wrong-press"><b>Pressed the wrong button?</b> Back and Next never change the demo. Undo with the opposite button in <i>All demo controls</i>: Summaries: Europe + US undoes Europe only; EU-A back to 100k undoes 50k; to undo Fail EU-A, use Any deployment › EU-A › Restore.</p>
+        <p className="wrong-press"><b>Pressed the wrong button?</b> Back and Next never change the demo. Undo with the opposite button in <i>All demo controls</i>: Summaries: Europe + US undoes Europe only; Restore EU-A undoes Fail EU-A.</p>
       </section>
 
       <aside className="live" aria-label="Live demo">
@@ -336,7 +339,7 @@ export default function Presenter({ live, now, control }: { live: Live; now: num
       </details>
       <details><summary>All demo controls</summary>
         <div className="controls">
-          <div>{(["start-traffic", "stop-traffic", "fail-eu-a", "approve-change", "summaries-europe", "summaries-anywhere", "eu-a-half", "eu-a-full"] as const).map(id => <span key={id}>{actionButton(id)}</span>)}</div>
+          <div>{(["start-traffic", "stop-traffic", "fail-eu-a", "approve-change", "summaries-europe", "summaries-anywhere", "restore-eu-a", "eu-a-half", "eu-a-full"] as const).map(id => <span key={id}>{actionButton(id)}</span>)}</div>
           {result(Object.keys(actions))}
           <div><button disabled={!canAct} onClick={() => health && void run("submit", [{ path: "/tasks", body: { id: `${health.run_epoch}-support-${crypto.randomUUID()}`, run_epoch: health.run_epoch, workload: "support", content: pick(SUPPORT_QUESTIONS) } }])}>Submit one support request</button>
             <button disabled={!canAct} onClick={() => health && void run("submit", [{ path: "/tasks", body: { id: `${health.run_epoch}-batch-${crypto.randomUUID()}`, run_epoch: health.run_epoch, workload: "batch", content: pick(SUMMARY_REQUESTS) } }])}>Submit one summary request</button>
@@ -348,7 +351,6 @@ export default function Presenter({ live, now, control }: { live: Live; now: num
         <div className="jump">
           <button onClick={() => show("ops")}>Grafana · Operations</button><button onClick={() => show("incident")}>Mattermost · #incident-ai-support</button>
           {slides.map(slide => <button key={slide.id} onClick={() => show(slide.id)}>{slide.title}</button>)}
-          {recaps.map(recap => <button key={recap.id} onClick={() => show(recap.id)}>What Drasi did: {recap.after}</button>)}
           {overdue[0] && <button onClick={() => control.show("request", String(overdue[0].id))}>Oldest late request</button>}
         </div>
         <p className="muted">These open privately on this laptop: <ProductLink href={products.grafana}>Grafana</ProductLink> <ProductLink href={products.langfuse}>Langfuse</ProductLink> <ProductLink href={incidentChannel}>Mattermost</ProductLink> <ProductLink href={products.server}>Drasi Server</ProductLink></p>

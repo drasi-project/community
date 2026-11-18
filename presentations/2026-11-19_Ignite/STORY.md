@@ -67,18 +67,16 @@ Then it went to Verified, and the same thread got "Verified: support has
 recovered". Errors dropped, the queue drained, overdue went back to 0. EU-A was
 still down at that point; we'd just routed around it.
 
-**The one I'd have missed.** Later, EU-A came back, but only at 50k. Every health
-signal was green, no errors, nothing alerting. But Failover readiness said No: not
-if EU-B fails, and Drasi posted "Failover at risk: losing EU-B leaves support
-nowhere to run". Support was now on EU-B, and if EU-B went, support would need 60k
-in Europe and EU-A only had 50k. Nobody would have spotted that until EU-B fell
-over. We got EU-A back to full capacity, it flipped back to Yes and Drasi posted
-"Failover restored", no outage.
+**Back to normal.** Later, EU-A was fixed and came back at full capacity. Drasi
+picked it up from the health checks: every deployment Healthy, and Failover
+readiness back to "Survives losing any one deployment". Nothing moved back:
+support stayed on EU-B and summaries on US-C, because that still fits, and Drasi
+doesn't propose a change unless the facts call for one.
 
 **Bottom line.** Grafana told me something was broken. Drasi told me, on the
 dashboard and in the incident channel, who was waiting, where the work was allowed
 to go, what would fit, whether the fix
-actually worked, and that we were exposed afterwards. It all just updated as
+actually worked. It all just updated as
 things changed, without me running queries or re-checking anything.
 
 ---
@@ -93,7 +91,7 @@ things changed, without me running queries or re-checking anything.
 | Who was hit | Who is affected | #incident-ai-support, then the late request |
 | Where to move it | Recovery | #incident-ai-support (the proposal card) |
 | The fix | Recovery | #incident-ai-support (Approve on the card), Operations, then the card's thread |
-| The one I'd have missed | Healthy but fragile | Operations, then #incident-ai-support |
+| Back to normal | Back to normal | Operations |
 
 Two things in the story are simulated for the demo: the three deployments
 (in-process stubs that fail or slow down on command) and the change-approval tool

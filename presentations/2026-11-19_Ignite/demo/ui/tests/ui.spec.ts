@@ -2,7 +2,7 @@ import { settings, url, port } from "../settings.mjs";
 import { test, expect, type Page } from "@playwright/test";
 import { applyFrame, applyChanges } from "../src/live";
 import { healthSchema, readPlan } from "../src/contracts";
-import { scenes, slides, recaps, allSlides, dashboards, incidentChannel, frame } from "../../../presentation/scenes";
+import { scenes, slides, allSlides, dashboards, incidentChannel, frame } from "../../../presentation/scenes";
 import { notes } from "../../../presentation/notes";
 import { presenterScript } from "../../../presentation/script";
 import { replayClips } from "../../../presentation/replay";
@@ -45,7 +45,6 @@ test("the talk is 22 minutes and every beat says something and shows something",
     }
     expect(cue.ifBroken.trim()).not.toBe("");
   }
-  for (const recap of recaps) expect(Object.values(notes).some(cue => cue.beats.some(beat => beat.show === recap.id))).toBe(true);
   expect(slides.map(s => s.id)).toEqual(["walkin", "title", "ecosystem", "ecosystem-2", "ecosystem-3", "answers", "drasi", "scenario", "concepts", "concepts-rules", "concepts-questions", "setup", "closing", "survey"]);
   // The walk-in opens the talk, the scenario reveals a section per beat, and the survey is last.
   const shown = scenes.flatMap(scene => notes[scene.id].beats.map(beat => beat.show));
@@ -600,7 +599,7 @@ test("a slow click on a desk button still works while the desk refreshes", async
   await expect.poll(async () => (await mutations(request)).map((m: { path: string }) => m.path)).toEqual(["/control"]);
 });
 
-test("the incident channel follows the talk: failure, overdue, proposal, out of date, rejected, applied, verified, at risk, restored", async ({ browser, request }) => {
+test("the incident channel follows the talk: failure, overdue, proposal, out of date, rejected, applied, verified, EU-A restored", async ({ browser, request }) => {
   test.slow();
   const context = await browser.newContext();
   const page = await context.newPage();
@@ -657,19 +656,11 @@ test("the incident channel follows the talk: failure, overdue, proposal, out of 
   await shot(8, "verified");
 
   await next();
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("Healthy but fragile");
-  await press("EU-A back at 50k");
-  await expect(page.locator(".now").getByRole("button", { name: /EU-A back at 50k/ })).toContainText("✓");
-  await next(); await next(); // the what-if on Grafana, then the channel once
-  await expect(card("at-risk")).toContainText("Failover at risk: losing EU-B leaves support nowhere to run");
-  await expect(page.locator(".answers")).toContainText("No: not if EU-B fails");
-  await shot(9, "at-risk");
-
-  await next();
-  await press("EU-A back to 100k");
-  await expect(card("restored")).toContainText("Failover restored");
-  await expect(page.locator(".answers")).toContainText("Yes");
-  await shot(10, "restored");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Back to normal");
+  await press("Restore EU-A");
+  await expect(page.locator(".now").getByRole("button", { name: /Restore EU-A/ })).toContainText("✓");
+  await expect(page.locator(".projector-line")).toContainText("Grafana");
+  await shot(9, "restored");
   await context.close();
 });
 

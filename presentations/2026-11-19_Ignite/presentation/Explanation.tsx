@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import QRCode from "qrcode";
-import { products, recaps, session, speaker, type SlideId } from "./scenes";
+import { products, session, speaker, type SlideId } from "./scenes";
 import "./slides.css";
 
 // Keep deployment names such as EU-A, and the incident channel's name, on one line.
@@ -23,7 +23,7 @@ function Artwork({ files, alt = "", className = "artwork", fallback = null }: { 
 // The Microsoft logo as the template places it (the template only has it as EMF).
 const Logo = () => <div className="ms-logo" role="img" aria-label="Microsoft"><span aria-hidden="true"><i /><i /><i /><i /></span><b aria-hidden="true">Microsoft</b></div>;
 
-// Colours of Drasi's parts, the same on the Drasi slide, the recaps and the diagrams.
+// Colours of Drasi's parts, the same on the Drasi slide and the diagrams.
 const roles = [{ tone: "blue" }, { tone: "purple" }, { tone: "green" }, { tone: "lime" }] as const;
 
 function DrasiCode() {
@@ -60,27 +60,6 @@ export function Explanation({ slide, active = false }: { slide: SlideId; active?
     <Artwork files={["survey-qr.png"]} className="survey-qr" alt="QR code for the event survey" />
   </div>;
 
-
-  const recap = recaps.find(r => r.id === slide);
-  if (recap) {
-    const parts = [
-      ["Sources", recap.sources], ["Continuous queries", "queries" in recap ? recap.queries : undefined],
-      ["Continuous Models", recap.models], ["Reactions", recap.reactions],
-    ] as const;
-    return <div className="content-slide recap-slide">
-      <h1>What Drasi just did</h1>
-      <div className="body">
-        <p className="lead">{nb(recap.title)}</p>
-        <ul className="recap-saw">{recap.saw.map(item => <li key={item}>{nb(item)}</li>)}</ul>
-        <ol className="roles">
-          {parts.map(([name, what], i) => <li key={name} className={what ? `active ${roles[i].tone}` : "idle"}>
-            <b>{name}</b><span>{what ? nb(what) : "Not involved in this step"}</span>
-          </li>)}
-        </ol>
-        <p className="callout"><b>Why it matters</b> {nb(recap.why)}</p>
-      </div>
-    </div>;
-  }
 
   // The scenario's three sections appear one desk beat at a time; hidden ones keep their space.
   if (slide.startsWith("concepts")) {
@@ -196,16 +175,16 @@ export function Explanation({ slide, active = false }: { slide: SlideId; active?
   </div>;
 
   return <div className="content-slide closing-slide">
-    <h1>Answers that change when the facts do</h1>
+    <h1>Richer context, without the integration project</h1>
     <div className="body">
       <div className="closing-copy">
-        <p className="lead">Keep your monitoring tools. Add change-driven computation.</p>
-        <ul>
-          <li>Who is affected, the moment they're affected</li>
-          <li>Plans that fit your rules and the current facts</li>
-          <li>Proof a fix worked, not just that it was approved</li>
-          <li>Safe from the next failure? Answered all the time</li>
-        </ul>
+        <p className="lead">Drasi brings data from many sources together and keeps the answers current. Here: the application database, OpenTelemetry health checks, policy and approvals.</p>
+        <ol className="closing-steps">
+          <li className="blue"><b>Connect sources</b><span>The databases and telemetry you already have</span></li>
+          <li className="purple"><b>Configure continuous models</b><span>Queries, policy and optimization, as configuration</span></li>
+          <li className="lime"><b>Connect reactions</b><span>Into the dashboards and channels people already use</span></li>
+        </ol>
+        <p className="slide-meta">No new application to watch. In this demo, everything except one Prometheus reaction plugin is configuration.</p>
       </div>
       <div className="closing-links">
         <DrasiCode />

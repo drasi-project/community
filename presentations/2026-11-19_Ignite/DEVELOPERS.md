@@ -111,7 +111,7 @@ All paths are under `demo/` unless noted.
 
 | File | Role |
 |---|---|
-| `scenes.ts` | The slides and the "What Drasi just did" visual, the talk's parts and timings, dashboard and product URLs |
+| `scenes.ts` | The slides, the talk's parts and timings, dashboard and product URLs |
 | `notes.ts` | The script: each part's beats (what the projector shows, what to say, which desk buttons, what to click on the projected channel, what to watch for, which panels to highlight), the glossary and the questions to expect. The single source for the desk and `PRESENTER.md` |
 | `script.ts` | Generates `PRESENTER.md`'s run of show, script, glossary and questions from `notes.ts` |
 | `Audience.tsx` | The projected stage: always the Ignite template's 1920×1080 slide, scaled to fit the window. Slides, the dashboard embedded in Grafana kiosk mode at 1.35×, the incident channel (`incident`: Mattermost's `#incident-ai-support`, framed at 1.5× so it lays out 1280 px wide; the projector's browser is signed in as `oncall` through the AI service's `/mattermost/sign-in`), both ending at the caption line (y 1002) and kept loaded once shown, the late request view and recordings. Keys pressed here (a clicker) are passed to the desk; if no desk answers within half a second, the stage steps through the talk's views on its own |

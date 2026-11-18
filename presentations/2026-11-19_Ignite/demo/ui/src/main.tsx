@@ -3,8 +3,7 @@ import { createRoot } from "react-dom/client";
 import { Audience } from "../../../presentation/Audience";
 import { useStage } from "./stage";
 import { useClock, useLive } from "./live";
-import { recapFromState, type View } from "../../../presentation/scenes";
-import { healthSchema, request } from "./contracts";
+import type { View } from "../../../presentation/scenes";
 import "./style.css";
 
 const Presenter = lazy(() => import("../../../presentation/Presenter"));
@@ -28,16 +27,4 @@ function App() {
   if (!preview && location.pathname === "/inspect") return <Diagnostics />;
   return <Slides />;
 }
-// "?slide=recap" shows the "What Drasi just did" visual (Healthy but fragile's)
-// (for a projected window navigated by hand). If the demo can't be reached, it shows the walk-in slide.
-async function resolveDrasiSlide() {
-  const params = new URLSearchParams(location.search);
-  if (params.get("slide") !== "recap") return;
-  try {
-    const health = healthSchema.parse(await request("/api/health", { signal: AbortSignal.timeout(2000) }));
-    params.set("slide", recapFromState(health).id);
-    history.replaceState(null, "", `${location.pathname}?${params}`);
-  } catch { /* fall back */ }
-}
-void resolveDrasiSlide().then(() =>
-  createRoot(document.getElementById("root")!).render(<Suspense fallback={<p>Loading...</p>}><App /></Suspense>));
+createRoot(document.getElementById("root")!).render(<Suspense fallback={<p>Loading...</p>}><App /></Suspense>);

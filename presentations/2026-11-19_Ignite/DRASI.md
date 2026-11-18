@@ -225,7 +225,7 @@ Drasi run for real. These parts are simulated or shortened for the stage:
 | Gateway configuration API | `POST /routes/apply`, `/approvals/{id}/reject`, `/approvals/{id}/verified` in the AI service, called only by `gateway-reaction` |
 | Scenario size | 2 workloads and 3 deployments |
 | Timing | The 15 s deadline, 8 s probe expiry, and 5 s plus 3 answers for recovery are shortened for the stage |
-| Talk extras | Reset deletes the previous run's Grafana annotations (a demo control). The late-request view reads the AI service's `/tasks/{id}`. The "What Drasi just did" visual (after the incident) is a static slide. The fallback recordings are captured from the live demo |
+| Talk extras | Reset deletes the previous run's Grafana annotations (a demo control). The late-request view reads the AI service's `/tasks/{id}`. The fallback recordings are captured from the live demo |
 
 ## 4. Worth knowing
 
