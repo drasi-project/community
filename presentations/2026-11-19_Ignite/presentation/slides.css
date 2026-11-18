@@ -13,7 +13,7 @@
   --navy: #2A446F; --white: #FFFFFF; --off-white: #F4F3F5; --title: #ADE5F1; --blue-black: #091F2C;
   --light-blue: #8DC8E8; --light-purple: #C5B4E3; --green: #8DE971; --light-green: #D4EC8E; --light-gray: #D9D9D6;
   --light-yellow: #FFE399; --light-red: #FFB3BB;
-  --panel: rgba(9, 31, 44, .45);
+  --panel: rgba(9, 31, 44, .6);
   --text: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
   --display: "Segoe Sans Display", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
   --code: Consolas, "Cascadia Mono", "SF Mono", Menlo, monospace;
@@ -65,6 +65,9 @@
 .slide-deck .stage-frame img.survey-qr { position: absolute; left: 1262px; top: 291px; width: 531px; height: 532px; }
 
 /* Content slides: the template's Title and Content layout */
+/* The template's Section Title artwork, enlarged so its neon sits at the top edge and in the
+   bottom-right corner, clear of titles and text; plain Dark Blue without the template assets. */
+.slide-deck .stage-frame .content-slide { background: var(--navy) url("/template/content-bg.jpg") center / 118% auto no-repeat; }
 .slide-deck .stage-frame .content-slide > h1 { position: absolute; left: 92px; top: 72px; width: 1736px;
   font: 600 72px/1.1 var(--display); letter-spacing: -.01em; white-space: nowrap; }
 .slide-deck .stage-frame .content-slide > .body { position: absolute; left: 92px; top: 226px; width: 1736px; height: 776px; display: flex; flex-direction: column; }
@@ -178,6 +181,17 @@
 .slide-deck .stage-frame .query-live li span { color: var(--light-red); font-weight: 600; }
 .slide-deck .stage-frame .query-live li code { color: var(--light-gray); font: 26px var(--code); }
 .slide-deck .stage-frame .query-live li.more { color: var(--light-gray); justify-content: center; }
+
+/* The configuration behind an answer: code panels and numbered notes, like the query slide */
+.slide-deck .stage-frame .code-slide .body { display: grid; grid-template-columns: 1200px 1fr; gap: 0 44px; align-items: start; }
+.slide-deck .stage-frame .code-slide .code-panels { display: grid; gap: 24px; }
+.slide-deck .stage-frame .code-slide .code-panel pre { font-size: 20px; line-height: 1.55; padding: 14px 24px 18px; }
+.slide-deck .stage-frame .code-slide .code-tab { font-size: 24px; }
+.slide-deck .stage-frame .code-slide .query-notes { font-size: 28px; }
+.slide-deck .stage-frame .code-slide.wide .body { grid-template-columns: 1fr; gap: 28px 0; }
+.slide-deck .stage-frame .code-slide.wide .code-panel pre { font-size: 23px; line-height: 1.5; }
+.slide-deck .stage-frame .code-slide.wide .query-notes { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 56px; }
+.slide-deck .stage-frame .code-slide.wide .query-notes li { margin-bottom: 0; }
 
 /* Close */
 .slide-deck .stage-frame .closing-slide .body { flex-direction: row; gap: 96px; }

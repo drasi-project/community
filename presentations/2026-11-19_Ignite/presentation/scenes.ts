@@ -19,7 +19,7 @@ export const dashboards = { ops: grafana("ignite-workload", true) } as const;
 export const incidentChannel = `${settings.mattermost}/ai-platform/channels/incident-ai-support`;
 
 // Shown on the title slide when set (bold name, then role, as in the Ignite template).
-export const speaker = { name: "", role: "" };
+export const speaker = { name: "Allen Jones", role: "" };
 export const session = { event: "Microsoft Ignite 2026", code: "THR1029" };
 
 // The Ignite template's 16:9 slide, in pixels. Projected content stays above captionTop: the
@@ -35,7 +35,10 @@ export const slides = [
   { id: "concepts-questions", title: "The scenario · three answers" },
   { id: "setup", title: "What happens when EU-A fails" },
   { id: "drasi", title: "Drasi: change-driven computation" },
+  { id: "health", title: "How Drasi knows EU-A failed" },
   { id: "query", title: "Who is affected: the continuous query" },
+  { id: "policy-config", title: "The policy behind the proposal" },
+  { id: "optimization-config", title: "The optimization behind the proposal" },
   { id: "closing", title: "Close" },
   { id: "survey", title: "Session survey" },
 ] as const;

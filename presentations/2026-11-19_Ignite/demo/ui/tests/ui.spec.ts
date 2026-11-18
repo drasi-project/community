@@ -7,6 +7,7 @@ import { notes } from "../../../presentation/notes";
 import { presenterScript } from "../../../presentation/script";
 import { replayClips } from "../../../presentation/replay";
 import { displayQuery } from "../../../presentation/QuerySlide";
+import { buildCodeSlides } from "../../../presentation/codeSlides";
 import { unknownKeys, type Dashboard } from "../../../presentation/panels";
 import fs from "node:fs";
 
@@ -46,7 +47,7 @@ test("the talk is 22 minutes and every beat says something and shows something",
     expect(cue.ifBroken.trim()).not.toBe("");
   }
   for (const recap of recaps) expect(Object.values(notes).some(cue => cue.beats.some(beat => beat.show === recap.id))).toBe(true);
-  expect(slides.map(s => s.id)).toEqual(["walkin", "title", "concepts", "concepts-rules", "concepts-questions", "setup", "drasi", "query", "closing", "survey"]);
+  expect(slides.map(s => s.id)).toEqual(["walkin", "title", "concepts", "concepts-rules", "concepts-questions", "setup", "drasi", "health", "query", "policy-config", "optimization-config", "closing", "survey"]);
   // The walk-in opens the talk, the scenario reveals a section per beat, and the survey is last.
   const shown = scenes.flatMap(scene => notes[scene.id].beats.map(beat => beat.show));
   expect(shown[0]).toBe("walkin");
@@ -115,6 +116,18 @@ test("a beat's highlight outlines its dashboard panels on the projector, above t
   await expect(projector.locator(".panel-highlight")).toHaveCount(0);
 });
 
+test("the configuration slides show the real files, and every numbered note marks a line", () => {
+  const read = (path: string) => fs.readFileSync(new URL(`../../drasi/${path}`, import.meta.url), "utf8");
+  const codeSlides = buildCodeSlides({ healthQuery: read("deployment-health.cypher"), tileQuery: read("tile-deployments.cypher"),
+    rego: read("policy/ignite.rego"), optimization: JSON.parse(read("optimization/optimization.json")) });
+  expect(codeSlides.health.panels[0].lines.join("\n")).toContain(read("deployment-health.cypher").split("\n").find(line => line.startsWith("MATCH"))!);
+  expect(codeSlides["policy-config"].panels[0].lines).toContain("allowed_destination if input.target.id in input.destinations");
+  for (const [id, slide] of Object.entries(codeSlides)) {
+    const marks = slide.panels.flatMap(panel => panel.marks.filter(([text]) => panel.lines.some(line => line.includes(text))).map(([, n]) => n));
+    expect(marks.sort((a, b) => a - b), id).toEqual(slide.notes.map((_, i) => i + 1));
+  }
+});
+
 test("the query slide shows exactly the query Drasi runs", () => {
   const file = fs.readFileSync(new URL("../../drasi/overdue-tasks.cypher", import.meta.url), "utf8");
   const words = (text: string) => text.replace(/\s+/g, " ").trim();
@@ -163,7 +176,7 @@ test("keys pressed on the projector (a clicker) drive the desk", async ({ page }
 });
 
 test("short on time skips the optional policy beats", async ({ page }) => {
-  await desk(page, "recovery", 0);
+  await desk(page, "recovery", 2);
   await page.getByLabel("Short on time").check();
   await page.getByRole("button", { name: "Next ▶" }).click();
   await expect(page.locator(".say")).toContainText("Now I approve the current proposal");
@@ -199,7 +212,7 @@ test("the desk shows how long demo traffic has been running", async ({ page }) =
 
 test("approving the out-of-date proposal is rejected by Drasi, and the desk says that's expected", async ({ page, request }) => {
   await failEuA(request);
-  await desk(page, "recovery", 1);
+  await desk(page, "recovery", 3);
   await expect.poll(async () => (await posts(request)).map(p => p.props.ignite_card)).toEqual(["failed", "proposal"]);
   await page.locator(".now").getByRole("button", { name: "Summaries: Europe only" }).click();
   await expect(page.locator(".now").getByRole("button", { name: /Summaries: Europe only/ })).toContainText("✓");
@@ -227,7 +240,7 @@ test("approving the out-of-date proposal is rejected by Drasi, and the desk says
 
 test("pressing Approve on the projected card applies the change, and the desk reports Drasi's answer", async ({ page, request }) => {
   await failEuA(request);
-  await desk(page, "recovery", 4);
+  await desk(page, "recovery", 6);
   const projector = await page.context().newPage();
   await stubMattermost(projector);
   await projector.goto("/present");
@@ -260,7 +273,7 @@ test("the projected incident view frames the channel above the caption line, kep
   await stubMattermost(page);
   await failEuA(request);
   await page.setViewportSize({ width: 1920, height: 1080 });
-  await desk(page, "failure", 2);
+  await desk(page, "failure", 3);
   const projector = await page.context().newPage();
   await stubGrafana(projector);
   await stubMattermost(projector);
@@ -299,7 +312,7 @@ test("switching to recordings puts the part's recording on the projector and hid
 
 test("out-of-date evidence disables approval and live buttons", async ({ page, request }) => {
   await failEuA(request);
-  await desk(page, "recovery", 4);
+  await desk(page, "recovery", 6);
   await expect(page.locator(".now").getByRole("button", { name: "Approve the proposed change" })).toBeEnabled();
   await request.post(`${fixture}/test/expire`);
   await expect(page.locator(".now").getByRole("button", { name: "Approve the proposed change" })).toBeDisabled();
@@ -389,7 +402,7 @@ test("the desk shows Drasi's answers from Drasi Server and never asks the AI ser
 
 test("Drasi's stream unavailable means NOT READY", async ({ page }) => {
   await page.route("**/drasi-stream/**", route => route.fulfill({ status: 503, body: "down" }));
-  await desk(page, "recovery", 4);
+  await desk(page, "recovery", 6);
   await expect(page.locator(".badge", { hasText: "NOT READY" })).toBeVisible();
   await expect(page.locator(".now").getByRole("button", { name: "Approve the proposed change" })).toBeDisabled();
   await expect(page.locator(".approval")).toHaveText("Approval status unavailable.");
@@ -476,7 +489,7 @@ test("with the template assets present, the desk doesn't flag them", async ({ pa
 test("the desk fits a laptop screen without scrolling", async ({ browser }) => {
   for (const cue of ["failure", "recovery"] as const) {
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-    await desk(page, cue, cue === "recovery" ? 4 : 0);
+    await desk(page, cue, cue === "recovery" ? 6 : 0);
     const main = await page.locator(".desk-main").boundingBox();
     expect(main!.y + main!.height).toBeLessThanOrEqual(900);
     await page.close();
@@ -580,7 +593,7 @@ test("the incident channel follows the talk: failure, overdue, proposal, out of 
 
   await press("Fail EU-A");
   await expect(page.locator(".now").getByRole("button", { name: /Fail EU-A/ })).toContainText("✓");
-  await next(); await next();
+  await next(); await next(); await next();
   await expect(page.locator(".projector-line")).toContainText("Mattermost · #incident-ai-support");
   await expect(card("failed")).toContainText("Deployment failed: EU-A");
   await expect(card("proposal")).toContainText("Proposed change: Move summaries to US-C and support to EU-B");
@@ -598,6 +611,7 @@ test("the incident channel follows the talk: failure, overdue, proposal, out of 
   await expect(card("proposal").getByRole("button", { name: "Approve" })).toBeVisible();
   await shot(3, "proposal");
 
+  await next(); await next(); // the policy and optimization slides
   await next();
   await press("Summaries: Europe only");
   await expect(page.locator(".now").getByRole("button", { name: /Summaries: Europe only/ })).toContainText("✓");

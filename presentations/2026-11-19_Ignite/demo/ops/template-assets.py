@@ -39,7 +39,7 @@ DEFAULTS = {
 FONTS = {"regular": "segoeui.woff", "semibold": "segoeui-semibold.woff",
          "semilight": "segoeui-semilight.woff", "light": "segoeui-light.woff"}
 # What the stage needs; the presenter desk checks these against manifest.json.
-REQUIRED = ["walkin.svg", "title-bg.jpg", "survey-bg.jpg", "survey-frame.svg",
+REQUIRED = ["walkin.svg", "title-bg.jpg", "content-bg.jpg", "survey-bg.jpg", "survey-frame.svg",
             "survey-qr.png", "segoeui.woff", "segoeui-semibold.woff"]
 
 
@@ -144,6 +144,8 @@ def main():
 
     template = Package(args.template)
     copy(template, template.background(template.layout("Title Slide")), "title-bg.jpg")
+    # Content slides use the Section Title artwork: its neon stays outside the content area.
+    copy(template, template.background(template.layout("Section Title")), "content-bg.jpg")
     problem = render_walkin(args.template, out)
     if problem:
         # The walk-in's artwork without the Microsoft logo and wordmark: better than nothing.

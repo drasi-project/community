@@ -2,6 +2,8 @@ import { useEffect, useState, type ReactNode } from "react";
 import QRCode from "qrcode";
 import { products, recaps, session, speaker, type SlideId } from "./scenes";
 import { QuerySlide } from "./QuerySlide";
+import { CodeSlide, codeSlides } from "./ConfigSlides";
+import type { CodeSlideId } from "./codeSlides";
 import "./slides.css";
 
 // Keep deployment names such as EU-A, and the incident channel's name, on one line.
@@ -62,12 +64,13 @@ export function Explanation({ slide, active = false }: { slide: SlideId; active?
   </div>;
 
   if (slide === "query") return <QuerySlide live={active} />;
+  if (slide in codeSlides) return <CodeSlide id={slide as CodeSlideId} />;
 
   const recap = recaps.find(r => r.id === slide);
   if (recap) {
     const parts = [
       ["Sources", recap.sources], ["Continuous queries", "queries" in recap ? recap.queries : undefined],
-      ["Continuous models", recap.models], ["Reactions", recap.reactions],
+      ["Continuous Models", recap.models], ["Reactions", recap.reactions],
     ] as const;
     return <div className="content-slide recap-slide">
       <h1>What Drasi just did</h1>
@@ -99,19 +102,19 @@ export function Explanation({ slide, active = false }: { slide: SlideId; active?
         </ul>
         <div className={`requirements ${shown(2) ?? ""}`} aria-hidden={step < 2}>
           <section>
-            <h2>Policy</h2>
+            <h2>Data Compliance</h2>
             <p><b className="blue">Customer support</b>: restricted data, <strong>Europe only</strong></p>
             <p><b className="purple">Document summaries</b>: public data, <strong>anywhere</strong></p>
           </section>
           <section>
             <h2>Business requirements</h2>
             <p>Customers get an answer within <strong>15 seconds</strong></p>
-            <p>Moving work needs <strong>a person's approval</strong></p>
+            <p>Infrastructure changes require <strong>human approval</strong></p>
           </section>
         </div>
         <div className={`callout questions ${shown(3) ?? ""}`} aria-hidden={step < 3}>
           <p>When something goes wrong, the business needs three answers:</p>
-          <ol><li>Who is affected right now?</li><li>What's the fastest fix that stays within policy?</li><li>How do we know it's really fixed?</li></ol>
+          <ol><li>Who is affected?</li><li>What's the fastest fix that stays within policy?</li><li>How do we know when it's resolved?</li></ol>
         </div>
       </div>
     </div>;
@@ -158,8 +161,8 @@ export function Explanation({ slide, active = false }: { slide: SlideId; active?
         <text className="drasi-note" x="992" y="500">Reacts to every change and keeps the</text>
         <text className="drasi-note" x="992" y="540">answers current, where the team looks</text>
 
-        <path className="flow" d="M712,118 H982" /><text className="edge" x="760" y="76">Metrics, traces,</text><text className="edge" x="760" y="102">health probes</text>
-        <path className="flow" d="M1020,300 V374" /><text className="edge" x="1006" y="342" textAnchor="end">Health probes</text>
+        <path className="flow" d="M740,118 H982" /><text className="edge" x="760" y="76">Metrics, traces,</text><text className="edge" x="760" y="102">health probes</text>
+        <path className="flow" d="M1020,272 V374" /><text className="edge" x="1006" y="342" textAnchor="end">Health probes</text>
         <path className="flow" d="M712,556 H954" /><text className="edge" x="760" y="538">Every change</text>
         <path className="flow answer" d="M1160,380 V278" /><text className="edge answer" x="1174" y="342">Answers</text>
         <path className="flow answer" d="M1520,380 V278" /><text className="edge answer" x="1534" y="328">Who's affected,</text><text className="edge answer" x="1534" y="354">what to do</text>
@@ -173,7 +176,7 @@ export function Explanation({ slide, active = false }: { slide: SlideId; active?
     <div className="body">
       <ol className="drasi-parts">
         <li className="part blue"><b>Sources</b></li>
-        <li className="part models"><b>Continuous models</b>
+        <li className="part models"><b>Continuous Models</b>
           <ul><li className="purple">Query</li><li className="green">Policy</li><li className="green">Optimization</li></ul></li>
         <li className="part lime"><b>Reactions</b></li>
       </ol>

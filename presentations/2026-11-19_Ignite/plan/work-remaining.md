@@ -57,24 +57,10 @@ Remove an item when it is done.
   the desk's select and approve buttons are replaced by Drasi's cards in a real
   Mattermost incident channel (`#incident-ai-support`), approved on the projected
   card. See `plan/incident-channel-plan.md`.
-- My name 'Allen Jones' on the Monitoring without Polling slide
-- The basic clue background on the main slides is awful, fix it
-- The Scenario slide
-  - Change 'Policy' to 'Data Compliance'
-  - 'Moving work needs a person's approval' should be something like 'Infrastructure changes require human approval'
-  - "Who is affected right now" should be "Who is affected"
-  - "How do we know its really fixed?" should be "How do we know when its resolved?"
-- "What happens when EU-A Fails"
-  - Arrow from Gateway to OpenTelemmetry, should start from dotted "AI Service" box, to indicate that there are multiple sources of telelmetry (even though for the demo it is only coming from the gateway)
-  - Arrow from 'Your Observability' to Drasi should start in the OpenTelemetry box, not the dotted line.
-- Drasi slide
-  - make 'Continuous models' into 'Continuous Models'
 - Grafana Dashboard
   - Can you combine the 'Recommended Action and Change Status Widgets?
   - When i first show the Drasi Decision Support dashboard, I should clarify what each control is doing and how it works, where it is getting is data from. Before i crash EU-A
-- Failing EU-A, I should be able to say exactly how the drasi is making the declaration that EU-A failed.
 - When i go to Mattermost is see 2 Deployment Failed cards from Drasi
-- Somewhere, just like we should the query that drives the overdue calls number, we should show the config that drives the policy and optimization functionality
 - in the dashboard, it would be good to be able to see what alerts grafana is firing
 - THe Dashboard shows a panel with Deployment Status. This is useful and it would also be useful to see the Workload Status shown in the same way.
 
