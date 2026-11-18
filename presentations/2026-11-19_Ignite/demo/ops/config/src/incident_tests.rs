@@ -657,7 +657,8 @@ async fn plan_row(query: &'static str, status: Value) -> Value {
 async fn plan_and_resilience_results_from_the_optimization_status() {
     let p = plan_row("plan-results", plan_status(json!({}))).await;
     assert_eq!(p["state"], "feasible");
-    assert_eq!(p["candidate_id"], "11bb");
+    // The plan for these facts: its solution, then its basis.
+    assert_eq!(p["candidate_id"], "11bb00aa");
     assert_eq!(p["basis"], "00aa");
     assert_eq!(p["revision"], 3);
     assert_eq!(p["run_epoch"], "run-1");

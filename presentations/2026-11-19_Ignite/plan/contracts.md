@@ -238,7 +238,7 @@ deployment (section 7). The result queries keep the columns below.
 | Column | Meaning |
 |---|---|
 | `state` | `feasible` (status `optimal`), `infeasible`, or `unknown` (a precondition does not hold, or a time limit or error) |
-| `candidate_id` | The solution's `solutionSignature` (16-hex FNV-1a over the published Assignment rows); `""` unless feasible |
+| `candidate_id` | This plan for these facts: the `solutionSignature` (16-hex FNV-1a over the published Assignment rows) followed by `basis`. Every new set of facts yields a new candidate, even for the same routes. `""` unless feasible |
 | `basis` | The status `signature`: 16-hex FNV-1a over the configuration and every input set member solved |
 | `revision`, `run_epoch` | From the `plan-context` row (`provenance`) |
 | `assignments` | JSON text `{workload: deployment}` from `summaries.assignments`; `"{}"` unless feasible |

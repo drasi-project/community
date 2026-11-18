@@ -18,8 +18,10 @@ what-if, and the never-guess behaviour are all configuration plus queries.
   missing or undecided, an input has not loaded, or inputs disagree on the
   revision, the status is `unknown`. No plan and no scenarios are published.
 - **Approvals.** `basis` = `signature` (the inputs solved) and
-  `candidate_id` = new `solutionSignature` (the published solution). Both are
-  stable across input order and change when the facts or the plan change.
+  `candidate_id` = new `solutionSignature` (the published solution) followed by
+  `signature`, so it identifies this plan for these facts. As before, a new set
+  of facts gives a new candidate, even with the same routes. Both are stable
+  across input order.
 - **Downstream.** `plan-results`, `assignment-results`, `resilience-results` and
   `loss-results` are rewritten over the new rows with **the same columns**
   (except `LossScenario.assignments`, unused). Tiles, approval checks and incident
@@ -44,7 +46,7 @@ standard Drasi configuration rather than demo code.
 | `fewestMoves`, then `lowestPeakUtilisation` | Objectives `moves` (assign where `target != current`), then `peak` (continuous `peak`, with `demand·x − peak·capacity ≤ 0` per bin) |
 | Deterministic ties | Built in: sets are materialized in key order |
 | `Plan.state` feasible / infeasible / unknown | Status `optimal` → feasible, `infeasible` → infeasible, `unknown`/`limit`/`error` → unknown (in `plan-results`) |
-| `basis`, `candidate_id` | `signature`, `solutionSignature` |
+| `basis`, `candidate_id` | `signature`, `solutionSignature` + `signature` |
 | `revision`, `run_epoch` | `provenance` from the `context` set (one `ignite_scenario` row) |
 | `assignments` JSON, `moves`, `peak_utilisation`, `reason` | `summaries.assignments`, `summaries.moved`, `objectives.moves`, `objectives.peak`, `detail`; text built in `plan-results` |
 | `solved_ms` | `drasi.changeDateTime(p).epochMillis`: the effective time of the triggering input |
@@ -577,7 +579,7 @@ WITH p, state, percent, size(moved) AS n,
      [m IN moved | m.subject + ' to ' + m.target] AS parts
 WITH p, state, percent, n, parts, parts[0..size(parts) - 1] AS init
 RETURN 'plan' AS id, state,
-       CASE WHEN state = 'feasible' THEN p.solutionSignature ELSE '' END AS candidate_id,
+       CASE WHEN state = 'feasible' THEN p.solutionSignature + p.signature ELSE '' END AS candidate_id,
        p.signature AS basis,
        p.provenance.revision AS revision,
        CASE WHEN state = 'feasible'
@@ -678,8 +680,8 @@ Do these on community-next once Server loads the merged plugins.
 3. **Remove** `plugins/optimizer`, its build step in `native-build.sh` (ask the
    port agent), and its library from the plugin list.
 4. **Contracts.** Update `contracts.md` §5 and §7 to point at this document.
-   `LossScenario.assignments` is gone; `basis` and `candidate_id` are 16-hex
-   FNV-1a signatures instead of SHA-256.
+   `LossScenario.assignments` is gone. `basis` is a 16-hex FNV-1a signature and
+   `candidate_id` a 32-hex one (solution, then basis), instead of SHA-256.
 5. **Verify.**
    - Run `tests/decision-integration.py`: failure plan, policy edit, capacity
      beat, approvals and stale approvals.

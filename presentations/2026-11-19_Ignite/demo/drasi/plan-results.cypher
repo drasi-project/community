@@ -7,7 +7,7 @@ WITH p, state, percent, size(moved) AS n,
      [m IN moved | m.subject + ' to ' + m.target] AS parts
 WITH p, state, percent, n, parts, parts[0..size(parts) - 1] AS init
 RETURN 'plan' AS id, state,
-       CASE WHEN state = 'feasible' THEN p.solutionSignature ELSE '' END AS candidate_id,
+       CASE WHEN state = 'feasible' THEN p.solutionSignature + p.signature ELSE '' END AS candidate_id,
        p.signature AS basis,
        p.provenance.revision AS revision,
        CASE WHEN state = 'feasible'
