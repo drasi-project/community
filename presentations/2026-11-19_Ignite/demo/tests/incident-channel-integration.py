@@ -3,8 +3,8 @@
 Drasi's `incident-channel` reaction posts each card once. The seed has summaries Europe-only, so
 the run opens with failover at risk; allowing summaries in the US restores it. Then the failure,
 the overdue requests, the proposal with its Approve and Reject buttons, the outcome of the
-approval in that card's thread (applied, verified), and failover at risk and restored again at
-EU-A 50k and back at 100k. The approval goes through Mattermost exactly as a press of the card's
+approval in that card's thread (applied, verified); restoring EU-A then posts nothing (degraded to
+safe is not news), and the routes stay where the plan put them. The approval goes through Mattermost exactly as a press of the card's
 Approve button (`POST /mattermost/approve-latest`, the desk's backup). Resets the scenario at the
 start and the end, which also clears the channel.
 """
@@ -84,26 +84,22 @@ def main():
         assert d.routes() == {"support": "EU-B", "batch": "US-C"}
         checks.append("Approve applies the change: Applied, then Verified, in the proposal's thread")
 
+        before = len(cards())
         d.control("restore", "EU-A")
-        time.sleep(5)
-        d.configure(capacity={"EU-A": 50000})
-        risk = [c for c in card("at-risk", 2) if c["card"] == "at-risk"][-1]
-        assert risk["attachment"]["title"] == "Failover at risk: losing EU-B leaves support nowhere to run", risk
-        d.configure(capacity={"EU-A": 100000})
-        restored = [c for c in card("restored", 2) if c["card"] == "restored"][-1]
-        assert restored["attachment"]["title"] == "Failover restored", restored
-        checks.append("EU-A back at 50k: failover at risk (losing EU-B leaves support nowhere to run); back to "
-                      "100k: failover restored")
-
+        d.metric_until("drasi_failover_readiness", lambda v: v == 1, 30)
+        assert all(v == 0 for _, v in d.series("drasi_deployment_health_status").items()), "every deployment Healthy"
+        assert d.routes() == {"support": "EU-B", "batch": "US-C"}, "nothing moves back"
         time.sleep(8)
         final = cards()
+        assert len(final) == before, f"restoring EU-A posts nothing: {[c['card'] for c in final[before:]]}"
+        checks.append("Restore EU-A: every deployment Healthy, failover survives losing any one deployment, "
+                      "the routes stay support → EU-B and summaries → US-C, and no card")
         ids = [c["incident_card_id"] for c in final]
         assert len(ids) == len(set(ids)), f"each card is posted once: {ids}"
         kinds = [c["card"] for c in final]
-        assert (kinds.count("at-risk"), kinds.count("restored")) == (2, 2), kinds
+        assert (kinds.count("at-risk"), kinds.count("restored")) == (1, 1), kinds
         assert [c["card"] for c in final if c["root_id"]] == ["outcome"] * 2
-        checks.append("every card posted once (at risk and restored twice each: the seed and EU-A at 50k); "
-                      "only outcomes are thread replies")
+        checks.append("every card posted once; only outcomes are thread replies")
         path = d.save("incident-channel.json", {"checks": checks, "cards": final})
         print(json.dumps({"passed": checks, "evidence": str(path)}, indent=2))
     finally:

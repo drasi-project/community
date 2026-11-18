@@ -804,7 +804,7 @@ the examples are the talk's values.
 | 3 | `proposal` | `proposal` ← `incident-proposal` | `Plan` feasible with `moves > 0`, unchanged for 2 s; one card per `candidate_id` (`id` = `proposal-{candidate_id}`) | top level |
 | 4 | `superseded` | `superseded` ← `incident-superseded` | The proposal of card 3 is replaced (new `candidate_id`, or the plan is infeasible) for 2 s, and not because it was applied (no `applied`/`verified` approval for that candidate). Uses `drasi.previousDistinctValue` on the plan's `candidate_id` | top level |
 | 5 | `outcome` | `outcome` ← `incident-outcome` | An approval of the current run turns `applied`, `verified` or `rejected` (not `pending`, not `declined`: the card itself shows those); `id` = `{approval}-{status}` | `root_id` = the approval's `post_id` (`""` if null) |
-| 6 | `at-risk` | `at-risk` ← `incident-at-risk` | `Resilience` `at_risk` with `unhealthy_bins = 0` for 3 s (healthy but fragile) | top level |
+| 6 | `at-risk` | `at-risk` ← `incident-at-risk` | `Resilience` `at_risk` with `unhealthy_bins = 0` for 3 s (healthy, but losing one deployment leaves no plan) | top level |
 | 7 | `restored` | `restored` ← `incident-restored` | `Resilience` `safe` for 3 s after having been `at_risk` in this run | top level |
 
 Card contents (title, colour, text, fields; `—` = none):
