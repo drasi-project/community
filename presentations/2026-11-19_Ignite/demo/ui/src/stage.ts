@@ -2,17 +2,16 @@ import { useEffect, useRef, useState } from "react";
 import { settings } from "./settings";
 import { z } from "zod";
 import { scenes, allSlides, type SlideId, type StageView } from "../../../presentation/scenes";
-import { selectionSchema, type Selection } from "./contracts";
 
 const slideIds = allSlides.map(slide => slide.id) as [SlideId, ...SlideId[]];
-export const viewSchema = z.enum([...slideIds, "ops", "plan", "request"] as [StageView, ...StageView[]]);
+export const viewSchema = z.enum([...slideIds, "ops", "incident", "request"] as [StageView, ...StageView[]]);
 const schema = z.object({
   cue: z.number().int().min(0).max(scenes.length - 1),
   beat: z.number().int().min(0),
   view: viewSchema, trace: z.string().nullable(), replay: z.string().nullable(),
   // Dashboard panels highlighted on the projector (presentation/Highlight.tsx).
   highlight: z.array(z.string()).default([]),
-  selection: selectionSchema.nullable(), short: z.boolean(),
+  short: z.boolean(),
   // Recording mode: the rest of the talk uses recordings instead of the live demo.
   fallback: z.boolean().default(false),
 });
@@ -21,7 +20,7 @@ const showSchema = z.object({ type: z.literal("stage"), view: viewSchema, trace:
 const keySchema = z.object({ type: z.literal("key"), key: z.string(), id: z.string() });
 const ackSchema = z.object({ type: z.literal("key-ack"), id: z.string() });
 export type Stage = z.infer<typeof schema>;
-const initial: Stage = { cue: 0, beat: 0, view: "walkin", trace: null, replay: null, highlight: [], selection: null, short: false, fallback: false };
+const initial: Stage = { cue: 0, beat: 0, view: "walkin", trace: null, replay: null, highlight: [], short: false, fallback: false };
 const key = settings.storageKey;
 
 // The view requested in the address (?view=… or ?slide=…), if any.
@@ -84,7 +83,6 @@ export function useStage(preview: boolean, presenter = false) {
   return {
     stage, update, keyHandler,
     show: (view: StageView, trace: string | null = null) => update({ view, trace, highlight: [] }),
-    select: (selection: Selection | null) => update({ selection }),
     // The projector forwards the presenter's keys (clicker, arrows) to the desk. If no desk answers
     // within half a second, onUnanswered runs, so the slides still work with no desk open.
     sendKey: (pressed: string, onUnanswered: () => void) => {

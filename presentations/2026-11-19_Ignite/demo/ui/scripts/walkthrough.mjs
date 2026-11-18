@@ -34,25 +34,31 @@ const metric = async (query) => {
 };
 // Drasi's answers as Grafana reads them: the Prometheus reaction's series (plan/contracts.md section 9).
 const drasi = async (name, labels = "") => (await metric(`${name}${labels}`))[0]?.value;
-const action = () => drasi("ignite_drasi_action_needed");
+const action = () => drasi("ignite_drasi_recommended_action");
+const failover = () => drasi("ignite_drasi_failover_readiness");
 const lastApproval = () => drasi("ignite_drasi_last_approval_state");
 
-// What each beat waits for before its screenshot, keyed by "<part>/<beat>".
+// What each beat waits for before its screenshot, keyed by "<part>/<beat>". Approving beats press
+// the desk's backup, which presses Approve on the newest proposal card, as a click on it would.
 const waits = {
   "normal/0": async () => until("traffic history", async () => (await api("/health")).traffic?.running, 10).then(() => sleep(15000)),
-  "failure/0": () => until("Action needed: Approve", async () => await action() === 1, 60),
-  "failure/2": () => until("errors and alert", async () => await drasi("ignite_drasi_overdue_requests", '{workload="support"}') > 0, 60).then(() => sleep(15000)),
+  "failure/0": () => until("Recommended action: the change", async () => await action() === 1, 60),
+  "failure/2": () => sleep(5000),
+  "failure/3": () => until("errors and alert", async () => await drasi("ignite_drasi_overdue_requests", '{workload="support"}') > 0, 60).then(() => sleep(15000)),
+  "who/0": () => sleep(3000),
   "who/1": () => sleep(3000),
-  "recovery/2": () => until("no valid plan", async () => await action() === 2, 30).then(() => sleep(6000)),
-  "recovery/3": () => until("rejected", async () => await lastApproval() === 4, 30).then(() => sleep(6000)),
-  "recovery/4": () => until("plan back", async () => await action() === 1, 30).then(() => sleep(6000)),
-  "recovery/6": () => until("applied", async () => [2, 3].includes(await lastApproval()), 30).then(() => sleep(6000)),
-  "recovery/7": () => until("verified", async () => await drasi("ignite_drasi_recovery_state") === 1, 150).then(() => sleep(6000)),
-  "recovery/8": () => sleep(30000),
-  "resilience/0": () => until("not safe", async () => await drasi("ignite_drasi_safe_if_one_fails") === 0, 30).then(() => sleep(8000)),
-  "resilience/3": () => until("safe again", async () => await drasi("ignite_drasi_safe_if_one_fails") === 1, 30).then(() => sleep(8000)),
+  "recovery/1": () => until("no valid plan", async () => await action() === 2, 30).then(() => sleep(6000)),
+  "recovery/2": () => until("rejected", async () => await lastApproval() === 4, 30).then(() => sleep(6000)),
+  "recovery/3": () => until("new proposal", async () => await action() === 1, 30).then(() => sleep(6000)),
+  "recovery/5": () => until("applied", async () => [2, 3].includes(await lastApproval()), 30).then(() => sleep(6000)),
+  "recovery/6": () => until("verified", async () => await drasi("ignite_drasi_change_status") === 4, 150).then(() => sleep(6000)),
+  "recovery/7": () => sleep(30000),
+  "recovery/8": () => sleep(3000),
+  "resilience/0": () => until("not safe", async () => await failover() === 0, 30).then(() => sleep(8000)),
+  "resilience/1": () => sleep(4000),
+  "resilience/3": () => until("safe again", async () => await failover() === 1, 30).then(() => sleep(8000)),
 };
-const recordings = { failure: ["failure/0", "failure/3"], policy: ["recovery/2", "recovery/4"], recovery: ["recovery/6", "recovery/8"], resilience: ["resilience/0", "resilience/3"] };
+const recordings = { failure: ["failure/0", "failure/4"], policy: ["recovery/1", "recovery/3"], recovery: ["recovery/5", "recovery/8"], resilience: ["resilience/0", "resilience/3"] };
 
 await fs.mkdir(output, { recursive: true });
 // The projector and recording pages run in background tabs: keep Chromium from throttling their
@@ -96,7 +102,11 @@ for (;;) {
   const part = (await desk.evaluate(key => JSON.parse(localStorage.getItem(key)), settings.IGNITE_STORAGE_KEY));
   const sceneId = ["title", "concepts", "drasi", "normal", "failure", "who", "recovery", "resilience", "closing"][part.cue];
   const key = `${sceneId}/${part.beat}`;
-  if (index === 0) await projector.goto(`${base}/present`);
+  if (index === 0) {
+    // Sign the projector's browser in to Mattermost as oncall, as the presenter does before the talk.
+    await projector.goto(`${url("WORKLOAD", "localhost")}/mattermost/sign-in`);
+    await projector.goto(`${base}/present`);
+  }
   for (const [name, [from]] of Object.entries(recordings)) if (mode === "record" && key === from) {
     recordingPage = await context.newPage();
     await recordingPage.goto(`${base}/present`);
@@ -112,7 +122,7 @@ for (;;) {
     await desk.waitForTimeout(1500);
   }
   await waits[key]?.();
-  await desk.waitForTimeout(part.view === "ops" || part.view === "plan" ? 6000 : 1500);
+  await desk.waitForTimeout(part.view === "ops" || part.view === "incident" ? 6000 : 1500);
   const name = `${String(index).padStart(2, "0")}-${key.replace("/", "-")}`;
   await shot(name);
   evidence.beats.push({ name, part: title, view: part.view, say: await desk.locator(".say").innerText(), result: await desk.locator(".now .result").innerText().catch(() => null) });

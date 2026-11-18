@@ -1,0 +1,83 @@
+<!doctype html>
+<!-- TEST FIXTURE: a plain stand-in for Mattermost's #incident-ai-support channel, used only by the
+     browser tests (they route Mattermost's URL here). It shows the fixture's cards in Mattermost's
+     desktop layout and sizes, so framing and legibility on the projector can be checked without
+     a live Mattermost. Buttons call the fixture's stand-in for POST /mattermost/actions. -->
+<html><head><meta charset="utf-8"><title>incident-ai-support - AI Platform Mattermost</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; height: 100vh; display: grid; grid-template-rows: 40px 1fr; grid-template-columns: 65px 240px 1fr;
+    font: 14px/1.43 "Open Sans", "Segoe UI", system-ui, sans-serif; color: #3f4350; background: #fff; overflow: hidden; }
+  .global { grid-column: 1 / -1; background: #14213e; color: #fff; display: flex; align-items: center; padding: 0 16px; gap: 12px; }
+  .global .fixture { margin-left: auto; font-size: 11px; font-weight: 700; color: #ffd28a; letter-spacing: .04em; }
+  .teams { background: #192a4d; padding-top: 12px; display: flex; justify-content: center; }
+  .teams span { width: 40px; height: 40px; border-radius: 8px; background: #fff; color: #1e325c; font-weight: 700; display: grid; place-items: center; }
+  .channels { background: #1e325c; color: #ffffffb8; padding: 12px 0; }
+  .channels h2 { color: #fff; font-size: 16px; margin: 0 16px 16px; }
+  .channels h3 { font-size: 12px; text-transform: uppercase; margin: 0 16px 6px; color: #ffffff99; }
+  .channels .item { padding: 6px 16px; }
+  .channels .item.active { background: #ffffff29; color: #fff; border-left: 3px solid #5d89ea; font-weight: 600; }
+  .center { display: grid; grid-template-rows: 62px 1fr auto; min-height: 0; }
+  .header { border-bottom: 1px solid #3f435029; padding: 10px 20px; }
+  .header b { font-size: 16px; color: #3f4350; } .header small { display: block; color: #3f4350a3; }
+  .posts { overflow-y: auto; padding: 8px 0 12px; }
+  .post { display: grid; grid-template-columns: 36px 1fr; gap: 10px; padding: 8px 20px; }
+  .avatar { width: 32px; height: 32px; border-radius: 50%; background: #2fa66a; color: #fff; font-weight: 700; display: grid; place-items: center; }
+  .avatar.grafana { background: #f46800; }
+  .name { font-weight: 700; color: #3f4350; } .bot { font-size: 10px; font-weight: 700; background: #3f435029; border-radius: 2px; padding: 1px 4px; margin-left: 4px; }
+  .time { color: #3f4350a3; font-size: 12px; margin-left: 6px; }
+  .reply-to { font-size: 12px; color: #3f4350a3; }
+  .attachment { margin-top: 6px; border: 1px solid #3f435029; border-left-width: 4px; border-radius: 4px; padding: 10px 12px; max-width: 900px; }
+  .attachment h4 { margin: 0 0 4px; font-size: 14px; }
+  .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px; margin-top: 8px; }
+  .fields .long { grid-column: 1 / -1; } .fields b { display: block; font-size: 13px; }
+  .footer { margin-top: 8px; font-size: 12px; color: #3f4350a3; }
+  .actions { margin-top: 10px; display: flex; gap: 8px; }
+  .actions button { font: 600 13px inherit; border-radius: 4px; padding: 6px 14px; cursor: pointer; border: 1px solid #1c58d9; background: #1c58d9; color: #fff; }
+  .actions button.danger { background: #fff; color: #d24b4e; border-color: #d24b4e; }
+  .box { margin: 0 20px 16px; border: 1px solid #3f435052; border-radius: 4px; padding: 12px; color: #3f435080; }
+  a { color: #1c58d9; }
+</style></head>
+<body>
+  <div class="global"><b>Mattermost</b><span class="fixture">TEST FIXTURE · STAND-IN FOR MATTERMOST</span></div>
+  <div class="teams"><span>AP</span></div>
+  <nav class="channels"><h2>AI Platform</h2><h3>Channels</h3><div class="item active"># incident-ai-support</div><div class="item"># town-square</div></nav>
+  <main class="center">
+    <div class="header"><b>incident-ai-support</b><small>Incidents for the AI service: Drasi and Grafana post here</small></div>
+    <div class="posts" id="posts"></div>
+    <div class="box">Write to incident-ai-support</div>
+  </main>
+<script>
+  const escape = text => String(text ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  const markdown = text => escape(text).replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+  let shown = "";
+  async function refresh() {
+    const posts = await (await fetch("/test-fixture/posts")).json();
+    const text = JSON.stringify(posts);
+    if (text === shown) return;
+    shown = text;
+    const byId = Object.fromEntries(posts.map(p => [p.id, p]));
+    const list = document.getElementById("posts");
+    list.innerHTML = posts.map(post => {
+      const a = post.props.attachments[0];
+      const root = post.root_id && byId[post.root_id];
+      return `<div class="post" data-card="${escape(post.props.ignite_card)}" data-post="${post.id}"><div class="avatar">D</div><div>
+        <span class="name">drasi</span><span class="bot">BOT</span><span class="time">${new Date(post.create_at).toTimeString().slice(0, 5)}</span>
+        ${root ? `<div class="reply-to">Replied to Drasi's thread: ${escape(root.props.attachments[0].title)}</div>` : ""}
+        <div class="attachment" style="border-left-color:${a.color}"><h4>${escape(a.title)}</h4><div>${markdown(a.text)}</div>
+          ${a.fields?.length ? `<div class="fields">${a.fields.map(f => `<div class="${f.short ? "" : "long"}"><b>${escape(f.title)}</b>${markdown(f.value)}</div>`).join("")}</div>` : ""}
+          ${a.actions ? `<div class="actions">${a.actions.map(b => `<button class="${b.style === "danger" ? "danger" : ""}" data-action="${b.id}">${escape(b.name)}</button>`).join("")}</div>` : ""}
+          <div class="footer">${escape(a.footer)}</div></div></div></div>`;
+    }).join("");
+    list.scrollTop = list.scrollHeight;
+  }
+  document.addEventListener("click", event => {
+    const button = event.target.closest("button[data-action]");
+    if (!button) return;
+    const post = button.closest("[data-post]").dataset.post;
+    void fetch("/test-fixture/press", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ post_id: post, action: button.dataset.action }) });
+  });
+  setInterval(refresh, 300);
+  void refresh();
+</script>
+</body></html>

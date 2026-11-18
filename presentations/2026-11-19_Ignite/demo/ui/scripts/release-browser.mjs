@@ -70,7 +70,7 @@ if (mode === "record") {
         const switchToPlayMs = Date.now() - start;
         expect(switchToPlayMs).toBeLessThan(15000);
         await desk.getByText("All demo controls").click();
-        for (const name of ["Start demo traffic", "Stop demo traffic", "Fail EU-A", "Submit one support request", "Apply to deployment", "Approve selected plan"]) {
+        for (const name of ["Start demo traffic", "Stop demo traffic", "Fail EU-A", "Submit one support request", "Apply to deployment", "Approve the proposed change"]) {
           await expect(desk.locator(".controls").getByRole("button", { name, exact: true })).toBeDisabled();
         }
         await desk.getByText("All demo controls").click();

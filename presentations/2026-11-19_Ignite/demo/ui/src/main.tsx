@@ -21,7 +21,7 @@ function Desk() {
 function Diagnostics() {
   const live = useLive(), now = useClock();
   const [view, setView] = useState<View>("change");
-  return <div className="private-inspector"><header className="app-header">PRIVATE DIAGNOSTICS · NOT THE PRESENTATION <a href="/presenter">Presenter desk</a></header><Inspector live={live} now={now} view={view} setView={setView} selection={null} /></div>;
+  return <div className="private-inspector"><header className="app-header">PRIVATE DIAGNOSTICS · NOT THE PRESENTATION <a href="/presenter">Presenter desk</a></header><Inspector live={live} now={now} view={view} setView={setView} /></div>;
 }
 function App() {
   if (!preview && location.pathname === "/presenter") return <Desk />;

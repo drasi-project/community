@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import Reveal from "reveal.js";
 import "reveal.js/dist/reveal.css";
-import { allSlides, dashboards, frame, scenes, type StageView } from "./scenes";
+import { allSlides, dashboards, frame, incidentChannel, scenes, type StageView } from "./scenes";
 import { notes } from "./notes";
 import { RequestView } from "./RequestView";
 import { replayClips } from "./replay";
@@ -12,6 +12,9 @@ import type { StageControl } from "../demo/ui/src/stage";
 // Dashboards are drawn at 1/zoom of the stage and scaled up, so they read from the back of the room.
 // At 1.35 both dashboards (about 740 px tall in Grafana) fit above the caption line.
 const zoom = Number(new URLSearchParams(location.search).get("zoom")) || 1.35;
+// The incident channel is scaled up more: at 1.5 Mattermost lays out 1280 x 668 px (its desktop
+// layout, above 768 px), so a whole proposal card fits and the cards read from the back of the room.
+const incidentZoom = Number(new URLSearchParams(location.search).get("incidentZoom")) || 1.5;
 const forwarded = [" ", "PageDown", "PageUp", "ArrowRight", "ArrowLeft", "ArrowDown", "ArrowUp", "Home", "End", "Enter", "Backspace", "b", "."];
 // Without a desk, keys step through what the talk shows, in order (the late request needs the desk).
 const sequence = scenes.flatMap(scene => notes[scene.id].beats.map(beat => beat.show))
@@ -42,11 +45,12 @@ export function Audience({ control, preview }: { control: StageControl; preview:
   const highlight = preview ? new URLSearchParams(location.search).get("highlight")?.split(",") ?? [] : control.stage.highlight;
   const index = allSlides.findIndex(slide => slide.id === view);
   const scale = useFit();
-  const dashboard = view === "ops" || view === "plan" ? view : null;
+  const dashboard = view === "ops" ? view : null;
+  const framed = dashboard ?? (view === "incident" ? view : null);
   const replay = replayClips.find(clip => clip.scene === replayId);
-  // Dashboards stay loaded once shown, so switching back is instant.
+  // Dashboards and the channel stay loaded once shown, so switching back is instant.
   const [loaded, setLoaded] = useState<Set<string>>(new Set());
-  useEffect(() => { if (dashboard && !loaded.has(dashboard)) setLoaded(new Set([...loaded, dashboard])); }, [dashboard, loaded]);
+  useEffect(() => { if (framed && !loaded.has(framed)) setLoaded(new Set([...loaded, framed])); }, [framed, loaded]);
   useEffect(() => {
     if (!element.current) return;
     const reveal = new Reveal(element.current, {
@@ -80,15 +84,20 @@ export function Audience({ control, preview }: { control: StageControl; preview:
       <div className="reveal" ref={element} hidden={!!replay || index < 0}>
         <div className="slides">{allSlides.map(slide => <section key={slide.id} data-slide={slide.id}><Explanation slide={slide.id} active={slide.id === view} /></section>)}</div>
       </div>
-      {(["ops", "plan"] as const).filter(id => loaded.has(id)).map(id =>
-        <iframe key={id} className="stage-dashboard" title={id === "ops" ? "Grafana · Operations" : "Grafana · Recovery plan"} scrolling="no"
+      {(["ops"] as const).filter(id => loaded.has(id)).map(id =>
+        <iframe key={id} className="stage-dashboard" title="Grafana · Operations" scrolling="no"
           src={dashboards[id]} aria-hidden={!!replay || dashboard !== id}
           // Hidden with visibility, not display:none: after display:none Grafana's annotation list
           // ("Decision events") stops refreshing. It ends at the caption line.
           style={{ width: frame.width / zoom, height: frame.captionTop / zoom, transform: `scale(${zoom})`,
             visibility: !!replay || dashboard !== id ? "hidden" : "visible" }} />)}
+      {loaded.has("incident") && <iframe className="stage-dashboard stage-incident" title="Mattermost · #incident-ai-support"
+        src={incidentChannel} aria-hidden={!!replay || view !== "incident"}
+        // Signed in as oncall through the AI service's /mattermost/sign-in (contracts.md §17).
+        style={{ width: frame.width / incidentZoom, height: frame.captionTop / incidentZoom, transform: `scale(${incidentZoom})`,
+          visibility: !!replay || view !== "incident" ? "hidden" : "visible" }} />}
       {dashboard && !replay && <PanelHighlight src={dashboards[dashboard]} keys={highlight} zoom={zoom} />}
-      {dashboard && !replay && <div className="caption-zone" />}
+      {framed && !replay && <div className="caption-zone" />}
       {view === "request" && !replay && <section className="stage-request"><RequestView taskId={trace} /></section>}
       {replay && <section className="replay-screen">
         <header><strong className="replay-label">REPLAY · NOT LIVE</strong><h1>{replay.title}</h1></header>

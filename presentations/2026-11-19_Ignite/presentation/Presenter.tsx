@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { settings } from "../demo/ui/src/settings";
-import { scenes, slides, recaps, products, duration, viewLabel, type StageView } from "./scenes";
+import { scenes, slides, recaps, products, incidentChannel, duration, viewLabel, type StageView } from "./scenes";
 import "./desk.css";
 import { notes, actionLabels, glossary, questions, type ActionId, type Beat } from "./notes";
 import { replayClips } from "./replay";
@@ -34,8 +34,7 @@ function Clock({ now }: { now: number }) {
     <button className="quiet" onClick={() => setStarted(Date.now())}>{started === null ? "Start timer" : "Restart timer"}</button></span>;
 }
 
-// `approval` is set for an approval sent to the approval tool: its outcome comes from Drasi.
-type Feedback = { action: string; tone: "ok" | "expected" | "error"; message: string; data?: unknown; approval?: string; expectRejected?: boolean };
+type Feedback = { action: string; tone: "ok" | "expected" | "error"; message: string; data?: unknown };
 type Request = { path: string; body: unknown };
 
 // The latest approval as Drasi reports it (tile-last-approval): 1 checking, 2 applied, 3 verified, 4 rejected.
@@ -44,18 +43,21 @@ function lastApproval(query: QueryState): { id: string; state: number | null; re
   return row ? { id: String(row.approval ?? ""), state: tileValue([row]), reason: typeof row.reason === "string" && row.reason ? row.reason : "the plan was out of date" } : null;
 }
 
-// What Drasi has decided about an approval the presenter sent, in the desk's words.
-function approvalFeedback(feedback: Feedback, live: Live): Feedback {
+// What has happened to the approval on this beat, in the desk's words. The approval comes from the
+// Approve button on the projected proposal card or the desk's backup (both press the same card);
+// Drasi decides whether it is applied or rejected (tile-last-approval).
+function approvalStatus(live: Live, since: string | null | undefined, expectRejected: boolean, needsChange: boolean): { tone: Feedback["tone"]; message: string } {
   const latest = lastApproval(live.queries["tile-last-approval"]);
-  const state = latest && latest.id === feedback.approval ? latest.state : null;
-  const reason = latest?.reason ?? "";
-  if (state === 4) return feedback.expectRejected
-    ? { ...feedback, tone: "expected", message: `Rejected by Drasi, as intended: ${reason}.` }
-    : { ...feedback, tone: "error", message: `Drasi rejected it: ${reason}. Select the proposed plan and approve again.` };
-  if (state === 2 || state === 3) return feedback.expectRejected
-    ? { ...feedback, tone: "error", message: "It was accepted, not rejected. Carry on: the plan is being applied." }
-    : { ...feedback, tone: "ok", message: "Done: Drasi checked it and the new routes are applied." };
-  return { ...feedback, tone: "ok", message: "Sent to the approval tool. Waiting for Drasi's check…" };
+  if (!latest || since === undefined || latest.id === since) return expectRejected
+    ? { tone: "ok", message: "Waiting for Approve on the out-of-date proposal card." }
+    : { tone: "ok", message: needsChange ? "Waiting for Approve on the newest proposal card." : "No proposal waiting for approval." };
+  if (latest.state === 4) return expectRejected
+    ? { tone: "expected", message: `Rejected by Drasi, as intended: ${latest.reason}.` }
+    : { tone: "error", message: `Drasi rejected it: ${latest.reason}. Approve the newest proposal card when it appears.` };
+  if (latest.state === 2 || latest.state === 3) return expectRejected
+    ? { tone: "error", message: "It was accepted, not rejected. Carry on: the change is being applied." }
+    : { tone: "ok", message: "Done: Drasi checked it and the new routes are applied." };
+  return { tone: "ok", message: "Approved. Drasi is checking it against its current plan…" };
 }
 
 // The Ignite template's artwork and fonts (ops/template-assets.py), checked once when the desk
@@ -87,8 +89,13 @@ export default function Presenter({ live, now, control }: { live: Live; now: num
   const health = live.health;
   const ready = !live.error && !live.drasiError && !!health && live.received !== null && now - live.received < 6000;
   const [busy, setBusy] = useState(false);
-  const [sent, setFeedback] = useState<Feedback | null>(null);
-  const feedback = sent?.approval ? approvalFeedback(sent, live) : sent;
+  const [feedback, setFeedback] = useState<Feedback | null>(null);
+  // The latest approval when this beat began: an approval after it is this beat's.
+  // Undefined until Drasi's approval tile has loaded (the desk may open mid-beat).
+  const [approvalBefore, setApprovalBefore] = useState<string | null | undefined>(undefined);
+  const approvalsLoaded = live.queries["tile-last-approval"].attached;
+  useEffect(() => { if (approvalBefore === undefined && approvalsLoaded) setApprovalBefore(lastApproval(live.queries["tile-last-approval"])?.id ?? null); },
+    [approvalBefore, approvalsLoaded, live.queries]);
   const [awaiting, setAwaiting] = useState<{ run_epoch: string; revision: number } | null>(null);
   const [connected, setConnected] = useState(false);
   const templateMissing = useTemplateAssets();
@@ -108,8 +115,6 @@ export default function Presenter({ live, now, control }: { live: Live; now: num
   // What runs now, as Drasi sees it (tile-running): a negative value means policy no longer allows that route.
   const running = Object.fromEntries(live.queries["tile-running"].rows.map(row =>
     [String(row.workload), `${String(row.deployment)}${typeof row.value === "number" && row.value < 0 ? " (not allowed)" : ""}`]));
-  const selection = stage.selection;
-  const stale = !!selection && selection.basis !== candidate?.basis;
   const overdue = live.queries["overdue-tasks"].rows
     .filter(row => row.workload === "support" && typeof row.id === "string")
     .sort((a, b) => Number(a.deadline_ms) - Number(b.deadline_ms));
@@ -131,8 +136,9 @@ export default function Presenter({ live, now, control }: { live: Live; now: num
     }
     setFeedback(null);
     setNudged(null);
+    setApprovalBefore(approvalsLoaded ? lastApproval(live.queries["tile-last-approval"])?.id ?? null : undefined);
     // In recording mode, parts of the live demo show their recording instead.
-    const recording = stage.fallback && (target.show === "ops" || target.show === "plan" || target.show === "request")
+    const recording = stage.fallback && (target.show === "ops" || target.show === "incident" || target.show === "request")
       ? target.recording ?? notes[scenes[cueIndex].id].recording ?? null : null;
     control.update({ cue: cueIndex, beat: beatIndex, view: target.show, trace, highlight: target.highlight ?? [], ...(stage.fallback ? { replay: recording } : {}) });
   }
@@ -169,23 +175,20 @@ export default function Presenter({ live, now, control }: { live: Live; now: num
   const show = (view: StageView) => control.show(view);
 
   // Sends the requests in order; stops at the first that fails.
-  async function run(action: string, requests: Request[], expectRejected = false) {
+  async function run(action: string, requests: Request[]) {
     if (!canAct) return;
     setBusy(true); setFeedback(null);
     try {
       let data: Row = {};
       for (const { path, body } of requests) data = rowSchema.parse(await post(path, body));
       if (typeof data.run_epoch === "string" && typeof data.revision === "number") setAwaiting({ run_epoch: data.run_epoch, revision: data.revision });
-      if (requests[0].path === "/reset") control.update({ selection: null });
       // The approval tool only records the approval; Drasi decides whether it is applied or rejected.
-      if (requests[0].path === "/approvals") setFeedback({ action, tone: "ok", message: "", data, approval: String(data.id), expectRejected });
-      else setFeedback({ action, tone: "ok", message: "Done.", data });
+      setFeedback({ action, tone: "ok", message: requests[0].path === "/mattermost/approve-latest" ? "Pressed Approve on the newest proposal card." : "Done.", data });
     } catch (error) {
       const text = errorText(error);
       const reason = /"error":"([^"]+)"/.exec(text)?.[1] ?? text;
       setFeedback({ action, tone: "error", message: `Didn't work: ${reason}. Check the banner says READY, then try once more.` });
     } finally {
-      if (requests[0].path === "/approvals") control.select(null);
       setBusy(false);
     }
   }
@@ -205,11 +208,9 @@ export default function Presenter({ live, now, control }: { live: Live; now: num
       press: () => health && void run("stop-traffic", [{ path: "/traffic", body: { run_epoch: health.run_epoch, running: false } }]) },
     "fail-eu-a": { enabled: euA?.mode === "ok", danger: true,
       press: () => health && void run("fail-eu-a", [{ path: "/control", body: { run_epoch: health.run_epoch, deployment: "EU-A", action: "fail" } }]) },
-    "select-plan": { enabled: needsChange, done: !!selection && !stale,
-      press: () => candidate && control.select({ approval_id: crypto.randomUUID(), candidate_id: candidate.candidate_id, basis: candidate.basis,
-        run_epoch: candidate.run_epoch, revision: candidate.revision, assignments: candidate.assignments, selected_ms: Date.now() }) },
-    "approve-plan": { enabled: !!selection,
-      press: () => selection && void run("approve-plan", [{ path: "/approvals", body: { id: selection.approval_id, candidate_id: selection.candidate_id, basis: selection.basis, revision: selection.revision } }], beat.expect === "rejected") },
+    // The backup for Approve on the projected card: it presses that same button (contracts.md §18).
+    "approve-change": { enabled: needsChange || beat.expect === "rejected",
+      press: () => health && void run("approve-change", [{ path: "/mattermost/approve-latest", body: { run_epoch: health.run_epoch } }]) },
     "summaries-europe": { enabled: batch.includes("US-C"),
       press: () => configure("summaries-europe", { destinations: { batch: ["EU-A", "EU-B"] } }) },
     "summaries-anywhere": { enabled: !!health && !batch.includes("US-C"),
@@ -222,9 +223,12 @@ export default function Presenter({ live, now, control }: { live: Live; now: num
       case "start-traffic": return !!health?.traffic?.running;
       case "stop-traffic": return !health?.traffic?.running;
       case "fail-eu-a": return euA?.mode === "failed";
-      case "select-plan": return !!selection || !needsChange;
-      // A rejected approval is done once Drasi has answered it.
-      case "approve-plan": return beat.expect === "rejected" ? feedback?.action === "approve-plan" && feedback.tone !== "ok" : !needsChange;
+      // Done once Drasi has answered this beat's approval (rejected, if that's the point of the beat).
+      case "approve-change": {
+        const latest = lastApproval(live.queries["tile-last-approval"]);
+        const answered = !!latest && approvalBefore !== undefined && latest.id !== approvalBefore;
+        return beat.expect === "rejected" ? answered && latest.state === 4 : !needsChange || (answered && latest.state !== 4);
+      }
       case "summaries-europe": return !batch.includes("US-C");
       case "summaries-anywhere": return batch.includes("US-C");
       case "eu-a-half": return euA?.capacity_tpm === 50000 && euA.mode === "ok";
@@ -273,13 +277,19 @@ export default function Presenter({ live, now, control }: { live: Live; now: num
           <button className="big primary" onClick={() => step(1)} disabled={!nextItem}>Next ▶</button>
           <p className="projector-line">Projector: <b>{viewLabel(stage.view)}</b>{beat.optional && <span className="optional"> · optional</span>}</p>
         </div>
-        {nudged === `${stage.cue}/${stage.beat}` && <p className="result error" role="alert">You haven't pressed {(beat.do ?? []).filter(id => !isDone(id)).map(id => actionLabels[id]).join(" or ")} yet. Press it, or press Next again to move on without it.</p>}
+        {nudged === `${stage.cue}/${stage.beat}` && <p className="result error" role="alert">{beat.click ? `Drasi hasn't answered an approval yet. Click ${beat.click}, or use ${actionLabels["approve-change"]} on the desk` : `You haven't pressed ${(beat.do ?? []).filter(id => !isDone(id)).map(id => actionLabels[id]).join(" or ")} yet. Press it`}, or press Next again to move on without it.</p>}
         {stage.fallback && <p className="result expected">Recording mode: the projector shows recordings for the live parts. Say they're recordings; keep pressing Next.</p>}
         {beat.do && !stage.fallback && <div className="now-actions">
           {beat.do.map((id, i) => <span key={id}>{actionButton(id, beat.do!.length > 1 ? i + 1 : undefined)}</span>)}
           {beat.expect === "rejected" && <span className="hint">This approval is meant to be rejected.</span>}
           {result(beat.do)}
+          {beat.do.includes("approve-change") && (() => {
+            const status = approvalStatus(live, approvalBefore, beat.expect === "rejected", needsChange);
+            return <p className={`result ${status.tone}`} role="status">{status.message}</p>;
+          })()}
         </div>}
+        {beat.click && !stage.fallback && <p className="click"><b>Click on the projector</b> {beat.click}. The audience sees it.
+          {beat.do?.includes("approve-change") && <> The desk's <i>{actionLabels["approve-change"]}</i> is the backup: it presses the same button.</>}</p>}
         <p className="say">{beat.say}</p>
         {beat.watch && <p className="watch"><b>Watch for</b> {beat.watch}</p>}
         {nextItem && <p className="up-next">Next: <b>{viewLabel(notes[scenes[nextItem.c].id].beats[nextItem.b].show)}</b> · {notes[scenes[nextItem.c].id].beats[nextItem.b].say.slice(0, 90)}…</p>}
@@ -289,7 +299,7 @@ export default function Presenter({ live, now, control }: { live: Live; now: num
       </section>
 
       <aside className="live" aria-label="Live demo">
-        <h2>Drasi's answers (as on the projector)</h2>
+        <h2>Drasi's answers</h2>
         <Answers live={live} />
         <h2>Live demo</h2>
         <ul className="deployments-state">{(health?.deployments ?? []).map(e => {
@@ -297,7 +307,7 @@ export default function Presenter({ live, now, control }: { live: Live; now: num
           return <li key={e.id} className={e.mode === "ok" && e.reporting ? "ok" : "bad"}><b>{e.id}</b> {mode}<small>{e.capacity_tpm / 1000}k</small></li>;
         })}</ul>
         <p className="traffic">Traffic: {health?.traffic?.running ? "running" : "stopped"} · Summaries allowed in {batch.includes("US-C") ? "Europe + US" : "Europe only"}</p>
-        <h2>Recovery plan</h2>
+        <h2>Routes</h2>
         <table className="plan-table">
           <thead><tr><th /><th>Support</th><th>Summaries</th></tr></thead>
           <tbody>
@@ -305,12 +315,10 @@ export default function Presenter({ live, now, control }: { live: Live; now: num
             <tr className={needsChange ? "proposed" : ""}><th>Proposed plan</th>{feasible
               ? <><td>{candidate.assignments.support}</td><td>{candidate.assignments.batch}</td></>
               : <td colSpan={2} className={proposalCurrent ? "no-plan" : ""} title={candidate?.reason}>{proposalCurrent ? "No valid plan" : "Unknown"}</td>}</tr>
-            {selection && <tr className={stale ? "stale" : "selected"}><th>You selected{stale ? " (out of date)" : ""}</th>
-              <td>{selection.assignments?.support ?? "?"}</td><td>{selection.assignments?.batch ?? "?"}</td></tr>}
           </tbody>
         </table>
         <p className="plan-status">{!proposalCurrent ? "The proposed plan is unavailable." : !feasible ? "No plan fits policy and capacity right now."
-          : needsChange ? "The proposed plan needs your approval." : "What's running is the proposed plan."}</p>
+          : needsChange ? "Drasi's proposal is waiting for Approve on its card in #incident-ai-support." : "What's running is the proposed plan."}</p>
         <ApprovalStatus live={live} />
       </aside>
     </main>
@@ -321,7 +329,7 @@ export default function Presenter({ live, now, control }: { live: Live; now: num
       </details>
       <details><summary>All demo controls</summary>
         <div className="controls">
-          <div>{(["start-traffic", "stop-traffic", "fail-eu-a", "select-plan", "approve-plan", "summaries-europe", "summaries-anywhere", "eu-a-half", "eu-a-full"] as const).map(id => <span key={id}>{actionButton(id)}</span>)}</div>
+          <div>{(["start-traffic", "stop-traffic", "fail-eu-a", "approve-change", "summaries-europe", "summaries-anywhere", "eu-a-half", "eu-a-full"] as const).map(id => <span key={id}>{actionButton(id)}</span>)}</div>
           {result(Object.keys(actions))}
           <div><button disabled={!canAct} onClick={() => health && void run("submit", [{ path: "/tasks", body: { id: `${health.run_epoch}-support-${crypto.randomUUID()}`, run_epoch: health.run_epoch, workload: "support", content: pick(SUPPORT_QUESTIONS) } }])}>Submit one support request</button>
             <button disabled={!canAct} onClick={() => health && void run("submit", [{ path: "/tasks", body: { id: `${health.run_epoch}-batch-${crypto.randomUUID()}`, run_epoch: health.run_epoch, workload: "batch", content: pick(SUMMARY_REQUESTS) } }])}>Submit one summary request</button>
@@ -331,12 +339,12 @@ export default function Presenter({ live, now, control }: { live: Live; now: num
       </details>
       <details><summary>Show something on the projector</summary>
         <div className="jump">
-          <button onClick={() => show("ops")}>Grafana · Operations</button><button onClick={() => show("plan")}>Grafana · Recovery plan</button>
+          <button onClick={() => show("ops")}>Grafana · Operations</button><button onClick={() => show("incident")}>Mattermost · #incident-ai-support</button>
           {slides.map(slide => <button key={slide.id} onClick={() => show(slide.id)}>{slide.title}</button>)}
           {recaps.map(recap => <button key={recap.id} onClick={() => show(recap.id)}>What Drasi did: {recap.after}</button>)}
           {overdue[0] && <button onClick={() => control.show("request", String(overdue[0].id))}>Oldest late request</button>}
         </div>
-        <p className="muted">These open privately on this laptop: <ProductLink href={products.grafana}>Grafana</ProductLink> <ProductLink href={products.langfuse}>Langfuse</ProductLink> <ProductLink href={products.server}>Drasi Server</ProductLink></p>
+        <p className="muted">These open privately on this laptop: <ProductLink href={products.grafana}>Grafana</ProductLink> <ProductLink href={products.langfuse}>Langfuse</ProductLink> <ProductLink href={incidentChannel}>Mattermost</ProductLink> <ProductLink href={products.server}>Drasi Server</ProductLink></p>
       </details>
       <details><summary>Recordings (fallback)</summary>
         <p className="muted">A recording plays on the projector, labelled REPLAY · NOT LIVE. Say it's a recording. Live buttons are off while it plays. Back to live returns to the live demo where you left it; if the live demo isn't working, use <b>recording mode</b> instead: every remaining live part then shows its recording as you press Next.</p>
@@ -357,12 +365,15 @@ export default function Presenter({ live, now, control }: { live: Live; now: num
   </div>;
 }
 
-// The same four answers as the projector's Drasi tiles, read from the same tile queries.
+// Drasi's answers from its tile queries: three as on the dashboard, and Recovery (the evidence behind Change status).
 function Answers({ live }: { live: Live }) {
   const q = live.queries;
   const late = q["overdue-tasks"].rows.filter(row => row.workload === "support").length;
+  // Recommended action and Failover readiness, as on the dashboard (contracts.md §16): the row's text when it has one.
   const actionValue = tileValue(q["tile-action"].rows);
-  const action = [["None", "ok"], ["Approve proposed plan", "warn"], ["No valid plan", "bad"], ["At risk", "warn"]][actionValue ?? -1] ?? ["Unknown", ""];
+  const actionText = q["tile-action"].rows[0]?.text;
+  const action = [["None", "ok"], ["Approve the proposed change", "warn"], ["No change fits policy and capacity", "bad"], ["Add capacity", "warn"]]
+    .map(([label, tone], value) => [value === actionValue && typeof actionText === "string" && actionText ? actionText : label, tone])[actionValue ?? -1] ?? ["Unknown", ""];
   const safeRow = q["tile-resilience"].rows[0];
   const safeValue = tileValue(q["tile-resilience"].rows);
   const safe = safeValue === 1 ? ["Yes", "ok"] : safeValue === 0 ? [`No: not if ${String(safeRow?.lost || "one")} fails`, "warn"]
@@ -372,9 +383,9 @@ function Answers({ live }: { live: Live }) {
   const recovery = [["Awaiting evidence", "warn"], ["Verified", "ok"], ["Nothing to verify", ""]][recoveryValue ?? -1] ?? ["Unknown", ""];
   return <dl className="answers">
     <div><dt>Support overdue</dt><dd className={!q["overdue-tasks"].attached ? "" : late ? "bad" : "ok"}>{q["overdue-tasks"].attached ? late : "Unknown"}</dd></div>
-    <div><dt>Action needed</dt><dd className={action[1]}>{action[0]}</dd></div>
+    <div><dt>Recommended action</dt><dd className={action[1]}>{action[0]}</dd></div>
     <div><dt>Recovery</dt><dd className={recovery[1]}>{recovery[0]}</dd></div>
-    <div><dt>Safe if one fails?</dt><dd className={safe[1]}>{safe[0]}</dd></div>
+    <div><dt>Failover readiness</dt><dd className={safe[1]}>{safe[0]}</dd></div>
   </dl>;
 }
 
@@ -383,7 +394,7 @@ function ApprovalStatus({ live }: { live: Live }) {
   const query = live.queries["tile-last-approval"];
   if (!query.attached) return <p className="approval">Approval status unavailable.</p>;
   const latest = lastApproval(query);
-  if (!latest) return <p className="approval">No plan approved yet.</p>;
+  if (!latest) return <p className="approval">No change approved yet.</p>;
   const recovery = live.queries["tile-recovery"];
   const verifiedNow = latest.state === 3 && tileValue(recovery.rows) === 1;
   const message = latest.state === 1 ? "Approved. Drasi is checking it against the current plan…"
@@ -395,7 +406,7 @@ function ApprovalStatus({ live }: { live: Live }) {
   return <p className={`approval ${verifiedNow ? "ok" : ""}`}>{message}</p>;
 }
 
-type Run = (action: string, requests: Request[], expectRejected?: boolean) => Promise<void>;
+type Run = (action: string, requests: Request[]) => Promise<void>;
 function DeploymentControl({ canAct, run, health }: { canAct: boolean; run: Run; health: Health | null }) {
   const [deployment, setDeployment] = useState("EU-A");
   const [action, setAction] = useState("restore");
@@ -417,6 +428,7 @@ function BeforeAfter({ live, canAct, run, feedback }: { live: Live; canAct: bool
     && route("support") === "EU-A" && route("batch") === "EU-B" && batch.includes("US-C");
   return <div className="before-after">
     <p className={starting ? "ok" : "warning"}><b>{starting ? "✓ Starting state" : "Not the starting state"}</b> · {health.deployments.map(e => `${e.id} ${modeLabel[e.mode] ?? e.mode} ${e.capacity_tpm / 1000}k`).join(" · ")} · Support → {route("support")} · Summaries → {route("batch")}</p>
+    <p>The projector shows the incident channel as the on-call engineer. Once, in this browser: <a href={settings.mattermostSignIn} target="_blank" rel="noreferrer">Sign the projector in to Mattermost</a> (no password is shown), then check <b>Show something on the projector › Mattermost</b>.</p>
     <button disabled={!canAct} onClick={() => setArmed(!armed)}>Reset scenario…</button>
     {armed && <span className="warning"> Restores the starting state and cancels waiting requests. Never during the talk. <button disabled={!canAct} onClick={() => { setArmed(false); void run("reset", [{ path: "/reset", body: { run_epoch: health.run_epoch, revision: health.revision } }]); }}>Confirm reset</button></span>}
     {feedback?.action === "reset" && <p className={`result ${feedback.tone}`}>{feedback.message}</p>}

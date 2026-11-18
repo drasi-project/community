@@ -40,6 +40,8 @@ button.quiet { background: transparent; border-color: var(--border); color: #aab
 .say { margin: 0; font-size: 20px; line-height: 1.5; color: #fff; }
 .watch { margin: 0; padding: 8px 12px; border-left: 3px solid var(--accent); background: #9ee8d70f; font-size: 15px; line-height: 1.45; }
 .watch b { color: var(--accent); margin-right: 6px; }
+.click { margin: 0; padding: 8px 12px; border-left: 3px solid #f2a33a; background: #f2a33a14; font-size: 16px; line-height: 1.45; }
+.click b { color: #f2a33a; margin-right: 6px; }
 .now-nav { display: flex; align-items: center; gap: 10px; }
 .now-nav .projector-line { margin-left: 8px; }
 .desk .big { font-size: 18px; padding: 10px 22px; border-radius: 8px; }

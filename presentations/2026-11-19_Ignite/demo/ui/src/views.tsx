@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { settings } from "./settings";
 import { z } from "zod";
 import { products, type View } from "../../../presentation/scenes";
-import { readPlan, tileValue, text, request, errorText, taskSchema, type Row, type Selection } from "./contracts";
+import { readPlan, tileValue, text, request, errorText, taskSchema, type Row } from "./contracts";
 import { useQuery, type Live } from "./live";
 import { queryText } from "./queryText";
 
@@ -71,7 +71,7 @@ function Operations({ live, setView }: { live: Live; setView: (view: View) => vo
   </div>;
 }
 
-function Decisions({ live, selection }: { live: Live; selection: Selection | null }) {
+function Decisions({ live }: { live: Live }) {
   const policy = useQuery("policy-results");
   const resilience = useQuery("resilience-results");
   const { plan, error } = readPlan(live.queries["plan-results"].rows);
@@ -112,8 +112,6 @@ function Decisions({ live, selection }: { live: Live; selection: Selection | nul
     <Panel title="Candidate → approval → recovery" className="lifecycle">
       <Status bad={!plan || plan.state === "unknown"}>{plan ? `Plan: ${plan.state}` : "Plan: unknown"}</Status>
       {plan && <p>Scenario r{plan.revision}<br />Basis <Basis value={plan.basis} /> · candidate <Basis value={plan.candidate_id || "none"} /></p>}
-      {selection && <div className="retained"><b>Selected proposal retained</b><p>Basis <Basis value={selection.basis} /> · scenario r{selection.revision}</p>
-        <Status bad={selection.basis !== plan?.basis}>{selection.basis === plan?.basis ? "Matches current basis" : "Differs from Drasi's current plan"}</Status></div>}
       <p>Last approval (tile-last-approval): {approval ? <><Basis value={text(approval.approval)} /> · state {text(approval.value)}{approval.reason ? ` · ${text(approval.reason)}` : ""}</> : "none yet"}</p>
       <p>Recovery (tile-recovery): {text(live.queries["tile-recovery"].rows[0]?.value ?? "nothing to verify")}</p>
     </Panel>
@@ -194,7 +192,7 @@ function Trace({ live }: { live: Live }) {
   </div>;
 }
 
-export function Demo({ live, now, view, setView, selection }: { live: Live; now: number; view: View; setView: (view: View) => void; selection: Selection | null }) {
+export function Demo({ live, now, view, setView }: { live: Live; now: number; view: View; setView: (view: View) => void }) {
   return <div className="demo" data-testid="persistent-demo">
     <nav className="view-tabs" aria-label="Audience views">{(["operations", "decisions", "change", "trace"] as const).map(item =>
       <button key={item} aria-current={view === item ? "page" : undefined} onClick={() => setView(item)}>{({ operations: "Operations", decisions: "Decisions", change: "Follow a Change", trace: "Task / trace" })[item]}</button>)}
@@ -203,7 +201,7 @@ export function Demo({ live, now, view, setView, selection }: { live: Live; now:
     <LiveBanner live={live} now={now} />
     <div className="view-body">
       <div hidden={view !== "operations"}>{view === "operations" && <Operations live={live} setView={setView} />}</div>
-      <div hidden={view !== "decisions"}>{view === "decisions" && <Decisions live={live} selection={selection} />}</div>
+      <div hidden={view !== "decisions"}>{view === "decisions" && <Decisions live={live} />}</div>
       <div hidden={view !== "change"}>{view === "change" && <FollowChange />}</div>
       <div hidden={view !== "trace"}><Trace live={live} /></div>
     </div>

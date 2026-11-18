@@ -2,7 +2,7 @@ import { settings, url, port } from "../settings.mjs";
 import { test, expect, type Page } from "@playwright/test";
 import { applyFrame, applyChanges } from "../src/live";
 import { healthSchema, readPlan } from "../src/contracts";
-import { scenes, slides, recaps, allSlides, dashboards, frame } from "../../../presentation/scenes";
+import { scenes, slides, recaps, allSlides, dashboards, incidentChannel, frame } from "../../../presentation/scenes";
 import { notes } from "../../../presentation/notes";
 import { presenterScript } from "../../../presentation/script";
 import { replayClips } from "../../../presentation/replay";
@@ -18,11 +18,21 @@ const mutations = async (request: import("@playwright/test").APIRequestContext) 
 async function desk(page: Page, cue: string, beat = 0, extra: object = {}) {
   const index = scenes.findIndex(scene => scene.id === cue);
   await page.addInitScript(([key, value]) => { if (!sessionStorage.getItem("seeded")) { localStorage.setItem(key, value); sessionStorage.setItem("seeded", "1"); } },
-    [stageKey, JSON.stringify({ cue: index, beat, view: notes[cue as keyof typeof notes].beats[beat].show, trace: null, replay: null, selection: null, short: false, ...extra })]);
+    [stageKey, JSON.stringify({ cue: index, beat, view: notes[cue as keyof typeof notes].beats[beat].show, trace: null, replay: null, short: false, ...extra })]);
   await page.goto("/presenter");
   await expect(page.getByRole("heading", { level: 1 })).toContainText(scenes[index].title);
 }
 const stubGrafana = (page: Page) => page.route(`http://localhost:${port("GRAFANA")}/**`, route => route.fulfill({ contentType: "text/html", body: "<h1>TEST Grafana</h1>" }));
+// Mattermost's URL serves the fixture's stand-in channel (tests/mattermost-stand-in.html) and its posts.
+const stubMattermost = (page: Page) => page.route(`http://localhost:${port("MATTERMOST")}/**`, async route => {
+  const path = new URL(route.request().url()).pathname;
+  const target = path.startsWith("/test-fixture/") ? `${fixture}/test/mattermost/${path.slice("/test-fixture/".length)}` : `${fixture}/test/mattermost/channel`;
+  await route.fulfill({ response: await route.fetch({ url: target }) });
+});
+const posts = async (request: import("@playwright/test").APIRequestContext) =>
+  (await (await request.get(`${fixture}/test/mattermost/posts`)).json()) as { id: string; root_id: string; props: { ignite_card: string; attachments: { title: string; actions?: unknown[] }[] } }[];
+const failEuA = (request: import("@playwright/test").APIRequestContext) =>
+  request.post(`${fixture}/control`, { data: { run_epoch: "TEST-FIXTURE-EPOCH", deployment: "EU-A", action: "fail" } });
 
 test("the talk is 22 minutes and every beat says something and shows something", () => {
   expect(scenes.reduce((sum, s) => sum + s.minutes, 0)).toBe(22);
@@ -31,7 +41,7 @@ test("the talk is 22 minutes and every beat says something and shows something",
     expect(cue.beats.length).toBeGreaterThan(0);
     for (const beat of cue.beats) {
       expect(beat.say.trim()).not.toBe("");
-      expect(["ops", "plan", "request", ...allSlides.map(s => s.id)]).toContain(beat.show);
+      expect(["ops", "incident", "request", ...allSlides.map(s => s.id)]).toContain(beat.show);
     }
     expect(cue.ifBroken.trim()).not.toBe("");
   }
@@ -143,11 +153,11 @@ test("keys pressed on the projector (a clicker) drive the desk", async ({ page }
 });
 
 test("short on time skips the optional policy beats", async ({ page }) => {
-  await desk(page, "recovery", 1);
+  await desk(page, "recovery", 0);
   await page.getByLabel("Short on time").check();
-  await page.locator(".now").getByRole("button", { name: "Select proposed plan" }).click();
   await page.getByRole("button", { name: "Next ▶" }).click();
-  await expect(page.locator(".say")).toContainText("Now I approve the current plan");
+  await expect(page.locator(".say")).toContainText("Now I approve the current proposal");
+  await expect(page.locator(".click")).toContainText("Approve on the newest orange Proposed change card");
 });
 
 test("the current beat's buttons sit beside its notes, and results appear there", async ({ page, request }) => {
@@ -165,37 +175,92 @@ test("traffic starts only through an explicit action", async ({ page, request })
   expect((await mutations(request)).map((m: { path: string }) => m.path)).toEqual(["/traffic"]);
 });
 
-test("a plan selected before a policy change is rejected, and the desk says that's expected", async ({ page, request }) => {
+test("approving the out-of-date proposal is rejected by Drasi, and the desk says that's expected", async ({ page, request }) => {
+  await failEuA(request);
   await desk(page, "recovery", 1);
-  await page.locator(".now").getByRole("button", { name: "Select proposed plan" }).click();
-  await expect(page.locator(".plan-table tr.selected")).toContainText("EU-B");
-  await page.getByRole("button", { name: "Next ▶" }).click();
+  await expect.poll(async () => (await posts(request)).map(p => p.props.ignite_card)).toEqual(["failed", "proposal"]);
   await page.locator(".now").getByRole("button", { name: "Summaries: Europe only" }).click();
-  await expect(page.locator(".plan-table tr.stale")).toContainText("out of date");
   await expect(page.locator(".now").getByRole("button", { name: /Summaries: Europe only/ })).toContainText("✓");
+  await expect.poll(async () => (await posts(request)).at(-1)?.props.attachments[0].title).toBe("Out of date: the facts changed");
   await page.getByRole("button", { name: "Next ▶" }).click();
   await expect(page.locator(".now-actions .hint")).toContainText("meant to be rejected");
-  await page.locator(".now").getByRole("button", { name: "Approve selected plan" }).click();
+  await expect(page.locator(".click")).toContainText("above the grey Out of date card");
+  await expect(page.locator(".now .result").last()).toHaveText("Waiting for Approve on the out-of-date proposal card.");
+  // The desk's backup presses Approve on the newest proposal card, which is the out-of-date one.
+  await page.locator(".now").getByRole("button", { name: "Approve the proposed change" }).click();
   await expect(page.locator(".now .result.expected")).toContainText("Rejected by Drasi, as intended: The plan changed since it was approved");
+  await expect(page.locator(".now").getByRole("button", { name: /Approve the proposed change/ })).toContainText("✓");
   await expect(page.locator(".approval")).toHaveText("Last approval rejected: The plan changed since it was approved.");
-  const state = await mutations(request);
-  expect(state.at(-1)).toMatchObject({ path: "/approvals", input: { candidate_id: "TEST-FIXTURE-CANDIDATE-1", basis: "TEST-FIXTURE-BASIS-1", revision: 1 } });
+  const state = await (await request.get(`${fixture}/test/state`)).json();
+  expect(state.mutations.at(-1)).toEqual({ path: "/mattermost/approve-latest", input: { run_epoch: "TEST-FIXTURE-EPOCH" } });
+  const proposal = (await posts(request)).find(p => p.props.ignite_card === "proposal")!;
+  expect(state.approvals[0]).toMatchObject({ id: `mm-${proposal.id}`, candidate_id: "TEST-FIXTURE-CANDIDATE-1", basis: "TEST-FIXTURE-BASIS-1", revision: 1, status: "rejected" });
+  // Drasi's answer replies in the approved card's thread.
+  await expect.poll(async () => (await posts(request)).at(-1)).toMatchObject({ root_id: proposal.id, props: { ignite_card: "outcome", attachments: [{ title: "Rejected by Drasi: nothing was changed" }] } });
+  // Once policy allows the US again, a new proposal follows and Next isn't held back.
+  await page.getByRole("button", { name: "Next ▶" }).click();
+  await page.locator(".now").getByRole("button", { name: "Summaries: Europe + US" }).click();
+  await expect.poll(async () => (await posts(request)).filter(p => p.props.ignite_card === "proposal")).toHaveLength(2);
 });
 
-test("approving clears the selection, so it can't be approved twice by accident", async ({ page, request }) => {
-  await desk(page, "recovery", 6);
+test("pressing Approve on the projected card applies the change, and the desk reports Drasi's answer", async ({ page, request }) => {
+  await failEuA(request);
+  await desk(page, "recovery", 5);
+  const projector = await page.context().newPage();
+  await stubMattermost(projector);
+  await projector.goto("/present");
+  const channel = projector.frameLocator("iframe.stage-incident");
   const now = page.locator(".now");
-  await now.getByRole("button", { name: "Select proposed plan" }).click();
-  await now.getByRole("button", { name: "Approve selected plan" }).click();
-  await expect(now.getByRole("button", { name: "Approve selected plan" })).toBeDisabled();
-  // The approval tool only records it; Drasi checks it and its reaction applies the routes.
-  await expect(now.locator(".result")).toHaveText("Done: Drasi checked it and the new routes are applied.");
+  await expect(now.locator(".result").last()).toHaveText("Waiting for Approve on the newest proposal card.");
+  await channel.locator('[data-card="proposal"]').last().getByRole("button", { name: "Approve" }).click();
+  await expect(now.locator(".result").last()).toHaveText("Done: Drasi checked it and the new routes are applied.");
+  await expect(now.getByRole("button", { name: /Approve the proposed change/ })).toBeDisabled();
+  await expect(now.getByRole("button", { name: /Approve the proposed change/ })).toContainText("✓");
   await expect(page.locator(".approval")).toHaveText("Applied. Waiting for evidence that recovery worked.");
   await expect(page.locator(".plan-table tr").nth(1)).toContainText("EU-B");
   await expect(page.locator(".answers")).toContainText("Awaiting evidence");
+  // The card shows who approved it; Drasi's outcomes reply in its thread.
+  const card = channel.locator('[data-card="proposal"]').last();
+  await expect(card).toContainText("Approved by @oncall at");
+  await expect(card.getByRole("button")).toHaveCount(0);
+  await expect(channel.locator('[data-card="outcome"]')).toContainText("Applied: Move summaries to US-C and support to EU-B");
   await request.post(`${fixture}/test/recover`);
   await expect(page.locator(".approval")).toHaveText("Recovery verified ✓");
-  expect((await mutations(request)).filter((m: { path: string }) => m.path === "/approvals")).toHaveLength(1);
+  await expect(channel.locator('[data-card="outcome"]').last()).toContainText("Verified: support has recovered");
+  const state = await (await request.get(`${fixture}/test/state`)).json();
+  expect(state.mutations.map((m: { path: string }) => m.path)).toEqual(["/control", "/mattermost/actions"]);
+  // With nothing left to approve, the backup has nothing to press.
+  expect((await request.post(`${fixture}/mattermost/approve-latest`, { data: { run_epoch: "TEST-FIXTURE-EPOCH" } })).status()).toBe(404);
+});
+
+test("the projected incident view frames the channel above the caption line, kept loaded once shown", async ({ page, request }) => {
+  await stubGrafana(page);
+  await stubMattermost(page);
+  await failEuA(request);
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await desk(page, "failure", 2);
+  const projector = await page.context().newPage();
+  await stubGrafana(projector);
+  await stubMattermost(projector);
+  await projector.setViewportSize({ width: 1920, height: 1080 });
+  await projector.goto("/present");
+  const iframe = projector.locator("iframe.stage-incident");
+  await expect(iframe).toBeVisible();
+  await expect(iframe).toHaveAttribute("src", incidentChannel);
+  expect(incidentChannel).toBe(`http://localhost:${port("MATTERMOST")}/ai-platform/channels/incident-ai-support`);
+  const box = (await iframe.boundingBox())!;
+  for (const [measured, expected] of [[box.x, 0], [box.y, 0], [box.width, 1920], [box.height, frame.captionTop]]) expect(measured).toBeCloseTo(expected, 0);
+  await expect(projector.frameLocator("iframe.stage-incident").locator('[data-card="failed"]')).toContainText("Deployment failed: EU-A");
+  await expect(page.locator(".projector-line")).toContainText("Mattermost · #incident-ai-support");
+  await page.getByRole("button", { name: "◀ Back" }).click();
+  await expect(iframe).toBeHidden();
+  await expect(iframe).toHaveCSS("display", "block");
+});
+
+test("the desk links the projector's Mattermost sign-in", async ({ page }) => {
+  await desk(page, "title");
+  await page.getByText("Before and after the talk").click();
+  await expect(page.getByRole("link", { name: "Sign the projector in to Mattermost" })).toHaveAttribute("href", `http://localhost:${port("WORKLOAD")}/mattermost/sign-in`);
 });
 
 test("switching to recordings puts the part's recording on the projector and hides live buttons", async ({ page, request }) => {
@@ -210,11 +275,12 @@ test("switching to recordings puts the part's recording on the projector and hid
   expect(await mutations(request)).toEqual([]);
 });
 
-test("out-of-date evidence disables plan selection and live buttons", async ({ page, request }) => {
-  await desk(page, "recovery", 1);
-  await expect(page.locator(".now").getByRole("button", { name: "Select proposed plan" })).toBeEnabled();
+test("out-of-date evidence disables approval and live buttons", async ({ page, request }) => {
+  await failEuA(request);
+  await desk(page, "recovery", 5);
+  await expect(page.locator(".now").getByRole("button", { name: "Approve the proposed change" })).toBeEnabled();
   await request.post(`${fixture}/test/expire`);
-  await expect(page.locator(".now").getByRole("button", { name: "Select proposed plan" })).toBeDisabled();
+  await expect(page.locator(".now").getByRole("button", { name: "Approve the proposed change" })).toBeDisabled();
   await request.post(`${fixture}/test/offline`, { data: { value: true } });
   await expect(page.locator(".badge", { hasText: "NOT READY" })).toBeVisible();
 });
@@ -280,13 +346,15 @@ test("the desk shows Drasi's answers from Drasi Server and never asks the AI ser
   page.on("request", r => asked.push(new URL(r.url()).pathname));
   await desk(page, "failure");
   const answers = page.locator(".answers");
-  await expect(answers).toContainText("Approve proposed plan");
-  await expect(answers).toContainText("No: not if EU-A fails");
+  await expect(answers.locator("div", { hasText: "Recommended action" })).toContainText("None");
+  await expect(answers).toContainText("Failover readiness");
+  await expect(answers.locator("div", { hasText: "Failover readiness" })).toContainText("Yes");
   await expect(answers).toContainText("Nothing to verify");
   await page.locator(".now").getByRole("button", { name: "Fail EU-A" }).click();
   await expect(answers).toContainText("Already one down");
+  await expect(answers.locator("div", { hasText: "Recommended action" })).toContainText("Move summaries to US-C and support to EU-B");
   await request.post(`${fixture}/test/expire`);
-  await expect(answers.locator("div", { hasText: "Action needed" })).toContainText("Unknown");
+  await expect(answers.locator("div", { hasText: "Recommended action" })).toContainText("Unknown");
   await expect(page.locator(".plan-table")).toContainText("Unknown");
   // One event stream from Drasi's SSE reaction, each output's snapshot once, and no polling of Drasi.
   expect(asked.filter(path => path === "/drasi-stream/events")).toHaveLength(1);
@@ -299,9 +367,9 @@ test("the desk shows Drasi's answers from Drasi Server and never asks the AI ser
 
 test("Drasi's stream unavailable means NOT READY", async ({ page }) => {
   await page.route("**/drasi-stream/**", route => route.fulfill({ status: 503, body: "down" }));
-  await desk(page, "recovery", 1);
+  await desk(page, "recovery", 5);
   await expect(page.locator(".badge", { hasText: "NOT READY" })).toBeVisible();
-  await expect(page.locator(".now").getByRole("button", { name: "Select proposed plan" })).toBeDisabled();
+  await expect(page.locator(".now").getByRole("button", { name: "Approve the proposed change" })).toBeDisabled();
   await expect(page.locator(".approval")).toHaveText("Approval status unavailable.");
 });
 
@@ -386,7 +454,7 @@ test("with the template assets present, the desk doesn't flag them", async ({ pa
 test("the desk fits a laptop screen without scrolling", async ({ browser }) => {
   for (const cue of ["failure", "recovery"] as const) {
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-    await desk(page, cue, cue === "recovery" ? 7 : 0);
+    await desk(page, cue, cue === "recovery" ? 5 : 0);
     const main = await page.locator(".desk-main").boundingBox();
     expect(main!.y + main!.height).toBeLessThanOrEqual(900);
     await page.close();
@@ -399,7 +467,7 @@ test("the oldest late request is shown on the projector with its attempts", asyn
   await page.route("**/api/tasks/TEST-TASK", route => route.fulfill({ json: {
     task: { id: "TEST-TASK", content: "My order hasn't arrived.", created_ms: Date.now() - 20000, deadline_ms: Date.now() - 5000, completed_ms: null, trace_id: "abcdef123456" },
     attempts: [503, 503, 503].map((status, i) => ({ endpoint: "EU-A", status, started_ms: Date.now() - 18000 + i * 3000 })) } }));
-  await desk(page, "who", 0);
+  await desk(page, "who", 1);
   const projector = await page.context().newPage();
   await projector.route("**/api/tasks/TEST-TASK", route => route.fulfill({ json: {
     task: { id: "TEST-TASK", content: "My order hasn't arrived.", created_ms: Date.now() - 20000, deadline_ms: Date.now() - 5000, completed_ms: null, trace_id: "abcdef123456" },
@@ -436,17 +504,10 @@ test("recording mode shows each live part's recording as the presenter presses N
   expect(await mutations(request)).toEqual([]);
 });
 
-test("a rejected approval clears the selection, and the first Next starts the talk timer", async ({ page }) => {
-  await desk(page, "recovery", 1);
-  const now = page.locator(".now");
-  await now.getByRole("button", { name: "Select proposed plan" }).click();
+test("the first Next starts the talk timer", async ({ page }) => {
+  await desk(page, "recovery", 0);
+  await expect(page.locator(".clock strong")).toHaveText("00:00");
   await page.getByRole("button", { name: "Next ▶" }).click();
-  await now.getByRole("button", { name: "Summaries: Europe only" }).click();
-  await expect(now.getByRole("button", { name: /Summaries: Europe only/ })).toContainText("✓");
-  await page.getByRole("button", { name: "Next ▶" }).click();
-  await now.getByRole("button", { name: "Approve selected plan" }).click();
-  await expect(now.locator(".result.expected")).toBeVisible();
-  await expect(page.locator(".plan-table tr.stale, .plan-table tr.selected")).toHaveCount(0);
   await expect(page.locator(".clock strong")).not.toHaveText("00:00", { timeout: 5000 });
 });
 
@@ -471,4 +532,94 @@ test("a slow click on a desk button still works while the desk refreshes", async
   await page.waitForTimeout(2500); // the desk re-renders at least twice in this time
   await page.mouse.up();
   await expect.poll(async () => (await mutations(request)).map((m: { path: string }) => m.path)).toEqual(["/control"]);
+});
+
+test("the incident channel follows the talk: failure, overdue, proposal, out of date, rejected, applied, verified, at risk, restored", async ({ browser, request }) => {
+  test.slow();
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await stubGrafana(page);
+  await desk(page, "failure", 0);
+  const projector = await context.newPage();
+  await projector.setViewportSize({ width: 1920, height: 1080 });
+  await stubGrafana(projector);
+  await stubMattermost(projector);
+  await projector.goto("/present");
+  const channel = projector.frameLocator("iframe.stage-incident");
+  const card = (name: string) => channel.locator(`[data-card="${name}"]`);
+  const next = () => page.getByRole("button", { name: "Next ▶" }).click();
+  const press = (name: string) => page.locator(".now").getByRole("button", { name }).click();
+  const shot = async (n: number, stage: string) => {
+    await projector.waitForTimeout(400);
+    await projector.screenshot({ path: `evidence/incident-${String(n).padStart(2, "0")}-${stage}.png` });
+    await page.screenshot({ path: `evidence/desk-${String(n).padStart(2, "0")}-${stage}.png` });
+  };
+
+  await press("Fail EU-A");
+  await expect(page.locator(".now").getByRole("button", { name: /Fail EU-A/ })).toContainText("✓");
+  await next(); await next();
+  await expect(page.locator(".projector-line")).toContainText("Mattermost · #incident-ai-support");
+  await expect(card("failed")).toContainText("Deployment failed: EU-A");
+  await expect(card("proposal")).toContainText("Proposed change: Move summaries to US-C and support to EU-B");
+  await shot(1, "failure");
+  await request.post(`${fixture}/test/query`, { data: { query: "overdue-tasks", rows: Object.fromEntries([1, 2, 3].map(n =>
+    [`late-${n}`, { id: `late-${n}`, run_epoch: "TEST-FIXTURE-EPOCH", workload: "support", trace_id: `trace${n}`, deadline_ms: Date.now() - n * 1000 }])) } });
+
+  for (let i = 0; i < 4; i++) await next();
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Who is affected");
+  await expect(card("overdue")).toContainText("Support requests overdue");
+  await shot(2, "overdue");
+
+  await next(); await next(); await next();
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Recovery");
+  await expect(card("proposal").getByRole("button", { name: "Approve" })).toBeVisible();
+  await shot(3, "proposal");
+
+  await next();
+  await press("Summaries: Europe only");
+  await expect(page.locator(".now").getByRole("button", { name: /Summaries: Europe only/ })).toContainText("✓");
+  await expect(card("superseded")).toContainText("Out of date: the facts changed");
+  await shot(4, "out-of-date");
+
+  await next();
+  await card("proposal").first().getByRole("button", { name: "Approve" }).click();
+  await expect(page.locator(".now .result.expected")).toContainText("Rejected by Drasi, as intended");
+  await expect(card("outcome")).toContainText("Rejected by Drasi: nothing was changed");
+  await shot(5, "rejected");
+
+  await next();
+  await press("Summaries: Europe + US");
+  await expect(page.locator(".now").getByRole("button", { name: /Summaries: Europe \+ US/ })).toContainText("✓");
+  await expect(card("proposal")).toHaveCount(2);
+  await shot(6, "new-proposal");
+
+  await next(); await next();
+  await expect(page.locator(".click")).toContainText("newest orange Proposed change card");
+  await card("proposal").last().getByRole("button", { name: "Approve" }).click();
+  await expect(page.locator(".now .result").last()).toHaveText("Done: Drasi checked it and the new routes are applied.");
+  await expect(card("outcome").last()).toContainText("Applied: Move summaries to US-C and support to EU-B");
+  await shot(7, "applied");
+
+  await request.post(`${fixture}/test/recover`);
+  await next(); await next(); await next();
+  await expect(card("outcome").last()).toContainText("Verified: support has recovered");
+  await expect(page.locator(".approval")).toHaveText("Recovery verified ✓");
+  await shot(8, "verified");
+
+  await next(); await next();
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Healthy but fragile");
+  await press("EU-A back at 50k");
+  await expect(page.locator(".now").getByRole("button", { name: /EU-A back at 50k/ })).toContainText("✓");
+  await next();
+  await expect(card("at-risk")).toContainText("Failover at risk: losing EU-B leaves support nowhere to run");
+  await expect(page.locator(".answers")).toContainText("No: not if EU-B fails");
+  await shot(9, "at-risk");
+
+  await next(); await next();
+  await press("EU-A back to 100k");
+  await expect(card("restored")).toContainText("Failover restored");
+  await expect(page.locator(".answers")).toContainText("Yes");
+  await shot(10, "restored");
+  await context.close();
 });

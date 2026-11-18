@@ -19,7 +19,7 @@ the rules, you approve it, and Drasi confirms it worked.
 4. [The presenter desk](#the-presenter-desk)
 5. [Run of show](#run-of-show) and [the script](#the-script)
 6. [Glossary](#glossary) and [questions to expect](#questions-to-expect)
-7. [Reading the dashboards](#reading-the-dashboards) and [the late request view](#the-late-request-view)
+7. [Reading the dashboard](#reading-the-dashboard), [the incident channel](#the-incident-channel) and [the late request view](#the-late-request-view)
 8. [When something goes wrong](#when-something-goes-wrong)
 9. [After the talk](#after-the-talk)
 
@@ -27,8 +27,10 @@ the rules, you approve it, and Drasi confirms it worked.
 
 There are two windows:
 
-- **The projector window** is what the audience sees: slides, Grafana dashboards
-  and one late customer request. You never click in it.
+- **The projector window** is what the audience sees: slides, the Grafana
+  dashboard, the team's incident channel in Mattermost (#incident-ai-support) and
+  one late customer request. You click in it only on the incident channel, to
+  scroll to a card or press **Approve** on Drasi's proposal; the desk says when.
 - **The presenter desk** is on your laptop screen. It shows what to say, the one
   or two buttons for this moment, and what to watch for.
 
@@ -37,13 +39,18 @@ The talk is a sequence of **beats**. Press **Next** on the desk (or your clicker
 the next slide, a dashboard, or a "What Drasi just did" visual. Your clicker works
 whichever window is in front.
 
-Some beats have buttons, such as **Fail EU-A** or **Approve selected plan**. They
+Some beats have buttons, such as **Fail EU-A** or **Summaries: Europe only**. They
 appear in the beat itself: press them when you reach the beat, while you say its
 words. Nothing in the demo changes unless you press a button; **Back** and
 **Next** never change the demo. If you forget a button, Next reminds you once.
 
-Your clicker moves Back and Next. Buttons need a click on the desk with the
-trackpad or mouse.
+Approving is done where the audience can see it: on the beats that approve, the
+desk shows **Click on the projector** and you press **Approve** on Drasi's
+proposal card in the projected channel. The desk keeps one backup button,
+**Approve the proposed change**, which presses that same button for you.
+
+Your clicker moves Back and Next. Buttons need a click with the trackpad or
+mouse: desk buttons on the desk, card buttons on the projector.
 
 If the desk isn't open, → / Space / Page Down (or the clicker) on the projector
 window still steps through the slides and dashboards on its own, but nothing in
@@ -77,14 +84,18 @@ once using only the recordings (see [When something goes wrong](#when-something-
 1. Start the demo ([SETUP.md › Start the demo](SETUP.md#start-the-demo)).
 2. Optional: sign in to Langfuse **privately** on the laptop, in case someone asks
    to see it ([SETUP.md › Get ready to present](SETUP.md#get-ready-to-present)).
-   Nothing on the projector needs a sign-in.
 3. [Set up your screens](#set-up-your-screens).
-4. On the desk, open **Before and after the talk** and check it says
+4. Sign the projector in to Mattermost: on the desk, open **Before and after the
+   talk** and press **Sign the projector in to Mattermost** (it signs this browser
+   in as the on-call engineer; no password is shown). Then **Show something on the
+   projector** › **Mattermost · #incident-ai-support** should show the channel,
+   not a sign-in page. Go back to the first beat afterwards.
+5. On the desk, open **Before and after the talk** and check it says
    **✓ Starting state**. If not, press **Reset scenario…** then **Confirm reset**.
-5. Check the header says **READY**, and doesn't say **Ignite template assets
+6. Check the header says **READY**, and doesn't say **Ignite template assets
    missing** (if it does, see [SETUP.md › Add the Ignite template artwork and
    fonts](SETUP.md#8-add-the-ignite-template-artwork-and-fonts)).
-6. Step through a few beats with your clicker to check it moves the projector,
+7. Step through a few beats with your clicker to check it moves the projector,
    then go back to the first beat (**Jump to a part** › 1. Title). The projector
    then shows the Ignite walk-in slide until you start.
 
@@ -104,36 +115,43 @@ Top to bottom:
 | Part | What it's for |
 |---|---|
 | Header | **READY** or **NOT READY**, whether the projector window is connected, **Ignite template assets missing** if they are, and the talk timer. It starts by itself on your first **Next** and turns amber at 22 minutes; tick **Short on time** if you're past about 11:30 when Recovery starts |
-| **The current beat** (left) | Part number and name, dots for the beats in this part, **◀ Back / Next ▶** and **what the projector shows** (always in the same place), the beat's buttons and their result, what to say, what to watch for, a preview of the next beat, what to do if it breaks (with **Use recordings from here on**), and how to undo a wrong button |
-| **Drasi's answers** (right) | The same answers the audience sees: Support overdue, Action needed, Recovery, Safe if one fails? |
+| **The current beat** (left) | Part number and name, dots for the beats in this part, **◀ Back / Next ▶** and **what the projector shows** (always in the same place), the beat's buttons and their result, **Click on the projector** (what to press or scroll on the projected channel), what to say, what to watch for, a preview of the next beat, what to do if it breaks (with **Use recordings from here on**), and how to undo a wrong button |
+| **Drasi's answers** (right) | Support overdue, Recommended action and Failover readiness, as on the dashboard, and Recovery: Awaiting evidence or Verified after a change is applied |
 | **Live demo** (right) | Each deployment's health and capacity; whether traffic is running; where the summaries may run |
-| **Recovery plan** (right) | Where support and summaries run now, the proposed plan, and the plan you selected for approval, with a line saying whether it needs your approval, and the latest approval status |
+| **Routes** (right) | Where support and summaries run now and Drasi's proposed plan, with a line saying whether a proposal is waiting for Approve, and the latest approval's status |
 | Jump to a part | Go straight to any part of the talk (also moves the projector) |
 | All demo controls | Every button, if you need one out of order, plus single requests and changes to any deployment |
 | Show something on the projector | Put any slide, dashboard or visual on the projector without changing your place |
 | Recordings (fallback) | Show one recording on the projector, or switch to recording mode for the rest of the talk |
 | Questions to expect, and glossary | The same as in this guide |
-| Before and after the talk | Starting-state check, reset, full settings, and whether the Ignite template assets are present |
+| Before and after the talk | Starting-state check, the projector's Mattermost sign-in, reset, full settings, and whether the Ignite template assets are present |
 
 **Buttons:** the button for the current beat is bright. A ✓ means it's already
-done (traffic running, plan selected, EU-A failed). Grey dashed means it can't be
-pressed yet (for example, Approve before you've selected a plan). **Fail EU-A**
-is red.
-After pressing, the result appears right under the buttons: **Done.**, or in green
-**Rejected, as intended** for the approval that's meant to be rejected.
+done (traffic running, EU-A failed, the change approved). Grey dashed means it
+can't be pressed now (for example, **Approve the proposed change** while there's
+no proposal). **Fail EU-A** is red.
+After pressing, the result appears right under the buttons: **Done.** On the
+approving beats a second line follows Drasi's answer, whichever button was
+pressed: waiting for Approve, checking, **Done: Drasi checked it and the new
+routes are applied**, or in green **Rejected by Drasi, as intended** for the
+approval that's meant to be rejected.
 
 **Short on time:** tick it to skip the beats marked optional (the policy change
 and the late request view). Their buttons and notes disappear from the sequence.
 
-**The approval flow.** Drasi's planner proposes a plan and re-works it whenever
-anything changes; nothing changes until you approve it. **Select proposed plan**
-takes a copy; **Approve selected plan** sends it to the change-approval tool,
-which only records it. Drasi then checks it: if the plan and the facts it was
-worked out from (policy, capacity, health) are unchanged, Drasi's reaction
-applies the new routes through the gateway's configuration API; otherwise it
-rejects the approval with a reason, which the desk shows. After an approval,
-your selection clears, so you can't approve twice by accident. That's also true
-after a rejected approval: select the plan again before approving.
+**The approval flow.** Drasi's planner works out a change and re-works it whenever
+anything changes; Drasi posts each new proposal as a card in #incident-ai-support
+with **Approve** and **Reject**. Nothing changes until someone approves. Pressing
+**Approve** (on the card, or the desk's backup, which presses the newest
+proposal's Approve) sends it to the change-approval tool, which only records it,
+and the card then says who approved it. Drasi checks it: if the proposal and the
+facts it was worked out from (policy, capacity, health) are unchanged, Drasi's
+reaction applies the new routes through the gateway's configuration API;
+otherwise it rejects the approval with a reason. Either way Drasi replies in the
+card's thread, and the desk shows the same answer. An approved card loses its
+buttons, so it can't be approved twice. When the facts change before anyone
+approves, Drasi posts **Out of date** and, if a change still fits, a new
+proposal: approve the new one.
 
 <!-- generated from presentation/notes.ts: do not edit; run npm run sync-presenter in demo/ui -->
 
@@ -145,10 +163,10 @@ after a rejected approval: select the plan again before approving.
 | 0:30 | The scenario | The scenario · deployments, The scenario · rules, The scenario · three answers, What you'll see | Set up the scenario and the three questions; what you'll see |
 | 2:00 | Drasi in one picture | Drasi: change-driven computation | Explain Drasi's parts and what is built in |
 | 3:30 | Healthy service | Grafana · Operations, What Drasi just did | Walk through the healthy dashboard |
-| 6:00 | Failure | Grafana · Operations, What Drasi just did | Fail EU-A |
-| 9:00 | Who is affected | Who is affected: the continuous query, One late request | Show who is affected: the query and its live list |
-| 11:30 | Recovery | Grafana · Recovery plan, What Drasi just did, Grafana · Operations | Approve the proposed plan; optionally show a stale approval rejected |
-| 17:00 | Healthy but fragile | Grafana · Recovery plan, Grafana · Operations, What Drasi just did | Healthy but fragile: EU-A returns with half its capacity |
+| 6:00 | Failure | Grafana · Operations, Mattermost · #incident-ai-support, What Drasi just did | Fail EU-A; Drasi's row and the incident channel are ahead of the alert |
+| 9:00 | Who is affected | Mattermost · #incident-ai-support, Who is affected: the continuous query, One late request | Show who is affected: the overdue card, the query and its live list |
+| 11:30 | Recovery | Mattermost · #incident-ai-support, What Drasi just did, Grafana · Operations | Approve Drasi's proposed change on its card; optionally show an out-of-date proposal rejected |
+| 17:00 | Healthy but fragile | Grafana · Operations, Mattermost · #incident-ai-support, What Drasi just did | Healthy but fragile: EU-A returns with half its capacity |
 | 20:30 | Close | Close, Session survey | Four takeaways, the session survey, then questions |
 | 22:00 | Questions | Session survey | Take questions |
 
@@ -196,65 +214,73 @@ Say it in your own words.
 
 1. **Grafana · Operations.** Now I'll make EU-A, the deployment serving customer support, fail.
    - **Press:** Fail EU-A
-   - **Watch for:** Within about 8 seconds: Deployment status EU-A Failed, and Action needed Approve proposed plan.
-2. **Grafana · Operations.** Look at the bottom row first: EU-A Failed, and Action needed already says Approve proposed plan. Drasi has worked out a fix that fits the rules. We'll come back to it.
-3. **Grafana · Operations.** The top half does its job: calls fail, errors and the queue climb, and Grafana's alert fires. Something is wrong.
-   - **Watch for:** Support errors red, Support queue rising, Grafana alerts firing 1 or 2 (the second is an alert on Drasi's overdue answer).
-4. **Grafana · Operations.** And Support overdue is climbing. Each request has a 15-second deadline. When a request passes it, nothing happens to that request: no new row, no new metric. Drasi counts it at that exact moment anyway, because its query re-checks each request at its deadline. On the chart, the red overdue line follows the orange waiting line 15 seconds later. I'll show you how in a moment.
+   - **Watch for:** Within about 8 seconds: Deployment status EU-A Failed, and Recommended action names a change.
+2. **Grafana · Operations.** Look at the bottom row first, Decision Support: EU-A Failed, and Recommended action already names a fix: move summaries to US-C and support to EU-B. Drasi has worked out a change that fits the rules. We'll come back to it.
+   - **Watch for:** Recommended action: Move summaries to US-C and support to EU-B (orange).
+3. **Mattermost · #incident-ai-support.** The team doesn't live on a dashboard, though. This is their incident channel in Mattermost. Drasi posted here as soon as EU-A failed, and its proposed change is already waiting, with an Approve button. Grafana hasn't alerted yet. We'll come back to the proposal.
+   - **Watch for:** Red card Deployment failed: EU-A, then the orange Proposed change card with Approve and Reject, the newest at the bottom.
+4. **Grafana · Operations.** Back on the dashboard, the top half catches up: calls fail, errors and the queue climb, and Grafana's alert fires; it posts to the channel too. Something is wrong.
+   - **Watch for:** Support errors red, Support queue rising, Alerts firing 1 or 2 (the second is an alert on Drasi's overdue answer).
+5. **Grafana · Operations.** And Support overdue is climbing. Each request has a 15-second deadline. When a request passes it, nothing happens to that request: no new row, no new metric. Drasi counts it at that exact moment anyway, because its query re-checks each request at its deadline. On the chart, the red overdue line follows the orange waiting line 15 seconds later. I'll show you how in a moment.
    - **Watch for:** Support overdue above 0; on the right-hand chart, the red line trails the orange one.
-5. **What Drasi just did.** Drasi saw the failed attempts and EU-A's health turn to Failed, worked out which requests were late as each deadline passed, and re-ran the planner. It didn't re-scan the database; it reacted to each change and each deadline. And notice the order: Drasi had a plan ready within seconds, before Grafana's alert rule fired, about 20 seconds later.
+6. **What Drasi just did.** Drasi saw the failed attempts and EU-A's health turn to Failed, worked out which requests were late as each deadline passed, and re-ran the planner. It didn't re-scan the database; it reacted to each change and each deadline. And notice the order: Drasi had a change proposed in the channel within seconds, before Grafana's alert rule fired, about 20 seconds later.
 
-**If it breaks:** If nothing changes within 30 seconds, press Use recordings from here on and say it's a recording.
+**If it breaks:** If nothing changes within 30 seconds, press Use recordings from here on and say it's a recording. If the channel shows no cards, say Drasi posts them there and stay on the dashboard: the same answers are on the Decision Support row.
 
 ### 6. Who is affected (2½ minutes)
 
-1. **Who is affected: the continuous query.** Which customers are affected? This is the actual query behind Support overdue. 1: every request, as it arrives from the database. 2: not answered yet. 3: this condition becomes true at the deadline, and Drasi re-checks just that request then. 4: the result is the list itself, not just a count, and here it is, live. With Prometheus you'd get a number from a gauge or a rule evaluated every so often; here it's the exact set of late requests, kept current request by request, from one query.
+1. **Mattermost · #incident-ai-support.** Which customers are affected? Drasi posted that too: Support requests overdue, as soon as the first support request passed its deadline, with a link to the tile on the dashboard. A count tells you it's bad. Let's see who.
+   - **Click on the projector:** If the red Support requests overdue card isn't in view, scroll up to it (Grafana's alerts may have posted below it). Backup on the desk: undefined
+   - **Watch for:** Red card Support requests overdue, with the count when posted and a link to Operations › Support overdue.
+2. **Who is affected: the continuous query.** This is the actual query behind Support overdue and that card. 1: every request, as it arrives from the database. 2: not answered yet. 3: this condition becomes true at the deadline, and Drasi re-checks just that request then. 4: the result is the list itself, not just a count, and here it is, live. With Prometheus you'd get a number from a gauge or a rule evaluated every so often; here it's the exact set of late requests, kept current request by request, from one query.
    - **Watch for:** Under the query: how many support requests are late, and the oldest few with their traces.
-2. **One late request (optional).** Here's one of those customers: their question, every attempt to send it to EU-A failing, and the moment its deadline passed and Drasi listed it. The same request is a trace in Langfuse, so whoever picks it up has the detail.
+3. **One late request (optional).** Here's one of those customers: their question, every attempt to send it to EU-A failing, and the moment its deadline passed and Drasi listed it. The same request is a trace in Langfuse, so whoever picks it up has the detail.
    - **Watch for:** The oldest late request, with its attempts and the moment Drasi listed it.
 
 **If it breaks:** If the list is empty, traffic has stopped: say what it would show. The request beat is skipped automatically when nothing is late.
 
 ### 7. Recovery (5½ minutes)
 
-1. **Grafana · Recovery plan.** This dashboard is all Drasi. Capacity: 300k in total, 200k on healthy deployments, 140k needed. On paper there's plenty. But US-C has the free room, and customer support isn't allowed there.
-   - **Watch for:** Customer support may run on: US-C Not allowed.
-2. **Grafana · Recovery plan.** The planner, an optimizer Drasi re-runs on every change, respects that: move summaries to US-C, which frees EU-B for support. I'll take this plan to our change-approval tool, here on my laptop.
-   - **Press:** Select proposed plan
-   - **Watch for:** Proposed plan: support → EU-B, summaries → US-C. (Selecting changes nothing on the projector.)
-3. **Grafana · Recovery plan (optional).** While it waits for approval, compliance restricts summaries to Europe too. The answer changes at once: no valid plan. Plans keep both workloads running, and with EU-A down, support and summaries can't both fit in EU-B. Dropping work is a decision for a person, not the planner.
+1. **Mattermost · #incident-ai-support.** Back to the proposal. On paper there's plenty of room: two healthy deployments with 200k, and we need 140k. But US-C has the free room, and customer support isn't allowed there: restricted data stays in Europe. The planner, an optimizer Drasi re-runs on every change, respects that: move summaries to US-C, which frees EU-B for support. Two moves, both within policy, and the card shows the facts it was based on.
+   - **Click on the projector:** Scroll up to the orange Proposed change card so the whole card shows. Backup on the desk: undefined
+   - **Watch for:** The orange Proposed change card: Move summaries to US-C and support to EU-B. Why EU-A is down; Policy; Capacity; Based on revision and plan.
+2. **Mattermost · #incident-ai-support (optional).** Before anyone approves it, compliance restricts summaries to Europe too. Drasi re-runs the policy and the planner at once: with EU-A down, support and summaries can't both fit in EU-B, so no change fits now, and Drasi says the proposal is out of date. Dropping work is a decision for a person, not the planner.
    - **Press:** Summaries: Europe only
-   - **Watch for:** Document summaries may run on: US-C Not allowed. Action needed and Proposed plan: No valid plan.
-4. **Grafana · Recovery plan (optional).** If I approve the plan I selected a moment ago, Drasi rejects it: every plan carries the facts it was based on, and those facts changed.
-   - **Press:** Approve selected plan (it's meant to be rejected)
-   - **Watch for:** Last approval: Rejected.
-5. **Grafana · Recovery plan (optional).** Compliance allows the US for summaries again, and the plan comes straight back.
+   - **Watch for:** A grey card Out of date: the facts changed, Now: No valid plan. The proposal above it still has its Approve button.
+3. **Mattermost · #incident-ai-support (optional).** Suppose someone approves the proposal anyway. The approval goes to the change-approval tool, and Drasi rejects it: every proposal carries the facts it was based on, and those facts changed. Nothing is changed.
+   - **Click on the projector:** Approve on the orange proposal card, above the grey Out of date card (scroll up a little if needed) (it's meant to be rejected). Backup on the desk: Approve the proposed change
+   - **Watch for:** The card says Approved by @oncall; then, in its thread, Rejected by Drasi: nothing was changed, with Drasi's reason.
+4. **Mattermost · #incident-ai-support (optional).** Compliance allows the US for summaries again, and Drasi posts a new proposal straight away.
    - **Press:** Summaries: Europe + US
-   - **Watch for:** Action needed: Approve proposed plan.
-6. **What Drasi just did (optional).** The policy change came in as a change like any other. Drasi re-ran the policy and the planner, saw that the approval no longer matched its current plan, and its reaction rejected it in the approval tool, with the reason.
-7. **Grafana · Recovery plan.** Now I approve the current plan. Drasi checks it still matches its plan, and its reaction applies the new routes through the gateway's configuration API.
-   - **Press:** Select proposed plan, then Approve selected plan
-   - **Watch for:** Last approval: Applied, awaiting evidence. Running now changes. Action needed None. Recovery Awaiting evidence.
-8. **Grafana · Recovery plan.** Look at Recovery. Approving isn't enough to call it fixed: another Drasi query waits until the queue has cleared and at least three support requests have been answered on the new route. Only then does it say Verified.
-   - **Watch for:** Recovery goes from Awaiting evidence to Verified, often within 30 seconds of approval. If it's already Verified, say so.
-9. **Grafana · Operations.** On Operations: the queue has drained, Support overdue is back to 0 and errors are falling. EU-A is still down: we routed around it, within policy.
-10. **What Drasi just did.** Drasi kept the policy and the plan current as health and capacity changed, applied the approved plan, and then checked the outcome before recording it as verified. Approving a change isn't the same as fixing the problem.
+   - **Watch for:** A new orange Proposed change card at the bottom, with a new plan in Based on.
+5. **What Drasi just did (optional).** The policy change came in as a change like any other. Drasi re-ran the policy and the planner, saw that the approval no longer matched its current plan, rejected it with the reason, and posted the new proposal.
+6. **Mattermost · #incident-ai-support.** Now I approve the current proposal, here on its card, as the on-call engineer would. The approval goes to the change-approval tool; Drasi checks it still matches its current plan, and its reaction applies the new routes through the gateway's configuration API.
+   - **Click on the projector:** Approve on the newest orange Proposed change card, at the bottom. Backup on the desk: Approve the proposed change
+   - **Watch for:** The card says Approved by @oncall at …; in its thread, blue Applied: Move summaries to US-C and support to EU-B.
+7. **Grafana · Operations.** Look at Change status. Applied isn't the same as fixed: another Drasi query waits until the backlog from before the change has cleared and at least three support requests have been answered on the new route. Only then does it say Verified.
+   - **Watch for:** Change status goes from Applied, verifying to Verified (green), often within 30 seconds of approval. If it's already Verified, say so.
+8. **Grafana · Operations.** The rest of the dashboard agrees: the queue has drained, Support overdue is back to 0 and errors are falling. EU-A is still down: we routed around it, within policy.
+   - **Watch for:** Support errors falling, Support queue back to 0 to 2, Support overdue 0.
+9. **Mattermost · #incident-ai-support.** And the channel has the whole story in one thread: proposed, approved by the on-call engineer, applied, and verified by Drasi from the evidence.
+   - **Watch for:** Green Verified: support has recovered, in the approved card's thread.
+10. **What Drasi just did.** Drasi kept the policy and the plan current as health and capacity changed, applied the approved change, and then checked the outcome before recording it as verified. Approving a change isn't the same as fixing the problem.
 
-**If it breaks:** If Recovery stays Awaiting evidence, say it's applied but not yet verified, and carry on. Never approve twice. If the plan or the policy change doesn't behave as described, press Use recordings from here on.
+**If it breaks:** If Approve on the card doesn't respond, press Approve the proposed change on the desk: it presses the same button. Never approve twice. If Change status stays Applied, verifying, say it's applied but not yet verified, and carry on. If the proposal or the policy change doesn't behave as described, press Use recordings from here on.
 
 ### 8. Healthy but fragile (3½ minutes)
 
-1. **Grafana · Recovery plan.** Later that day EU-A is fixed, but it comes back with only 50k of capacity. Nothing is broken. Recovery now says Nothing to verify: it checks the last fix only until the setup changes, and the earlier approval stays recorded as Applied and verified.
+1. **Grafana · Operations.** Later that day EU-A is fixed, but it comes back with only 50k of capacity. Nothing is broken: every deployment is healthy, every service-health signal is green. But Failover readiness says No.
    - **Press:** EU-A back at 50k
-   - **Watch for:** Deployment capacity EU-A 50k. Safe if one fails? No: not if EU-B fails. Action needed: At risk. Recovery: Nothing to verify; Last approval: Applied and verified.
-2. **Grafana · Operations.** Every service-health signal is green. But Drasi says we're not safe. Support now runs on EU-B. If EU-B failed, support would need 60k in Europe, and EU-A has only 50k.
-3. **Grafana · Recovery plan.** That's the what-if model: for each deployment, would every workload still fit somewhere allowed if that one failed? It re-asks whenever anything changes. A game-day question, answered all the time. And it's a metric, so you can alert on it.
-4. **Grafana · Recovery plan.** Give EU-A its full capacity back, and the answer is Yes again, without any outage.
+   - **Watch for:** Deployment status all Healthy, EU-A 50k. Failover readiness: No, not if EU-B fails. Recommended action: Add capacity: losing EU-B leaves support nowhere to run.
+2. **Mattermost · #incident-ai-support.** Drasi posted it in the channel, while everything is green. Support now runs on EU-B. If EU-B failed, support would need 60k in Europe, and EU-A has only 50k. Nobody would notice until EU-B fell over.
+   - **Watch for:** Orange card Failover at risk: losing EU-B leaves support nowhere to run.
+3. **Grafana · Operations.** That's the what-if model: for each deployment, would every workload still fit somewhere allowed if that one failed? It re-asks whenever anything changes. A game-day question, answered all the time. And it's a metric, so you can alert on it.
+4. **Mattermost · #incident-ai-support.** Give EU-A its full capacity back, and Drasi says we're safe again, without any outage.
    - **Press:** EU-A back to 100k
-   - **Watch for:** Safe if one fails? Yes. Action needed None.
+   - **Watch for:** Green card Failover restored. (On the dashboard, Failover readiness: Yes, and Recommended action: None.)
 5. **What Drasi just did.** One capacity change, and Drasi re-checked every what-if. Are we safe from the next failure? Answered before it happens.
 
-**If it breaks:** If Safe if one fails? doesn't change, press Use recordings from here on.
+**If it breaks:** If Failover readiness doesn't change, press Use recordings from here on. If the channel shows no card, stay on the dashboard: it shows the same answer.
 
 ### 9. Close (1½ minutes)
 
@@ -300,46 +326,47 @@ Say it in your own words.
 
 <!-- end generated -->
 
-## Reading the dashboards
+## Reading the dashboard
 
 Colours mean the same everywhere: **red** broken, **orange** needs action or
 waiting, **green** OK, **grey** nothing to show. **Unknown** means Drasi's answer is
-out of date or unavailable; it never means healthy.
+out of date or unavailable; it never means healthy. Every panel's (i) icon says
+what it shows.
 
 **AI service · Operations**
 
-| Area | Tile | Meaning |
+| Row | Panel | Meaning |
 |---|---|---|
-| Monitoring (top) | Model calls | Calls to the AI model per second, last 30 seconds |
+| AI Deployments (top: today's monitoring) | Model calls | Calls to the AI model per second, both workloads, last 30 seconds |
 | | Support errors | Share of support calls failing, last 30 seconds |
 | | Answer time p95 | 95th-percentile time from a customer's question to its answer. **No answers** during the outage |
 | | Support queue | Support requests waiting for an answer. One or two in flight is normal (green) |
-| | Grafana alerts firing | Grafana alert rules firing: "Model calls failing", and "Support requests overdue", an alert on Drasi's answer |
-| | Model calls (chart) | Answered and failed calls for each workload |
+| | Alerts firing | Grafana alert rules firing: "Model calls failing", and "Support requests overdue", an alert on Drasi's answer. Each also posts to #incident-ai-support |
+| | Model calls by workload (chart) | Answered and failed calls for each workload |
 | | Support requests waiting (chart) | Orange: waiting. Red: overdue, from Drasi. The red line trails the orange one by the 15-second deadline |
-| Drasi's answers (bottom) | Support overdue | Support requests past their 15-second deadline |
+| Decision Support (bottom: Drasi) | Support overdue | Support requests past their 15-second deadline |
 | | Deployment status | Each deployment's latest health report: Healthy, Over quota or Failed; Unknown if it has been silent for 8 seconds |
-| | Recovery | Nothing to verify, Awaiting evidence, or Verified. It checks the latest applied plan only while the setup is unchanged: after any capacity or policy change it goes back to Nothing to verify |
-| | Action needed | None; Approve proposed plan; No valid plan; At risk (healthy, but losing one deployment would leave no valid plan) |
-| | Safe if one fails? | If any one deployment failed, would every workload still fit somewhere allowed? **No** names the deployment whose loss would hurt. **Already one down** while a deployment has failed: the question doesn't apply |
-
-Dashed green lines on the charts mark Drasi's decision events (plans, approvals,
-verified recovery), which Drasi posts to Grafana.
-
-**AI service · Recovery plan** (everything on it comes from Drasi)
-
-| Tile | Meaning |
-|---|---|
-| Action needed, Recovery, Safe if one fails? | As above |
-| Last approval | None yet; Approved, applying; Applied, awaiting evidence; Applied and verified; Rejected |
-| Running now | Where each workload runs and the capacity it needs. **(not allowed)** when policy no longer allows it there; the requests still go there until a plan is applied |
-| Proposed plan | The planner's plan, in orange when it differs from what's running. **Same as running now** or **No valid plan** otherwise |
-| Customer support / Document summaries may run on | Drasi's Rego policy answer for each deployment: Allowed or Not allowed |
-| Decision events | Newest first: plans, approvals, rejections with the reason, verified recovery |
-| Capacity | Total, on healthy deployments, and needed by the two workloads |
-| Deployments | Each deployment's capacity, orange when below its normal 100k; **Failed** while it is down |
+| | Change status | No change in progress; Awaiting approval; Approved, applying; Applied, verifying; Verified (the backlog cleared and support is answered on the new route); Rejected (the facts changed) |
+| | Recommended action | None; the proposed change, for example **Move summaries to US-C and support to EU-B** (approve it on its card in #incident-ai-support); **No change fits policy and capacity**; **Add capacity: losing EU-B leaves support nowhere to run** |
+| | Failover readiness | If any one deployment failed, would every workload still have somewhere allowed to run? **No** names the deployment whose loss would hurt. **Already one down** while a deployment has failed |
 
 The deadlines (15-second target, 8-second silence) are shortened for the demo.
+
+## The incident channel
+
+**#incident-ai-support** in Mattermost, projected signed in as the on-call
+engineer. Drasi posts a card when something changes; Grafana posts its alerts.
+The newest post is at the bottom.
+
+| Card | Colour | When |
+|---|---|---|
+| Deployment failed: EU-A | red | A deployment has reported Failed for 3 seconds |
+| Support requests overdue | red | Support requests have passed their 15-second deadline; links to the dashboard tile |
+| Proposed change: … | orange | Drasi's plan for the current facts, with Why, Policy, Capacity and Based on, and **Approve** / **Reject**. After a press it says who approved or rejected it, and its buttons go |
+| Out of date: the facts changed | grey | The proposal above no longer matches Drasi's plan; approving it would be rejected. Now says the new change or **No valid plan** |
+| Applied / Verified / Rejected by Drasi | blue / green / orange | Drasi's answer to an approval, in the approved card's thread |
+| Failover at risk: losing EU-B leaves support nowhere to run | orange | Everything is healthy, but losing one deployment would leave a workload nowhere to run |
+| Failover restored | green | Losing any one deployment again leaves a valid plan |
 
 ## The late request view
 
@@ -382,8 +409,10 @@ without it.
 | Charts are empty, or Traffic: stopped | Press **Start demo traffic** (All demo controls) and keep talking |
 | Tiles show Unknown | Drasi's answer is out of date. Say so; never call it healthy. Press **Use recordings from here on** |
 | Nothing happens 30 seconds after Fail EU-A | Press **Use recordings from here on** |
-| Recovery stays Awaiting evidence | Say it's applied but not yet verified; keep going. Never approve twice |
-| Approve is grey | Press **Select proposed plan** first |
+| Change status stays Applied, verifying | Say it's applied but not yet verified; keep going. Never approve twice |
+| Approve on the card does nothing | Press **Approve the proposed change** on the desk: it presses the same button |
+| The channel shows Mattermost's sign-in page | Press **Sign the projector in to Mattermost** (Before and after the talk), then show the channel again |
+| No cards appear in the channel | Say Drasi posts them there, and stay on the dashboard: the Decision Support row shows the same answers |
 | The projector shows the wrong thing | Press **Back**, then **Next**, or use **Jump to a part** |
 | The projector window closed | Press **Open projector window** in the header and put it back on the projector |
 | You lost your place | **Jump to a part** |

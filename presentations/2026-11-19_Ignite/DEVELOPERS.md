@@ -44,8 +44,9 @@ simulated.
    both and raises the alerts, which also post to **Mattermost**'s
    `#incident-ai-support`, the incident channel where Drasi posts its incident
    cards.
-5. A small **web app** serves the projected stage (slides, the two dashboards
-   embedded from Grafana, the late request view) and the private presenter desk
+5. A small **web app** serves the projected stage (slides, the dashboard
+   embedded from Grafana, the incident channel embedded from Mattermost, the late
+   request view) and the private presenter desk
    that drives it. Its controls only change inputs (traffic, deployment faults,
    policy, capacity, approvals); every answer comes from Drasi.
 
@@ -103,10 +104,10 @@ All paths are under `demo/` unless noted.
 | File | Role |
 |---|---|
 | `scenes.ts` | The slides and "What Drasi just did" visuals, the talk's parts and timings, dashboard and product URLs |
-| `notes.ts` | The script: each part's beats (what the projector shows, what to say, which buttons, what to watch for), the glossary and the questions to expect. The single source for the desk and `PRESENTER.md` |
+| `notes.ts` | The script: each part's beats (what the projector shows, what to say, which desk buttons, what to click on the projected channel, what to watch for, which panels to highlight), the glossary and the questions to expect. The single source for the desk and `PRESENTER.md` |
 | `script.ts` | Generates `PRESENTER.md`'s run of show, script, glossary and questions from `notes.ts` |
-| `Audience.tsx` | The projected stage: always the Ignite template's 1920×1080 slide, scaled to fit the window. Slides, the two dashboards embedded in Grafana kiosk mode at 1.35× and ending at the caption line (y 1002), the late request view and recordings. Keys pressed here (a clicker) are passed to the desk; if no desk answers within half a second, the stage steps through the talk's views on its own |
-| `Presenter.tsx`, `desk.css` | The presenter desk: the current beat with its buttons, a mirror of Drasi's answers, the live demo and recovery plan, and the collapsible extras. **Next** moves to the next beat and switches the projector, warning once if the beat's button wasn't pressed. Recording mode (`fallback` in the stage state) shows each live part's recording instead |
+| `Audience.tsx` | The projected stage: always the Ignite template's 1920×1080 slide, scaled to fit the window. Slides, the dashboard embedded in Grafana kiosk mode at 1.35×, the incident channel (`incident`: Mattermost's `#incident-ai-support`, framed at 1.5× so it lays out 1280 px wide; the projector's browser is signed in as `oncall` through the AI service's `/mattermost/sign-in`), both ending at the caption line (y 1002) and kept loaded once shown, the late request view and recordings. Keys pressed here (a clicker) are passed to the desk; if no desk answers within half a second, the stage steps through the talk's views on its own |
+| `Presenter.tsx`, `desk.css` | The presenter desk: the current beat with its buttons and what to click on the projector, a mirror of Drasi's answers, the live demo and routes, and the collapsible extras. Approving happens on the projected proposal card; the desk's backup, **Approve the proposed change**, calls `POST /mattermost/approve-latest`, which presses that card's Approve, and the desk reports Drasi's answer from `tile-last-approval`. **Next** moves to the next beat and switches the projector, warning once if the beat's button wasn't pressed. Recording mode (`fallback` in the stage state) shows each live part's recording instead |
 | `Explanation.tsx`, `slides.css` | Slide content and styles. `slides.css` holds the Ignite template's dark theme: its colours, Segoe UI, and the layout grid in pixels on a 1920×1080 slide (92 px side margins, titles at y 72, body from y 226, nothing below y 1002, the closed-caption clear space). Template artwork and fonts load from `/template/` (see `ops/template-assets.py` below) |
 | `Highlight.tsx`, `panels.ts` | Highlights the dashboard panels a beat talks about (a beat's `highlight` in `notes.ts`, as `<dashboard uid>.<panel key>`): dims the rest of the projected dashboard and outlines the panels, placed from the dashboard JSON's `gridPos` the way Grafana lays it out. A panel's key is its `key` in the dashboard JSON, else its title in lower case with dashes; a row's key covers its panels. A test fails if a highlight names no panel |
 | `QuerySlide.tsx` | The continuous query slide: `demo/drasi/overdue-tasks.cypher` laid out for the projector (a test checks it matches the file), and Drasi's live list of late requests |
@@ -226,7 +227,7 @@ infeasible after the policy edit, "not if EU-B fails" at EU-A 50k).
 
 | Command | Checks |
 |---|---|
-| `cd ui && npm test` | Slides and desk against a test fixture, at 1280×720 and 1920×1080: every slide inside the template's margins and above the caption line, dashboards ending at it, and the stage still working without the template assets; and that `PRESENTER.md`'s script matches `notes.ts`. Builds into `ui/dist-test`, so it never replaces what a running demo serves |
+| `cd ui && npm test` | Slides and desk against a test fixture, at 1280×720 and 1920×1080: every slide inside the template's margins and above the caption line, dashboards and the incident channel ending at it, and the stage still working without the template assets; approving on a card (a stand-in channel page, `tests/mattermost-stand-in.html`, shows the fixture's cards) and through the desk's backup, including the out-of-date proposal rejected; and that `PRESENTER.md`'s script matches `notes.ts`. Builds into `ui/dist-test`, so it never replaces what a running demo serves |
 | `python3 observability/grafana/fixture.py [state]` | Serves sample `/metrics` for each tile state on the reaction's port, for checking Grafana; only while Drasi Server is stopped |
 | `python3 tests/release-test.py`, `python3 tests/native-runtime-test.py` | Release and bundle guards |
 

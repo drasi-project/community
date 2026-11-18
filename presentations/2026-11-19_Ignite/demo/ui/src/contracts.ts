@@ -45,13 +45,6 @@ export function tileValue(rows: Row[], match: (row: Row) => boolean = () => true
   return typeof value === "number" && value >= 0 ? value : null;
 }
 
-// The plan the presenter took to the approval tool. The ID is the approval's ID.
-export const selectionSchema = z.object({
-  approval_id: z.string(), candidate_id: z.string(), basis: z.string(), run_epoch: z.string(), revision: z.number(),
-  assignments: z.record(z.string(), z.string()).optional(), selected_ms: z.number().optional(),
-});
-export type Selection = z.infer<typeof selectionSchema>;
-
 export function text(value: unknown): string {
   return value == null ? "unknown" : typeof value === "object" ? JSON.stringify(value) : String(value);
 }

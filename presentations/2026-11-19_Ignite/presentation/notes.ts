@@ -5,16 +5,17 @@ import type { SceneId, StageView } from "./scenes";
 // (cd demo/ui && npm run sync-presenter). A test fails if PRESENTER.md drifts.
 
 // Buttons the desk shows next to a beat. Each changes the live demo.
-export type ActionId = "start-traffic" | "stop-traffic" | "fail-eu-a" | "select-plan" | "approve-plan"
+export type ActionId = "start-traffic" | "stop-traffic" | "fail-eu-a" | "approve-change"
   | "summaries-europe" | "summaries-anywhere" | "eu-a-half" | "eu-a-full";
 
 export type Beat = {
   show: StageView;     // what the projector shows during this beat (Next switches it)
   say: string;         // what to say, in your own words
   do?: ActionId[];     // the buttons to press, in order, before or while saying it
+  click?: string;      // what to press on the projected screen itself (the audience sees it)
   watch?: string;      // what appears on screen
   optional?: true;     // skipped when "Short on time" is ticked
-  expect?: "rejected"; // the approval is meant to be rejected
+  expect?: "rejected"; // the approval is meant to be rejected (the out-of-date proposal)
   recording?: string;  // the recording shown instead in recording mode (default: the part's)
   // Dashboard panels to highlight on the projector, as "<dashboard uid>.<panel key>": the panel's
   // "key" in the dashboard JSON, or its title in lower case with dashes (a row covers its panels).
@@ -67,24 +68,36 @@ export const notes: Record<SceneId, Cue> = {
     ifBroken: "If the charts are empty, traffic isn't running: press Start demo traffic and keep talking.",
   },
   failure: {
-    summary: "Fail EU-A",
+    summary: "Fail EU-A; Drasi's row and the incident channel are ahead of the alert",
     recording: "failure",
     beats: [
-      { show: "ops", do: ["fail-eu-a"], say: "Now I'll make EU-A, the deployment serving customer support, fail.",
-        watch: "Within about 8 seconds: Deployment status EU-A Failed, and Action needed Approve proposed plan." },
-      { show: "ops", say: "Look at the bottom row first: EU-A Failed, and Action needed already says Approve proposed plan. Drasi has worked out a fix that fits the rules. We'll come back to it." },
-      { show: "ops", say: "The top half does its job: calls fail, errors and the queue climb, and Grafana's alert fires. Something is wrong.",
-        watch: "Support errors red, Support queue rising, Grafana alerts firing 1 or 2 (the second is an alert on Drasi's overdue answer)." },
-      { show: "ops", say: "And Support overdue is climbing. Each request has a 15-second deadline. When a request passes it, nothing happens to that request: no new row, no new metric. Drasi counts it at that exact moment anyway, because its query re-checks each request at its deadline. On the chart, the red overdue line follows the orange waiting line 15 seconds later. I'll show you how in a moment.",
+      { show: "ops", do: ["fail-eu-a"], highlight: ["ignite-workload.deployment-status"],
+        say: "Now I'll make EU-A, the deployment serving customer support, fail.",
+        watch: "Within about 8 seconds: Deployment status EU-A Failed, and Recommended action names a change." },
+      { show: "ops", highlight: ["ignite-workload.deployment-status", "ignite-workload.recommended-action"],
+        say: "Look at the bottom row first, Decision Support: EU-A Failed, and Recommended action already names a fix: move summaries to US-C and support to EU-B. Drasi has worked out a change that fits the rules. We'll come back to it.",
+        watch: "Recommended action: Move summaries to US-C and support to EU-B (orange)." },
+      { show: "incident",
+        say: "The team doesn't live on a dashboard, though. This is their incident channel in Mattermost. Drasi posted here as soon as EU-A failed, and its proposed change is already waiting, with an Approve button. Grafana hasn't alerted yet. We'll come back to the proposal.",
+        watch: "Red card Deployment failed: EU-A, then the orange Proposed change card with Approve and Reject, the newest at the bottom." },
+      { show: "ops", highlight: ["ignite-workload.ai-deployments"],
+        say: "Back on the dashboard, the top half catches up: calls fail, errors and the queue climb, and Grafana's alert fires; it posts to the channel too. Something is wrong.",
+        watch: "Support errors red, Support queue rising, Alerts firing 1 or 2 (the second is an alert on Drasi's overdue answer)." },
+      { show: "ops", highlight: ["ignite-workload.support-overdue", "ignite-workload.support-waiting"],
+        say: "And Support overdue is climbing. Each request has a 15-second deadline. When a request passes it, nothing happens to that request: no new row, no new metric. Drasi counts it at that exact moment anyway, because its query re-checks each request at its deadline. On the chart, the red overdue line follows the orange waiting line 15 seconds later. I'll show you how in a moment.",
         watch: "Support overdue above 0; on the right-hand chart, the red line trails the orange one." },
-      { show: "drasi-failure", say: "Drasi saw the failed attempts and EU-A's health turn to Failed, worked out which requests were late as each deadline passed, and re-ran the planner. It didn't re-scan the database; it reacted to each change and each deadline. And notice the order: Drasi had a plan ready within seconds, before Grafana's alert rule fired, about 20 seconds later." },
+      { show: "drasi-failure", say: "Drasi saw the failed attempts and EU-A's health turn to Failed, worked out which requests were late as each deadline passed, and re-ran the planner. It didn't re-scan the database; it reacted to each change and each deadline. And notice the order: Drasi had a change proposed in the channel within seconds, before Grafana's alert rule fired, about 20 seconds later." },
     ],
-    ifBroken: "If nothing changes within 30 seconds, press Use recordings from here on and say it's a recording.",
+    ifBroken: "If nothing changes within 30 seconds, press Use recordings from here on and say it's a recording. If the channel shows no cards, say Drasi posts them there and stay on the dashboard: the same answers are on the Decision Support row.",
   },
   who: {
-    summary: "Show who is affected: the query and its live list",
+    summary: "Show who is affected: the overdue card, the query and its live list",
     beats: [
-      { show: "query", say: "Which customers are affected? This is the actual query behind Support overdue. 1: every request, as it arrives from the database. 2: not answered yet. 3: this condition becomes true at the deadline, and Drasi re-checks just that request then. 4: the result is the list itself, not just a count, and here it is, live. With Prometheus you'd get a number from a gauge or a rule evaluated every so often; here it's the exact set of late requests, kept current request by request, from one query.",
+      { show: "incident",
+        click: "If the red Support requests overdue card isn't in view, scroll up to it (Grafana's alerts may have posted below it)",
+        say: "Which customers are affected? Drasi posted that too: Support requests overdue, as soon as the first support request passed its deadline, with a link to the tile on the dashboard. A count tells you it's bad. Let's see who.",
+        watch: "Red card Support requests overdue, with the count when posted and a link to Operations › Support overdue." },
+      { show: "query", say: "This is the actual query behind Support overdue and that card. 1: every request, as it arrives from the database. 2: not answered yet. 3: this condition becomes true at the deadline, and Drasi re-checks just that request then. 4: the result is the list itself, not just a count, and here it is, live. With Prometheus you'd get a number from a gauge or a rule evaluated every so often; here it's the exact set of late requests, kept current request by request, from one query.",
         watch: "Under the query: how many support requests are late, and the oldest few with their traces." },
       { show: "request", optional: true, say: "Here's one of those customers: their question, every attempt to send it to EU-A failing, and the moment its deadline passed and Drasi listed it. The same request is a trace in Langfuse, so whoever picks it up has the detail.",
         watch: "The oldest late request, with its attempts and the moment Drasi listed it." },
@@ -92,42 +105,59 @@ export const notes: Record<SceneId, Cue> = {
     ifBroken: "If the list is empty, traffic has stopped: say what it would show. The request beat is skipped automatically when nothing is late.",
   },
   recovery: {
-    summary: "Approve the proposed plan; optionally show a stale approval rejected",
+    summary: "Approve Drasi's proposed change on its card; optionally show an out-of-date proposal rejected",
     recording: "recovery",
     beats: [
-      { show: "plan", say: "This dashboard is all Drasi. Capacity: 300k in total, 200k on healthy deployments, 140k needed. On paper there's plenty. But US-C has the free room, and customer support isn't allowed there.",
-        watch: "Customer support may run on: US-C Not allowed." },
-      { show: "plan", do: ["select-plan"], say: "The planner, an optimizer Drasi re-runs on every change, respects that: move summaries to US-C, which frees EU-B for support. I'll take this plan to our change-approval tool, here on my laptop.",
-        watch: "Proposed plan: support → EU-B, summaries → US-C. (Selecting changes nothing on the projector.)" },
-      { show: "plan", optional: true, recording: "policy", do: ["summaries-europe"], say: "While it waits for approval, compliance restricts summaries to Europe too. The answer changes at once: no valid plan. Plans keep both workloads running, and with EU-A down, support and summaries can't both fit in EU-B. Dropping work is a decision for a person, not the planner.",
-        watch: "Document summaries may run on: US-C Not allowed. Action needed and Proposed plan: No valid plan." },
-      { show: "plan", optional: true, recording: "policy", do: ["approve-plan"], expect: "rejected", say: "If I approve the plan I selected a moment ago, Drasi rejects it: every plan carries the facts it was based on, and those facts changed.",
-        watch: "Last approval: Rejected." },
-      { show: "plan", optional: true, recording: "policy", do: ["summaries-anywhere"], say: "Compliance allows the US for summaries again, and the plan comes straight back.",
-        watch: "Action needed: Approve proposed plan." },
-      { show: "drasi-policy", optional: true, say: "The policy change came in as a change like any other. Drasi re-ran the policy and the planner, saw that the approval no longer matched its current plan, and its reaction rejected it in the approval tool, with the reason." },
-      { show: "plan", do: ["select-plan", "approve-plan"], say: "Now I approve the current plan. Drasi checks it still matches its plan, and its reaction applies the new routes through the gateway's configuration API.",
-        watch: "Last approval: Applied, awaiting evidence. Running now changes. Action needed None. Recovery Awaiting evidence." },
-      { show: "plan", say: "Look at Recovery. Approving isn't enough to call it fixed: another Drasi query waits until the queue has cleared and at least three support requests have been answered on the new route. Only then does it say Verified.",
-        watch: "Recovery goes from Awaiting evidence to Verified, often within 30 seconds of approval. If it's already Verified, say so." },
-      { show: "ops", say: "On Operations: the queue has drained, Support overdue is back to 0 and errors are falling. EU-A is still down: we routed around it, within policy." },
-      { show: "drasi-recovery", say: "Drasi kept the policy and the plan current as health and capacity changed, applied the approved plan, and then checked the outcome before recording it as verified. Approving a change isn't the same as fixing the problem." },
+      { show: "incident",
+        click: "Scroll up to the orange Proposed change card so the whole card shows",
+        say: "Back to the proposal. On paper there's plenty of room: two healthy deployments with 200k, and we need 140k. But US-C has the free room, and customer support isn't allowed there: restricted data stays in Europe. The planner, an optimizer Drasi re-runs on every change, respects that: move summaries to US-C, which frees EU-B for support. Two moves, both within policy, and the card shows the facts it was based on.",
+        watch: "The orange Proposed change card: Move summaries to US-C and support to EU-B. Why EU-A is down; Policy; Capacity; Based on revision and plan." },
+      { show: "incident", optional: true, recording: "policy", do: ["summaries-europe"],
+        say: "Before anyone approves it, compliance restricts summaries to Europe too. Drasi re-runs the policy and the planner at once: with EU-A down, support and summaries can't both fit in EU-B, so no change fits now, and Drasi says the proposal is out of date. Dropping work is a decision for a person, not the planner.",
+        watch: "A grey card Out of date: the facts changed, Now: No valid plan. The proposal above it still has its Approve button." },
+      { show: "incident", optional: true, recording: "policy", do: ["approve-change"], expect: "rejected",
+        click: "Approve on the orange proposal card, above the grey Out of date card (scroll up a little if needed)",
+        say: "Suppose someone approves the proposal anyway. The approval goes to the change-approval tool, and Drasi rejects it: every proposal carries the facts it was based on, and those facts changed. Nothing is changed.",
+        watch: "The card says Approved by @oncall; then, in its thread, Rejected by Drasi: nothing was changed, with Drasi's reason." },
+      { show: "incident", optional: true, recording: "policy", do: ["summaries-anywhere"],
+        say: "Compliance allows the US for summaries again, and Drasi posts a new proposal straight away.",
+        watch: "A new orange Proposed change card at the bottom, with a new plan in Based on." },
+      { show: "drasi-policy", optional: true, say: "The policy change came in as a change like any other. Drasi re-ran the policy and the planner, saw that the approval no longer matched its current plan, rejected it with the reason, and posted the new proposal." },
+      { show: "incident", do: ["approve-change"],
+        click: "Approve on the newest orange Proposed change card, at the bottom",
+        say: "Now I approve the current proposal, here on its card, as the on-call engineer would. The approval goes to the change-approval tool; Drasi checks it still matches its current plan, and its reaction applies the new routes through the gateway's configuration API.",
+        watch: "The card says Approved by @oncall at …; in its thread, blue Applied: Move summaries to US-C and support to EU-B." },
+      { show: "ops", highlight: ["ignite-workload.change-status"],
+        say: "Look at Change status. Applied isn't the same as fixed: another Drasi query waits until the backlog from before the change has cleared and at least three support requests have been answered on the new route. Only then does it say Verified.",
+        watch: "Change status goes from Applied, verifying to Verified (green), often within 30 seconds of approval. If it's already Verified, say so." },
+      { show: "ops", highlight: ["ignite-workload.ai-deployments", "ignite-workload.support-overdue"],
+        say: "The rest of the dashboard agrees: the queue has drained, Support overdue is back to 0 and errors are falling. EU-A is still down: we routed around it, within policy.",
+        watch: "Support errors falling, Support queue back to 0 to 2, Support overdue 0." },
+      { show: "incident",
+        say: "And the channel has the whole story in one thread: proposed, approved by the on-call engineer, applied, and verified by Drasi from the evidence.",
+        watch: "Green Verified: support has recovered, in the approved card's thread." },
+      { show: "drasi-recovery", say: "Drasi kept the policy and the plan current as health and capacity changed, applied the approved change, and then checked the outcome before recording it as verified. Approving a change isn't the same as fixing the problem." },
     ],
-    ifBroken: "If Recovery stays Awaiting evidence, say it's applied but not yet verified, and carry on. Never approve twice. If the plan or the policy change doesn't behave as described, press Use recordings from here on.",
+    ifBroken: "If Approve on the card doesn't respond, press Approve the proposed change on the desk: it presses the same button. Never approve twice. If Change status stays Applied, verifying, say it's applied but not yet verified, and carry on. If the proposal or the policy change doesn't behave as described, press Use recordings from here on.",
   },
   resilience: {
     summary: "Healthy but fragile: EU-A returns with half its capacity",
     recording: "resilience",
     beats: [
-      { show: "plan", do: ["eu-a-half"], say: "Later that day EU-A is fixed, but it comes back with only 50k of capacity. Nothing is broken. Recovery now says Nothing to verify: it checks the last fix only until the setup changes, and the earlier approval stays recorded as Applied and verified.",
-        watch: "Deployment capacity EU-A 50k. Safe if one fails? No: not if EU-B fails. Action needed: At risk. Recovery: Nothing to verify; Last approval: Applied and verified." },
-      { show: "ops", say: "Every service-health signal is green. But Drasi says we're not safe. Support now runs on EU-B. If EU-B failed, support would need 60k in Europe, and EU-A has only 50k." },
-      { show: "plan", say: "That's the what-if model: for each deployment, would every workload still fit somewhere allowed if that one failed? It re-asks whenever anything changes. A game-day question, answered all the time. And it's a metric, so you can alert on it." },
-      { show: "plan", do: ["eu-a-full"], say: "Give EU-A its full capacity back, and the answer is Yes again, without any outage.",
-        watch: "Safe if one fails? Yes. Action needed None." },
+      { show: "ops", do: ["eu-a-half"], highlight: ["ignite-workload.deployment-status", "ignite-workload.failover-readiness"],
+        say: "Later that day EU-A is fixed, but it comes back with only 50k of capacity. Nothing is broken: every deployment is healthy, every service-health signal is green. But Failover readiness says No.",
+        watch: "Deployment status all Healthy, EU-A 50k. Failover readiness: No, not if EU-B fails. Recommended action: Add capacity: losing EU-B leaves support nowhere to run." },
+      { show: "incident",
+        say: "Drasi posted it in the channel, while everything is green. Support now runs on EU-B. If EU-B failed, support would need 60k in Europe, and EU-A has only 50k. Nobody would notice until EU-B fell over.",
+        watch: "Orange card Failover at risk: losing EU-B leaves support nowhere to run." },
+      { show: "ops", highlight: ["ignite-workload.failover-readiness"],
+        say: "That's the what-if model: for each deployment, would every workload still fit somewhere allowed if that one failed? It re-asks whenever anything changes. A game-day question, answered all the time. And it's a metric, so you can alert on it." },
+      { show: "incident", do: ["eu-a-full"],
+        say: "Give EU-A its full capacity back, and Drasi says we're safe again, without any outage.",
+        watch: "Green card Failover restored. (On the dashboard, Failover readiness: Yes, and Recommended action: None.)" },
       { show: "drasi-resilience", say: "One capacity change, and Drasi re-checked every what-if. Are we safe from the next failure? Answered before it happens." },
     ],
-    ifBroken: "If Safe if one fails? doesn't change, press Use recordings from here on.",
+    ifBroken: "If Failover readiness doesn't change, press Use recordings from here on. If the channel shows no card, stay on the dashboard: it shows the same answer.",
   },
   closing: {
     summary: "Four takeaways, the session survey, then questions",
@@ -171,7 +201,7 @@ export const questions: readonly [string, string][] = [
 
 export const actionLabels: Record<ActionId, string> = {
   "start-traffic": "Start demo traffic", "stop-traffic": "Stop demo traffic", "fail-eu-a": "Fail EU-A",
-  "select-plan": "Select proposed plan", "approve-plan": "Approve selected plan",
+  "approve-change": "Approve the proposed change",
   "summaries-europe": "Summaries: Europe only", "summaries-anywhere": "Summaries: Europe + US",
   "eu-a-half": "EU-A back at 50k", "eu-a-full": "EU-A back to 100k",
 };

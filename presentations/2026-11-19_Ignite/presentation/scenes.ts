@@ -14,7 +14,9 @@ export const products = {
   drasi: "https://drasi.io/",
 };
 // Dashboards as projected: kiosk mode (no Grafana toolbar), embedded in the stage.
-export const dashboards = { ops: grafana("ignite-workload", true), plan: grafana("ignite-decisions", true) } as const;
+export const dashboards = { ops: grafana("ignite-workload", true) } as const;
+// The incident channel as projected (contracts.md §17); the projector's browser is signed in as oncall.
+export const incidentChannel = `${settings.mattermost}/ai-platform/channels/incident-ai-support`;
 
 // Shown on the title slide when set (bold name, then role, as in the Ignite template).
 export const speaker = { name: "", role: "" };
@@ -100,10 +102,10 @@ export const recaps = [
 export const allSlides = [...slides, ...recaps.map(recap => ({ id: recap.id, title: recap.title }))] as const;
 export type SlideId = typeof slides[number]["id"] | typeof recaps[number]["id"];
 
-// What the projected stage shows: a slide, a dashboard, or one late request.
-export type StageView = SlideId | "ops" | "plan" | "request";
+// What the projected stage shows: a slide, the dashboard, the incident channel, or one late request.
+export type StageView = SlideId | "ops" | "incident" | "request";
 export const viewLabel = (view: StageView) => view === "ops" ? "Grafana · Operations"
-  : view === "plan" ? "Grafana · Recovery plan" : view === "request" ? "One late request"
+  : view === "incident" ? "Mattermost · #incident-ai-support" : view === "request" ? "One late request"
   : view.startsWith("drasi-") ? "What Drasi just did" : slides.find(slide => slide.id === view)?.title ?? view;
 
 // The talk's parts. Timings are minutes from the start.
