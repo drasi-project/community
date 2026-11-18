@@ -20,7 +20,7 @@ Builds go to `ignite-native/.cargo-target-next`, so the running demo's build fol
 | Demo plugin (`ignite-prometheus`) | Builds and passes its tests. Drasi's `drasi.standard/policy` and `drasi.standard/optimization` replace `ignite-policy` and `ignite-optimizer` |
 | Config generator (`ignite-config`) | Adapted. Its tests pass, and `drasi-server validate` accepts the graph with 9 plugins: 56 components (PostgreSQL health) or 58 (OTel health) |
 | Build and run scripts | Point at the `-next` checkouts and build folder. `ops/native-build.sh` runs end to end, including `validate` and `stamp` |
-| Live switch | Ready, not done. It needs the user's go-ahead (see [Switch-over](#switch-over)) |
+| Live switch | Done 2026-11-18 06:09–06:13 PST, with health from telemetry (`IGNITE_HEALTH_SOURCE=otel`). See [Switch record](#switch-record) |
 
 Two stacks can't run at once (Podman memory), so the live switch is one short,
 reversible window: stop the native processes, start the same processes from
@@ -140,3 +140,40 @@ containers, run `./ops/observability-stack.sh up -d --wait` from
 processes there as before. The running demo's checkouts, binaries
 (`.cargo-target`) and `.native/` were never changed. If step 4 applied a
 schema change, roll back only if the old service can't run on the new schema.
+
+## Switch record
+
+On 2026-11-18 the live demo moved to `community-next` (`1861cfe`) with health
+from telemetry.
+
+- **Stopped**, from `community` (binaries in `.cargo-target`): Server 57841,
+  AI service 81845, UI 86617 (npm 86592).
+- **Collector:** recreated alone with the drasi overlay
+  (`./ops/observability-stack.sh up -d --wait --no-deps collector`, otel mode).
+  Every other container kept running.
+- **Started** detached from `community-next` (binaries in `.cargo-target-next`):
+  Server 53843, AI service 53853, UI 53931. Logs are in `.native/`. The API
+  answered 200 about 2 minutes after start.
+- **Verified:**
+  - all 12 `drasi_reaction_input_ready` series are 1;
+  - `health-telemetry-integration.py` passes: Failed in 0.9 s, Unknown after
+    8.9 s, Healthy in 1.1 s, and `ignite_reports` not written;
+  - `incident-channel-integration.py`, up to Verified: failure card, proposal,
+    Out of date, rejection, approval, Applied, Verified;
+  - the desk (`/presenter`, live SSE), Grafana and the Prometheus scrape.
+
+**Open:** `incident-channel-integration.py` fails its last check. After EU-A
+recovers, a "Failover restored" card is posted about 4 s later, before the
+test's at-risk step. That means the failover state passed through `at_risk`
+between `degraded` and `safe`. A plain fail and restore (no policy edits, no
+approval) goes from degraded straight to safe. This is for the
+optimization workstream (`resilience-results`, `e3d5fbe`).
+
+**Roll back:**
+1. Stop 53843, 53853 and 53931.
+2. From `community/.../demo`, run
+   `./ops/observability-stack.sh up -d --wait --no-deps collector`, which
+   recreates the Collector in postgres mode.
+3. Start the three processes there, as in [Switch-over](#switch-over).
+4. Run `python3 ops/workload.py reset`, so the AI service writes
+   `ignite_reports` again.
