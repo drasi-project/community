@@ -4,8 +4,9 @@ import { products, recaps, session, speaker, type SlideId } from "./scenes";
 import { QuerySlide } from "./QuerySlide";
 import "./slides.css";
 
-// Keep deployment names such as EU-A on one line.
-const nb = (text: string) => text.replace(/\b(EU|US)-([A-C])\b/g, "$1\u2011$2");
+// Keep deployment names such as EU-A, and the incident channel's name, on one line.
+const nb = (text: string) => text.replace(/\b(EU|US)-([A-C])\b/g, "$1\u2011$2")
+  .replace(/#incident-ai-support/g, "#incident\u2011ai\u2011support");
 
 // The Ignite template's artwork, extracted on the presenting machine by ops/template-assets.py
 // and served at /template/. Without it, slides keep the template's solid Dark Blue.
