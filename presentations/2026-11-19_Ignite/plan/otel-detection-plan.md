@@ -22,31 +22,34 @@ One setting, `IGNITE_HEALTH_SOURCE` in `demo/ports.env` (`postgres` or `otel`),
 switches the AI service, the Server configuration and the Collector together.
 The default is `postgres`, which is exactly today's demo.
 
-| Piece | Ready now (committed, tested) | Waits for the merge |
+PR 1030 has merged (drasi-core `32880d6d`). The whole path is verified
+against the merged native OTel source and a Server built on it, on spare ports
+(section 8).
+
+| Piece | Verified | Still to do |
 |---|---|---|
-| 1. Synthetic prober | Probe gauges in the AI service; `ignite_reports` writes behind the setting | — |
-| 2. Collector | Overlay pipeline to Drasi, applied only with `otel` | — |
-| 3. Drasi queries and generator | `deployment-health`, the rewritten health queries, generator wiring, plugin build step | Building the plugin and generating the `otel` graph against it |
-| 4. Tests | Unit and in-process query tests (pass); OTLP sender; live integration test | Running the live test on the switched stack |
+| 1. Synthetic prober | Real `probe.rs` → OTLP protobuf → merged source | — |
+| 2. Collector | Demo image with `collector.yaml` + overlay → gRPC → merged source on loopback | — |
+| 3. Drasi queries and generator | `otel` graph generated against the real plugin; `drasi-server validate` passes from `community-next` HEAD; live run on a throwaway next Server | — |
+| 4. Tests | Generator (19), in-process queries, SDK-level and live checks | The live gate on the switched demo |
 | 5. Docs | Drafts below | Applying them at the switch |
 
-What remains after PR 1030 merges:
-1. Rebase.
-2. Build: the PR changes the native plugin-services ABI, so the Server and every
-   native plugin are rebuilt together.
-3. Validate the generated graph.
-4. Switch the setting.
-5. Run the tests.
+What remains:
+1. The port to the merged drasi-core lands (`community-next`, which already
+   includes the generic `sourceProgress` fix, `2fd85ab`).
+2. Build the demo against it (`native-build.sh` builds the OTel plugin).
+3. Switch the setting.
+4. Run the live gates.
 
 Rollback is the same setting set back to `postgres`.
 
 **Effort and risk for Nov 19.**
-- **Effort:** about half a day after the merge, most of it building and the
-  test run.
-- **Risk:** medium. The prober, Collector path and query logic are proven. The
-  unproven part is the native source inside the demo's generated graph:
-  plugin loading, its `out` port, and a query with a non-bootstrapping source
-  input. That part can only be tested once the merged plugin builds.
+- **Effort:** a couple of hours once the demo runs on the merged drasi-core:
+  switch, restart, live gates and docs.
+- **Risk:** low to medium. The `otel` graph has run end to end on a next
+  Server, including the planner and the incident card query. What is left is
+  the demo's own port to the merged drasi-core, which the `postgres` mode
+  needs as well.
 - **Fallback:** if the switch isn't validated by the morning of Nov 19, present
   with `postgres`.
 
@@ -196,11 +199,14 @@ dedicated probe request type.
   - `plan_bins_from_telemetry`: `failed`, `ok`, `unknown`.
 - `cargo test -p ignite-config --bin ignite-config`: 18 pass.
 
-**Waits for the merge:**
-- Generating the `otel` graph against the real plugin: the factory, the `out`
-  port and stream, and query construction with a source input that has no
-  bootstrap port.
-- Then `drasi-server validate`.
+**Verified against the merged plugin (section 8):**
+- The `otel` graph generates against the real factories (59 components).
+- It passes `drasi-server validate` on a Server built on the merged
+  drasi-core.
+- It runs live.
+- This found and fixed one bug, in `community-next` `fc035a1`: `joins()`
+  treated `[:REPORTS]` as an unknown synthetic join. It is a relation the
+  source delivers. A test now checks every query's joins in both modes.
 
 ## 4. Tests (ready)
 
@@ -227,9 +233,8 @@ dedicated probe request type.
 
 ## 5. Switch-over (after PR 1030 merges)
 
-1. **Rebase.** Rebase `agentofreality-ignite-native` in drasi-core onto the
-   merged main, and drasi-server if its host SDK must follow. Expect
-   conflicts only where this branch changed shared crates.
+1. **Port.** Run the demo on the merged drasi-core and the matching
+   drasi-server: the `-next` checkouts, from the port session.
 2. **Build.** `./ops/native-build.sh` builds the Server, every native plugin
    and the OTel source together. Plugin-services ABI v2 requires an exact
    host/plugin match.
@@ -285,9 +290,10 @@ The `postgres` graph does not need the OTel plugin. Reset once so
   cumulative counter) with identity attributes `[endpoint, workload, status]`.
   `ignite_workload_last_request_failed` is not a health signal: it changes
   only when traffic reaches the endpoint and is re-exported forever.
-- **Untested until the merge.** The native plugin inside the generated graph
-  (see step 3). The PR's ABI change means nothing built before the rebase can
-  be mixed with it.
+- **Plugin build on macOS.** The merged plugin's dylib needs
+  `ops/macho-align.py` (Apple ld's unaligned LINKEDIT string pool), as the
+  other plugins do. `native-build.sh` already runs it on every installed
+  plugin.
 - **Port.** `IGNITE_DRASI_OTLP_PORT` (19427) must be free on the host at the
   switch.
 
@@ -357,3 +363,85 @@ card too, so do it only at the switch.
 > | `python3 tests/health-telemetry-integration.py` | Health from telemetry: detection, Unknown on silence, recovery, the Collector path (applies with `IGNITE_HEALTH_SOURCE=otel`) | Yes |
 >
 > | `python3 tests/otlp.py --self-test` | The test OTLP sender's protobuf encoding | No |
+
+## 8. Verified with the merged drasi-core
+
+These checks ran against drasi-core `32880d6d` (`drasi-core-next`, PR 1030
+merged) and a drasi-server built on it. They used spare ports and throwaway
+containers only. The harness, the generated configurations and the run logs
+are kept outside the repositories, in the session's `otel-sdk-check`.
+
+**The plugin** (`cargo build -p drasi-computation-source-otel --features dynamic-plugin`):
+- **Identity:** `drasi.network/otel-source`, implementation `1`, plugin
+  `drasi-computation-source-otel` 0.11.3.
+- **Configuration:** the factory accepts the generator's configuration
+  unchanged: `host 127.0.0.1`, `protocols [grpc]`, `grpcPort`,
+  `metricAllowlist [ignite_probe_status]`,
+  `metricIdentityAttributes [deployment, run_epoch]`, `maxMetrics 1000000`
+  (maximum 10,000,000), `destinationAttributes []`.
+- **Loopback:** `0.0.0.0` without `authToken` is refused, which is why the
+  generator binds loopback.
+- **Ports:** `out` (the projection) plus the Host SDK's generic `bootstrap`
+  input and `snapshot` output. The source has no dependencies.
+  - The generator connects only `out`.
+  - A drasi-lib graph runs with the other two unconnected.
+
+**The projection, observed from the real prober's export:**
+- **Ids:**
+  - Service: `svc:ignite-workload`.
+  - Metric:
+    `metric:svc:ignite-workload:ignite_probe_status:deployment=EU-A,run_epoch=<run>`,
+    with identity attributes sorted.
+  - Relation: `reports:<metric id>`, `Service → Metric`.
+- **Labels:** `Service`, `Metric`, `REPORTS`.
+- **Metric properties:** `name`, `unit`, `value`, `observedAt` (the point's
+  time) and `receivedAt` (receipt; about 2 ms later). The deployment is only
+  in the id, so `deployment-health` reads it with `split(elementId(m), …)`.
+- **Allowlist:** `ignite_probe_up` and `ignite_probe_latency_ms` are not
+  projected.
+
+**SDK level** (Host SDK load of the plugin; queries through drasi-core; all pass):
+- **Real prober (`probe.rs`, OTLP/HTTP protobuf) and `tests/otlp.py`** →
+  source → `deployment-health` → the rewritten `tile-deployments`,
+  `plan-bins` and `incident-failed`:
+  - Healthy;
+  - Failed;
+  - "Deployment failed: EU-A" after 3 s;
+  - Unknown after 8 s of silence;
+  - throttled;
+  - recovery.
+- **The demo's Collector image with `collector.yaml` + `collector-drasi.yaml`**
+  → OTLP/gRPC → the source's loopback listener.
+- **A drasi-lib computation graph wired as the generator wires it**
+  (`otel.out` → `deployment-health` → a chained `trueLater` query):
+  Failed, Unknown at about 9 s, recovery.
+
+**Generator and Server:**
+- `ignite-config` from `community-next` generates both modes against the
+  next-built plugins.
+- From `community-next` HEAD, both pass `drasi-server validate` with no
+  changes.
+  - `postgres`: 57 components.
+  - `otel`: 59 components, with `ignite_reports` dropped from the
+    PostgreSQL tables.
+
+**Generic, not OTel:** the merged Server requires each `sourceProgress`
+recipe to name its query's index resource. The port session added that in
+`community-next` `2fd85ab`; the live run below used the same recipe.
+
+**Live, on a throwaway next Server.** Setup:
+- Server on port 19821, OTel gRPC on loopback 19827;
+- throwaway PostgreSQL with the demo schema and its own publication and
+  slot;
+- throwaway Collector;
+- probes every second.
+
+| Step | Result |
+|---|---|
+| Probes for the run | `deployment-health` rows for all three; tiles Healthy; plan feasible, 0 moves (support → EU-A, batch → EU-B) |
+| EU-A probes Failed | Tile Failed within 1 s; the Rego policy and optimizer move batch → US-C and support → EU-B (2 moves) at once; the incident-failed row 2.8 s later |
+| EU-B stops reporting | `plan-bins` `unknown` and the tile Unknown 8.1 s later |
+| Everyone reports ok | Healthy, plan back to 0 moves, within 0.3 s |
+| `ignite_reports` | Never written; Drasi does not replicate it |
+| Server restart, probes running | API up at 14.6 s (PostgreSQL bootstrap); health from probes and the failure plan 2.8 s later |
+
