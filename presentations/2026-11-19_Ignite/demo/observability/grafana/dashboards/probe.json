@@ -1,6 +1,6 @@
 {
   "uid": "integration-probe",
-  "title": "Ignite integration probe - real HTTP telemetry",
+  "title": "Integration probe - real HTTP telemetry",
   "schemaVersion": 39,
   "version": 1,
   "refresh": "5s",

@@ -103,7 +103,7 @@ class Handler(BaseHTTPRequestHandler):
                 "http.request.method": "GET",
                 "http.route": "/probe",
                 "http.response.status_code": status,
-                "langfuse.trace.name": "Ignite integration probe",
+                "langfuse.trace.name": "Integration probe",
                 "langfuse.trace.metadata.request_id": request_id,
                 "langfuse.trace.metadata.synthetic": True,
             })

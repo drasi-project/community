@@ -1,9 +1,9 @@
 apiVersion: 1
 contactPoints:
   - orgId: 1
-    name: ignite-probe-webhook
+    name: integration-probe-webhook
     receivers:
-      - uid: ignite-probe-webhook
+      - uid: integration-probe-webhook
         type: webhook
         disableResolveMessage: false
         settings:
@@ -14,7 +14,7 @@ contactPoints:
 # Grafana's own no-data and query-error alerts, which would repeat a rule's summary.
 policies:
   - orgId: 1
-    receiver: ignite-probe-webhook
+    receiver: integration-probe-webhook
     group_by: [alertname]
     group_wait: 1s
     group_interval: 5s
@@ -23,15 +23,15 @@ policies:
       - receiver: incident-channel
         object_matchers: [["component", "=", "workload"], ["alertname", "!~", "DatasourceNoData|DatasourceError"]]
         continue: true
-      - receiver: ignite-probe-webhook
+      - receiver: integration-probe-webhook
 groups:
   - orgId: 1
     name: integration-probe
-    folder: Ignite
+    folder: AI platform
     interval: 10s
     rules:
       - uid: integration-probe-http-failure
-        title: Ignite probe HTTP failure
+        title: Integration probe HTTP failure
         condition: B
         for: 0s
         noDataState: NoData

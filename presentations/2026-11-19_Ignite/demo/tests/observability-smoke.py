@@ -133,7 +133,7 @@ def main():
             event for event in get(f"{probe}/events")
             if event["id"] > baseline
             and event["payload"]["status"] == status
-            and event["payload"].get("commonLabels", {}).get("alertname") == "Ignite probe HTTP failure"
+            and event["payload"].get("commonLabels", {}).get("alertname") == "Integration probe HTTP failure"
         ]
         return matching[0] if matching else None
 

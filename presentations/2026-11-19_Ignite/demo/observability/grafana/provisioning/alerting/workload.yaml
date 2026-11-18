@@ -23,7 +23,7 @@ contactPoints:
 groups:
   - orgId: 1
     name: support-workload
-    folder: Ignite
+    folder: AI platform
     interval: 10s
     rules:
       - uid: model-calls-failing
