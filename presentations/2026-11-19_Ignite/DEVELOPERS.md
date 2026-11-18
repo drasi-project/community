@@ -18,7 +18,8 @@ simulated.
    systems around it. It accepts support and summary requests, queues them, and
    its **gateway** sends each to the deployment its route names, among three
    **simulated model deployments** (EU-A, EU-B, US-C). A **health monitor**
-   checks each deployment every second. Two small APIs stand in for external
+   checks each deployment every second and exports what it found as
+   OpenTelemetry metrics (`ignite_probe_*`). Two small APIs stand in for external
    systems: a **change-approval tool** (`POST /approvals`, which only records an
    approval) and the gateway's **configuration API** (`POST /routes/apply`,
    `/approvals/{id}/reject`, `/approvals/{id}/verified`, called only by Drasi).
@@ -26,9 +27,12 @@ simulated.
    `POST /mattermost/actions`, which records the approval exactly as
    `POST /approvals` does (and updates the card); `POST /mattermost/approve-latest`
    presses Approve on the newest proposal card for the desk's backup button.
-   Every request, attempt, health report, scenario setting and approval is a row
-   in **PostgreSQL**. The AI service reads none of Drasi's results.
-2. **Drasi Server** reads PostgreSQL's change feed. Its continuous queries
+   Every request, attempt, scenario setting and approval is a row in
+   **PostgreSQL**. The AI service reads none of Drasi's results.
+2. **Drasi Server** reads PostgreSQL's change feed, and the health monitor's
+   probe metrics through its OpenTelemetry source (`IGNITE_HEALTH_SOURCE=otel`
+   in `ports.env`; with `postgres` the monitor writes `ignite_reports` and Drasi
+   reads health from PostgreSQL instead). Its continuous queries
    (Cypher) prepare the inputs for three continuous models (native plugins in
    `plugins/`): a Rego **policy**, and an **optimizer** on `good_lp` that
    produces the **plan** and the **what-if** (is there still a plan if any one
@@ -42,7 +46,8 @@ simulated.
    Langfuse's scores API; an SSE stream for the presenter desk; and the
    incident cards, posted to Mattermost's REST API as the `drasi` bot.
 4. The AI service also sends its own **telemetry** through the OpenTelemetry
-   Collector to Prometheus (metrics) and Langfuse (traces). **Grafana** shows
+   Collector to Prometheus (metrics) and Langfuse (traces), and the Collector
+   forwards the health probes to Drasi (`observability/collector-drasi.yaml`). **Grafana** shows
    both and raises the alerts, which also post to **Mattermost**'s
    `#incident-ai-support`, the incident channel where Drasi posts its incident
    cards.
@@ -58,7 +63,7 @@ configuration API are simulated. Everything else is real.
 ### Rules the code follows
 
 - **Unknown is never healthy.** Stale or missing evidence shows as Unknown: a
-  health report expires after 8 seconds (`drasi.trueLater`), the models emit
+  deployment's health expires 8 seconds after its last probe (`drasi.trueLater`), the models emit
   `unknown` rather than guess, and Grafana shows a Drasi tile only while the
   Prometheus reaction reports its input loaded (`drasi_reaction_input_ready`).
 - **Inputs, not answers.** Controls change inputs only. Policy, plans, approval
@@ -81,7 +86,7 @@ All paths are under `demo/` unless noted.
 
 | Path | What it is |
 |---|---|
-| `workloads/` | The AI service (`ignite-workloads`): gateway and retries (`main.rs`), simulated deployments and health monitor (`main.rs`), traffic (`traffic.rs`), demo controls and reset (`scenario.rs`), the approval tool and gateway configuration API (`external.rs`), telemetry (`telemetry.rs`) |
+| `workloads/` | The AI service (`ignite-workloads`): gateway and retries (`main.rs`), simulated deployments and health monitor (`main.rs`; its probe metrics in `probe.rs`), traffic (`traffic.rs`), demo controls and reset (`scenario.rs`), the approval tool and gateway configuration API (`external.rs`), telemetry (`telemetry.rs`) |
 | `settings/` | Crate `ignite-settings`: reads `ports.env` for every Rust program |
 | `drasi/policy/` | The placement rules (`ignite.rego`) and the configuration (`policy.json`) of Drasi's Rego policy, `drasi.standard/policy` (drasi-core crate `drasi-computation-transformer-policy`) |
 | `drasi/optimization/` | The placement model, its single-loss what-if and its preconditions: the configuration (`optimization.json`) of Drasi's optimization, `drasi.standard/optimization` (drasi-core crate `drasi-computation-transformer-optimization`, `good_lp` with `microlp`) |
@@ -152,6 +157,7 @@ regenerate them with `observability/grafana/dashboards.py` after changing it.
 | `IGNITE_DRASI_API_PORT` | 19421 | 18421 | Drasi Server API and UI (`/ui/`) |
 | `IGNITE_DRASI_METRICS_PORT` | 19423 | 18423 | Drasi Prometheus reaction (`/metrics`) |
 | `IGNITE_DRASI_SSE_PORT` | 19424 | 18424 | Drasi SSE reaction for the desk (`/events`, `/snapshot/{query}`) |
+| `IGNITE_DRASI_OTLP_PORT` | 19427 | 18427 | Drasi OpenTelemetry source (OTLP/gRPC, loopback), fed the health probes by the Collector |
 | `IGNITE_WORKLOAD_PORT` | 19500 | 18500 | AI service: gateway, controls, approval tool, gateway configuration |
 | `IGNITE_DEPLOYMENT_{EU_A,EU_B,US_C}_PORT` | 19531–19533 | 18531–18533 | Simulated deployments |
 | `IGNITE_UI_PORT` / `_UI_TEST_PORT` / `_UI_FIXTURE_PORT` | 19580 / 19581 / 19582 | 18580 / 18581 / 18582 | Slides and presenter desk; the browser tests' copy and fixture server |
@@ -163,6 +169,7 @@ regenerate them with `observability/grafana/dashboards.py` after changing it.
 | `IGNITE_PROJECT` | `ignite-native` | `ignite-observability` | Podman compose project and probe image name |
 | `IGNITE_PG_PUBLICATION`, `IGNITE_PG_SLOT` | `ignite_rework` | `ignite_native` | Logical replication read by Drasi |
 | `IGNITE_STORAGE_KEY` | `ignite-native-stage-v1` | `ignite-presentation-stage-v3` | Presenter stage in browser storage |
+| `IGNITE_HEALTH_SOURCE` | `otel` | `postgres` | Where Drasi learns deployment health: the probes' OpenTelemetry metrics, or `ignite_reports` rows. Read by the AI service, the Server configuration generator and `ops/observability-stack.sh` (which adds the Collector's Drasi pipeline) |
 
 Everything listens on loopback only and has no authentication. Don't expose it.
 
@@ -231,6 +238,7 @@ infeasible after the policy edit, "not if EU-B fails" at EU-A 50k).
 | `cd ui && npm test` | Slides and desk against a test fixture, at 1280×720 and 1920×1080: every slide inside the template's margins and above the caption line, dashboards and the incident channel ending at it, and the stage still working without the template assets; approving on a card (a stand-in channel page, `tests/mattermost-stand-in.html`, shows the fixture's cards) and through the desk's backup, including the out-of-date proposal rejected; and that `PRESENTER.md`'s script matches `notes.ts`. Builds into `ui/dist-test`, so it never replaces what a running demo serves |
 | `python3 observability/grafana/fixture.py [state]` | Serves sample `/metrics` for each tile state on the reaction's port, for checking Grafana; only while Drasi Server is stopped |
 | `python3 tests/release-test.py`, `python3 tests/native-runtime-test.py` | Release and bundle guards |
+| `python3 tests/otlp.py --self-test` | The tests' OTLP sender: protobuf encoding of a probe metric |
 
 **Against the running demo:** these read every answer from Drasi's outputs
 (`tests/drasi_outputs.py`: the desk stream, the Prometheus reaction and Server's
@@ -242,6 +250,7 @@ query results), never from the AI service.
 | `python3 tests/workload-integration.py` | The application and simulated deployments as Drasi sees them: deployment status, overdue requests and their history | Yes |
 | `python3 tests/workload-telemetry.py` | The application's metrics and Langfuse traces, Drasi's overdue metric, and Grafana's alerts on both | Yes |
 | `python3 tests/decision-integration.py` | Policy, plan and what-if | Yes |
+| `python3 tests/health-telemetry-integration.py` | Health from telemetry: probes through the Collector reach Drasi; Failed and the planner's move, Unknown after 8 s of silence, recovery; `ignite_reports` not written. Applies with `IGNITE_HEALTH_SOURCE=otel` | Yes; resets at the start and the end |
 | `python3 tests/mattermost-actions.py` | Mattermost's card buttons reach the approval tool (approve, reject, an earlier run's card), the desk's backup press, the projector sign-in | Yes: adds approvals Drasi rejects (made-up plans); deletes its cards |
 | `python3 tests/incident-channel-integration.py` | Drasi's incident cards in #incident-ai-support through the talk: failure, proposal, overdue, Out of date and the rejected stale approval, approve → Applied → Verified in the card's thread, at risk, restored; each posted once | Yes; resets at the start and the end (clears the channel) |
 | `python3 tests/recovery-integration.py` | Approval checked by Drasi, routes changed by its gateway reaction, stale rejection, verified recovery, annotations and scores | Yes |

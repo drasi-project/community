@@ -20,8 +20,9 @@ queue started climbing. About 20 seconds later the "Model calls failing" alert
 fired. Normal stuff, tells you something's broken.
 
 **Then the bottom row.** That's Decision Support, the Drasi row, and it was
-already ahead of the alert. Deployment status had EU-A as Failed, from its health
-checks. Recommended action already named a change: "Move summaries to US-C and
+already ahead of the alert. Deployment status had EU-A as Failed. Nobody told
+Drasi that: it worked it out from EU-A's health-check telemetry. Recommended
+action already named a change: "Move summaries to US-C and
 support to EU-B". And it was in #incident-ai-support before the alert had even
 fired: Drasi had posted "Deployment failed: EU-A", and right under it the proposed
 change, with an Approve button.

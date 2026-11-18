@@ -201,7 +201,7 @@ Say it in your own words.
 
 ### 3. Drasi in one picture (1½ minutes)
 
-1. **Drasi: change-driven computation.** Drasi is open-source change-driven computation, in three parts. Sources bring in every change as it happens: here, from the AI service's database. Continuous models do the work: continuous queries keep a result up to date as changes arrive, and as time passes, and policy and optimization models run logic on those results, re-running whenever an input changes. Reactions deliver each change to other systems.
+1. **Drasi: change-driven computation.** Drasi is open-source change-driven computation, in three parts. Sources bring in every change as it happens: here, from the AI service's database and from its health-check telemetry. Continuous models do the work: continuous queries keep a result up to date as changes arrive, and as time passes, and policy and optimization models run logic on those results, re-running whenever an input changes. Reactions deliver each change to other systems.
 2. **Drasi: change-driven computation.** What's what. Drasi does the hard part: it keeps results up to date incrementally as changes arrive, re-checks them when time passes a deadline, and re-runs the models whenever their inputs change. For this demo we wrote three plugins: a policy model that runs Rego rules, an optimizer for the planner and the what-if, and a reaction that publishes answers to Prometheus. The rules and settings are their configuration. The AI service, its change-approval tool and its gateway configuration API are the systems Drasi works with. 'Without polling' is about computing the answers: nothing is recomputed on a schedule. Health checks still run every second, as in any system, and Prometheus and Grafana still collect and draw on their own schedule; Drasi reacts to what changes.
 
 **If it breaks:** Carry on.
@@ -212,7 +212,7 @@ Say it in your own words.
    - **Watch for:** Charts moving (traffic started on the walk-in beat; if the desk says Traffic: stopped, press Start demo traffic in All demo controls).
 2. **Grafana · Operations.** The top row, AI Deployments, is ordinary monitoring, measured from real requests: calls, errors, answer time, the support queue and Grafana alerts. OpenTelemetry, Prometheus and Grafana; nothing new.
    - **Watch for:** Support errors 0%, Support queue 0 to 2 (green).
-3. **Grafana · Operations.** The bottom row, Decision Support, is Drasi's answers, worked out from changes in the AI service's database rather than from metrics. The service records every request and attempt, and checks each deployment's health every second. Drasi turns that into Decision Support: overdue support requests, each deployment's status, the status of any change, the recommended action, and whether we'd survive losing any one deployment. A Drasi reaction publishes them as ordinary Prometheus metrics, so you can alert on them like anything else; another posts to the team's incident channel when something needs them. No new tool to watch: the answers arrive where you already look.
+3. **Grafana · Operations.** The bottom row, Decision Support, is Drasi's answers, worked out from changes as they happen: in the AI service's database, and in its health-check telemetry. The service records every request and attempt in its database, and checks each deployment's health every second, sending the result as ordinary OpenTelemetry metrics. Drasi turns that into Decision Support: overdue support requests, each deployment's status, the status of any change, the recommended action, and whether we'd survive losing any one deployment. A Drasi reaction publishes them as ordinary Prometheus metrics, so you can alert on them like anything else; another posts to the team's incident channel when something needs them. No new tool to watch: the answers arrive where you already look.
    - **Watch for:** Support overdue 0, all deployments Healthy, Change status: No change in progress, Recommended action: None, Failover readiness: Survives losing any one deployment.
 
 **If it breaks:** If the charts are empty, traffic isn't running: press Start demo traffic and keep talking.
@@ -222,7 +222,7 @@ Say it in your own words.
 1. **Grafana · Operations.** Now I'll make EU-A, the deployment serving customer support, fail.
    - **Press:** Fail EU-A
    - **Watch for:** Within about 8 seconds: Deployment status EU-A Failed, and Recommended action names a change.
-2. **Grafana · Operations.** Look at the bottom row first, Decision Support: EU-A Failed, and Recommended action already names a fix: move summaries to US-C and support to EU-B. Drasi has worked out a change that fits the rules. We'll come back to it.
+2. **Grafana · Operations.** Look at the bottom row first, Decision Support: EU-A Failed, and Recommended action already names a fix: move summaries to US-C and support to EU-B. Nobody told Drasi EU-A was down: the health checks are ordinary OpenTelemetry metrics, and Drasi turned them into Failed, as it would turn silence into Unknown. And it has worked out a change that fits the rules. We'll come back to it.
    - **Watch for:** Recommended action: Move summaries to US-C and support to EU-B (orange).
 3. **Mattermost · #incident-ai-support.** The team doesn't live on a dashboard, though. This is their incident channel in Mattermost. Drasi posted here as soon as EU-A failed, and its proposed change is already waiting, with an Approve button. Grafana hasn't alerted yet. We'll come back to the proposal.
    - **Watch for:** Red card Deployment failed: EU-A, then the orange Proposed change card with Approve and Reject, the newest at the bottom.
@@ -305,7 +305,7 @@ Say it in your own words.
 | Customer support / document summaries | The two workloads: support needs 60k, summaries 80k |
 | Plan | Where each workload should run. Drasi's planner proposes one; you approve it, and Drasi applies it if it's still current |
 | Policy | The rules: support only in Europe; summaries anywhere |
-| Source | How Drasi hears about changes; here, the database's live list of changes |
+| Source | How Drasi hears about changes; here, the database's live list of changes and the health checks' OpenTelemetry metrics |
 | Continuous query | A question whose answer Drasi keeps up to date as data changes and time passes |
 | Continuous model | Logic that Drasi re-runs when its inputs change: here a Rego policy, and an optimizer for the planner and the what-if |
 | Reaction | Delivers each change in an answer to another system: here Prometheus, the gateway's configuration API, Grafana, Langfuse and the presenter desk |
@@ -320,7 +320,7 @@ Say it in your own words.
 | Isn't trueLater just a timer? | It's a re-check of one item at one moment. The claim is no scheduled scans or recomputation, not no clock. |
 | Grafana refreshes every 5 seconds. Isn't that polling? | That's Prometheus and Grafana collecting and drawing, as they always do. Deciding who is late, what's allowed and which plan fits happens in Drasi as changes and deadlines arrive. |
 | Was the alert slow on purpose? | The alert is measured over a short window, as most are. The point isn't speed: Drasi has a plan that fits policy, not just a signal. |
-| Does it only work with PostgreSQL? | No. Drasi has sources for other databases, Kafka, Kubernetes, OpenTelemetry and HTTP. This demo uses PostgreSQL's change feed. |
+| Does it only work with PostgreSQL? | No. Drasi has sources for other databases, Kafka, Kubernetes, OpenTelemetry and HTTP. This demo uses two: PostgreSQL's change feed, and OpenTelemetry for the deployments' health checks. |
 | Are the policy, planner and what-if part of Drasi? | Not yet built in: they're plugins written for this demo, in the repository. One runs Rego rules; the other is an optimizer on the open-source good_lp solver. Both are generic: the rules, workloads and capacities are configuration. Drasi runs them as continuous models and re-runs them when their inputs change. |
 | Who changes the routes? | Drasi's reaction calls the gateway's configuration API, only for an approval that still matches Drasi's current plan. The AI service just applies the call, and refuses it if the scenario changed in between. |
 | How do the answers reach Grafana? | A Drasi reaction keeps every answer as a Prometheus metric. Prometheus scrapes it and Grafana shows it. |
@@ -349,7 +349,7 @@ what it shows.
 | | Model calls by workload (chart) | Answered and failed calls for each workload |
 | | Support requests waiting (chart) | Orange: waiting. Red: overdue, from Drasi. The red line trails the orange one by the 15-second deadline |
 | Decision Support (bottom: Drasi) | Support overdue | Support requests past their 15-second deadline |
-| | Deployment status | Each deployment's latest health report: Healthy, Over quota or Failed; Unknown if it has been silent for 8 seconds |
+| | Deployment status | Each deployment's health as Drasi derives it from its health-probe telemetry: Healthy, Over quota or Failed; Unknown if its probes have been silent for 8 seconds |
 | | Change status | No change in progress; Awaiting approval; Approved, applying; Applied, verifying; Verified (the backlog cleared and support is answered on the new route); Rejected (the facts changed) |
 | | Recommended action | None; the proposed change, for example **Move summaries to US-C and support to EU-B** (approve it on its card in #incident-ai-support); **No change fits policy and capacity**; **Add capacity: losing EU-B leaves support nowhere to run** |
 | | Failover readiness | If any one deployment failed, would every workload still have somewhere allowed to run? **No** names the deployment whose loss would hurt. **Already one down** while a deployment has failed |
@@ -364,7 +364,7 @@ The newest post is at the bottom.
 
 | Card | Colour | When |
 |---|---|---|
-| Deployment failed: EU-A | red | A deployment has reported Failed for 3 seconds |
+| Deployment failed: EU-A | red | A deployment's probes have shown Failed for 3 seconds |
 | Support requests overdue | red | Support requests have passed their 15-second deadline; links to the dashboard tile |
 | Proposed change: … | orange | Drasi's plan for the current facts, with Why, Policy, Capacity and Based on, and **Approve** / **Reject**. After a press it says who approved or rejected it, and its buttons go |
 | Out of date: the facts changed | grey | The proposal above no longer matches Drasi's plan; approving it would be rejected. Now says the new change or **No valid plan** |
