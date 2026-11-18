@@ -291,7 +291,7 @@ After changing a port, rebuild (`./ops/native-build.sh` and `npm run build` in
   probes as OpenTelemetry metrics, the Collector forwards them to Drasi's
   OpenTelemetry source on `IGNITE_DRASI_OTLP_PORT`, and Drasi derives Healthy,
   Over quota, Failed and Unknown itself.
-- `postgres` (the fallback): the health monitor writes `ignite_reports` rows,
+- `postgres` (the fallback): the health monitor writes `deployment_health_reports` rows,
   and Drasi reads them through its PostgreSQL source.
 
 To change it, stop terminals 1 and 2, edit the line, then:

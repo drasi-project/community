@@ -25,7 +25,7 @@ DEMO = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location("runtime", DEMO / "ops/native-runtime.py")
 runtime = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(runtime)
-BASE = settings.url("DRASI_API")+"/api/v1/instances/ignite"
+BASE = settings.url("DRASI_API")+"/api/v1/instances/ai-ops"
 EVIDENCE = DEMO / ".native/evidence"
 
 
@@ -37,7 +37,7 @@ def api(path):
 class Attachment:
     def __init__(self, name):
         self.connection = http.client.HTTPConnection("127.0.0.1", settings.port("DRASI_API"), timeout=35)
-        self.connection.request("GET", "/api/v1/instances/ignite/queries/" + name + "/attach")
+        self.connection.request("GET", "/api/v1/instances/ai-ops/queries/" + name + "/attach")
         self.response = self.connection.getresponse()
         assert self.response.status == 200, self.response.read()
         self.socket = self.connection.sock
@@ -175,11 +175,11 @@ def main():
                       "tile queries -> Prometheus and SSE reactions")
 
         d.configure(capacity={"EU-B": 90000})
-        d.metric_until("ignite_drasi_deployment_capacity_tpm", lambda v: v == 90000, deployment="EU-B")
+        d.metric_until("drasi_deployment_capacity_tpm", lambda v: v == 90000, deployment="EU-B")
         passed.append("a scenario change propagates through change capture to the reaction")
 
         d.control("fail")
-        d.metric_until("ignite_drasi_deployment_status", lambda v: v == 2, deployment="EU-A")
+        d.metric_until("drasi_deployment_health_status", lambda v: v == 2, deployment="EU-A")
         with d.DeskStream(["plan-results"]) as stream:
             plan = stream.until("plan-results", lambda r: r and r[0]["state"] == "feasible" and r[0]["moves"] > 0)[0]
         server.stop()
@@ -188,8 +188,8 @@ def main():
         approval = d.approve(plan)
         server.start()
         d.wait(ready, 60, "every input ready after restart")
-        d.metric_until("ignite_drasi_deployment_capacity_tpm", lambda v: v == 95000, deployment="EU-B")
-        d.metric_until("ignite_drasi_deployment_status", lambda v: v == 2, deployment="EU-A")
+        d.metric_until("drasi_deployment_capacity_tpm", lambda v: v == 95000, deployment="EU-B")
+        d.metric_until("drasi_deployment_health_status", lambda v: v == 2, deployment="EU-A")
         with d.DeskStream(["plan-results", "tile-action", "tile-last-approval", "overdue-tasks"]) as stream:
             stream.until("overdue-tasks", lambda r: any(row["id"] == body["id"] for row in r), 30)
             row = stream.until("tile-last-approval", lambda r: r and r[0]["approval"] == approval
@@ -204,7 +204,7 @@ def main():
         runtime.sql(f"SELECT pg_terminate_backend(active_pid) FROM pg_replication_slots "
                     f"WHERE slot_name='{settings.SLOT}' AND active_pid IS NOT NULL;")
         d.configure(capacity={"EU-B": 100000})
-        d.metric_until("ignite_drasi_deployment_capacity_tpm", lambda v: v == 100000, 60, deployment="EU-B")
+        d.metric_until("drasi_deployment_capacity_tpm", lambda v: v == 100000, 60, deployment="EU-B")
         passed.append("PostgreSQL replication reconnect resumes change capture")
 
         d.reset()

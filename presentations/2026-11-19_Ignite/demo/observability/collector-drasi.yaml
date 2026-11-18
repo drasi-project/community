@@ -3,7 +3,7 @@
 # --config; the Collector merges it into collector.yaml. It only adds components and a
 # pipeline, so the existing metrics and traces pipelines are unchanged.
 #
-# The AI service's health probes (ignite_probe_*) go to Drasi's OpenTelemetry source on the
+# The AI service's health probes (deployment_health_probe_*) go to Drasi's OpenTelemetry source on the
 # host, over OTLP/gRPC. The source listens on loopback, which host.containers.internal reaches
 # (as Prometheus reaches Drasi's metrics reaction).
 processors:
@@ -12,7 +12,7 @@ processors:
     error_mode: ignore
     metrics:
       metric:
-        - 'not IsMatch(name, "^ignite_probe_")'
+        - 'not IsMatch(name, "^deployment_health_probe_")'
 exporters:
   otlp_grpc/drasi:
     endpoint: host.containers.internal:${env:IGNITE_DRASI_OTLP_PORT}

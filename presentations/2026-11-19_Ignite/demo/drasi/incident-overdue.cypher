@@ -1,4 +1,4 @@
-MATCH (c:SupportOverdue)-[:OVERDUE_SCENARIO]->(s:ignite_scenario)
+MATCH (c:SupportOverdue)-[:OVERDUE_CONFIG]->(s:routing_config)
 WHERE c.run_epoch = s.run_epoch
 WITH s, toInteger(c.overdue) AS overdue,
      drasi.previousDistinctValue(CASE WHEN c.overdue > 0 THEN 'overdue' ELSE toString(toInteger(c.next_deadline)) END) AS clear_until,

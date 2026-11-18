@@ -1,7 +1,7 @@
 {
   "stream": "policy/out",
-  "modules": [{ "name": "ignite.rego", "source": "<the text of ignite.rego; the config generator inlines it>" }],
-  "query": "data.ignite.assessment",
+  "modules": [{ "name": "placement.rego", "source": "<the text of placement.rego; the config generator inlines it>" }],
+  "query": "data.placement.assessment",
   "labels": ["PolicyInput"],
   "input": {
     "subject": {

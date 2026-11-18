@@ -1,6 +1,6 @@
-MATCH (p:PlanResult)-[:PLAN_SCENARIO]->(s:ignite_scenario),
-      (f:DeploymentFacts)-[:DEPLOYMENT_FACTS_SCENARIO]->(s),
-      (g:PolicyFacts)-[:POLICY_FACTS_SCENARIO]->(s)
+MATCH (p:PlanResult)-[:PLAN_CONFIG]->(s:routing_config),
+      (f:DeploymentFacts)-[:DEPLOYMENT_FACTS_CONFIG]->(s),
+      (g:PolicyFacts)-[:POLICY_FACTS_CONFIG]->(s)
 WHERE p.run_epoch = s.run_epoch AND f.run_epoch = s.run_epoch AND g.run_epoch = s.run_epoch
 WITH p, s, f, g,
      split(coalesce(drasi.previousDistinctValue(p.run_epoch + '|' + p.state + '|' + toString(p.moves) + '|' + p.candidate_id), '') + '|||', '|') AS was

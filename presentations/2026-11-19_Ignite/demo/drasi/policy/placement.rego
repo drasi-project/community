@@ -1,11 +1,11 @@
-package ignite
+package placement
 
 import rego.v1
 
-# Placement policy for the Ignite graph, evaluated by drasi.standard/policy
+# Placement policy for the AI platform, evaluated by drasi.standard/policy
 # once for every workload (input.subject) and deployment (input.target) pair.
 # input.destinations lists the deployments the operator currently allows this
-# workload to use (rows of ignite_policy_destinations). Changing those rows
+# workload to use (rows of data_residency_policy). Changing those rows
 # is a data change; changing this module is a configuration change.
 
 allowed_destination if input.target.id in input.destinations

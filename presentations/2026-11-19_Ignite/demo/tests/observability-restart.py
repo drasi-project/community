@@ -47,7 +47,7 @@ def main():
     assert any(event["id"] == old["firing"]["id"] for event in events), "Historical webhook lost"
     auth = base64.b64encode(f"admin:{env['GRAFANA_ADMIN_PASSWORD']}".encode()).decode()
     params = urllib.parse.urlencode({
-        "query": "ignite_probe_http_requests_total",
+        "query": "integration_probe_http_requests_total",
         "start": datetime.fromisoformat(old["started_at"]).timestamp(),
         "end": datetime.fromisoformat(old["finished_at"]).timestamp(),
         "step": "2",

@@ -1,6 +1,6 @@
-MATCH (a:ignite_approvals)-[:APPROVAL_SCENARIO]->(s:ignite_scenario),
-      (rs:ignite_routes)-[:ROUTE_SCENARIO]->(s),
-      (rb:ignite_routes)-[:ROUTE_SCENARIO]->(s)
+MATCH (a:change_approvals)-[:APPROVAL_CONFIG]->(s:routing_config),
+      (rs:workload_routes)-[:ROUTE_CONFIG]->(s),
+      (rb:workload_routes)-[:ROUTE_CONFIG]->(s)
 WHERE a.run_epoch = s.run_epoch AND rs.workload = 'support' AND rb.workload = 'batch'
   AND (a.status = 'applied' OR a.status = 'verified' OR a.status = 'rejected')
   AND drasi.trueLater(true, a.decided_ms + 1000)

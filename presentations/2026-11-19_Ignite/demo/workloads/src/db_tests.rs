@@ -40,7 +40,7 @@ async fn approval(id: &str) -> Value {
     db().await
         .unwrap()
         .query_one(
-            "SELECT to_jsonb(a) FROM ignite_approvals a WHERE id=$1",
+            "SELECT to_jsonb(a) FROM change_approvals a WHERE id=$1",
             &[&id],
         )
         .await
@@ -86,7 +86,7 @@ async fn stand_in_apis_follow_the_contract() {
     let applied = approval(&a1).await;
     assert_eq!((applied["status"].as_str(), applied["applied_revision"].as_i64()), (Some("applied"), Some(2)));
     let route_approval: Option<String> = db().await.unwrap()
-        .query_one("SELECT approval FROM ignite_routes WHERE workload='support'", &[]).await.unwrap().get(0);
+        .query_one("SELECT approval FROM workload_routes WHERE workload='support'", &[]).await.unwrap().get(0);
     assert_eq!(route_approval.as_deref(), Some(a1.as_str()));
 
     let conflict = ok(external::apply(delivery(&format!("{tag}/d3")), body(apply(&a2, "c2", "b2", 1))).await).await;

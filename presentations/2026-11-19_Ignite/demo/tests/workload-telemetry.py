@@ -23,18 +23,18 @@ def firing(title):
 
 def main():
     auth = d.grafana_auth()
-    dashboard = d.get(settings.url("GRAFANA") + "/api/dashboards/uid/ignite-workload", auth)
+    dashboard = d.get(settings.url("GRAFANA") + "/api/dashboards/uid/ai-operations", auth)
     assert {"Support errors", "Support queue", "Support overdue", "Workload status", "Recommended action", "Alerts firing"} <= {
         panel["title"] for panel in dashboard["dashboard"]["panels"]}
     errors = settings.url("GRAFANA") + "/api/datasources/proxy/uid/ignite-prometheus/api/v1/query?" + \
-        urllib.parse.urlencode({"query": 'sum(ignite_workload_requests_total{workload="support",endpoint="EU-A",status="503"})'})
+        urllib.parse.urlencode({"query": 'sum(ai_gateway_model_calls_total{workload="support",endpoint="EU-A",status="503"})'})
 
     def measured():
         rows = d.get(errors, auth)["data"]["result"]
         return float(rows[0]["value"][1]) if rows else 0
 
     d.reset()
-    evidence = {"dashboard_uid": "ignite-workload"}
+    evidence = {"dashboard_uid": "ai-operations"}
     try:
         # Start from resolved alerts so the firing below is new.
         warm, _ = d.submit()
@@ -44,13 +44,13 @@ def main():
         d.control("fail")
         started = time.time()
         body, trace = d.submit()
-        evidence.update({"task_id": body["id"], "trace": trace})
+        evidence.update({"request_id": body["id"], "trace": trace})
         d.wait(lambda: measured() > baseline, 60, "the application's 503 metric in Grafana's Prometheus")
         evidence["failing"] = d.wait(lambda: firing(FAILING), 100, "Grafana fires 'Model calls failing'", 2)
         evidence["failing_seconds"] = round(time.time() - started, 1)
 
-        d.metric_until("ignite_drasi_overdue_requests", lambda v: v and v >= 1, 40, workload="support")
-        scraped = d.wait(lambda: [r for r in d.prometheus('ignite_drasi_overdue_requests{workload="support"} >= 1')],
+        d.metric_until("drasi_requests_overdue", lambda v: v and v >= 1, 40, workload="support")
+        scraped = d.wait(lambda: [r for r in d.prometheus('drasi_requests_overdue{workload="support"} >= 1')],
                          20, "Prometheus scraped Drasi's overdue count")
         assert scraped[0]["metric"].get("job") == "drasi", scraped
         evidence["overdue"] = d.wait(lambda: firing(OVERDUE), 100, "Grafana fires the overdue alert", 2)
@@ -58,7 +58,7 @@ def main():
 
         d.control("restore")
         d.wait(lambda: d.task(body["id"])["task"]["completed_ms"], 30, "the request completes on EU-A")
-        d.metric_until("ignite_drasi_overdue_requests", lambda v: not v, 20, workload="support")
+        d.metric_until("drasi_requests_overdue", lambda v: not v, 20, workload="support")
         url = settings.url("LANGFUSE") + "/api/public/v2/observations?" + urllib.parse.urlencode(
             {"traceId": trace["trace_id"], "fields": "core,basic,metadata", "limit": 100})
 
@@ -66,7 +66,7 @@ def main():
             rows = [r for r in d.get(url, d.ENV["LANGFUSE_AUTH_BASE64"]).get("data", [])
                     if r.get("traceId") == trace["trace_id"]]
             attempts = [r for r in rows if r["name"].startswith("attempt · ")
-                        and r.get("metadata", {}).get("task_id") == body["id"]]
+                        and r.get("metadata", {}).get("request_id") == body["id"]]
             root = [r for r in rows if r["name"] == "request received" and r["id"] == trace["root_span_id"]
                     and r["isRootObservation"]]
             return rows if attempts and root else None
@@ -80,7 +80,7 @@ def main():
             "requests overdue (Drasi)'",
             "the request's Langfuse trace has its attempts and root span",
             "restoring EU-A completes the request; Drasi's count returns to 0 and both alerts resolve"],
-            "task_id": body["id"], "evidence": str(path)}, indent=2))
+            "request_id": body["id"], "evidence": str(path)}, indent=2))
     finally:
         d.control("restore")
 

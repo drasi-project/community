@@ -19,7 +19,7 @@ simulated.
    its **gateway** sends each to the deployment its route names, among three
    **simulated model deployments** (EU-A, EU-B, US-C). A **health monitor**
    checks each deployment every second and exports what it found as
-   OpenTelemetry metrics (`ignite_probe_*`). Two small APIs stand in for external
+   OpenTelemetry metrics (`deployment_health_probe_*`). Two small APIs stand in for external
    systems: a **change-approval tool** (`POST /approvals`, which only records an
    approval) and the gateway's **configuration API** (`POST /routes/apply`,
    `/approvals/{id}/reject`, `/approvals/{id}/verified`, called only by Drasi).
@@ -31,7 +31,7 @@ simulated.
    **PostgreSQL**. The AI service reads none of Drasi's results.
 2. **Drasi Server** reads PostgreSQL's change feed, and the health monitor's
    probe metrics through its OpenTelemetry source (`IGNITE_HEALTH_SOURCE=otel`
-   in `ports.env`; with `postgres` the monitor writes `ignite_reports` and Drasi
+   in `ports.env`; with `postgres` the monitor writes `deployment_health_reports` and Drasi
    reads health from PostgreSQL instead). Its continuous queries
    (Cypher) prepare the inputs for two of Drasi's standard continuous models,
    configured by files in `drasi/`: a Rego **policy** (`drasi.standard/policy`),
@@ -75,7 +75,7 @@ configuration API are simulated. Everything else is real.
   from a snapshot.
 - **Epoch and revision.** A scenario reset starts a new `run_epoch`; every
   change to routes, capacity or allowed destinations raises
-  `ignite_scenario.revision`. A plan carries its revision and a `basis` hash of
+  `routing_config.revision`. A plan carries its revision and a `basis` hash of
   the facts it solved, so an approval that no longer matches is rejected.
 - **Idempotent reactions.** The gateway configuration API records each
   `x-drasi-delivery-id`, acts only on a `pending` (or, for verified, `applied`)
@@ -89,7 +89,7 @@ All paths are under `demo/` unless noted.
 |---|---|
 | `workloads/` | The AI service (`ignite-workloads`): gateway and retries (`main.rs`), simulated deployments and health monitor (`main.rs`; its probe metrics in `probe.rs`), traffic (`traffic.rs`), demo controls and reset (`scenario.rs`), the approval tool and gateway configuration API (`external.rs`), telemetry (`telemetry.rs`) |
 | `settings/` | Crate `ignite-settings`: reads `ports.env` for every Rust program |
-| `drasi/policy/` | The placement rules (`ignite.rego`) and the configuration (`policy.json`) of Drasi's Rego policy, `drasi.standard/policy` (drasi-core crate `drasi-computation-transformer-policy`) |
+| `drasi/policy/` | The placement rules (`placement.rego`) and the configuration (`policy.json`) of Drasi's Rego policy, `drasi.standard/policy` (drasi-core crate `drasi-computation-transformer-policy`) |
 | `drasi/optimization/` | The placement model, its single-loss what-if and its preconditions: the configuration (`optimization.json`) of Drasi's optimization, `drasi.standard/optimization` (drasi-core crate `drasi-computation-transformer-optimization`, `good_lp` with `microlp`) |
 | `plugins/prometheus` | Prometheus reaction, `ignite/prometheus-exporter` (crate `ignite-prometheus`) |
 | `plugins/prometheus/examples/ignite.json` | The Prometheus reaction's metric mapping in this graph |
@@ -97,7 +97,7 @@ All paths are under `demo/` unless noted.
 | `ops/config/` | Generates Drasi Server's configuration (`.native/server.json`): every source, query, model, reaction and connection |
 | `database/` | PostgreSQL schema (`schema.sql`, `workload.sql`) and scenario seed (`reset.sql`) |
 | `observability/` | Container configuration: Collector, Prometheus, Grafana dashboards, alerts and data source, and an integration test probe |
-| `observability/grafana/dashboards.py` | Generates the audience dashboard, `ignite-workload` (AI Deployments and Decision Support rows); `fixture.py` serves sample `/metrics` for each tile state |
+| `observability/grafana/dashboards.py` | Generates the audience dashboard, `ai-operations` (AI Deployments and Decision Support rows); `fixture.py` serves sample `/metrics` for each tile state |
 | `ui/` | The web app (Vite, React, Reveal.js) and its tests and scripts |
 | `../presentation/` | Slide content and speaker notes, built by `ui/` (see below) |
 | `tests/` | Integration and regression tests (Python) |
@@ -170,7 +170,7 @@ regenerate them with `observability/grafana/dashboards.py` after changing it.
 | `IGNITE_PROJECT` | `ignite-native` | `ignite-observability` | Podman compose project and probe image name |
 | `IGNITE_PG_PUBLICATION`, `IGNITE_PG_SLOT` | `ignite_rework` | `ignite_native` | Logical replication read by Drasi |
 | `IGNITE_STORAGE_KEY` | `ignite-native-stage-v1` | `ignite-presentation-stage-v3` | Presenter stage in browser storage |
-| `IGNITE_HEALTH_SOURCE` | `otel` | `postgres` | Where Drasi learns deployment health: the probes' OpenTelemetry metrics, or `ignite_reports` rows. Read by the AI service, the Server configuration generator and `ops/observability-stack.sh` (which adds the Collector's Drasi pipeline) |
+| `IGNITE_HEALTH_SOURCE` | `otel` | `postgres` | Where Drasi learns deployment health: the probes' OpenTelemetry metrics, or `deployment_health_reports` rows. Read by the AI service, the Server configuration generator and `ops/observability-stack.sh` (which adds the Collector's Drasi pipeline) |
 
 Everything listens on loopback only and has no authentication. Don't expose it.
 
@@ -186,7 +186,7 @@ only the one you changed, then reload the desk.
 | A continuous query | `drasi/<name>.cypher` | Rebuild; restart Server |
 | Which components exist or how they connect | `ops/config/src/main.rs` | Rebuild; restart Server |
 | An incident card's text or trigger | `drasi/incident-<card>.cypher` (every string is built there); its colour, field titles and buttons are `incident_routes` in `ops/config/src/main.rs` | `cargo test --locked -p ignite-config`; rebuild; restart Server |
-| Policy rules | `drasi/policy/ignite.rego` (its input and output mapping: `drasi/policy/policy.json`; what it decides: `drasi/policy-input.cypher`) | Rebuild; restart Server |
+| Policy rules | `drasi/policy/placement.rego` (its input and output mapping: `drasi/policy/policy.json`; what it decides: `drasi/policy-input.cypher`) | Rebuild; restart Server |
 | The optimizer's inputs, constraints, objectives, what-if or preconditions | `drasi/optimization/optimization.json` (its inputs: `drasi/plan-*.cypher`; its results: `plan-`, `assignment-`, `resilience-` and `loss-results.cypher`) | `cargo test --locked -p ignite-config`; rebuild; restart Server |
 | Which tile rows become which metrics | `plugins/prometheus/examples/ignite.json` (and Grafana, below) | Rebuild; restart Server |
 | The Prometheus reaction's code | `plugins/prometheus/src/` | Test the crate (below); rebuild; restart Server |
@@ -255,7 +255,7 @@ query results), never from the AI service.
 | `python3 tests/workload-integration.py` | The application and simulated deployments as Drasi sees them: deployment status, overdue requests and their history | Yes |
 | `python3 tests/workload-telemetry.py` | The application's metrics and Langfuse traces, Drasi's overdue metric, and Grafana's alerts on both | Yes |
 | `python3 tests/decision-integration.py` | Policy, plan and what-if | Yes |
-| `python3 tests/health-telemetry-integration.py` | Health from telemetry: probes through the Collector reach Drasi; Failed and the planner's move, Unknown after 8 s of silence, recovery; `ignite_reports` not written. Applies with `IGNITE_HEALTH_SOURCE=otel` | Yes; resets at the start and the end |
+| `python3 tests/health-telemetry-integration.py` | Health from telemetry: probes through the Collector reach Drasi; Failed and the planner's move, Unknown after 8 s of silence, recovery; `deployment_health_reports` not written. Applies with `IGNITE_HEALTH_SOURCE=otel` | Yes; resets at the start and the end |
 | `python3 tests/mattermost-actions.py` | Mattermost's card buttons reach the approval tool (approve, reject, an earlier run's card), the desk's backup press, the projector sign-in | Yes: adds approvals Drasi rejects (made-up plans); deletes its cards |
 | `python3 tests/incident-channel-integration.py` | Drasi's incident cards in #incident-ai-support through the talk: failure, proposal, overdue, Out of date and the rejected stale approval, approve → Applied → Verified in the card's thread, at risk, restored; each posted once | Yes; resets at the start and the end (clears the channel) |
 | `python3 tests/recovery-integration.py` | Approval checked by Drasi, routes changed by its gateway reaction, stale rejection, verified recovery, annotations and scores | Yes |
@@ -318,7 +318,7 @@ these commits beyond their upstream branch:
 | Issue | Effect | Status |
 |---|---|---|
 | A query fed by another query receives only that query's changes, not its bootstrap rows | Query-to-query edges are used only where the upstream's rows arrive live after startup: the models' results and the recovery chain (`recovery-task-context` and `recovery-observation-context` → `recovery-results`, a workaround: it should bootstrap from their snapshots). Tiles over rows that rarely change read PostgreSQL directly instead of an upstream query: `tile-capacity` joins the deployments and their health itself rather than reading `plan-bins`. These queries rebuild only when the whole graph starts, so restart all of Server, never one query | Open. Queries now have a `snapshot` output; try bootstrap edges from upstream queries in `ops/config/src/main.rs` |
-| Drasi Server's API lists no reactions (`GET …/instances/ignite/reactions` is empty) | The Server UI shows the queries and sources but none of the six native sinks; see `.native/server.json` | Drasi Server issue, not yet filed |
+| Drasi Server's API lists no reactions (`GET …/instances/ai-ops/reactions` is empty) | The Server UI shows the queries and sources but none of the six native sinks; see `.native/server.json` | Drasi Server issue, not yet filed |
 | Drasi Server UI requests component details by ID, but the API now expects names | The UI shows no query text or configuration | Drasi Server issue, not yet filed |
 | Drasi Server's expanded query view uses 14 px text | Too small to read on a projector; use browser zoom | Drasi Server issue, not yet filed |
 | Grafana's annotations API has no idempotency key | A retried post whose response was lost, or a Server restart within 30 s of an approval event, can add the same decision event twice (same tag) | Accepted for the demo |

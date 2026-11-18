@@ -37,10 +37,10 @@ def main():
         # A repeated delivery of the same card (a retried request, or the same row delivered
         # twice) must not post it again: Drasi's post carries pending_post_id = run/card id.
         post = d.mattermost(f"/posts/{failed['id']}")
-        assert post.get("pending_post_id") in (None, "", f"{epoch}/{failed['ignite_id']}"), post.get("pending_post_id")
+        assert post.get("pending_post_id") in (None, "", f"{epoch}/{failed['incident_card_id']}"), post.get("pending_post_id")
         replay = d.mattermost("/posts", token="IGNITE_MATTERMOST_BOT_TOKEN", body={
             "channel_id": post["channel_id"], "root_id": "", "message": "", "props": post["props"],
-            "pending_post_id": f"{epoch}/{failed['ignite_id']}"})
+            "pending_post_id": f"{epoch}/{failed['incident_card_id']}"})
         assert replay["id"] == failed["id"], f"a replayed failure card is the same post: {replay['id']} != {failed['id']}"
         assert [c["card"] for c in cards()].count("failed") == 1, "the replay posted nothing new"
         posted = card("overdue")
@@ -59,7 +59,7 @@ def main():
         assert field(proposal, "Capacity") == "healthy: EU-B 100k, US-C 100k · needed: support 60k, summaries 80k"
         assert [a["id"] for a in proposal["attachment"]["actions"]] == ["approve", "decline"]
         assert overdue["attachment"]["title"] == "Support requests overdue" and field(overdue, "Deadline") == "15 s"
-        assert [c["card"] for c in posted].count("failed") == 1, f"one failure card: {[c['ignite_id'] for c in posted]}"
+        assert [c["card"] for c in posted].count("failed") == 1, f"one failure card: {[c['incident_card_id'] for c in posted]}"
         checks.append("EU-A fails: the failure card (after 3 s), then the proposal with Approve and Reject "
                       "(policy and capacity from Drasi's queries), then support overdue; the failure card once, "
                       "and a replayed delivery of it is the same post")
@@ -82,7 +82,7 @@ def main():
         approved = d.api("/mattermost/approve-latest", {"run_epoch": epoch})
         assert approved["post_id"] == second["id"], approved
         verified = until(lambda cs: any(c["card"] == "outcome" and c["root_id"] == second["id"]
-                                        and c["ignite_id"].endswith("-verified") for c in cs),
+                                        and c["incident_card_id"].endswith("-verified") for c in cs),
                          "applied and verified in the thread", 60)
         replies = [c for c in verified if c["root_id"] == second["id"]]
         assert [c["attachment"]["title"] for c in replies] == [
@@ -105,7 +105,7 @@ def main():
 
         time.sleep(8)
         final = cards()
-        ids = [c["ignite_id"] for c in final]
+        ids = [c["incident_card_id"] for c in final]
         assert len(ids) == len(set(ids)), f"each card is posted once: {ids}"
         assert [c["card"] for c in final if c["root_id"]] == ["outcome"] * 3
         checks.append("every card posted once; only outcomes are thread replies")

@@ -1,4 +1,4 @@
-MATCH (p:PlanResult)-[:PLAN_SCENARIO]->(s:ignite_scenario)
+MATCH (p:PlanResult)-[:PLAN_CONFIG]->(s:routing_config)
 WHERE p.run_epoch = s.run_epoch
 WITH p, s,
      split(coalesce(drasi.previousDistinctValue(p.run_epoch + '|' + p.state + '|' + toString(p.moves) + '|'

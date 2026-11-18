@@ -355,8 +355,8 @@ mod tests {
             "listen": "127.0.0.1:0",
             "outputs": {"overdue": {"component": "tile-overdue"}, "action": {"component": "tile-action"}},
             "metrics": {
-                "overdue": [{"metric": "ignite_drasi_overdue_requests", "help": "Overdue.", "value": "value", "labels": {"workload": "workload"}}],
-                "action": [{"metric": "ignite_drasi_action_needed", "help": "Action.", "value": "value"}]
+                "overdue": [{"metric": "drasi_requests_overdue", "help": "Overdue.", "value": "value", "labels": {"workload": "workload"}}],
+                "action": [{"metric": "drasi_action_needed", "help": "Action.", "value": "value"}]
             }
         }))
     }
@@ -465,52 +465,52 @@ mod tests {
         // last-approval stays Loading: no series, ready 0.
         assert_eq!(
             exporter.render(),
-            r#"# HELP ignite_drasi_capacity_tpm Capacity in tokens per minute: total, on healthy deployments, and needed.
-# TYPE ignite_drasi_capacity_tpm gauge
-ignite_drasi_capacity_tpm{kind="healthy"} 200000
-ignite_drasi_capacity_tpm{kind="needed"} 140000
-ignite_drasi_capacity_tpm{kind="total"} 300000
-# HELP ignite_drasi_change_status Latest change: 0 none in progress, 1 awaiting approval, 2 approved and applying, 3 applied and verifying, 4 verified, 5 rejected, -1 unknown; text names the approved change.
-# TYPE ignite_drasi_change_status gauge
-ignite_drasi_change_status{text="Move summaries to US-C and support to EU-B"} 3
-# HELP ignite_drasi_deployment_capacity_tpm Configured capacity of each deployment, tokens per minute.
-# TYPE ignite_drasi_deployment_capacity_tpm gauge
-ignite_drasi_deployment_capacity_tpm{deployment="EU-A"} 100000
-ignite_drasi_deployment_capacity_tpm{deployment="EU-B"} 100000
-ignite_drasi_deployment_capacity_tpm{deployment="US-C"} 100000
-# HELP ignite_drasi_deployment_status Latest health report: 0 healthy, 1 throttled, 2 failed, -1 unknown.
-# TYPE ignite_drasi_deployment_status gauge
-ignite_drasi_deployment_status{deployment="EU-A"} 2
-ignite_drasi_deployment_status{deployment="EU-B"} 0
-ignite_drasi_deployment_status{deployment="US-C"} -1
-# HELP ignite_drasi_failover_readiness Failover readiness, described by the text label: 1 survives losing any one deployment, 0 at risk (lost and workload name the first loss that leaves no plan), 2 already degraded, -1 unknown.
-# TYPE ignite_drasi_failover_readiness gauge
-ignite_drasi_failover_readiness{lost="EU-B",text="",workload=""} 0
-# HELP ignite_drasi_overdue_requests Requests past their deadline and still unanswered, per workload.
-# TYPE ignite_drasi_overdue_requests gauge
-ignite_drasi_overdue_requests{workload="support"} 3
-# HELP ignite_drasi_policy_allowed Placement policy: 1 allowed, 0 not allowed, -1 unknown.
-# TYPE ignite_drasi_policy_allowed gauge
-ignite_drasi_policy_allowed{deployment="EU-A",workload="support"} 1
-ignite_drasi_policy_allowed{deployment="US-C",workload="support"} 0
-# HELP ignite_drasi_proposed_tpm Demand of each workload on the deployment Drasi's feasible plan assigns.
-# TYPE ignite_drasi_proposed_tpm gauge
-ignite_drasi_proposed_tpm{deployment="EU-B",workload="support"} 60000
-ignite_drasi_proposed_tpm{deployment="US-C",workload="batch"} 80000
-# HELP ignite_drasi_recommended_action Recommended action, named by the text label: 0 none, 1 approve the proposed change, 2 no change fits policy and capacity, 3 add capacity (at risk), -1 unknown.
-# TYPE ignite_drasi_recommended_action gauge
-ignite_drasi_recommended_action{text=""} 1
-# HELP ignite_drasi_recovery_state Recovery after an applied plan: 0 awaiting evidence, 1 verified, 2 nothing to verify, -1 unknown.
-# TYPE ignite_drasi_recovery_state gauge
-ignite_drasi_recovery_state 0
-# HELP ignite_drasi_running_tpm Demand of each workload on its configured deployment; negative when policy no longer allows it.
-# TYPE ignite_drasi_running_tpm gauge
-ignite_drasi_running_tpm{deployment="EU-A",workload="support"} 60000
-ignite_drasi_running_tpm{deployment="EU-B",workload="batch"} 80000
-# HELP ignite_drasi_workload_status Each workload where it runs now: 0 healthy, 1 over quota, 2 failing (its deployment failed), 3 not allowed there by policy, -1 unknown.
-# TYPE ignite_drasi_workload_status gauge
-ignite_drasi_workload_status{deployment="EU-A",name="Support",workload="support"} 2
-ignite_drasi_workload_status{deployment="EU-B",name="Summaries",workload="batch"} 0
+            r#"# HELP drasi_capacity_tpm Capacity in tokens per minute: total, on healthy deployments, and needed.
+# TYPE drasi_capacity_tpm gauge
+drasi_capacity_tpm{kind="healthy"} 200000
+drasi_capacity_tpm{kind="needed"} 140000
+drasi_capacity_tpm{kind="total"} 300000
+# HELP drasi_change_status Latest change: 0 none in progress, 1 awaiting approval, 2 approved and applying, 3 applied and verifying, 4 verified, 5 rejected, -1 unknown; text names the approved change.
+# TYPE drasi_change_status gauge
+drasi_change_status{text="Move summaries to US-C and support to EU-B"} 3
+# HELP drasi_deployment_capacity_tpm Configured capacity of each deployment, tokens per minute.
+# TYPE drasi_deployment_capacity_tpm gauge
+drasi_deployment_capacity_tpm{deployment="EU-A"} 100000
+drasi_deployment_capacity_tpm{deployment="EU-B"} 100000
+drasi_deployment_capacity_tpm{deployment="US-C"} 100000
+# HELP drasi_deployment_health_status Latest health report: 0 healthy, 1 throttled, 2 failed, -1 unknown.
+# TYPE drasi_deployment_health_status gauge
+drasi_deployment_health_status{deployment="EU-A"} 2
+drasi_deployment_health_status{deployment="EU-B"} 0
+drasi_deployment_health_status{deployment="US-C"} -1
+# HELP drasi_failover_readiness Failover readiness, described by the text label: 1 survives losing any one deployment, 0 at risk (lost and workload name the first loss that leaves no plan), 2 already degraded, -1 unknown.
+# TYPE drasi_failover_readiness gauge
+drasi_failover_readiness{lost="EU-B",text="",workload=""} 0
+# HELP drasi_placement_allowed Placement policy: 1 allowed, 0 not allowed, -1 unknown.
+# TYPE drasi_placement_allowed gauge
+drasi_placement_allowed{deployment="EU-A",workload="support"} 1
+drasi_placement_allowed{deployment="US-C",workload="support"} 0
+# HELP drasi_recommended_action Recommended action, named by the text label: 0 none, 1 approve the proposed change, 2 no change fits policy and capacity, 3 add capacity (at risk), -1 unknown.
+# TYPE drasi_recommended_action gauge
+drasi_recommended_action{text=""} 1
+# HELP drasi_recovery_state Recovery after an applied plan: 0 awaiting evidence, 1 verified, 2 nothing to verify, -1 unknown.
+# TYPE drasi_recovery_state gauge
+drasi_recovery_state 0
+# HELP drasi_requests_overdue Requests past their deadline and still unanswered, per workload.
+# TYPE drasi_requests_overdue gauge
+drasi_requests_overdue{workload="support"} 3
+# HELP drasi_workload_proposed_tpm Demand of each workload on the deployment Drasi's feasible plan assigns.
+# TYPE drasi_workload_proposed_tpm gauge
+drasi_workload_proposed_tpm{deployment="EU-B",workload="support"} 60000
+drasi_workload_proposed_tpm{deployment="US-C",workload="batch"} 80000
+# HELP drasi_workload_running_tpm Demand of each workload on its configured deployment; negative when policy no longer allows it.
+# TYPE drasi_workload_running_tpm gauge
+drasi_workload_running_tpm{deployment="EU-A",workload="support"} 60000
+drasi_workload_running_tpm{deployment="EU-B",workload="batch"} 80000
+# HELP drasi_workload_status Each workload where it runs now: 0 healthy, 1 over quota, 2 failing (its deployment failed), 3 not allowed there by policy, -1 unknown.
+# TYPE drasi_workload_status gauge
+drasi_workload_status{deployment="EU-A",name="Support",workload="support"} 2
+drasi_workload_status{deployment="EU-B",name="Summaries",workload="batch"} 0
 # HELP drasi_reaction_input_ready 1 once the output's snapshot is loaded and its changes are applied; 0 otherwise.
 # TYPE drasi_reaction_input_ready gauge
 drasi_reaction_input_ready{output="action"} 1
@@ -589,9 +589,9 @@ drasi_reaction_input_ready{output="workloads"} 1
         assert_eq!(
             series(&exporter),
             [
-                "ignite_drasi_action_needed 1",
-                "ignite_drasi_overdue_requests{workload=\"batch\"} 0",
-                "ignite_drasi_overdue_requests{workload=\"support\"} 1",
+                "drasi_action_needed 1",
+                "drasi_requests_overdue{workload=\"batch\"} 0",
+                "drasi_requests_overdue{workload=\"support\"} 1",
             ]
         );
         // Replace, patch (set and remove), delete.
@@ -621,8 +621,8 @@ drasi_reaction_input_ready{output="workloads"} 1
         assert_eq!(
             series(&exporter),
             [
-                "ignite_drasi_overdue_requests{workload=\"batch\"} 2",
-                "ignite_drasi_overdue_requests{workload=\"support\"} 4",
+                "drasi_requests_overdue{workload=\"batch\"} 2",
+                "drasi_requests_overdue{workload=\"support\"} 4",
             ]
         );
         exporter.apply(
@@ -634,8 +634,8 @@ drasi_reaction_input_ready{output="workloads"} 1
         assert_eq!(
             series(&exporter),
             [
-                "ignite_drasi_action_needed -1.5",
-                "ignite_drasi_overdue_requests{workload=\"batch\"} 2"
+                "drasi_action_needed -1.5",
+                "drasi_requests_overdue{workload=\"batch\"} 2"
             ]
         );
         // A patch of an unknown row means the rows no longer match: reload.
@@ -652,7 +652,7 @@ drasi_reaction_input_ready{output="workloads"} 1
             Applied::ReloadNeeded
         );
         assert!(!exporter.is_ready("overdue"));
-        assert_eq!(series(&exporter), ["ignite_drasi_action_needed -1.5"]);
+        assert_eq!(series(&exporter), ["drasi_action_needed -1.5"]);
     }
 
     #[test]
@@ -674,11 +674,11 @@ drasi_reaction_input_ready{output="workloads"} 1
         );
         let text = exporter.render();
         assert!(
-            text.contains("ignite_drasi_overdue_requests{workload=\"\"} 1\n"),
+            text.contains("drasi_requests_overdue{workload=\"\"} 1\n"),
             "{text}"
         );
         assert!(
-            text.contains("ignite_drasi_overdue_requests{workload=\"7\"} 0\n"),
+            text.contains("drasi_requests_overdue{workload=\"7\"} 0\n"),
             "{text}"
         );
         assert!(
@@ -701,7 +701,7 @@ drasi_reaction_input_ready{output="workloads"} 1
         );
         assert!(exporter
             .render()
-            .contains("ignite_drasi_overdue_requests{workload=\"a\\\"b\\\\c\\nd\"} 1\n"));
+            .contains("drasi_requests_overdue{workload=\"a\\\"b\\\\c\\nd\"} 1\n"));
     }
 
     #[test]
@@ -736,11 +736,11 @@ drasi_reaction_input_ready{output="workloads"} 1
         );
         let text = exporter.render();
         assert!(
-            text.contains("ignite_drasi_overdue_requests{workload=\"support\"} 3\n"),
+            text.contains("drasi_requests_overdue{workload=\"support\"} 3\n"),
             "{text}"
         );
         assert!(
-            text.contains("ignite_drasi_overdue_requests{workload=\"batch\"} 1\n"),
+            text.contains("drasi_requests_overdue{workload=\"batch\"} 1\n"),
             "{text}"
         );
         assert!(text.contains("drasi_reaction_input_ready{output=\"overdue\"} 1\n"));
@@ -753,7 +753,7 @@ drasi_reaction_input_ready{output="workloads"} 1
 
         // Restart: a new exporter (the sink is volatile) rebuilds from the snapshot alone.
         let mut restarted = Exporter::new(&config, ["overdue"]);
-        assert!(!restarted.render().contains("ignite_drasi_overdue_requests"));
+        assert!(!restarted.render().contains("drasi_requests_overdue"));
         let generation = restarted.loading("overdue").unwrap();
         restarted.complete_load(
             "overdue",
@@ -769,7 +769,7 @@ drasi_reaction_input_ready{output="workloads"} 1
 
         // An input failure drops the output to not ready until it reloads.
         let generation = restarted.fail("overdue").unwrap();
-        assert!(!restarted.render().contains("ignite_drasi_overdue_requests"));
+        assert!(!restarted.render().contains("drasi_requests_overdue"));
         assert!(restarted
             .render()
             .contains("drasi_reaction_input_ready{output=\"overdue\"} 0\n"));
@@ -824,7 +824,7 @@ drasi_reaction_input_ready{output="workloads"} 1
             ],
         );
         let text = exporter.render();
-        assert_eq!(text.matches("ignite_drasi_overdue_requests{").count(), 1);
+        assert_eq!(text.matches("drasi_requests_overdue{").count(), 1);
         assert!(text.contains("{workload=\"support\"} 2\n"));
     }
 }

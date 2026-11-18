@@ -7,14 +7,14 @@ export type View = "operations" | "decisions" | "change" | "trace";
 const grafana = (uid: string, kiosk = false) =>
   `${settings.grafana}/d/${uid}?from=now-5m&to=now&refresh=5s${kiosk ? "&kiosk&_dash.hideTimePicker&_dash.hideLinks&_dash.hideVariables" : ""}`;
 export const products = {
-  grafana: grafana("ignite-workload"),
+  grafana: grafana("ai-operations"),
   decisions: grafana("ignite-decisions"),
   langfuse: `${settings.langfuse}/project/ignite-probe/traces?filter=isRootObservation%3Bboolean%3B%3B%3D%3Btrue`,
   server: `${settings.server}/ui/?instance=ignite`,
   drasi: "https://drasi.io/",
 };
 // Dashboards as projected: kiosk mode (no Grafana toolbar), embedded in the stage.
-export const dashboards = { ops: grafana("ignite-workload", true) } as const;
+export const dashboards = { ops: grafana("ai-operations", true) } as const;
 // The incident channel as projected (contracts.md §17); the projector's browser is signed in as oncall.
 export const incidentChannel = `${settings.mattermost}/ai-platform/channels/incident-ai-support`;
 

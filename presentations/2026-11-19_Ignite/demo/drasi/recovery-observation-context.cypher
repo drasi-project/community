@@ -1,5 +1,5 @@
-MATCH (a:ignite_approvals)-[:APPROVAL_ROUTE]->(rt:ignite_routes)-[:ROUTE_REPORT]->(r:ignite_reports),
-      (a)-[:APPROVAL_SCENARIO]->(s:ignite_scenario)
+MATCH (a:change_approvals)-[:APPROVAL_ROUTE]->(rt:workload_routes)-[:ROUTE_HEALTH]->(r:deployment_health_reports),
+      (a)-[:APPROVAL_CONFIG]->(s:routing_config)
 WHERE rt.workload = 'support' AND a.run_epoch = s.run_epoch AND rt.run_epoch = s.run_epoch
   AND r.run_epoch = s.run_epoch AND a.applied_revision = s.revision
   AND (a.status = 'applied' OR a.status = 'verified')

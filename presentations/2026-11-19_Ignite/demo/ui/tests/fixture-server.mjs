@@ -122,7 +122,7 @@ const colour = { red: "#d44a3a", orange: "#f2a33a", blue: "#3d8bd9", green: "#2f
 const field = (title, value, short = true) => ({ title, value, short });
 function postCard(card, attachment, root_id = "") {
   const post = { id: `TESTPOST${++postSeq}`, root_id, create_at: Date.now(), user: "drasi",
-    props: { ignite_card: card, ignite_run_epoch: epoch, attachments: [{ fallback: attachment.title, ...attachment }] } };
+    props: { incident_card: card, incident_run_epoch: epoch, attachments: [{ fallback: attachment.title, ...attachment }] } };
   posts.push(post);
   return post;
 }
@@ -141,7 +141,7 @@ function syncCards() {
   const overdue = Object.values(extraRows["overdue-tasks"] ?? {}).filter(row => row.workload === "support").length;
   if (overdue) once("overdue", () => postCard("overdue", { color: colour.red, title: "Support requests overdue",
     text: `${overdue} customer-support requests are past their 15-second deadline. More follow until support can run somewhere.`,
-    fields: [field("Overdue when posted", String(overdue)), field("Deadline", "15 s"), field("Dashboard", `[Operations › Support overdue](http://localhost:${port("GRAFANA")}/d/ignite-workload)`)], footer: "Drasi · incident-overdue" }));
+    fields: [field("Overdue when posted", String(overdue)), field("Deadline", "15 s"), field("Dashboard", `[Operations › Support overdue](http://localhost:${port("GRAFANA")}/d/ai-operations)`)], footer: "Drasi · incident-overdue" }));
   else posted.delete("overdue");
   const p = plan();
   if (p.state === "feasible" && p.moves > 0) once(`proposal-${p.candidate_id}`, () => {
@@ -294,7 +294,7 @@ const server = createServer(async (request, response) => {
       return json(response, { run_epoch: epoch, revision });
     }
     if (url.pathname === "/mattermost/approve-latest") {
-      const post = posts.findLast(p => p.props.ignite_card === "proposal" && p.props.ignite_run_epoch === input.run_epoch
+      const post = posts.findLast(p => p.props.incident_card === "proposal" && p.props.incident_run_epoch === input.run_epoch
         && p.props.attachments[0].actions?.some(a => a.id === "approve"));
       if (!post) return json(response, { error: "No proposed change to approve in #incident-ai-support" }, 404);
       return json(response, { post_id: post.id, approval: pressCard(post, "approve") });

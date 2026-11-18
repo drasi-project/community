@@ -27,7 +27,7 @@ pub struct Telemetry {
     pub answer: Histogram<f64>,
     pub queue: Gauge<u64>,
     pub failure: Gauge<u64>,
-    /// The health monitor's readings, exported as `ignite_probe_*` gauges.
+    /// The health monitor's readings, exported as `deployment_health_probe_*` gauges.
     pub probes: crate::probe::Probes,
     _probe_gauges: crate::probe::Gauges,
 }
@@ -35,7 +35,7 @@ pub struct Telemetry {
 impl Telemetry {
     pub fn new() -> Result<Self> {
         let resource = Resource::builder()
-            .with_service_name("ignite-workload")
+            .with_service_name("ai-gateway")
             .build();
         let exporter = opentelemetry_otlp::SpanExporter::builder()
             .with_http()
@@ -57,24 +57,24 @@ impl Telemetry {
             .with_reader(reader)
             .build();
         use opentelemetry::metrics::MeterProvider;
-        let meter = metrics.meter("ignite.workload");
+        let meter = metrics.meter("ai.workload");
         let probes = crate::probe::Probes::default();
         let probe_gauges = probes.register(&meter);
         Ok(Self {
-            tracer: traces.tracer("ignite.workload"),
-            requests: meter.u64_counter("ignite_workload_requests").build(),
-            retries: meter.u64_counter("ignite_workload_retries").build(),
-            tokens: meter.u64_counter("ignite_workload_tokens").build(),
-            completed: meter.u64_counter("ignite_workload_completed").build(),
+            tracer: traces.tracer("ai.workload"),
+            requests: meter.u64_counter("ai_gateway_model_calls").build(),
+            retries: meter.u64_counter("ai_gateway_retries").build(),
+            tokens: meter.u64_counter("ai_gateway_tokens").build(),
+            completed: meter.u64_counter("ai_gateway_requests_completed").build(),
             duration: meter
-                .f64_histogram("ignite_workload_call_duration")
+                .f64_histogram("ai_gateway_model_call_duration")
                 .with_unit("s")
                 .with_boundaries(vec![
                     0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.0, 5.0, 10.0,
                 ])
                 .build(),
             answer: meter
-                .f64_histogram("ignite_workload_answer")
+                .f64_histogram("ai_gateway_answer_time")
                 .with_description("Time from a request being received to its answer")
                 .with_unit("s")
                 .with_boundaries(vec![
@@ -82,9 +82,9 @@ impl Telemetry {
                     90.0, 120.0,
                 ])
                 .build(),
-            queue: meter.u64_gauge("ignite_workload_queue_depth").build(),
+            queue: meter.u64_gauge("ai_gateway_queue_depth").build(),
             failure: meter
-                .u64_gauge("ignite_workload_last_request_failed")
+                .u64_gauge("ai_gateway_last_request_failed")
                 .build(),
             probes,
             _probe_gauges: probe_gauges,
@@ -139,7 +139,7 @@ impl Telemetry {
                     "Document summary request"
                 },
             ),
-            KeyValue::new("langfuse.trace.metadata.task_id", task.to_owned()),
+            KeyValue::new("langfuse.trace.metadata.request_id", task.to_owned()),
             KeyValue::new("langfuse.trace.metadata.workload", workload.to_owned()),
             KeyValue::new("langfuse.trace.metadata.synthetic", true),
         ]);

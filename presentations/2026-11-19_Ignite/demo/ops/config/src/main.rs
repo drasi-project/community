@@ -4,7 +4,7 @@
 //! approval, recovery, annotation and score queries → HTTP reactions; the incident
 //! event queries → the `incident-channel` reaction posting cards to Mattermost.
 //! With IGNITE_HEALTH_SOURCE=otel, deployment health comes from the health probes instead:
-//! OTel source → `deployment-health` → the queries that read `ignite_reports` today.
+//! OTel source → `deployment-health` → the queries that read `deployment_health_reports` today.
 use anyhow::{Context, Result};
 use drasi_host_sdk::computation::{NativeBootstrapNodeFactory, NativeFactory, NativePlugin};
 use drasi_lib::computation::v1::*;
@@ -42,7 +42,7 @@ const HEALTH_LABEL: &str = "DeploymentHealth";
 /// Where Drasi learns deployment health (`IGNITE_HEALTH_SOURCE` in ports.env).
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum Health {
-    /// `ignite_reports` rows the health monitor writes, through the PostgreSQL source.
+    /// `deployment_health_reports` rows the health monitor writes, through the PostgreSQL source.
     Postgres,
     /// The health monitor's probe metrics, through the Collector and the OTel source.
     Otel,
@@ -57,60 +57,60 @@ impl Health {
             Ok(other) => anyhow::bail!("IGNITE_HEALTH_SOURCE must be postgres or otel, not {other:?}"),
         }
     }
-    /// The PostgreSQL tables the source replicates: not `ignite_reports` when health comes
+    /// The PostgreSQL tables the source replicates: not `deployment_health_reports` when health comes
     /// from telemetry, so no health reaches Drasi through PostgreSQL.
     fn tables(self) -> Vec<&'static str> {
         TABLES
             .into_iter()
-            .filter(|table| self == Health::Postgres || *table != "ignite_reports")
+            .filter(|table| self == Health::Postgres || *table != "deployment_health_reports")
             .collect()
     }
     /// A synthetic relationship's label as the queries see it in this mode.
     fn label(self, label: &'static str) -> &'static str {
         match (self, label) {
-            (Health::Otel, "ignite_reports") => HEALTH_LABEL,
+            (Health::Otel, "deployment_health_reports") => HEALTH_LABEL,
             _ => label,
         }
     }
 }
 const TABLES: [&str; 9] = [
-    "ignite_scenario",
-    "ignite_workloads",
-    "ignite_deployments",
-    "ignite_routes",
-    "ignite_policy_destinations",
-    "ignite_approvals",
-    "ignite_tasks",
-    "ignite_attempts",
-    "ignite_reports",
+    "routing_config",
+    "ai_workloads",
+    "model_deployments",
+    "workload_routes",
+    "data_residency_policy",
+    "change_approvals",
+    "ai_requests",
+    "model_call_attempts",
+    "deployment_health_reports",
 ];
 
 /// Synthetic relationships the queries use: name → (label, property) = (label, property).
 const JOINS: &[(&str, (&str, &str), (&str, &str))] = &[
-    ("WORKLOAD_SCENARIO", ("ignite_workloads", "run_epoch"), ("ignite_scenario", "run_epoch")),
-    ("DEPLOYMENT_SCENARIO", ("ignite_deployments", "run_epoch"), ("ignite_scenario", "run_epoch")),
-    ("DESTINATION_SCENARIO", ("ignite_policy_destinations", "run_epoch"), ("ignite_scenario", "run_epoch")),
-    ("WORKLOAD_DESTINATION", ("ignite_workloads", "id"), ("ignite_policy_destinations", "workload")),
-    ("TASK_SCENARIO", ("ignite_tasks", "run_epoch"), ("ignite_scenario", "run_epoch")),
-    ("ATTEMPT_SCENARIO", ("ignite_attempts", "run_epoch"), ("ignite_scenario", "run_epoch")),
-    ("APPROVAL_SCENARIO", ("ignite_approvals", "run_epoch"), ("ignite_scenario", "run_epoch")),
-    ("WORKLOAD_ROUTE", ("ignite_workloads", "id"), ("ignite_routes", "workload")),
-    ("DEPLOYMENT_REPORT", ("ignite_deployments", "id"), ("ignite_reports", "id")),
-    ("APPROVAL_ROUTE", ("ignite_approvals", "id"), ("ignite_routes", "approval")),
-    ("ROUTE_REPORT", ("ignite_routes", "deployment"), ("ignite_reports", "id")),
-    ("ROUTE_POLICY", ("ignite_routes", "workload"), ("PolicyResult", "subject")),
-    ("TASK_APPROVAL", ("ignite_tasks", "completed_revision"), ("ignite_approvals", "applied_revision")),
-    ("APPROVAL_PLAN", ("ignite_approvals", "run_epoch"), ("PlanResult", "run_epoch")),
+    ("WORKLOAD_CONFIG", ("ai_workloads", "run_epoch"), ("routing_config", "run_epoch")),
+    ("DEPLOYMENT_CONFIG", ("model_deployments", "run_epoch"), ("routing_config", "run_epoch")),
+    ("POLICY_CONFIG", ("data_residency_policy", "run_epoch"), ("routing_config", "run_epoch")),
+    ("WORKLOAD_DESTINATION", ("ai_workloads", "id"), ("data_residency_policy", "workload")),
+    ("REQUEST_CONFIG", ("ai_requests", "run_epoch"), ("routing_config", "run_epoch")),
+    ("ATTEMPT_CONFIG", ("model_call_attempts", "run_epoch"), ("routing_config", "run_epoch")),
+    ("APPROVAL_CONFIG", ("change_approvals", "run_epoch"), ("routing_config", "run_epoch")),
+    ("WORKLOAD_ROUTE", ("ai_workloads", "id"), ("workload_routes", "workload")),
+    ("DEPLOYMENT_HEALTH", ("model_deployments", "id"), ("deployment_health_reports", "id")),
+    ("APPROVAL_ROUTE", ("change_approvals", "id"), ("workload_routes", "approval")),
+    ("ROUTE_HEALTH", ("workload_routes", "deployment"), ("deployment_health_reports", "id")),
+    ("ROUTE_POLICY", ("workload_routes", "workload"), ("PolicyResult", "subject")),
+    ("REQUEST_APPROVAL", ("ai_requests", "completed_revision"), ("change_approvals", "applied_revision")),
+    ("APPROVAL_PLAN", ("change_approvals", "run_epoch"), ("PlanResult", "run_epoch")),
     ("PLAN_RESILIENCE", ("PlanResult", "run_epoch"), ("ResilienceResult", "run_epoch")),
     ("RECOVERY_SUMMARY", ("RecoveryObservation", "run_epoch"), ("RecoveryTasks", "run_epoch")),
     // Incident cards (contracts.md section 15).
-    ("ROUTE_SCENARIO", ("ignite_routes", "run_epoch"), ("ignite_scenario", "run_epoch")),
-    ("PLAN_SCENARIO", ("PlanResult", "run_epoch"), ("ignite_scenario", "run_epoch")),
-    ("RESILIENCE_SCENARIO", ("ResilienceResult", "run_epoch"), ("ignite_scenario", "run_epoch")),
-    ("OVERDUE_SCENARIO", ("SupportOverdue", "run_epoch"), ("ignite_scenario", "run_epoch")),
-    ("DEPLOYMENT_FACTS_SCENARIO", ("DeploymentFacts", "run_epoch"), ("ignite_scenario", "run_epoch")),
-    ("POLICY_FACTS_SCENARIO", ("PolicyFacts", "run_epoch"), ("ignite_scenario", "run_epoch")),
-    ("POLICY_WORKLOAD", ("PolicyResult", "subject"), ("ignite_workloads", "id")),
+    ("ROUTE_CONFIG", ("workload_routes", "run_epoch"), ("routing_config", "run_epoch")),
+    ("PLAN_CONFIG", ("PlanResult", "run_epoch"), ("routing_config", "run_epoch")),
+    ("RESILIENCE_CONFIG", ("ResilienceResult", "run_epoch"), ("routing_config", "run_epoch")),
+    ("OVERDUE_CONFIG", ("SupportOverdue", "run_epoch"), ("routing_config", "run_epoch")),
+    ("DEPLOYMENT_FACTS_CONFIG", ("DeploymentFacts", "run_epoch"), ("routing_config", "run_epoch")),
+    ("POLICY_FACTS_CONFIG", ("PolicyFacts", "run_epoch"), ("routing_config", "run_epoch")),
+    ("POLICY_WORKLOAD", ("PolicyResult", "subject"), ("ai_workloads", "id")),
 ];
 
 struct Query {
@@ -134,13 +134,13 @@ macro_rules! query {
 }
 
 /// The queries for `health`. From telemetry, `deployment-health` turns the probes into rows
-/// shaped like `ignite_reports`, and every query reading reports reads those rows instead.
+/// shaped like `deployment_health_reports`, and every query reading reports reads those rows instead.
 fn queries(health: Health) -> Vec<Query> {
     let mut queries = all_queries();
     if health == Health::Otel {
         for query in &mut queries {
-            if query.text.contains("ignite_reports") {
-                query.text = query.text.replace("ignite_reports", HEALTH_LABEL).into();
+            if query.text.contains("deployment_health_reports") {
+                query.text = query.text.replace("deployment_health_reports", HEALTH_LABEL).into();
                 query.inputs.push(HEALTH);
             }
         }
@@ -295,7 +295,7 @@ fn card(channel: &str, card: &str, query: &str, color: &str, fields: &str, actio
     let color = if color.starts_with("{{") { color.to_string() } else { json!(color).to_string() };
     let actions = if actions.is_empty() { String::new() } else { format!(r#","actions":{actions}"#) };
     format!(
-        r#"{{"channel_id":{channel},"root_id":{{{{json after.root_id}}}},"pending_post_id":"{{{{after.run_epoch}}}}/{{{{after.id}}}}","message":"","props":{{"ignite_card":{card},"ignite_id":{{{{json after.id}}}},"ignite_run_epoch":{{{{json after.run_epoch}}}},"attachments":[{{"fallback":{{{{json after.title}}}},"color":{color},"title":{{{{json after.title}}}},"text":{{{{json after.text}}}},"fields":[{fields}],"footer":{footer}{actions}}}]}}}}"#,
+        r#"{{"channel_id":{channel},"root_id":{{{{json after.root_id}}}},"pending_post_id":"{{{{after.run_epoch}}}}/{{{{after.id}}}}","message":"","props":{{"incident_card":{card},"incident_card_id":{{{{json after.id}}}},"incident_run_epoch":{{{{json after.run_epoch}}}},"attachments":[{{"fallback":{{{{json after.title}}}},"color":{color},"title":{{{{json after.title}}}},"text":{{{{json after.text}}}},"fields":[{fields}],"footer":{footer}{actions}}}]}}}}"#,
         channel = json!(channel),
         card = json!(card),
         footer = json!(format!("Drasi · {query}")),
@@ -316,7 +316,7 @@ fn proposal_actions(url: &str) -> String {
 
 /// The `incident-channel` routes: every card is `added` → `POST /api/v4/posts`.
 fn incident_routes(channel: &str, grafana_port: u16, workload_port: u16) -> Value {
-    let dashboard = format!("[Operations › Support overdue](http://localhost:{grafana_port}/d/ignite-workload)");
+    let dashboard = format!("[Operations › Support overdue](http://localhost:{grafana_port}/d/ai-operations)");
     let actions = proposal_actions(&format!("http://host.containers.internal:{workload_port}/mattermost/actions"));
     json!({
         "failed":http_route("POST", "/api/v4/posts", &card(channel, "failed", "incident-failed", RED,
@@ -414,13 +414,13 @@ fn find_factory(plugin: &NativePlugin, name: &str) -> Result<Arc<NativeFactory>>
         .cloned()
         .with_context(|| format!("factory {name}"))
 }
-/// The health probes as Drasi's OTel source sees them: `ignite_probe_status` per deployment
+/// The health probes as Drasi's OTel source sees them: `deployment_health_probe_status` per deployment
 /// and run (`deployment-health` reads the identity attributes from the Metric's id).
 fn otel_configuration() -> Result<Value> {
     Ok(json!({
         "stream":stream(OTEL)?, "host":"127.0.0.1", "protocols":["grpc"],
         "grpcPort":ignite_settings::get().port("DRASI_OTLP")?,
-        "metricAllowlist":["ignite_probe_status"],
+        "metricAllowlist":["deployment_health_probe_status"],
         "metricIdentityAttributes":["deployment", "run_epoch"],
         // Metrics never expire and each run adds one per deployment.
         "maxMetrics":1000000,
@@ -645,7 +645,7 @@ fn main() -> Result<()> {
     // Drasi's Rego policy (drasi.standard/policy) decides each `policy-input` row; the
     // module and the input and output mappings are its configuration (drasi/policy).
     let mut rego: Value = serde_json::from_str(include_str!("../../../drasi/policy/policy.json"))?;
-    rego["modules"][0]["source"] = json!(include_str!("../../../drasi/policy/ignite.rego"));
+    rego["modules"][0]["source"] = json!(include_str!("../../../drasi/policy/placement.rego"));
     rego["stream"] = json!(stream(ids["policy"].as_str())?);
     let factory = find_factory(&policy, "drasi.standard/policy")?;
     let mut specification = factory.specification(ids["policy"].clone(), rego)?;
@@ -711,8 +711,8 @@ fn main() -> Result<()> {
     let langfuse = format!("http://127.0.0.1:{}", settings.port("LANGFUSE")?);
     let mattermost = format!("http://127.0.0.1:{}", settings.port("MATTERMOST")?);
     let channel = mattermost_channel()?;
-    let annotation = r#"{"time":{{after.at_ms}},"tags":["ignite-decision","{{after.id}}"],"text":{{json after.text}}}"#;
-    let plan_annotation = r#"{"tags":["ignite-decision","{{after.id}}"],"text":{{json after.text}}}"#;
+    let annotation = r#"{"time":{{after.at_ms}},"tags":["drasi-decision","{{after.id}}"],"text":{{json after.text}}}"#;
+    let plan_annotation = r#"{"tags":["drasi-decision","{{after.id}}"],"text":{{json after.text}}}"#;
     let reaction_configs: BTreeMap<&str, (Value, Vec<(&str, ConfigurationValue)>)> = BTreeMap::from([
         ("gateway-reaction", (json!({
             "baseUrl":workload, "onPermanentFailure":"stall", "maxRetries":10, "retryBudgetMs":30000, "timeoutMs":5000,
@@ -845,7 +845,7 @@ fn main() -> Result<()> {
         serde_json::to_string_pretty(&json!({
             "apiVersion":"drasi.io/v1","host":"127.0.0.1","port":settings.port("DRASI_API")?,
             "persistConfig":false,"enableUi":true,"verifyPlugins":false,"autoInstallPlugins":false,
-            "instances":[{"id":"ignite",
+            "instances":[{"id":"ai-ops",
                 // Each PostgreSQL query snapshots the tables in turn; with a
                 // long run's history a restart takes minutes.
                 "activationTimeoutSecs":1200,
@@ -932,9 +932,9 @@ mod tests {
             let body = render(template, &row);
             assert_eq!(body["channel_id"], "channel-1");
             assert_eq!(body["message"], "");
-            assert_eq!(body["props"]["ignite_card"], *alias);
-            assert_eq!(body["props"]["ignite_id"], "card-1");
-            assert_eq!(body["props"]["ignite_run_epoch"], "run-1");
+            assert_eq!(body["props"]["incident_card"], *alias);
+            assert_eq!(body["props"]["incident_card_id"], "card-1");
+            assert_eq!(body["props"]["incident_run_epoch"], "run-1");
             assert_eq!(body["pending_post_id"], "run-1/card-1", "{alias}: a repeated delivery is the same post");
             let attachment = &body["props"]["attachments"][0];
             assert_eq!(attachment["fallback"], "Title");
@@ -952,7 +952,7 @@ mod tests {
         let (_, a) = attachment("overdue", json!({"overdue":"3","deadline":"15 s"}));
         assert_eq!(a["color"], RED);
         assert_eq!(field_titles(&a), ["Overdue when posted", "Deadline", "Dashboard"]);
-        assert_eq!(a["fields"][2]["value"], "[Operations › Support overdue](http://localhost:14000/d/ignite-workload)");
+        assert_eq!(a["fields"][2]["value"], "[Operations › Support overdue](http://localhost:14000/d/ai-operations)");
         let (_, a) = attachment("superseded", json!({"was":"Move summaries to US-C","now":"No valid plan"}));
         assert_eq!((a["color"].as_str().unwrap(), field_titles(&a)), (GREY, vec!["Was".into(), "Now".into()]));
         assert_eq!(a["fields"][0]["short"], false);
@@ -1026,12 +1026,12 @@ mod tests {
         let queries = queries(Health::Postgres);
         assert!(queries.iter().all(|q| q.name != HEALTH && !q.inputs.contains(&HEALTH) && !q.inputs.contains(&OTEL)));
         assert!(queries.iter().all(|q| matches!(q.text, std::borrow::Cow::Borrowed(_))), "query files unchanged");
-        let readers: Vec<_> = queries.iter().filter(|q| q.text.contains("ignite_reports")).map(|q| q.name).collect();
+        let readers: Vec<_> = queries.iter().filter(|q| q.text.contains("deployment_health_reports")).map(|q| q.name).collect();
         assert_eq!(readers.len(), HEALTH_QUERIES.len());
         assert!(HEALTH_QUERIES.iter().all(|name| readers.contains(name)), "{readers:?}");
         assert_eq!(Health::Postgres.tables(), TABLES);
-        let report = joins("(d)-[:DEPLOYMENT_REPORT]->(r)", Health::Postgres).unwrap();
-        assert_eq!(report[0]["keys"][1]["label"], "ignite_reports");
+        let report = joins("(d)-[:DEPLOYMENT_HEALTH]->(r)", Health::Postgres).unwrap();
+        assert_eq!(report[0]["keys"][1]["label"], "deployment_health_reports");
     }
 
     #[test]
@@ -1039,7 +1039,7 @@ mod tests {
         let queries = queries(Health::Otel);
         let adapter = queries.iter().find(|q| q.name == HEALTH).expect("deployment-health");
         assert_eq!((adapter.inputs.as_slice(), adapter.label), (&[OTEL][..], Some(HEALTH_LABEL)));
-        let readers: Vec<_> = queries.iter().filter(|q| q.name != HEALTH && q.text.contains("ignite_reports")).map(|q| q.name).collect();
+        let readers: Vec<_> = queries.iter().filter(|q| q.name != HEALTH && q.text.contains("deployment_health_reports")).map(|q| q.name).collect();
         assert!(readers.is_empty(), "no query reads reports: {readers:?}");
         for name in HEALTH_QUERIES {
             let query = queries.iter().find(|q| q.name == name).unwrap();
@@ -1049,9 +1049,9 @@ mod tests {
         }
         let others = queries.iter().filter(|q| q.name != HEALTH && !HEALTH_QUERIES.contains(&q.name));
         assert!(others.into_iter().all(|q| !q.inputs.contains(&HEALTH) && !q.inputs.contains(&OTEL)));
-        assert!(!Health::Otel.tables().contains(&"ignite_reports"));
+        assert!(!Health::Otel.tables().contains(&"deployment_health_reports"));
         assert_eq!(Health::Otel.tables().len(), TABLES.len() - 1);
-        for (text, join) in [("(d)-[:DEPLOYMENT_REPORT]->(r)", "DEPLOYMENT_REPORT"), ("(rt)-[:ROUTE_REPORT]->(r)", "ROUTE_REPORT")] {
+        for (text, join) in [("(d)-[:DEPLOYMENT_HEALTH]->(r)", "DEPLOYMENT_HEALTH"), ("(rt)-[:ROUTE_HEALTH]->(r)", "ROUTE_HEALTH")] {
             let keys = &joins(text, Health::Otel).unwrap()[0];
             assert_eq!((keys["id"].as_str(), keys["keys"][1]["label"].as_str()), (Some(join), Some(HEALTH_LABEL)));
         }

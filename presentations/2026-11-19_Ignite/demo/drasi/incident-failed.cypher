@@ -1,7 +1,7 @@
-MATCH (d:ignite_deployments)-[:DEPLOYMENT_REPORT]->(r:ignite_reports),
-      (d)-[:DEPLOYMENT_SCENARIO]->(s:ignite_scenario),
-      (rs:ignite_routes)-[:ROUTE_SCENARIO]->(s),
-      (rb:ignite_routes)-[:ROUTE_SCENARIO]->(s)
+MATCH (d:model_deployments)-[:DEPLOYMENT_HEALTH]->(r:deployment_health_reports),
+      (d)-[:DEPLOYMENT_CONFIG]->(s:routing_config),
+      (rs:workload_routes)-[:ROUTE_CONFIG]->(s),
+      (rb:workload_routes)-[:ROUTE_CONFIG]->(s)
 WHERE d.run_epoch = s.run_epoch AND r.run_epoch = s.run_epoch
   AND rs.workload = 'support' AND rb.workload = 'batch'
 WITH d, s, rs, rb,

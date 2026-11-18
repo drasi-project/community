@@ -91,13 +91,13 @@ def prune():
     # Every query snapshots these tables on start but only reads the current
     # run, so earlier runs' rows only slow startup. Delete them while Server is
     # stopped, in batches below the source's per-transaction change limit.
-    for table in ["ignite_attempts", "ignite_receipts", "ignite_tasks",
-                  "ignite_approvals"]:
+    for table in ["model_call_attempts", "model_responses", "ai_requests",
+                  "change_approvals"]:
         removed = 0
         while True:
             output = sql(f"""DELETE FROM {table} WHERE ctid IN (
                 SELECT ctid FROM {table}
-                WHERE run_epoch <> (SELECT run_epoch FROM ignite_scenario WHERE singleton)
+                WHERE run_epoch <> (SELECT run_epoch FROM routing_config WHERE singleton)
                 LIMIT 2000);""")
             count = int(output.split()[-1])
             removed += count
@@ -107,7 +107,7 @@ def prune():
             print(f"pruned {removed} earlier-run rows from {table}", file=sys.stderr)
     # Delivery IDs name the producer run, which a Server restart replaces, so recorded
     # deliveries can never repeat; approval state keeps the gateway API idempotent.
-    removed = int(sql("DELETE FROM ignite_deliveries;").split()[-1])
+    removed = int(sql("DELETE FROM gateway_deliveries;").split()[-1])
     if removed:
         print(f"pruned {removed} recorded deliveries", file=sys.stderr)
 
@@ -117,15 +117,17 @@ def main():
     if action == "stamp":
         stamp()
     elif action == "init":
+        print(sql((DEMO / "database/rename.sql").read_text()), end="")
         print(sql((DEMO / "database/schema.sql").read_text()), end="")
         print(sql((DEMO / "database/workload.sql").read_text()), end="")
         # Initial fixture is explicit once (or after migrating from the JSON model, which leaves
         # the scenario tables empty); subsequent starts never seed or reset.
-        if sql("SELECT 1 FROM ignite_scenario s JOIN ignite_workloads w USING (run_epoch) LIMIT 1;").count("(0 rows)"):
+        if sql("SELECT 1 FROM routing_config s JOIN ai_workloads w USING (run_epoch) LIMIT 1;").count("(0 rows)"):
             print(sql((DEMO / "database/reset.sql").read_text()), end="")
     elif action == "reset":
         print(sql((DEMO / "database/reset.sql").read_text()), end="")
     elif action == "migrate":
+        print(sql((DEMO / "database/rename.sql").read_text()), end="")
         print(sql((DEMO / "database/workload.sql").read_text()), end="")
     elif action == "sql":
         print(sql(sys.stdin.read()), end="")

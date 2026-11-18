@@ -65,7 +65,7 @@ mod tests {
     #[test]
     fn renders_help_type_labels_and_escapes() {
         let family = Family {
-            name: "ignite_drasi_overdue_requests".into(),
+            name: "drasi_requests_overdue".into(),
             help: "Requests past their deadline.".into(),
             series: BTreeMap::from([
                 (vec![("workload".into(), "support".into())], 2.0),
@@ -79,10 +79,10 @@ mod tests {
         };
         assert_eq!(
             render(&[family, ready]),
-            "# HELP ignite_drasi_overdue_requests Requests past their deadline.\n\
-             # TYPE ignite_drasi_overdue_requests gauge\n\
-             ignite_drasi_overdue_requests{workload=\"a\\\"b\\\\c\"} -1\n\
-             ignite_drasi_overdue_requests{workload=\"support\"} 2\n\
+            "# HELP drasi_requests_overdue Requests past their deadline.\n\
+             # TYPE drasi_requests_overdue gauge\n\
+             drasi_requests_overdue{workload=\"a\\\"b\\\\c\"} -1\n\
+             drasi_requests_overdue{workload=\"support\"} 2\n\
              # HELP drasi_reaction_input_ready 1 once the output's snapshot is loaded.\n\
              # TYPE drasi_reaction_input_ready gauge\n\
              drasi_reaction_input_ready{output=\"overdue\"} 1\n"

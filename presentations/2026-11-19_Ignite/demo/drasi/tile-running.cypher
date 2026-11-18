@@ -1,4 +1,4 @@
-MATCH (r:ignite_routes)<-[:WORKLOAD_ROUTE]-(w:ignite_workloads),
+MATCH (r:workload_routes)<-[:WORKLOAD_ROUTE]-(w:ai_workloads),
       (r)-[:ROUTE_POLICY]->(p:PolicyResult)
 WHERE p.target = r.deployment AND w.run_epoch = r.run_epoch AND p.run_epoch = r.run_epoch
 RETURN r.workload AS workload, r.deployment AS deployment,

@@ -31,7 +31,7 @@ try {
   await page.getByLabel("Password", { exact: true }).fill(env.GRAFANA_ADMIN_PASSWORD);
   await page.getByRole("button", { name: "Log in", exact: true }).click();
   await page.waitForURL(url => !url.pathname.endsWith("/login"), { timeout: 30000 });
-  await page.goto(`http://localhost:${port("GRAFANA")}/d/ignite-integration-probe`);
+  await page.goto(`http://localhost:${port("GRAFANA")}/d/integration-probe`);
   await page.getByText("Completed HTTP requests by status", { exact: true }).waitFor();
   await page.getByText("Last real request failed (1=yes, 0=no)", { exact: true }).waitFor();
   await page.screenshot({ path: path.join(root, "observability/evidence/grafana.png"), fullPage: true });

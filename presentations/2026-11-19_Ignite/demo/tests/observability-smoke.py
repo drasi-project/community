@@ -63,7 +63,7 @@ def operations_dashboard(auth):
     """One dashboard with the contract's panel keys, a description on every panel, the Recovery plan
     dashboard gone, and Grafana's alerts posting to #incident-ai-support."""
     grafana = settings.url("GRAFANA")
-    panels = get(grafana + "/api/dashboards/uid/ignite-workload", auth)["dashboard"]["panels"]
+    panels = get(grafana + "/api/dashboards/uid/ai-operations", auth)["dashboard"]["panels"]
     assert [p.get("key") for p in panels] == PANEL_KEYS, [p.get("key") for p in panels]
     assert all(p.get("description") for p in panels if p["type"] != "row"), "a panel has no description"
     get(grafana + "/api/dashboards/uid/ignite-decisions", auth, expected=404)
@@ -87,10 +87,10 @@ def main():
         ("Langfuse", settings.url("LANGFUSE")+"/api/public/health"),
     ]:
         wait_for(label, lambda url=url: get(url), timeout=240)
-    dashboard = get(settings.url("GRAFANA")+"/api/dashboards/uid/ignite-integration-probe", grafana_auth)
-    assert dashboard["dashboard"]["uid"] == "ignite-integration-probe"
+    dashboard = get(settings.url("GRAFANA")+"/api/dashboards/uid/integration-probe", grafana_auth)
+    assert dashboard["dashboard"]["uid"] == "integration-probe"
     evidence["operations_dashboard"] = operations_dashboard(grafana_auth)
-    query = urllib.parse.urlencode({"query": "ignite_probe_http_requests_total"})
+    query = urllib.parse.urlencode({"query": "integration_probe_http_requests_total"})
     metric_url = settings.url("GRAFANA")+f"/api/datasources/proxy/uid/ignite-prometheus/api/v1/query?{query}"
     # A probe restart resets its counters; wait out old collector/scrape samples.
     warmup = get(f"{probe}/probe?outcome=ok")

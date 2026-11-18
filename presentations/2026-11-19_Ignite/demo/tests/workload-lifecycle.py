@@ -44,7 +44,7 @@ class Service:
 
 
 def statuses():
-    return {dep: d.metric("ignite_drasi_deployment_status", deployment=dep) for dep in ["EU-A", "EU-B", "US-C"]}
+    return {dep: d.metric("drasi_deployment_health_status", deployment=dep) for dep in ["EU-A", "EU-B", "US-C"]}
 
 
 def main():
@@ -64,13 +64,13 @@ def main():
         body, _ = d.submit()
         d.wait(lambda: any(a["status"] == 503 for a in d.task(body["id"])["attempts"]), 20, "HTTP 503")
         service.stop()
-        before = d.sql(f"SELECT row_to_json(t) FROM ignite_tasks t WHERE id='{body['id']}';")
+        before = d.sql(f"SELECT row_to_json(t) FROM ai_requests t WHERE id='{body['id']}';")
         with d.DeskStream(["overdue-tasks", "plan-results", "tile-action"]) as stream:
             stream.until("overdue-tasks", lambda r: any(row["id"] == body["id"] for row in r), 30)
             d.wait(lambda: set(statuses().values()) == {-1}, 20, "every deployment Unknown")
             stream.until("plan-results", lambda r: r and r[0]["state"] == "unknown")
             stream.until("tile-action", lambda r: r and r[0]["value"] == -1)
-        assert before == d.sql(f"SELECT row_to_json(t) FROM ignite_tasks t WHERE id='{body['id']}';")
+        assert before == d.sql(f"SELECT row_to_json(t) FROM ai_requests t WHERE id='{body['id']}';")
         checks.append("application stopped: Drasi's timers alone make the request overdue and every deployment, "
                       "the plan and Action needed Unknown (never healthy)")
 
@@ -115,8 +115,8 @@ def main():
         uncertain, _ = d.submit()
         d.wait(lambda: any(a["status"] == 200 for a in d.task(uncertain["id"])["attempts"]), 20, "HTTP 200")
         service.stop()
-        record = json.loads(d.sql(f"SELECT row_to_json(t) FROM ignite_tasks t WHERE id='{uncertain['id']}';"))
-        receipts = lambda: d.sql(f"SELECT count(*) FROM ignite_receipts WHERE task_id='{uncertain['id']}';")
+        record = json.loads(d.sql(f"SELECT row_to_json(t) FROM ai_requests t WHERE id='{uncertain['id']}';"))
+        receipts = lambda: d.sql(f"SELECT count(*) FROM model_responses WHERE request_id='{uncertain['id']}';")
         if record["completed_ms"] is None:
             assert receipts() == "1"
             service.start()

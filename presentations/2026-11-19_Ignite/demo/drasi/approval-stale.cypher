@@ -1,4 +1,4 @@
-MATCH (a:ignite_approvals)-[:APPROVAL_PLAN]->(p:PlanResult)
+MATCH (a:change_approvals)-[:APPROVAL_PLAN]->(p:PlanResult)
 WHERE a.status = 'pending' AND p.state <> 'unknown'
   AND NOT (p.state = 'feasible' AND a.candidate_id = p.candidate_id
            AND a.basis = p.basis AND a.revision = p.revision)

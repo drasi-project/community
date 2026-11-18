@@ -72,17 +72,17 @@ What Drasi enables here:
 
 | Component | Implementation | Purpose | Configuration |
 |---|---|---|---|
-| `postgres` | `drasi.postgres/shared-changes` | Every change to the published tables except `ignite_reports` | `127.0.0.1:$IGNITE_POSTGRES_PORT/ignite`, user `ignite`, password `env:IGNITE_POSTGRES_PASSWORD` (secret reference). Publication and slot `$IGNITE_PG_PUBLICATION`/`$IGNITE_PG_SLOT`, `slotOwnership: external` (created by `ops/native-runtime.py init`). `persistent: false`. Limits: 4096 changes, 8 MB and 30 s per transaction, 8 MB protocol frames, 10 s I/O timeout, 1 s feedback, 60 s reconnect budget. Consumer progress for every subscriber is tracked in the `pg-consumers` checkpoint resource |
-| `otel` | `drasi.network/otel-source` | The AI service's health probes, from the OpenTelemetry Collector | OTLP/gRPC on `127.0.0.1:$IGNITE_DRASI_OTLP_PORT`. Allowlist `ignite_probe_status`; identity attributes `deployment`, `run_epoch` (one `Metric` per deployment and run, under `(:Service {name: 'ignite-workload'})-[:REPORTS]->`); `maxMetrics` 1,000,000; no dependencies. No bootstrap: its state is volatile and the probes arrive every second |
+| `postgres` | `drasi.postgres/shared-changes` | Every change to the published tables except `deployment_health_reports` | `127.0.0.1:$IGNITE_POSTGRES_PORT/ignite`, user `ignite`, password `env:IGNITE_POSTGRES_PASSWORD` (secret reference). Publication and slot `$IGNITE_PG_PUBLICATION`/`$IGNITE_PG_SLOT`, `slotOwnership: external` (created by `ops/native-runtime.py init`). `persistent: false`. Limits: 4096 changes, 8 MB and 30 s per transaction, 8 MB protocol frames, 10 s I/O timeout, 1 s feedback, 60 s reconnect budget. Consumer progress for every subscriber is tracked in the `pg-consumers` checkpoint resource |
+| `otel` | `drasi.network/otel-source` | The AI service's health probes, from the OpenTelemetry Collector | OTLP/gRPC on `127.0.0.1:$IGNITE_DRASI_OTLP_PORT`. Allowlist `deployment_health_probe_status`; identity attributes `deployment`, `run_epoch` (one `Metric` per deployment and run, under `(:Service {name: 'ai-gateway'})-[:REPORTS]->`); `maxMetrics` 1,000,000; no dependencies. No bootstrap: its state is volatile and the probes arrive every second |
 
-Published tables (all `REPLICA IDENTITY FULL`): `ignite_scenario` (one row:
-`run_epoch`, `revision`), `ignite_workloads`, `ignite_deployments`,
-`ignite_routes`, `ignite_policy_destinations`, `ignite_approvals`,
-`ignite_tasks`, `ignite_attempts` and `ignite_reports`. The source reads every
-published table except `ignite_reports`: with `IGNITE_HEALTH_SOURCE=otel`
+Published tables (all `REPLICA IDENTITY FULL`): `routing_config` (one row:
+`run_epoch`, `revision`), `ai_workloads`, `model_deployments`,
+`workload_routes`, `data_residency_policy`, `change_approvals`,
+`ai_requests`, `model_call_attempts` and `deployment_health_reports`. The source reads every
+published table except `deployment_health_reports`: with `IGNITE_HEALTH_SOURCE=otel`
 (`ports.env`) health does not reach Drasi through PostgreSQL, and Drasi derives
 it from the health monitor's probe metrics. The simulation state
-(`ignite_simulation`) is not published.
+(`simulated_deployment_faults`) is not published.
 
 **Bootstrap.** `postgres-bootstrap` is a graph component with the
 `BootstrapProvider` role, using `drasi.postgres/shared-row-bootstrap` with the
@@ -100,14 +100,14 @@ secret store.
 
 All 47 are Cypher files in `drasi/`, run by `drasi_computation_transformer_query`
 with `outbox_capacity: 128` and memory indexes. Queries over tables join
-`ignite_scenario` on `run_epoch` through synthetic relationships (`JOINS` in
+`routing_config` on `run_epoch` through synthetic relationships (`JOINS` in
 `main.rs`), so a reset, which starts a new `run_epoch`, drops old rows. Queries
 over model output read the models' elements (`PolicyDecision`, `PlanStatus`,
 `Assignment`, `LossScenario`) or another query's result label.
 
 | Group | Queries | Reads | Feeds |
 |---|---|---|---|
-| Health | `deployment-health` (label `DeploymentHealth`) | `otel`: each deployment's latest `ignite_probe_status` for the run: `ok`, `throttled` or `failed`, expiring 8 s after the probe. The deployment and run come from the Metric's id | `plan-bins`, `tile-deployments`, `tile-workloads`, `tile-capacity`, `incident-deployments`, `incident-failed`, `recovery-observation-context` |
+| Health | `deployment-health` (label `DeploymentHealth`) | `otel`: each deployment's latest `deployment_health_probe_status` for the run: `ok`, `throttled` or `failed`, expiring 8 s after the probe. The deployment and run come from the Metric's id | `plan-bins`, `tile-deployments`, `tile-workloads`, `tile-capacity`, `incident-deployments`, `incident-failed`, `recovery-observation-context` |
 | Model inputs | `policy-input` | One row per workload × deployment: the pair's properties and whether it is an allowed destination | `policy` (`in`) |
 | | `plan-context` | The scenario's `run_epoch` and `revision` | `plan` (set `context`) |
 | | `plan-items` | Workloads ⋈ routes: demand and current deployment | `plan` (set `items`) |
@@ -153,7 +153,7 @@ missing, inconsistent or times out.
 
 Configuration:
 
-- **Policy.** Drasi's standard Rego component. The demo supplies only the rules (`drasi/policy/ignite.rego`, inlined by the config generator) and a query, `policy-input`, that says what to decide: one row per workload × deployment. The rule `data.ignite.assessment` runs for each row with the workload, the deployment and its allowed destination. A pair is allowed when the deployment is an allowed destination, the region matches the workload's requirement (`EU` or `any`) and the model matches. Changing the allowed destinations (the talk's policy edit) is a data change, and only that pair's decision changes. Changing the module is an in-place configuration update. Each evaluation is bounded to 250 ms (`drasi/policy/policy.json`). The component starts from `policy-input`'s snapshot. Anything except a clear yes or no reads as `unknown`, never allowed.
+- **Policy.** Drasi's standard Rego component. The demo supplies only the rules (`drasi/policy/placement.rego`, inlined by the config generator) and a query, `policy-input`, that says what to decide: one row per workload × deployment. The rule `data.placement.assessment` runs for each row with the workload, the deployment and its allowed destination. A pair is allowed when the deployment is an allowed destination, the region matches the workload's requirement (`EU` or `any`) and the model matches. Changing the allowed destinations (the talk's policy edit) is a data change, and only that pair's decision changes. Changing the module is an in-place configuration update. Each evaluation is bounded to 250 ms (`drasi/policy/policy.json`). The component starts from `policy-input`'s snapshot. Anything except a clear yes or no reads as `unknown`, never allowed.
 - **Optimizer.** Drasi's standard optimization component. The demo supplies only a declarative model (`drasi/optimization/optimization.json`) and the queries that feed it.
   - **Model:** one yes/no `assign` per workload × deployment that is allowed, healthy and has room (`plan-candidates` joins demand, current route and capacity; `policy-results` says allowed). Each workload is placed exactly once (nothing is shed), within capacity. Objectives: fewest moves, then the lowest peak use.
   - **What-if:** the `loss` scenario re-solves without each healthy deployment and lists the losses that leave no plan.
@@ -170,7 +170,7 @@ Configuration:
 | `metrics` | `ignite/prometheus-exporter` (`drasi_computation_ignite_prometheus`, written for this demo) | The 13 tile queries | Each row as a gauge on `127.0.0.1:$IGNITE_DRASI_METRICS_PORT/metrics` (mapping in `plugins/prometheus/examples/ignite.json`), plus `drasi_reaction_input_ready{output}`. Prometheus scrapes it every 2 s; an input that isn't loaded exports no series, which Grafana shows as Unknown |
 | `desk-stream` | `drasi.network/sse-sink` | `overdue-tasks`, `plan-results` and five tiles | `GET /events` on `127.0.0.1:$IGNITE_DRASI_SSE_PORT` (heartbeat every 10 s) and `GET /snapshot/{query}`. The desk and projector read it through the web app's `/drasi-stream` proxy |
 | `gateway-reaction` | `drasi.network/http-sink` | `approval-valid`, `approval-stale`, `recovery-verified` | `POST /routes/apply`, `/approvals/{id}/reject` and `/approvals/{id}/verified` on the AI service's gateway configuration API. `onPermanentFailure: stall`, 10 retries within 30 s |
-| `grafana-annotations` | `drasi.network/http-sink` | `approval-events`, `plan-events` | `POST /api/annotations` (tag `ignite-decision`) with the `env:IGNITE_GRAFANA_TOKEN` service-account token. `onPermanentFailure: skip`, 3 retries |
+| `grafana-annotations` | `drasi.network/http-sink` | `approval-events`, `plan-events` | `POST /api/annotations` (tag `drasi-decision`) with the `env:IGNITE_GRAFANA_TOKEN` service-account token. `onPermanentFailure: skip`, 3 retries |
 | `langfuse-scores` | `drasi.network/http-sink` | `recovery-scores` | `POST /api/public/scores` (`drasi_recovery`) with `env-json:IGNITE_LANGFUSE_HEADERS`. `onPermanentFailure: skip`, 3 retries |
 | `incident-channel` | `drasi.network/http-sink` | The seven `incident-*` card queries | `POST /api/v4/posts` on Mattermost (`127.0.0.1:$IGNITE_MATTERMOST_PORT`) as the `drasi` bot (`env:IGNITE_MATTERMOST_BOT_TOKEN`), into the channel named in `.native/mattermost.json`. Success is `201`; `onPermanentFailure: skip`, 3 retries, 5 s timeout. The proposal's buttons call `http://host.containers.internal:$IGNITE_WORKLOAD_PORT/mattermost/actions` |
 
@@ -204,12 +204,12 @@ only place them. Three rules keep the channel honest:
 Out of date is posted only for a proposal that stood 5 s (so its card was
 posted) and that was replaced for another reason than being applied (applied:
 the new plan has no moves and the same assignments). Outcomes reply in the
-thread of the card that was approved (`ignite_approvals.post_id`); everything
+thread of the card that was approved (`change_approvals.post_id`); everything
 else is a new post.
 
 `query-results` is Server's result outlet: the Drasi Server UI, the private
 diagnostics page (`/inspect`) and the integration tests read queries through
-`GET /api/v1/instances/ignite/queries/{name}/attach`.
+`GET /api/v1/instances/ai-ops/queries/{name}/attach`.
 
 ## 3. What is simulated
 
@@ -219,8 +219,8 @@ Drasi run for real. These parts are simulated or shortened for the stage:
 | Area | Simulated or shortened |
 |---|---|
 | Model deployments | Three in-process HTTP stubs in the AI service. `failed` returns 503, `throttled` 429. Answers are canned (`workloads/src/content.rs`); regions are labels |
-| Capacity | Numbers in `ignite_deployments` and `ignite_workloads`. Nothing actually rate-limits tokens |
-| Health monitor | The AI service probes each stub's `/health` every second and exports the result as OpenTelemetry metrics (`ignite_probe_*`); the Collector forwards them to Drasi. The desk's faults set the stubs' mode |
+| Capacity | Numbers in `model_deployments` and `ai_workloads`. Nothing actually rate-limits tokens |
+| Health monitor | The AI service probes each stub's `/health` every second and exports the result as OpenTelemetry metrics (`deployment_health_probe_*`); the Collector forwards them to Drasi. The desk's faults set the stubs' mode |
 | Traffic | One support and one summary request every 5 s, for 90 minutes. Retries are unbounded |
 | Change-approval tool | `POST /approvals` in the AI service: records what the desk sends, nothing else |
 | Gateway configuration API | `POST /routes/apply`, `/approvals/{id}/reject`, `/approvals/{id}/verified` in the AI service, called only by `gateway-reaction` |
@@ -247,11 +247,11 @@ Drasi run for real. These parts are simulated or shortened for the stage:
   continuous queries turn that into Healthy, Over quota or Failed, and into
   Unknown when a deployment goes quiet for 8 seconds (`drasi.trueLater`).
   `IGNITE_HEALTH_SOURCE=postgres` (`ports.env`) is the fallback: the monitor
-  writes `ignite_reports`, the `postgres` source reads it, and there is no
+  writes `deployment_health_reports`, the `postgres` source reads it, and there is no
   `otel` source or `deployment-health` query (57 components).
 - **Grafana's alerts stay in Grafana.** Its two rules (model-call errors, and
   Drasi's overdue count) fire in Grafana; nothing sends alerts to Drasi.
-- **Server's reaction list is empty.** `GET /api/v1/instances/ignite/reactions`
+- **Server's reaction list is empty.** `GET /api/v1/instances/ai-ops/reactions`
   returns none of the six native sinks, so the Server UI shows no reactions;
   they appear only in `.native/server.json`.
 - **Known issues:** see [DEVELOPERS.md › Known issues](DEVELOPERS.md#known-issues),

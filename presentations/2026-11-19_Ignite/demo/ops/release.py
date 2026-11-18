@@ -36,7 +36,7 @@ INPUTS = ["action", "capacity", "demand", "deployments", "last-approval", "overd
 def drasi_ready():
     """Every Prometheus reaction input is ready and every deployment is Healthy in Drasi."""
     return (all(drasi.metric("drasi_reaction_input_ready", output=o) == 1 for o in INPUTS)
-            and all(drasi.metric("ignite_drasi_deployment_status", deployment=dep) == 0
+            and all(drasi.metric("drasi_deployment_health_status", deployment=dep) == 0
                     for dep in ["EU-A", "EU-B", "US-C"]))
 
 
@@ -130,9 +130,9 @@ def sample(names, processes):
             "containers": json.loads(command(["podman", "stats", "--no-stream", "--format", "json", *names])),
             "database": json.loads(drasi.runtime.sql(
                 "SELECT json_build_object('bytes',pg_database_size(current_database()),"
-                "'tasks',(SELECT count(*) FROM ignite_tasks),"
-                "'approvals',(SELECT count(*) FROM ignite_approvals),"
-                "'reports',(SELECT json_agg(r) FROM ignite_reports r));", tuples=True)),
+                "'tasks',(SELECT count(*) FROM ai_requests),"
+                "'approvals',(SELECT count(*) FROM change_approvals),"
+                "'reports',(SELECT json_agg(r) FROM deployment_health_reports r));", tuples=True)),
             "disk": {"total": disk.total, "used": disk.used, "free": disk.free}}
 
 

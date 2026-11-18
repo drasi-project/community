@@ -73,7 +73,7 @@ pub async fn record(input: Record) -> std::result::Result<String, Error> {
     tx.batch_execute("SELECT pg_advisory_xact_lock(190622)")
         .await?;
     if tx
-        .query_opt("SELECT 1 FROM ignite_approvals WHERE id=$1", &[&id])
+        .query_opt("SELECT 1 FROM change_approvals WHERE id=$1", &[&id])
         .await?
         .is_some()
     {
@@ -81,7 +81,7 @@ pub async fn record(input: Record) -> std::result::Result<String, Error> {
     }
     let (epoch, _) = scenario::current(&tx).await?;
     tx.execute(
-        "UPDATE ignite_approvals SET latest=false WHERE latest AND run_epoch=$1",
+        "UPDATE change_approvals SET latest=false WHERE latest AND run_epoch=$1",
         &[&epoch],
     )
     .await?;
@@ -92,7 +92,7 @@ pub async fn record(input: Record) -> std::result::Result<String, Error> {
         ("pending", None, None)
     };
     tx.execute(
-        "INSERT INTO ignite_approvals(id, run_epoch, candidate_id, basis, revision, status, reason, latest,
+        "INSERT INTO change_approvals(id, run_epoch, candidate_id, basis, revision, status, reason, latest,
              requested_ms, decided_ms, requested_by, post_id, change)
          VALUES($1, $2, $3, $4, $5, $6, $7, true, $8, $9, $10, $11, $12)",
         &[&id, &epoch, &input.candidate_id, &input.basis, &input.revision, &status, &reason, &now(),
@@ -174,14 +174,14 @@ pub async fn apply(headers: HeaderMap, Payload(input): Payload<Apply>) -> Api {
     tx.batch_execute("SELECT pg_advisory_xact_lock(190619)")
         .await?;
     if let Some(row) = tx
-        .query_opt("SELECT result FROM ignite_deliveries WHERE id=$1", &[&delivery])
+        .query_opt("SELECT result FROM gateway_deliveries WHERE id=$1", &[&delivery])
         .await?
     {
         return Ok(Json(row.get(0)));
     }
     let row = tx
         .query_opt(
-            "SELECT status, run_epoch, candidate_id, basis FROM ignite_approvals WHERE id=$1 FOR UPDATE",
+            "SELECT status, run_epoch, candidate_id, basis FROM change_approvals WHERE id=$1 FOR UPDATE",
             &[&input.approval],
         )
         .await?
@@ -203,20 +203,20 @@ pub async fn apply(headers: HeaderMap, Payload(input): Payload<Apply>) -> Api {
         Outcome::Duplicate => json!({"result": "duplicate", "status": status}),
         Outcome::Conflict(reason) => {
             tx.execute(
-                "UPDATE ignite_approvals SET status='rejected', reason=$1, decided_ms=$2 WHERE id=$3",
+                "UPDATE change_approvals SET status='rejected', reason=$1, decided_ms=$2 WHERE id=$3",
                 &[&reason, &now(), &input.approval],
             )
             .await?;
             json!({"result": "conflict", "reason": reason})
         }
         Outcome::Apply => {
-            let workloads = ids(&tx, "ignite_workloads", &epoch).await?;
-            let deployments = ids(&tx, "ignite_deployments", &epoch).await?;
+            let workloads = ids(&tx, "ai_workloads", &epoch).await?;
+            let deployments = ids(&tx, "model_deployments", &epoch).await?;
             check_assignments(&input.assignments, &workloads, &deployments).map_err(Error::bad)?;
             let applied = now();
             for (workload, deployment) in &input.assignments {
                 tx.execute(
-                    "UPDATE ignite_routes SET deployment=$1, approval=$2, applied_ms=$3
+                    "UPDATE workload_routes SET deployment=$1, approval=$2, applied_ms=$3
                      WHERE workload=$4 AND run_epoch=$5 AND deployment<>$1",
                     &[deployment, &input.approval, &applied, workload, &epoch],
                 )
@@ -224,7 +224,7 @@ pub async fn apply(headers: HeaderMap, Payload(input): Payload<Apply>) -> Api {
             }
             let applied_revision = scenario::bump(&tx).await?;
             tx.execute(
-                "UPDATE ignite_approvals SET status='applied', reason=NULL, decided_ms=$1, applied_revision=$2 WHERE id=$3",
+                "UPDATE change_approvals SET status='applied', reason=NULL, decided_ms=$1, applied_revision=$2 WHERE id=$3",
                 &[&applied, &applied_revision, &input.approval],
             )
             .await?;
@@ -232,7 +232,7 @@ pub async fn apply(headers: HeaderMap, Payload(input): Payload<Apply>) -> Api {
         }
     };
     tx.execute(
-        "INSERT INTO ignite_deliveries(id, received_ms, result) VALUES($1, $2, $3)",
+        "INSERT INTO gateway_deliveries(id, received_ms, result) VALUES($1, $2, $3)",
         &[&delivery, &now(), &result],
     )
     .await?;
@@ -269,7 +269,7 @@ pub async fn reject(Path(id): Path<String>, Payload(input): Payload<Reject>) -> 
         &id,
         "pending",
         "rejected",
-        "UPDATE ignite_approvals SET status='rejected', reason=$1, decided_ms=$2 WHERE id=$3",
+        "UPDATE change_approvals SET status='rejected', reason=$1, decided_ms=$2 WHERE id=$3",
         &input.reason,
     )
     .await
@@ -287,7 +287,7 @@ pub async fn verified(Path(id): Path<String>, Payload(input): Payload<Verified>)
         &id,
         "applied",
         "verified",
-        "UPDATE ignite_approvals SET status='verified', verified_ms=$1, decided_ms=$2 WHERE id=$3",
+        "UPDATE change_approvals SET status='verified', verified_ms=$1, decided_ms=$2 WHERE id=$3",
         &input.verified_ms,
     )
     .await
@@ -305,7 +305,7 @@ async fn transition(
     let tx = client.transaction().await?;
     let status: String = tx
         .query_opt(
-            "SELECT status FROM ignite_approvals WHERE id=$1 FOR UPDATE",
+            "SELECT status FROM change_approvals WHERE id=$1 FOR UPDATE",
             &[&id],
         )
         .await?

@@ -15,7 +15,7 @@ import uuid
 import drasi_outputs as d
 import otlp
 
-STATUS = "ignite_drasi_deployment_status"
+STATUS = "drasi_deployment_health_status"
 
 
 def main():
@@ -33,10 +33,10 @@ def main():
         for deployment in ("EU-A", "EU-B", "US-C"):
             d.metric_until(STATUS, lambda v: v == 0, deployment=deployment)
         time.sleep(3)
-        reported = d.sql(f"SELECT max(observed_ms) FROM ignite_reports WHERE run_epoch='{epoch}'")
-        assert reported == "0", f"the health monitor still writes ignite_reports: {reported}"
+        reported = d.sql(f"SELECT max(observed_ms) FROM deployment_health_reports WHERE run_epoch='{epoch}'")
+        assert reported == "0", f"the health monitor still writes deployment_health_reports: {reported}"
         evidence["baseline"] = {k: rows[k] for k in ("EU-A", "EU-B", "US-C")}
-        checks.append("baseline: every deployment Healthy from probe metrics alone; ignite_reports is not written")
+        checks.append("baseline: every deployment Healthy from probe metrics alone; deployment_health_reports is not written")
 
         # The path itself: a synthetic probe through the Collector reaches deployment-health.
         test_run = f"test-{uuid.uuid4()}"

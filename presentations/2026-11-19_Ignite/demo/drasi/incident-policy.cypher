@@ -1,5 +1,5 @@
-MATCH (d:PolicyResult)-[:POLICY_WORKLOAD]->(w:ignite_workloads),
-      (w)-[:WORKLOAD_SCENARIO]->(s:ignite_scenario)
+MATCH (d:PolicyResult)-[:POLICY_WORKLOAD]->(w:ai_workloads),
+      (w)-[:WORKLOAD_CONFIG]->(s:routing_config)
 WHERE d.run_epoch = s.run_epoch AND w.run_epoch = s.run_epoch
 WITH s.run_epoch AS run_epoch,
      collect(CASE WHEN w.id = 'support' AND d.state = 'allowed' THEN d.target ELSE '' END) AS support_list,

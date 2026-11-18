@@ -19,14 +19,14 @@ contactPoints:
           title: '{{ if eq .Status "firing" }}Alert firing{{ else }}Resolved{{ end }}: {{ .CommonLabels.alertname }}'
           text: >-
             {{ .CommonAnnotations.summary }}
-            [Open AI service · Operations]({{ .ExternalURL }}d/ignite-workload?from=now-5m&to=now&refresh=5s)
+            [Open AI service · Operations]({{ .ExternalURL }}d/ai-operations?from=now-5m&to=now&refresh=5s)
 groups:
   - orgId: 1
     name: support-workload
     folder: Ignite
     interval: 10s
     rules:
-      - uid: ignite-workload-http-failure
+      - uid: model-calls-failing
         title: Model calls failing
         condition: B
         for: 0s
@@ -34,7 +34,7 @@ groups:
         execErrState: Error
         annotations:
           summary: Model-call errors were measured in the last 30 seconds.
-          __dashboardUid__: ignite-workload
+          __dashboardUid__: ai-operations
           __panelId__: "5"
         labels:
           component: workload
@@ -44,9 +44,9 @@ groups:
             relativeTimeRange: {from: 60, to: 0}
             model:
               expr: >-
-                (sum by(workload,endpoint) (increase(ignite_workload_requests_total{status!="200"}[30s]))
-                or on(workload,endpoint) (0 * sum by(workload,endpoint) (increase(ignite_workload_requests_total[30s]))))
-                and on() count(ignite_workload_queue_depth)
+                (sum by(workload,endpoint) (increase(ai_gateway_model_calls_total{status!="200"}[30s]))
+                or on(workload,endpoint) (0 * sum by(workload,endpoint) (increase(ai_gateway_model_calls_total[30s]))))
+                and on() count(ai_gateway_queue_depth)
               instant: true
               refId: A
           - refId: B
@@ -61,7 +61,7 @@ groups:
                   evaluator: {type: gt, params: [0]}
                   operator: {type: and}
                   reducer: {type: last}
-      - uid: ignite-support-overdue
+      - uid: support-requests-overdue
         title: Support requests overdue (Drasi)
         condition: B
         for: 0s
@@ -69,7 +69,7 @@ groups:
         execErrState: Error
         annotations:
           summary: Drasi reports customer-support requests past their 15-second deadline.
-          __dashboardUid__: ignite-workload
+          __dashboardUid__: ai-operations
           __panelId__: "7"
         labels:
           component: workload
@@ -81,7 +81,7 @@ groups:
               # Drasi's Prometheus reaction (tile-overdue). No series is 0 only while the
               # reaction's input is ready; otherwise Unknown, which is NoData (OK).
               expr: >-
-                max((max(ignite_drasi_overdue_requests{workload="support"})
+                max((max(drasi_requests_overdue{workload="support"})
                 and on() (drasi_reaction_input_ready{output="overdue"} == 1))
                 or on() ((drasi_reaction_input_ready{output="overdue"} == 1) * 0))
               instant: true

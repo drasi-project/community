@@ -30,7 +30,7 @@ groups:
     folder: Ignite
     interval: 10s
     rules:
-      - uid: ignite-probe-http-failure
+      - uid: integration-probe-http-failure
         title: Ignite probe HTTP failure
         condition: B
         for: 0s
@@ -46,7 +46,7 @@ groups:
             datasourceUid: ignite-prometheus
             relativeTimeRange: {from: 60, to: 0}
             model:
-              expr: ignite_probe_last_request_failed
+              expr: integration_probe_last_request_failed
               instant: true
               refId: A
           - refId: B

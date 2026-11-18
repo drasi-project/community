@@ -10,7 +10,7 @@ already exists in this branch.
 |---|---|---|
 | [Settings](#1-settings) | Every port, the compose project, the publication and slot and the storage key come from `demo/ports.env`; this copy uses +1000 ports and project `ignite-native` | `demo/ports.env`, `demo/ports.default.env` |
 | [Build and test](#2-build-and-test) | One crate at a time, shared `ignite-native/.cargo-target`, at most 4 jobs | `demo/.cargo/config.toml` |
-| [Schema](#3-schema) | The JSON model becomes `ignite_workloads`, `ignite_deployments`, `ignite_routes`, `ignite_policy_destinations`, `ignite_approvals`; `ignite_scenario` holds `run_epoch` and `revision` | this file |
+| [Schema](#3-schema) | The JSON model becomes `ai_workloads`, `model_deployments`, `workload_routes`, `data_residency_policy`, `change_approvals`; `routing_config` holds `run_epoch` and `revision` | this file |
 | [Graph](#4-graph) | Context queries → Drasi's Rego policy → `policy-results` → Drasi's optimization (plan) → result queries → tile queries → Prometheus reaction; approvals and events → HTTP reactions | this file |
 | [Element contracts](#5-element-contracts) | `PolicyInput`, `PolicyDecision`, the plan result queries, and the rows each plugin reads | this file |
 | [Rego policy](#6-rego-policy) | Drasi's `drasi.standard/policy` decides each `policy-input` row; the Rego module is configuration, allowed destinations are data | `drasi/policy` |
@@ -22,7 +22,7 @@ already exists in this branch.
 | [Mattermost](#13-mattermost) | Local Mattermost on `IGNITE_MATTERMOST_PORT` (19065), bootstrapped by `ops/mattermost.py`; team `ai-platform`, channel `incident-ai-support`, bot `drasi`, user `oncall`; secrets in `.env`, IDs in `.native/mattermost.json` | [incident-channel-plan.md](incident-channel-plan.md) |
 | [Approvals from Mattermost](#14-approvals-from-mattermost) | `POST /mattermost/actions` turns a card's button into the existing approval (`id` = `mm-{post_id}`); `POST /mattermost/approve-latest` presses the newest proposal's button for the desk | this file |
 | [Incident cards](#15-incident-cards) | Seven Drasi event queries → `incident-channel` HTTP reaction → Mattermost REST; outcomes reply in the approved card's thread | this file |
-| [Operations dashboard](#16-operations-dashboard) | One dashboard `ignite-workload`, rows AI Deployments and Decision Support, stable panel `key`s; Workload status, Recommended action (with the change's progress), Failover readiness; Grafana's alert list | this file |
+| [Operations dashboard](#16-operations-dashboard) | One dashboard `ai-operations`, rows AI Deployments and Decision Support, stable panel `key`s; Workload status, Recommended action (with the change's progress), Failover readiness; Grafana's alert list | this file |
 | [Projected Mattermost view](#17-projected-mattermost-view) | Stage view `incident`, framed from the web app origin, signed in through `/mattermost/sign-in` | this file |
 | [Desk](#18-desk) | One backup button, `approve-change`, calls `approve-latest`; `select-plan` and `approve-plan` go | this file |
 | [Working rules](#19-working-rules-for-the-incident-channel-work) | File ownership for workstreams A–D; one rule for restarting the live stack; no resets without notice | this file |
@@ -99,16 +99,16 @@ health reports, tasks or approvals.
 
 | Table | Columns | Written by | Published to Drasi |
 |---|---|---|---|
-| `ignite_scenario` | `singleton` PK, `run_epoch`, `revision` | reset, every scenario change | yes |
-| `ignite_workloads` | `id` PK (`support`, `batch`), `run_epoch`, `data_class` (`restricted`, `public`), `region_requirement` (`EU`, `any`), `model`, `demand_tpm` | reset, desk controls | yes |
-| `ignite_deployments` | `id` PK (`EU-A`, `EU-B`, `US-C`), `run_epoch`, `region`, `model`, `capacity_tpm` | reset, desk controls | yes |
-| `ignite_routes` | `workload` PK, `run_epoch`, `deployment`, `approval` (nullable), `applied_ms` | reset, `POST /routes/apply` only | yes |
-| `ignite_policy_destinations` | `id` PK (`{workload}/{deployment}`), `run_epoch`, `workload`, `deployment` | reset, desk policy edit (the talk's policy change) | yes |
-| `ignite_approvals` | `id` PK, `run_epoch`, `candidate_id`, `basis`, `revision` (plan's scenario revision), `status` (`pending`, `applied`, `rejected`, `verified`), `reason`, `latest` (bool), `requested_ms`, `decided_ms`, `applied_revision`, `verified_ms` | approval tool (insert), gateway configuration API (status) | yes |
-| `ignite_deliveries` | `id` PK (`x-drasi-delivery-id`), `received_ms`, `result` | gateway configuration API | no |
-| `ignite_simulation` | `deployment` PK, `mode` (`ok`, `failed`, `throttled`), `reporting` | demo controls; read only by the simulated deployments and health monitor | **no**: Drasi sees health only through reports |
-| `ignite_reports`, `ignite_tasks`, `ignite_attempts` | unchanged | AI service (health monitor, gateway) | yes |
-| `ignite_receipts` | unchanged | gateway | no |
+| `routing_config` | `singleton` PK, `run_epoch`, `revision` | reset, every scenario change | yes |
+| `ai_workloads` | `id` PK (`support`, `batch`), `run_epoch`, `data_class` (`restricted`, `public`), `region_requirement` (`EU`, `any`), `model`, `demand_tpm` | reset, desk controls | yes |
+| `model_deployments` | `id` PK (`EU-A`, `EU-B`, `US-C`), `run_epoch`, `region`, `model`, `capacity_tpm` | reset, desk controls | yes |
+| `workload_routes` | `workload` PK, `run_epoch`, `deployment`, `approval` (nullable), `applied_ms` | reset, `POST /routes/apply` only | yes |
+| `data_residency_policy` | `id` PK (`{workload}/{deployment}`), `run_epoch`, `workload`, `deployment` | reset, desk policy edit (the talk's policy change) | yes |
+| `change_approvals` | `id` PK, `run_epoch`, `candidate_id`, `basis`, `revision` (plan's scenario revision), `status` (`pending`, `applied`, `rejected`, `verified`), `reason`, `latest` (bool), `requested_ms`, `decided_ms`, `applied_revision`, `verified_ms` | approval tool (insert), gateway configuration API (status) | yes |
+| `gateway_deliveries` | `id` PK (`x-drasi-delivery-id`), `received_ms`, `result` | gateway configuration API | no |
+| `simulated_deployment_faults` | `deployment` PK, `mode` (`ok`, `failed`, `throttled`), `reporting` | demo controls; read only by the simulated deployments and health monitor | **no**: Drasi sees health only through reports |
+| `deployment_health_reports`, `ai_requests`, `model_call_attempts` | unchanged | AI service (health monitor, gateway) | yes |
+| `model_responses` | unchanged | gateway | no |
 
 Removed: `ignite_model` (payload), `ignite_endpoints`, `ignite_commands`,
 `ignite_publications`, `ignite_audit`, `ignite_alerts` and `ignite_breaches`
@@ -120,7 +120,7 @@ and EU-B (EU) and US-C (US), all `support-model`, 100 000; routes support → EU
 batch → EU-B; destinations support: EU-A, EU-B; batch: EU-A, EU-B, US-C;
 `revision` 1; all simulation modes `ok`.
 
-The monotonic trigger moves from `ignite_model` to `ignite_scenario` (revision
+The monotonic trigger moves from `ignite_model` to `routing_config` (revision
 +1 per change). `latest` is set on the inserted approval and cleared on the
 others in the same transaction.
 
@@ -128,7 +128,7 @@ others in the same transaction.
 
 Component names are fixed here; the config generator (workstream 7) maps them to
 component IDs. Context queries filter to the current run by joining
-`ignite_scenario` on `run_epoch`.
+`routing_config` on `run_epoch`.
 
 ```mermaid
 flowchart LR
@@ -197,8 +197,8 @@ canonical JSON (sorted keys, no whitespace).
 
 | Query | Port | Columns |
 |---|---|---|
-| `policy-input` (label `PolicyInput`) | policy `in` | `id` (`{workload}/{deployment}`), `run_epoch`, `workload`, `data_class`, `region_requirement`, `workload_model`, `deployment`, `region`, `deployment_model`, `destinations` (`[deployment]` when the pair's `ignite_policy_destinations` row exists, else `[]`) |
-| `plan-context` (label `PlanContext`) | plan `in` | `run_epoch`, `revision` (the one `ignite_scenario` row) |
+| `policy-input` (label `PolicyInput`) | policy `in` | `id` (`{workload}/{deployment}`), `run_epoch`, `workload`, `data_class`, `region_requirement`, `workload_model`, `deployment`, `region`, `deployment_model`, `destinations` (`[deployment]` when the pair's `data_residency_policy` row exists, else `[]`) |
+| `plan-context` (label `PlanContext`) | plan `in` | `run_epoch`, `revision` (the one `routing_config` row) |
 | `plan-items` (label `PlanItem`) | plan `in` | `id` (workload), `run_epoch`, `revision` (scenario), `demand_tpm`, `deployment` (current route) |
 | `plan-bins` (label `PlanBin`) | plan `in` | `id`, `run_epoch`, `capacity_tpm`, `health` (`healthy` for `ok`; `unhealthy` for `failed` or `throttled`; `unknown` otherwise or once the latest report expires, via `drasi.trueLater`) |
 | `plan-candidates` (label `PlanCandidate`) | plan `in` | one row per workload × deployment in the current run: `subject`, `target`, `run_epoch`, `demand_tpm`, `current` (route), `capacity_tpm` |
@@ -281,7 +281,7 @@ A solve that exceeds its time limit is `unknown` too.
 Drasi's native Rego transformer, `drasi.standard/policy`
 (`drasi-computation-transformer-policy`, drasi-core). It evaluates the rule once
 for each `policy-input` row. Configuration: `drasi/policy/policy.json`. The
-config generator inlines `drasi/policy/ignite.rego` and sets `stream` to
+config generator inlines `drasi/policy/placement.rego` and sets `stream` to
 `{component id}/out`.
 
 - **Input:** `policy-input` produces one row per workload × deployment in the
@@ -289,12 +289,12 @@ config generator inlines `drasi/policy/ignite.rego` and sets `stream` to
   most one value and its content never changes order. It filters out empty
   groups (`count(d) … WHERE matches > 0`), so a reset retracts the previous
   run's pairs.
-- **Rule:** `data.ignite.assessment` returns `{allowed, reason}` from
+- **Rule:** `data.placement.assessment` returns `{allowed, reason}` from
   `input.subject` (workload), `input.target` (deployment) and
   `input.destinations`. Support may use EU-A and EU-B, never US-C (restricted
   data stays in the EU). Batch may use all three. Removing EU-B from support's
   destinations denies it.
-- **The talk's policy edit** is a data change to `ignite_policy_destinations`.
+- **The talk's policy edit** is a data change to `data_residency_policy`.
   Only that pair's decision is emitted. Demand and capacity edits emit nothing.
   A rule change is a managed in-place update: retained inputs are
   re-evaluated, and only changed decisions are emitted, with a new
@@ -397,21 +397,21 @@ Workload labels stay `support` and `batch`; Grafana relabels `batch` as
 
 | Tile (dashboard) | Metric | Labels | Values | Missing while ready | Query (alias) |
 |---|---|---|---|---|---|
-| Support overdue; Support requests waiting (overdue line); alert "Support requests overdue (Drasi)" (Operations) | `ignite_drasi_overdue_requests` | `workload` | count | 0 | `tile-overdue` (`overdue`) |
-| Deployment status (Operations); Deployments (Recovery plan) | `ignite_drasi_deployment_status` | `deployment` | 0 healthy, 1 throttled ("Over quota"), 2 failed, -1 unknown | — | `tile-deployments` (`deployments`) |
-| Deployments (Recovery plan) | `ignite_drasi_deployment_capacity_tpm` | `deployment` | capacity | — | `tile-deployments` |
-| Capacity · tokens/min (Recovery plan) | `ignite_drasi_capacity_tpm` | `kind` = `total`, `healthy`, `needed` | sum | — | `tile-capacity` (`capacity`: total, healthy), `tile-demand` (`demand`: needed) |
-| Recovery (both) | `ignite_drasi_recovery_state` | — | 0 awaiting evidence, 1 verified, 2 nothing to verify, -1 unknown | 2 | `tile-recovery` (`recovery`) |
-| Action needed (both) | `ignite_drasi_action_needed` | — | 0 none, 1 approve proposed plan, 2 no valid plan, 3 at risk, -1 unknown | — | `tile-action` (`action`) |
-| Safe if one fails? (both) | `ignite_drasi_safe_if_one_fails` | `lost` | 1 yes, 0 no (`lost` = first failure), 2 already one down, -1 unknown | — | `tile-resilience` (`resilience`) |
-| Running now (Recovery plan) | `ignite_drasi_running_tpm` | `workload`, `deployment` | demand; negative = not allowed (policy denies its route; the gateway still sends there until a plan is applied) | — | `tile-running` (`running`) |
-| Proposed plan (Recovery plan) | `ignite_drasi_proposed_tpm` | `workload`, `deployment` | demand on the planned deployment | no plan | `tile-proposed` (`proposed`) |
-| Customer support / Document summaries may run on (Recovery plan) | `ignite_drasi_policy_allowed` | `workload`, `deployment` | 1 allowed, 0 not allowed, -1 unknown | — | `tile-policy` (`policy`) |
-| Last approval (Recovery plan) | `ignite_drasi_last_approval_state` | `approval` | 1 approved, applying; 2 applied, awaiting evidence; 3 applied and verified; 4 rejected; -1 unknown | 0 none yet | `tile-last-approval` (`last-approval`) |
+| Support overdue; Support requests waiting (overdue line); alert "Support requests overdue (Drasi)" (Operations) | `drasi_requests_overdue` | `workload` | count | 0 | `tile-overdue` (`overdue`) |
+| Deployment status (Operations); Deployments (Recovery plan) | `drasi_deployment_health_status` | `deployment` | 0 healthy, 1 throttled ("Over quota"), 2 failed, -1 unknown | — | `tile-deployments` (`deployments`) |
+| Deployments (Recovery plan) | `drasi_deployment_capacity_tpm` | `deployment` | capacity | — | `tile-deployments` |
+| Capacity · tokens/min (Recovery plan) | `drasi_capacity_tpm` | `kind` = `total`, `healthy`, `needed` | sum | — | `tile-capacity` (`capacity`: total, healthy), `tile-demand` (`demand`: needed) |
+| Recovery (both) | `drasi_recovery_state` | — | 0 awaiting evidence, 1 verified, 2 nothing to verify, -1 unknown | 2 | `tile-recovery` (`recovery`) |
+| Action needed (both) | `drasi_action_needed` | — | 0 none, 1 approve proposed plan, 2 no valid plan, 3 at risk, -1 unknown | — | `tile-action` (`action`) |
+| Safe if one fails? (both) | `drasi_safe_if_one_fails` | `lost` | 1 yes, 0 no (`lost` = first failure), 2 already one down, -1 unknown | — | `tile-resilience` (`resilience`) |
+| Running now (Recovery plan) | `drasi_workload_running_tpm` | `workload`, `deployment` | demand; negative = not allowed (policy denies its route; the gateway still sends there until a plan is applied) | — | `tile-running` (`running`) |
+| Proposed plan (Recovery plan) | `drasi_workload_proposed_tpm` | `workload`, `deployment` | demand on the planned deployment | no plan | `tile-proposed` (`proposed`) |
+| Customer support / Document summaries may run on (Recovery plan) | `drasi_placement_allowed` | `workload`, `deployment` | 1 allowed, 0 not allowed, -1 unknown | — | `tile-policy` (`policy`) |
+| Last approval (Recovery plan) | `drasi_last_approval_state` | `approval` | 1 approved, applying; 2 applied, awaiting evidence; 3 applied and verified; 4 rejected; -1 unknown | 0 none yet | `tile-last-approval` (`last-approval`) |
 
 The ordinary-monitoring tiles (model calls, errors, answer time, support queue)
-stay on the AI service's OpenTelemetry metrics. `ignite_drasi_dashboard`,
-`ignite_drasi_valid_until_seconds`, `ignite_drasi_projection_timestamp_seconds`
+stay on the AI service's OpenTelemetry metrics. `drasi_dashboard`,
+`drasi_valid_until_seconds`, `drasi_projection_timestamp_seconds`
 and `ignite_workload_capacity_tpm` go away; Grafana's "valid until" checks become
 the readiness rule above.
 
@@ -420,14 +420,14 @@ How Grafana applies this (workstream 5, `observability/grafana`):
 - Every Drasi expression is gated with `and on() (drasi_reaction_input_ready{output=…} == 1)`, so a value that outlives its input's readiness is not shown. The `Missing while ready` defaults are wrapped in `max(…)` so a chart keeps one series.
 - "Safe if one fails?" and "Action needed" no longer re-derive "already one down" in PromQL; `tile-resilience` and `tile-action` do.
 - Deployments (Recovery plan) shows capacity unless the status is 2 (Failed). Throttled and unknown health show capacity (today throttled showed "Failed"); unknown health shows on Deployment status.
-- The application's freshness gate (`ignite_drasi_projection_timestamp_seconds`) goes too: Support queue relies on the collector's 10 s expiry, and the "Model calls failing" alert requires `count(ignite_workload_queue_depth)` (the AI service is reporting).
+- The application's freshness gate (`drasi_projection_timestamp_seconds`) goes too: Support queue relies on the collector's 10 s expiry, and the "Model calls failing" alert requires `count(ai_gateway_queue_depth)` (the AI service is reporting).
 - "Support requests overdue (Drasi)": Unknown is NoData, which is Normal; it fires only on a count above 0.
 - Grafana's alerts go to the probe's webhook and, for the AI service's two rules, to #incident-ai-support ([section 16](#16-operations-dashboard)); Grafana's environment drops `IGNITE_WORKLOAD_PORT`.
 - `IGNITE_GRAFANA_TOKEN`: `.env` gets an empty line; `ops/observability-stack.sh up` (when it starts Grafana) runs `ops/observability-env.py grafana-token`, which keeps a token that still has `annotations:write`, or creates the `drasi-annotations` service account (Editor) and a new token. Grafana stores only token hashes, so it cannot be generated before Grafana runs. This is the one edit to `observability-stack.sh`, outside workstream 5's list.
 - Grafana's file provisioning does not notice regenerated dashboards through the podman mount; restart Grafana (`ops/observability-stack.sh restart grafana`) after `dashboards.py`.
 
 Tile queries (sketches; workstream 7 owns the final text). `S` is
-`ignite_scenario` joined on `run_epoch`, which keeps each tile to the current
+`routing_config` joined on `run_epoch`, which keeps each tile to the current
 run:
 
 | Query | Returns |
@@ -460,7 +460,7 @@ host references (`env:…` on the `configuration` resource), exported by
 | `gateway-reaction` | `approve` ← `approval-valid` (added) | `POST {workload}/routes/apply`, body `{"approval":"{{after.approval}}","candidate_id":…,"basis":…,"expected_revision":{{after.expected_revision}},"assignments":{{{after.assignments}}}}` | `onPermanentFailure: stall`, `maxRetries: 10`, `retryBudgetMs: 30000`, `timeoutMs: 5000` |
 | | `reject` ← `approval-stale` (added) | `POST {workload}/approvals/{{after.approval}}/reject`, body `{"reason": {{json after.reason}}}` | same |
 | | `verified` ← `recovery-verified` (added) | `POST {workload}/approvals/{{after.approval}}/verified`, body `{"verified_ms": {{after.verified_ms}}}` | same |
-| `grafana-annotations` | `events` ← `approval-events`, `plan-events` (added) | `POST {grafana}/api/annotations`, `token` = `env:IGNITE_GRAFANA_TOKEN` (service account, workstream 5), body `{"time":{{after.at_ms}},"tags":["ignite-decision","{{after.id}}"],"text":{{json after.text}}}` | `onPermanentFailure: skip`, `maxRetries: 3` |
+| `grafana-annotations` | `events` ← `approval-events`, `plan-events` (added) | `POST {grafana}/api/annotations`, `token` = `env:IGNITE_GRAFANA_TOKEN` (service account, workstream 5), body `{"time":{{after.at_ms}},"tags":["drasi-decision","{{after.id}}"],"text":{{json after.text}}}` | `onPermanentFailure: skip`, `maxRetries: 3` |
 | `langfuse-scores` | `scores` ← `recovery-scores` (added) | `POST {langfuse}/api/public/scores`, `secretHeaders.authorization` = `env:IGNITE_LANGFUSE_AUTHORIZATION` (`Basic …`), body `{"id":"{{after.id}}","traceId":"{{after.trace_id}}","name":"drasi_recovery","value":1,"dataType":"NUMERIC","comment":{{json after.comment}}}` | `onPermanentFailure: skip`, `maxRetries: 3` |
 
 Driving queries:
@@ -479,7 +479,7 @@ Driving queries:
 | API | Caller | Request | Effect and response |
 |---|---|---|---|
 | `POST /approvals` (approval tool) | Desk | `{"id"?: string, "candidate_id", "basis", "revision"}` | Inserts a `pending` approval (the ID is generated unless given; a repeated ID is a no-op) and makes it `latest`. No validation of the plan. `200 {"id"}` |
-| `POST /routes/apply` (gateway configuration) | `gateway-reaction` only | as above, header `x-drasi-delivery-id` | In one transaction: a delivery ID already in `ignite_deliveries` returns its recorded result; an approval not `pending` → `200 {"result":"duplicate"}`; `ignite_scenario.revision ≠ expected_revision` → approval `rejected` with reason "Scenario changed since the plan (revision N, plan revision M)" and `200 {"result":"conflict"}`; otherwise routes are written, revision +1, approval `applied` with `applied_revision` → `200 {"result":"applied","revision":N+1}` |
+| `POST /routes/apply` (gateway configuration) | `gateway-reaction` only | as above, header `x-drasi-delivery-id` | In one transaction: a delivery ID already in `gateway_deliveries` returns its recorded result; an approval not `pending` → `200 {"result":"duplicate"}`; `routing_config.revision ≠ expected_revision` → approval `rejected` with reason "Scenario changed since the plan (revision N, plan revision M)" and `200 {"result":"conflict"}`; otherwise routes are written, revision +1, approval `applied` with `applied_revision` → `200 {"result":"applied","revision":N+1}` |
 | `POST /approvals/{id}/reject` | `gateway-reaction` only | `{"reason"}` | `pending` → `rejected` with Drasi's reason; any other status is a no-op. `200` |
 | `POST /approvals/{id}/verified` | `gateway-reaction` only | `{"verified_ms"}` | `applied` → `verified`; any other status is a no-op. `200` |
 
@@ -508,13 +508,13 @@ Implementation details (workstream 1, `workloads/src/external.rs`):
 - **`decided_ms`** is the time of the approval's latest status change
   (applied, rejected or verified), so `approval-events` sees each change.
 - **Revision.** Desk configuration (capacity, destinations) and apply each raise
-  `ignite_scenario.revision` by one per transaction that changes a row;
+  `routing_config.revision` by one per transaction that changes a row;
   simulation controls never do.
 - **Prune.** `ops/native-runtime.py run` also deletes earlier-run approvals and
-  all `ignite_deliveries` before Server starts (a restart issues new delivery IDs).
+  all `gateway_deliveries` before Server starts (a restart issues new delivery IDs).
 
 Demo controls stay demo controls: reset may delete the previous run's Grafana
-annotations (tag `ignite-decision`) as today; that is the demo driver, not
+annotations (tag `drasi-decision`) as today; that is the demo driver, not
 Drasi.
 
 ### Demo controls (desk → AI service)
@@ -524,7 +524,7 @@ Agreed between workstreams 1 and 6; the desk and its test fixture
 
 | API | Request | Response |
 |---|---|---|
-| `GET /health` | | `{run_epoch, revision, pending, task_target_seconds, report_expiry_seconds, traffic: {running, submitted, ends_ms, error, interval_seconds}, deployments: [{id, region, model, capacity_tpm, mode, reporting}], workloads: [{id, data_class, region_requirement, model, demand_tpm, deployment}], destinations: {workload: [deployment]}}`. `mode`/`reporting` are the simulation (`ignite_simulation`); `deployment` is the current route. No Drasi answers and no readiness of Drasi |
+| `GET /health` | | `{run_epoch, revision, pending, task_target_seconds, report_expiry_seconds, traffic: {running, submitted, ends_ms, error, interval_seconds}, deployments: [{id, region, model, capacity_tpm, mode, reporting}], workloads: [{id, data_class, region_requirement, model, demand_tpm, deployment}], destinations: {workload: [deployment]}}`. `mode`/`reporting` are the simulation (`simulated_deployment_faults`); `deployment` is the current route. No Drasi answers and no readiness of Drasi |
 | `POST /control` | `{run_epoch, deployment, action}`, action `fail`, `throttle`, `restore`, `pause-reports`, `resume-reports` | `200 {run_epoch, revision}`; simulation only, the revision is unchanged |
 | `POST /configuration` | `{run_epoch, revision, capacity?: {deployment: tpm}, destinations?: {workload: [deployment]}}` | `200 {run_epoch, revision}` (unchanged revision when nothing changed); `409 {"error"}` when `run_epoch`/`revision` are stale. The desk's "EU-A to 50k/100k" buttons send `POST /control` `restore` for EU-A first when it isn't healthy and reporting |
 | `POST /approvals` | `{id, candidate_id, basis, revision}`; the desk always sends its own UUID `id` and the `Plan`'s `candidate_id`, `basis` and `revision` | `200 {id}` (above) |
@@ -694,7 +694,7 @@ generator and the AI service:
 
 ### Schema change (workstream A, `database/`)
 
-`ignite_approvals` gains nullable `requested_by` (`@oncall`), `post_id` (the
+`change_approvals` gains nullable `requested_by` (`@oncall`), `post_id` (the
 Mattermost card that was approved) and `change` (the card's change text);
 `status` gains `declined` (a person pressed Reject). `POST /approvals` is
 unchanged and leaves the new columns null. Drasi's existing queries ignore
@@ -738,7 +738,7 @@ No authentication beyond the local bind, as for `POST /approvals`.
 
 Request `{"run_epoch"}`. Finds the newest post in the channel
 (`GET /api/v4/channels/{channel_id}/posts`, admin token) with
-`props.ignite_card` = `proposal`, `props.ignite_run_epoch` = `run_epoch` and an
+`props.incident_card` = `proposal`, `props.incident_run_epoch` = `run_epoch` and an
 `approve` action still on it, then presses it as `oncall`
 (`POST /api/v4/posts/{post_id}/actions/approve`, oncall token). Mattermost then
 calls `/mattermost/actions` exactly as for a click.
@@ -776,7 +776,7 @@ Body envelope (every card; the queries build every string, templates only use
 
 ```json
 {"channel_id":"<channel_id>","root_id":{{json after.root_id}},"message":"",
- "props":{"ignite_card":"<card>","ignite_id":{{json after.id}},"ignite_run_epoch":{{json after.run_epoch}},
+ "props":{"incident_card":"<card>","incident_card_id":{{json after.id}},"incident_run_epoch":{{json after.run_epoch}},
   "attachments":[{"fallback":{{json after.title}},"color":"<colour>","title":{{json after.title}},
     "text":{{json after.text}},"fields":[<fields>],"footer":"Drasi · <query>"<, "actions":[…]>}]}}
 ```
@@ -789,13 +789,13 @@ grey `#9aa4b0`. Workloads are written `support` and `summaries` (`batch` →
 
 ### The cards
 
-Every query keeps to the current run (`ignite_scenario` on `run_epoch`),
+Every query keeps to the current run (`routing_config` on `run_epoch`),
 returns `id`, `run_epoch`, `at_ms` and the columns below, and emits a row only
 within 60 s of its event (`NOT drasi.trueLater(true, at_ms + 60000)`), so a
 Server restart reposts nothing older. Texts with `{…}` are filled by the query;
 the examples are the talk's values.
 
-| # | Card (`ignite_card`) | Alias ← query | Trigger and debounce | Thread |
+| # | Card (`incident_card`) | Alias ← query | Trigger and debounce | Thread |
 |---|---|---|---|---|
 | 1 | `failed` | `failed` ← `incident-failed` | A deployment's latest report is `failed` for 3 s (`drasi.trueFor(…, 3000)`); one card per failure; `id` = `failed-{deployment}-{at_ms}` | top level |
 | 2 | `overdue` | `overdue` ← `incident-overdue` | Support's overdue count > 0 for 3 s; one card per episode (until it returns to 0) | top level |
@@ -815,7 +815,7 @@ Card contents (title, colour, text, fields; `—` = none):
 2. **overdue**, red. Title `Support requests overdue`. Text "{n} customer-support
    requests are past their 15-second deadline. More follow until support can
    run somewhere." Fields: Overdue when posted `3`; Deadline `15 s`; Dashboard
-   `[Operations › Support overdue](http://localhost:{IGNITE_GRAFANA_PORT}/d/ignite-workload)`
+   `[Operations › Support overdue](http://localhost:{IGNITE_GRAFANA_PORT}/d/ai-operations)`
    (the generator writes the port into the template; not a query column).
 3. **proposal**, orange. Title `Proposed change: {change}` ("Proposed change:
    Move summaries to US-C and support to EU-B"; `change` = the plan's `reason`
@@ -896,10 +896,10 @@ through drasi-core with a test clock). Where it differs from the above:
 
 ### Panels (workstream C, `dashboards.py`)
 
-One dashboard, uid `ignite-workload`, title "AI service · Operations";
+One dashboard, uid `ai-operations`, title "AI service · Operations";
 `decisions.json` (Recovery plan, uid `ignite-decisions`) and its links are
 removed. Every panel has a `description` (the (i) icon) and a top-level
-`"key"`; the projector's highlight addresses `ignite-workload.<key>`. The panel
+`"key"`; the projector's highlight addresses `ai-operations.<key>`. The panel
 header (title, (i) and menu) must stay visible and steady in kiosk view; C
 fixes the current flicker of the menu.
 
@@ -940,10 +940,10 @@ panel's menu visible. Grafana renders it only with `GF_PANELS_DISABLE_SANITIZE_H
 
 | Tile | Metric | Labels | Values (text, colour) | Missing while ready | Query (alias) |
 |---|---|---|---|---|---|
-| Recommended action | `ignite_drasi_recommended_action` (replaces `ignite_drasi_action_needed`) | `text` | 0 `None`, 1 the change, e.g. `Move summaries to US-C and support to EU-B`, 2 `No change fits policy and capacity`, 3 `Add capacity: losing EU-B leaves support nowhere to run`, -1 Unknown | — | `tile-action` (`action`) |
-| Recommended action (the change's progress) | `ignite_drasi_change_status` | `text` (the approved change) | 0 none in progress, 1 awaiting approval, 2 approved, applying, 3 applied, verifying, 4 verified, 5 rejected, -1 unknown | no row before this run's first approval | `tile-change` (`change`) |
-| Workload status | `ignite_drasi_workload_status` | `workload`, `name` (`Support`, `Summaries`), `deployment` | 0 Healthy (green), 1 Over quota (yellow), 2 Failing (red), 3 Not allowed (red), -1 Unknown | — | `tile-workloads` (`workloads`) |
-| Failover readiness | `ignite_drasi_failover_readiness` (replaces `ignite_drasi_safe_if_one_fails`) | `text`, `lost`, `workload` | 1 `Survives losing any one deployment` (green), 0 `At risk: losing EU-B leaves support nowhere to run` (orange), 2 `Already degraded: EU-A down` (grey; Grafana writes the names from `ignite_drasi_deployment_status >= 1`, since the query knows only the count), -1 Unknown | — | `tile-resilience` (`resilience`) |
+| Recommended action | `drasi_recommended_action` (replaces `drasi_action_needed`) | `text` | 0 `None`, 1 the change, e.g. `Move summaries to US-C and support to EU-B`, 2 `No change fits policy and capacity`, 3 `Add capacity: losing EU-B leaves support nowhere to run`, -1 Unknown | — | `tile-action` (`action`) |
+| Recommended action (the change's progress) | `drasi_change_status` | `text` (the approved change) | 0 none in progress, 1 awaiting approval, 2 approved, applying, 3 applied, verifying, 4 verified, 5 rejected, -1 unknown | no row before this run's first approval | `tile-change` (`change`) |
+| Workload status | `drasi_workload_status` | `workload`, `name` (`Support`, `Summaries`), `deployment` | 0 Healthy (green), 1 Over quota (yellow), 2 Failing (red), 3 Not allowed (red), -1 Unknown | — | `tile-workloads` (`workloads`) |
+| Failover readiness | `drasi_failover_readiness` (replaces `drasi_safe_if_one_fails`) | `text`, `lost`, `workload` | 1 `Survives losing any one deployment` (green), 0 `At risk: losing EU-B leaves support nowhere to run` (orange), 2 `Already degraded: EU-A down` (grey; Grafana writes the names from `drasi_deployment_health_status >= 1`, since the query knows only the count), -1 Unknown | — | `tile-resilience` (`resilience`) |
 
 Grafana shows the `text` label (legend `{{text}}`, text mode name) coloured by
 value. As built: `tile-resilience` returns `text` "Already degraded" for 2 (Grafana
@@ -957,7 +957,7 @@ is taken from the `Resilience` reason (`support`, or `batch` written `summaries`
 meanings (the desk reads them); the new columns are additive.
 
 **The change's progress** (`tile-change`, inputs `postgres` and `plan-results`,
-joins `APPROVAL_PLAN` and `APPROVAL_SCENARIO`), first match wins: plan `unknown` →
+joins `APPROVAL_PLAN` and `APPROVAL_CONFIG`), first match wins: plan `unknown` →
 -1; latest approval `applied` → 3; `pending` → 2; plan feasible with `moves > 0` →
 1; latest approval `rejected` → 5; `verified` → 4; otherwise 0 (`declined` falls
 through). `text` is the approval's `change`. It returns a row only when a latest
@@ -996,8 +996,8 @@ and links to the dashboard. As built (`provisioning/alerting/`): the notificatio
 policy routes `component=workload` (except Grafana's `DatasourceNoData` and
 `DatasourceError`) to `incident-channel` with `continue`, then everything to the
 probe's webhook; title "Alert firing: {rule}" or "Resolved: {rule}", text the rule's
-summary and "[Open AI service · Operations](…/d/ignite-workload?from=now-5m&to=now&refresh=5s)".
-Each rule carries `__dashboardUid__` `ignite-workload` and its panel. The
+summary and "[Open AI service · Operations](…/d/ai-operations?from=now-5m&to=now&refresh=5s)".
+Each rule carries `__dashboardUid__` `ai-operations` and its panel. The
 **Alerts firing** panel is Grafana's alert list, showing firing (and error) rules
 labelled `component=workload`, without instances.
 

@@ -1,5 +1,5 @@
 {
-  "uid": "ignite-workload",
+  "uid": "ai-operations",
   "title": "AI service · Operations",
   "schemaVersion": 39,
   "version": 37,
@@ -9,7 +9,7 @@
     "to": "now"
   },
   "tags": [
-    "ignite",
+    "ai-platform",
     "workload"
   ],
   "description": "AI Deployments: ordinary monitoring, measured from real requests. Decision Support: Drasi's answers, computed from changes. Deployments and capacity are simulated.",
@@ -27,7 +27,7 @@
         "target": {
           "type": "tags",
           "tags": [
-            "ignite-decision"
+            "drasi-decision"
           ],
           "matchAny": false,
           "limit": 100
@@ -113,7 +113,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(ignite_workload_requests_total[30s]))",
+          "expr": "sum(rate(ai_gateway_model_calls_total[30s]))",
           "instant": true,
           "range": false,
           "interval": "1s"
@@ -207,7 +207,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "100 * (sum(rate(ignite_workload_requests_total{workload=\"support\",status!=\"200\"}[30s])) or vector(0)) / sum(rate(ignite_workload_requests_total{workload=\"support\"}[30s]))",
+          "expr": "100 * (sum(rate(ai_gateway_model_calls_total{workload=\"support\",status!=\"200\"}[30s])) or vector(0)) / sum(rate(ai_gateway_model_calls_total{workload=\"support\"}[30s]))",
           "instant": true,
           "range": false,
           "interval": "1s"
@@ -309,7 +309,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.95, sum by(le)(rate(ignite_workload_answer_seconds_bucket{workload=\"support\"}[1m])))",
+          "expr": "histogram_quantile(0.95, sum by(le)(rate(ai_gateway_answer_time_seconds_bucket{workload=\"support\"}[1m])))",
           "instant": true,
           "range": false,
           "interval": "1s"
@@ -421,7 +421,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "ignite_workload_queue_depth{workload=\"support\"}",
+          "expr": "ai_gateway_queue_depth{workload=\"support\"}",
           "instant": true,
           "range": false,
           "interval": "1s"
@@ -555,22 +555,22 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(ignite_workload_requests_total{workload=\"support\",status=\"200\"}[30s])) or vector(0)",
+          "expr": "sum(rate(ai_gateway_model_calls_total{workload=\"support\",status=\"200\"}[30s])) or vector(0)",
           "legendFormat": "support answered"
         },
         {
           "refId": "B",
-          "expr": "sum(rate(ignite_workload_requests_total{workload=\"batch\",status=\"200\"}[30s])) or vector(0)",
+          "expr": "sum(rate(ai_gateway_model_calls_total{workload=\"batch\",status=\"200\"}[30s])) or vector(0)",
           "legendFormat": "summaries answered"
         },
         {
           "refId": "C",
-          "expr": "sum(rate(ignite_workload_requests_total{workload=\"support\",status!=\"200\"}[30s])) or vector(0)",
+          "expr": "sum(rate(ai_gateway_model_calls_total{workload=\"support\",status!=\"200\"}[30s])) or vector(0)",
           "legendFormat": "support failed"
         },
         {
           "refId": "D",
-          "expr": "sum(rate(ignite_workload_requests_total{workload=\"batch\",status!=\"200\"}[30s])) or vector(0)",
+          "expr": "sum(rate(ai_gateway_model_calls_total{workload=\"batch\",status!=\"200\"}[30s])) or vector(0)",
           "legendFormat": "summaries failed"
         }
       ],
@@ -679,12 +679,12 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "ignite_workload_queue_depth{workload=\"support\"}",
+          "expr": "ai_gateway_queue_depth{workload=\"support\"}",
           "legendFormat": "waiting"
         },
         {
           "refId": "B",
-          "expr": "max((max(ignite_drasi_overdue_requests{workload=\"support\"}) and on() (drasi_reaction_input_ready{output=\"overdue\"} == 1)) or on() ((drasi_reaction_input_ready{output=\"overdue\"} == 1) * 0 + 0))",
+          "expr": "max((max(drasi_requests_overdue{workload=\"support\"}) and on() (drasi_reaction_input_ready{output=\"overdue\"} == 1)) or on() ((drasi_reaction_input_ready{output=\"overdue\"} == 1) * 0 + 0))",
           "legendFormat": "overdue (Drasi)"
         }
       ],
@@ -778,7 +778,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "max((max(ignite_drasi_overdue_requests{workload=\"support\"}) and on() (drasi_reaction_input_ready{output=\"overdue\"} == 1)) or on() ((drasi_reaction_input_ready{output=\"overdue\"} == 1) * 0 + 0))",
+          "expr": "max((max(drasi_requests_overdue{workload=\"support\"}) and on() (drasi_reaction_input_ready{output=\"overdue\"} == 1)) or on() ((drasi_reaction_input_ready{output=\"overdue\"} == 1) * 0 + 0))",
           "instant": true,
           "range": false,
           "interval": "1s"
@@ -875,7 +875,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "(ignite_drasi_deployment_status and on() (drasi_reaction_input_ready{output=\"deployments\"} == 1))",
+          "expr": "(drasi_deployment_health_status and on() (drasi_reaction_input_ready{output=\"deployments\"} == 1))",
           "instant": true,
           "range": false,
           "interval": "1s",
@@ -975,7 +975,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "(ignite_drasi_workload_status{workload=\"support\"} and on() (drasi_reaction_input_ready{output=\"workloads\"} == 1))",
+          "expr": "(drasi_workload_status{workload=\"support\"} and on() (drasi_reaction_input_ready{output=\"workloads\"} == 1))",
           "instant": true,
           "range": false,
           "interval": "1s",
@@ -983,7 +983,7 @@
         },
         {
           "refId": "B",
-          "expr": "(ignite_drasi_workload_status{workload=\"batch\"} and on() (drasi_reaction_input_ready{output=\"workloads\"} == 1))",
+          "expr": "(drasi_workload_status{workload=\"batch\"} and on() (drasi_reaction_input_ready{output=\"workloads\"} == 1))",
           "instant": true,
           "range": false,
           "interval": "1s",
@@ -1087,7 +1087,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "((label_replace(max((ignite_drasi_recommended_action and on() (drasi_reaction_input_ready{output=\"action\"} == 1))) == -1, \"text\", \"Unknown\", \"\", \"\") or on() label_replace((((ignite_drasi_change_status and on() (drasi_reaction_input_ready{output=\"change\"} == 1)) == 2) * 0 + 4), \"text\", \"Applying: $1\", \"text\", \"(.*)\") or on() label_replace((((ignite_drasi_change_status and on() (drasi_reaction_input_ready{output=\"change\"} == 1)) == 3) * 0 + 5), \"text\", \"Verifying: $1\", \"text\", \"(.*)\") or on() label_replace((((ignite_drasi_recommended_action and on() (drasi_reaction_input_ready{output=\"action\"} == 1)) == 1) * 0 + 1), \"text\", \"Approve: $1\", \"text\", \"(.*)\") or on() (((ignite_drasi_recommended_action and on() (drasi_reaction_input_ready{output=\"action\"} == 1)) == 2) * 0 + 2) or on() (((ignite_drasi_recommended_action and on() (drasi_reaction_input_ready{output=\"action\"} == 1)) == 3) * 0 + 3) or on() label_replace(((((ignite_drasi_change_status and on() (drasi_reaction_input_ready{output=\"change\"} == 1)) == 4) and on() (max((ignite_drasi_recommended_action and on() (drasi_reaction_input_ready{output=\"action\"} == 1))) == 0)) * 0 + 6), \"text\", \"Verified: $1\", \"text\", \"(.*)\") or on() (((ignite_drasi_recommended_action and on() (drasi_reaction_input_ready{output=\"action\"} == 1)) == 0) * 0 + 0)) and on() (drasi_reaction_input_ready{output=\"change\"} == 1)) or on() label_replace(vector(-1), \"text\", \"Unknown\", \"\", \"\")",
+          "expr": "((label_replace(max((drasi_recommended_action and on() (drasi_reaction_input_ready{output=\"action\"} == 1))) == -1, \"text\", \"Unknown\", \"\", \"\") or on() label_replace((((drasi_change_status and on() (drasi_reaction_input_ready{output=\"change\"} == 1)) == 2) * 0 + 4), \"text\", \"Applying: $1\", \"text\", \"(.*)\") or on() label_replace((((drasi_change_status and on() (drasi_reaction_input_ready{output=\"change\"} == 1)) == 3) * 0 + 5), \"text\", \"Verifying: $1\", \"text\", \"(.*)\") or on() label_replace((((drasi_recommended_action and on() (drasi_reaction_input_ready{output=\"action\"} == 1)) == 1) * 0 + 1), \"text\", \"Approve: $1\", \"text\", \"(.*)\") or on() (((drasi_recommended_action and on() (drasi_reaction_input_ready{output=\"action\"} == 1)) == 2) * 0 + 2) or on() (((drasi_recommended_action and on() (drasi_reaction_input_ready{output=\"action\"} == 1)) == 3) * 0 + 3) or on() label_replace(((((drasi_change_status and on() (drasi_reaction_input_ready{output=\"change\"} == 1)) == 4) and on() (max((drasi_recommended_action and on() (drasi_reaction_input_ready{output=\"action\"} == 1))) == 0)) * 0 + 6), \"text\", \"Verified: $1\", \"text\", \"(.*)\") or on() (((drasi_recommended_action and on() (drasi_reaction_input_ready{output=\"action\"} == 1)) == 0) * 0 + 0)) and on() (drasi_reaction_input_ready{output=\"change\"} == 1)) or on() label_replace(vector(-1), \"text\", \"Unknown\", \"\", \"\")",
           "instant": true,
           "range": false,
           "interval": "1s",
@@ -1217,7 +1217,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "(((ignite_drasi_failover_readiness and on() (drasi_reaction_input_ready{output=\"resilience\"} == 1)) != 2) or ((ignite_drasi_failover_readiness and on() (drasi_reaction_input_ready{output=\"resilience\"} == 1)) == 2 unless on() ((label_replace((((ignite_drasi_deployment_status and on() (drasi_reaction_input_ready{output=\"deployments\"} == 1)) >= 1) * 0 + 2) and on() (count(((ignite_drasi_deployment_status and on() (drasi_reaction_input_ready{output=\"deployments\"} == 1)) >= 1)) == 1), \"text\", \"Already degraded: $1 down\", \"deployment\", \"(.+)\") or on() label_replace((count(((ignite_drasi_deployment_status and on() (drasi_reaction_input_ready{output=\"deployments\"} == 1)) >= 1)) > 1) * 0 + 2, \"text\", \"Already degraded: more than one deployment down\", \"\", \"\")) and on() ((ignite_drasi_failover_readiness and on() (drasi_reaction_input_ready{output=\"resilience\"} == 1)) == 2)))) or on() label_replace(vector(-1), \"text\", \"Unknown\", \"\", \"\") unless on() ((label_replace((((ignite_drasi_deployment_status and on() (drasi_reaction_input_ready{output=\"deployments\"} == 1)) >= 1) * 0 + 2) and on() (count(((ignite_drasi_deployment_status and on() (drasi_reaction_input_ready{output=\"deployments\"} == 1)) >= 1)) == 1), \"text\", \"Already degraded: $1 down\", \"deployment\", \"(.+)\") or on() label_replace((count(((ignite_drasi_deployment_status and on() (drasi_reaction_input_ready{output=\"deployments\"} == 1)) >= 1)) > 1) * 0 + 2, \"text\", \"Already degraded: more than one deployment down\", \"\", \"\")) and on() ((ignite_drasi_failover_readiness and on() (drasi_reaction_input_ready{output=\"resilience\"} == 1)) == 2))",
+          "expr": "(((drasi_failover_readiness and on() (drasi_reaction_input_ready{output=\"resilience\"} == 1)) != 2) or ((drasi_failover_readiness and on() (drasi_reaction_input_ready{output=\"resilience\"} == 1)) == 2 unless on() ((label_replace((((drasi_deployment_health_status and on() (drasi_reaction_input_ready{output=\"deployments\"} == 1)) >= 1) * 0 + 2) and on() (count(((drasi_deployment_health_status and on() (drasi_reaction_input_ready{output=\"deployments\"} == 1)) >= 1)) == 1), \"text\", \"Already degraded: $1 down\", \"deployment\", \"(.+)\") or on() label_replace((count(((drasi_deployment_health_status and on() (drasi_reaction_input_ready{output=\"deployments\"} == 1)) >= 1)) > 1) * 0 + 2, \"text\", \"Already degraded: more than one deployment down\", \"\", \"\")) and on() ((drasi_failover_readiness and on() (drasi_reaction_input_ready{output=\"resilience\"} == 1)) == 2)))) or on() label_replace(vector(-1), \"text\", \"Unknown\", \"\", \"\") unless on() ((label_replace((((drasi_deployment_health_status and on() (drasi_reaction_input_ready{output=\"deployments\"} == 1)) >= 1) * 0 + 2) and on() (count(((drasi_deployment_health_status and on() (drasi_reaction_input_ready{output=\"deployments\"} == 1)) >= 1)) == 1), \"text\", \"Already degraded: $1 down\", \"deployment\", \"(.+)\") or on() label_replace((count(((drasi_deployment_health_status and on() (drasi_reaction_input_ready{output=\"deployments\"} == 1)) >= 1)) > 1) * 0 + 2, \"text\", \"Already degraded: more than one deployment down\", \"\", \"\")) and on() ((drasi_failover_readiness and on() (drasi_reaction_input_ready{output=\"resilience\"} == 1)) == 2))",
           "instant": true,
           "range": false,
           "interval": "1s",
@@ -1225,7 +1225,7 @@
         },
         {
           "refId": "B",
-          "expr": "((label_replace((((ignite_drasi_deployment_status and on() (drasi_reaction_input_ready{output=\"deployments\"} == 1)) >= 1) * 0 + 2) and on() (count(((ignite_drasi_deployment_status and on() (drasi_reaction_input_ready{output=\"deployments\"} == 1)) >= 1)) == 1), \"text\", \"Already degraded: $1 down\", \"deployment\", \"(.+)\") or on() label_replace((count(((ignite_drasi_deployment_status and on() (drasi_reaction_input_ready{output=\"deployments\"} == 1)) >= 1)) > 1) * 0 + 2, \"text\", \"Already degraded: more than one deployment down\", \"\", \"\")) and on() ((ignite_drasi_failover_readiness and on() (drasi_reaction_input_ready{output=\"resilience\"} == 1)) == 2))",
+          "expr": "((label_replace((((drasi_deployment_health_status and on() (drasi_reaction_input_ready{output=\"deployments\"} == 1)) >= 1) * 0 + 2) and on() (count(((drasi_deployment_health_status and on() (drasi_reaction_input_ready{output=\"deployments\"} == 1)) >= 1)) == 1), \"text\", \"Already degraded: $1 down\", \"deployment\", \"(.+)\") or on() label_replace((count(((drasi_deployment_health_status and on() (drasi_reaction_input_ready{output=\"deployments\"} == 1)) >= 1)) > 1) * 0 + 2, \"text\", \"Already degraded: more than one deployment down\", \"\", \"\")) and on() ((drasi_failover_readiness and on() (drasi_reaction_input_ready{output=\"resilience\"} == 1)) == 2))",
           "instant": true,
           "range": false,
           "interval": "1s",

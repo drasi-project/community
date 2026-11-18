@@ -44,16 +44,16 @@ def state(status=(0, 0, 0), capacity=(100000, 100000, 100000), overdue=0, change
           action=(0, "None"), readiness=(1, "Survives losing any one deployment", "", ""), workloads=HOME):
     """Series in the reaction's shape; None or 0 counts and "nothing yet" states export no series."""
     s = []
-    if overdue: s.append(("ignite_drasi_overdue_requests", {"workload": "support"}, overdue))
+    if overdue: s.append(("drasi_requests_overdue", {"workload": "support"}, overdue))
     for d, st, cap in zip(DEPLOYMENTS, status, capacity):
-        s.append(("ignite_drasi_deployment_status", {"deployment": d}, st))
-        s.append(("ignite_drasi_deployment_capacity_tpm", {"deployment": d}, cap))
+        s.append(("drasi_deployment_health_status", {"deployment": d}, st))
+        s.append(("drasi_deployment_capacity_tpm", {"deployment": d}, cap))
     for workload, name, deployment, st in workloads:
-        s.append(("ignite_drasi_workload_status", {"workload": workload, "name": name, "deployment": deployment}, st))
-    if change is not None: s.append(("ignite_drasi_change_status", {"text": MOVE if change >= 0 else ""}, change))
-    s.append(("ignite_drasi_recommended_action", {"text": action[1]}, action[0]))
+        s.append(("drasi_workload_status", {"workload": workload, "name": name, "deployment": deployment}, st))
+    if change is not None: s.append(("drasi_change_status", {"text": MOVE if change >= 0 else ""}, change))
+    s.append(("drasi_recommended_action", {"text": action[1]}, action[0]))
     value, text, lost, workload = readiness
-    s.append(("ignite_drasi_failover_readiness", {k: v for k, v in (("text", text), ("lost", lost), ("workload", workload)) if v}, value))
+    s.append(("drasi_failover_readiness", {k: v for k, v in (("text", text), ("lost", lost), ("workload", workload)) if v}, value))
     return s
 
 
@@ -105,12 +105,12 @@ class Workload:
 
     def render(self, name):
         self.advance(name)
-        lines = ["# TYPE ignite_workload_requests_total counter"]
-        lines += [f'ignite_workload_requests_total{{workload="{k.split(",")[0]}",status="{k.split(",")[1]}",endpoint="fixture"}} {int(v)}'
+        lines = ["# TYPE ai_gateway_model_calls_total counter"]
+        lines += [f'ai_gateway_model_calls_total{{workload="{k.split(",")[0]}",status="{k.split(",")[1]}",endpoint="fixture"}} {int(v)}'
                   for k, v in self.calls.items()]
-        lines += ["# TYPE ignite_workload_queue_depth gauge", f'ignite_workload_queue_depth{{workload="support"}} {TRAFFIC[name][4]}',
-                  "# TYPE ignite_workload_answer_seconds histogram"]
-        lines += [f'ignite_workload_answer_seconds_bucket{{workload="support",le="{"+Inf" if b == float("inf") else b}"}} {int(v)}'
+        lines += ["# TYPE ai_gateway_queue_depth gauge", f'ai_gateway_queue_depth{{workload="support"}} {TRAFFIC[name][4]}',
+                  "# TYPE ai_gateway_answer_time_seconds histogram"]
+        lines += [f'ai_gateway_answer_time_seconds_bucket{{workload="support",le="{"+Inf" if b == float("inf") else b}"}} {int(v)}'
                   for b, v in self.answers.items()]
         return lines
 

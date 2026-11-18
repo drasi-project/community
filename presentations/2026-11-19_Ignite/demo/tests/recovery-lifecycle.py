@@ -46,16 +46,16 @@ def main():
             # The approval tool is a separate system in a real company; here its record is written
             # directly because the AI service (which plays it) is the system that is down.
             ident = str(uuid.uuid4())
-            d.sql(f"""BEGIN; UPDATE ignite_approvals SET latest=false WHERE latest;
-                INSERT INTO ignite_approvals (id, run_epoch, candidate_id, basis, revision, status, latest, requested_ms)
+            d.sql(f"""BEGIN; UPDATE change_approvals SET latest=false WHERE latest;
+                INSERT INTO change_approvals (id, run_epoch, candidate_id, basis, revision, status, latest, requested_ms)
                 SELECT '{ident}', run_epoch, '{plan['candidate_id']}', '{plan['basis']}', {plan['revision']},
                        'pending', true, (extract(epoch FROM clock_timestamp())*1000)::bigint
-                FROM ignite_scenario WHERE singleton; COMMIT;""")
+                FROM routing_config WHERE singleton; COMMIT;""")
             time.sleep(5)
             assert d.approval(ident)["status"] == "pending"
             service.start()
             recovery.applied(stream, ident, body)
-            assert len(json.loads(d.sql("SELECT coalesce(json_agg(id),'[]') FROM ignite_deliveries WHERE "
+            assert len(json.loads(d.sql("SELECT coalesce(json_agg(id),'[]') FROM gateway_deliveries WHERE "
                                          f"result->>'result'='applied' AND received_ms >= {d.approval(ident)['requested_ms']};"))) == 1
             checks.append("gateway configuration API down when Drasi approved: the strict gateway reaction "
                           "retries and applies the plan once when it is back")

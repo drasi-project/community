@@ -1,5 +1,5 @@
-MATCH (d:ignite_deployments)-[:DEPLOYMENT_REPORT]->(r:ignite_reports),
-      (d)-[:DEPLOYMENT_SCENARIO]->(s:ignite_scenario)
+MATCH (d:model_deployments)-[:DEPLOYMENT_HEALTH]->(r:deployment_health_reports),
+      (d)-[:DEPLOYMENT_CONFIG]->(s:routing_config)
 WHERE d.run_epoch = s.run_epoch AND r.run_epoch = s.run_epoch
 WITH s.run_epoch AS run_epoch,
      collect(CASE WHEN drasi.trueLater(true, r.expires_ms) THEN d.id + ' is not reporting'

@@ -28,7 +28,7 @@ test("the AI service, Drasi's answers, embedded Grafana and the operator's links
   const grafana = await request.get(dashboards.ops);
   expect(grafana.ok()).toBe(true);
   expect(grafana.headers()["x-frame-options"]).toBeUndefined();
-  const query = await request.get("/server/api/v1/instances/ignite/queries/overdue-tasks");
+  const query = await request.get("/server/api/v1/instances/ai-ops/queries/overdue-tasks");
   expect(query.ok()).toBe(true);
   expect((await query.json()).data.id).toBeTruthy();
 });

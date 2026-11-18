@@ -178,7 +178,7 @@ async fn submit(State(app): State<App>, Payload(input): Payload<Submit>) -> Api 
     }
     if let Some(row) = tx
         .query_opt(
-            "SELECT workload, content, trace_id, run_epoch, root_span_id FROM ignite_tasks WHERE id=$1",
+            "SELECT workload, content, trace_id, run_epoch, root_span_id FROM ai_requests WHERE id=$1",
             &[&input.id],
         )
         .await?
@@ -194,7 +194,7 @@ async fn submit(State(app): State<App>, Payload(input): Payload<Submit>) -> Api 
         ));
     }
     let pending: i64 = tx.query_one(
-        "SELECT count(*) FROM ignite_tasks WHERE run_epoch=$1 AND workload=$2 AND completed_ms IS NULL AND cancelled_ms IS NULL",
+        "SELECT count(*) FROM ai_requests WHERE run_epoch=$1 AND workload=$2 AND completed_ms IS NULL AND cancelled_ms IS NULL",
         &[&epoch,&input.workload],
     ).await?.get(0);
     ensure!(pending < 200, "workload queue admission limit reached");
@@ -203,7 +203,7 @@ async fn submit(State(app): State<App>, Payload(input): Payload<Submit>) -> Api 
     let root_span = span.span_context().span_id().to_string();
     let created = now();
     let deadline = created + 15_000;
-    tx.execute("INSERT INTO ignite_tasks(id,run_epoch,workload,content,trace_id,created_ms,deadline_ms,root_span_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8)",
+    tx.execute("INSERT INTO ai_requests(id,run_epoch,workload,content,trace_id,created_ms,deadline_ms,root_span_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8)",
         &[&input.id,&epoch,&input.workload,&input.content,&trace,&created,&deadline,&root_span]).await?;
     tx.commit().await?;
     span.set_attributes([
@@ -221,11 +221,11 @@ async fn submit(State(app): State<App>, Payload(input): Payload<Submit>) -> Api 
 async fn task(Path(id): Path<String>) -> Api {
     let client = db().await?;
     let row = client
-        .query_one("SELECT to_jsonb(t) FROM ignite_tasks t WHERE id=$1", &[&id])
+        .query_one("SELECT to_jsonb(t) FROM ai_requests t WHERE id=$1", &[&id])
         .await?;
     let attempts: Vec<Value> = client
         .query(
-            "SELECT to_jsonb(a) FROM ignite_attempts a WHERE task_id=$1 ORDER BY started_ms",
+            "SELECT to_jsonb(a) FROM model_call_attempts a WHERE request_id=$1 ORDER BY started_ms",
             &[&id],
         )
         .await?
@@ -240,7 +240,7 @@ async fn task(Path(id): Path<String>) -> Api {
 
 #[derive(Deserialize, Serialize)]
 struct Inference {
-    task_id: String,
+    request_id: String,
     run_epoch: String,
     workload: String,
     content: String,
@@ -260,7 +260,7 @@ async fn endpoint_health(State(state): State<EndpointApp>) -> Api {
     let (epoch, _) = scenario::current(&client).await?;
     let row = client
         .query_one(
-            "SELECT mode, reporting FROM ignite_simulation WHERE deployment=$1",
+            "SELECT mode, reporting FROM simulated_deployment_faults WHERE deployment=$1",
             &[&state.id],
         )
         .await?;
@@ -296,7 +296,7 @@ async fn infer(
         format!("model · {}", state.id),
         &input.trace_id,
         &input.root_span_id,
-        &input.task_id,
+        &input.request_id,
         &input.workload,
     )?;
     span.set_attributes([
@@ -309,8 +309,8 @@ async fn infer(
     ]);
     if let Some(row) = tx
         .query_opt(
-            "SELECT response,tokens FROM ignite_receipts WHERE id=$1",
-            &[&input.task_id],
+            "SELECT response,tokens FROM model_responses WHERE id=$1",
+            &[&input.request_id],
         )
         .await?
     {
@@ -320,7 +320,7 @@ async fn infer(
     // Whitespace token units and fixed responses are explicitly simulated, never GPU measurements.
     let tokens =
         (input.content.split_whitespace().count() + response.split_whitespace().count()) as i64;
-    let used: i64 = tx.query_one("SELECT COALESCE(sum(tokens),0)::bigint FROM ignite_receipts WHERE endpoint=$1 AND run_epoch=$2 AND received_ms>$3",
+    let used: i64 = tx.query_one("SELECT COALESCE(sum(tokens),0)::bigint FROM model_responses WHERE endpoint=$1 AND run_epoch=$2 AND received_ms>$3",
         &[&state.id,&epoch,&(now()-60_000)]).await?.get(0);
     let status = if e.mode == "failed" {
         503
@@ -348,8 +348,8 @@ async fn infer(
         )
             .into_response());
     }
-    tx.execute("INSERT INTO ignite_receipts(id,task_id,run_epoch,endpoint,workload,content,response,tokens,received_ms,model_revision) VALUES($1,$1,$2,$3,$4,$5,$6,$7,$8,$9)",
-        &[&input.task_id,&epoch,&state.id,&input.workload,&input.content,&response,&tokens,&now(),&input.model_revision]).await?;
+    tx.execute("INSERT INTO model_responses(id,request_id,run_epoch,endpoint,workload,content,response,tokens,received_ms,model_revision) VALUES($1,$1,$2,$3,$4,$5,$6,$7,$8,$9)",
+        &[&input.request_id,&epoch,&state.id,&input.workload,&input.content,&response,&tokens,&now(),&input.model_revision]).await?;
     tx.commit().await?;
     span.set_attribute(KeyValue::new(
         "gen_ai.usage.input_tokens",
@@ -376,26 +376,26 @@ async fn dispatch_once(app: &App, workload: &str) -> Result<bool> {
         .await?;
     let scenario = scenario::load(&tx).await?;
     let (epoch, revision) = (scenario.run_epoch.clone(), scenario.revision);
-    let pending: i64 = tx.query_one("SELECT count(*) FROM ignite_tasks WHERE run_epoch=$1 AND workload=$2 AND completed_ms IS NULL", &[&epoch,&workload]).await?.get(0);
+    let pending: i64 = tx.query_one("SELECT count(*) FROM ai_requests WHERE run_epoch=$1 AND workload=$2 AND completed_ms IS NULL", &[&epoch,&workload]).await?.get(0);
     app.telemetry.queue.record(
         pending as u64,
         &[KeyValue::new("workload", workload.to_owned())],
     );
     // Untried requests first, then the least recently tried, so a failing deployment doesn't
     // leave every request behind the oldest one with no attempt in its trace.
-    let Some(row) = tx.query_opt("SELECT t.id,t.content,t.trace_id,t.root_span_id FROM ignite_tasks t WHERE t.run_epoch=$1 AND t.workload=$2 AND t.completed_ms IS NULL AND t.cancelled_ms IS NULL ORDER BY (SELECT max(a.started_ms) FROM ignite_attempts a WHERE a.task_id=t.id) NULLS FIRST,t.created_ms,t.id LIMIT 1", &[&epoch,&workload]).await? else { return Ok(false) };
+    let Some(row) = tx.query_opt("SELECT t.id,t.content,t.trace_id,t.root_span_id FROM ai_requests t WHERE t.run_epoch=$1 AND t.workload=$2 AND t.completed_ms IS NULL AND t.cancelled_ms IS NULL ORDER BY (SELECT max(a.started_ms) FROM model_call_attempts a WHERE a.request_id=t.id) NULLS FIRST,t.created_ms,t.id LIMIT 1", &[&epoch,&workload]).await? else { return Ok(false) };
     let id: String = row.get(0);
     let trace: String = row.get(2);
     let root_span: String = row.get(3);
     // Durable receipts reconcile an HTTP success whose gateway acknowledgement was lost.
     if let Some(receipt) = tx
         .query_opt(
-            "SELECT r.endpoint,r.response,r.received_ms,r.model_revision,t.created_ms FROM ignite_receipts r JOIN ignite_tasks t ON t.id=r.task_id WHERE r.task_id=$1",
+            "SELECT r.endpoint,r.response,r.received_ms,r.model_revision,t.created_ms FROM model_responses r JOIN ai_requests t ON t.id=r.request_id WHERE r.request_id=$1",
             &[&id],
         )
         .await?
     {
-        tx.execute("UPDATE ignite_tasks SET completed_ms=$1,endpoint=$2,outcome=$3,revision=revision+1,completed_revision=$5 WHERE id=$4 AND completed_ms IS NULL",
+        tx.execute("UPDATE ai_requests SET completed_ms=$1,endpoint=$2,outcome=$3,revision=revision+1,completed_revision=$5 WHERE id=$4 AND completed_ms IS NULL",
             &[&receipt.get::<_,i64>(2),&receipt.get::<_,String>(0),&receipt.get::<_,String>(1),&id,&receipt.get::<_,Option<i64>>(3)]).await?;
         tx.commit().await?;
         app.telemetry
@@ -424,12 +424,12 @@ async fn dispatch_once(app: &App, workload: &str) -> Result<bool> {
     let started = now();
     let count: i64 = tx
         .query_one(
-            "SELECT count(*) FROM ignite_attempts WHERE task_id=$1",
+            "SELECT count(*) FROM model_call_attempts WHERE request_id=$1",
             &[&id],
         )
         .await?
         .get(0);
-    tx.execute("INSERT INTO ignite_attempts(id,task_id,run_epoch,workload,endpoint,model_revision,started_ms,trace_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8)",
+    tx.execute("INSERT INTO model_call_attempts(id,request_id,run_epoch,workload,endpoint,model_revision,started_ms,trace_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8)",
         &[&attempt,&id,&epoch,&workload,&deployment,&revision,&started,&trace]).await?;
     tx.commit().await?;
     // The shared reset/control lock is held from the final basis check through HTTP completion.
@@ -438,7 +438,7 @@ async fn dispatch_once(app: &App, workload: &str) -> Result<bool> {
         .await?;
     let (current_epoch, current_revision) = scenario::current(&tx).await?;
     if current_epoch != epoch || current_revision != revision {
-        tx.execute("UPDATE ignite_attempts SET finished_ms=$1,status=409,detail='route configuration changed before transmission' WHERE id=$2", &[&now(),&attempt]).await?;
+        tx.execute("UPDATE model_call_attempts SET finished_ms=$1,status=409,detail='route configuration changed before transmission' WHERE id=$2", &[&now(),&attempt]).await?;
         tx.commit().await?;
         return Ok(true);
     }
@@ -466,7 +466,7 @@ async fn dispatch_once(app: &App, workload: &str) -> Result<bool> {
         .http
         .post(format!("http://127.0.0.1:{}/infer", port(&deployment)?))
         .json(&Inference {
-            task_id: id.clone(),
+            request_id: id.clone(),
             run_epoch: epoch,
             workload: workload.into(),
             content: row.get(1),
@@ -489,7 +489,7 @@ async fn dispatch_once(app: &App, workload: &str) -> Result<bool> {
         Err(error) => (0, format!("transport outcome uncertain: {error}"), 0),
     };
     tx.execute(
-        "UPDATE ignite_attempts SET finished_ms=$1,status=$2,detail=$3,tokens=$4 WHERE id=$5",
+        "UPDATE model_call_attempts SET finished_ms=$1,status=$2,detail=$3,tokens=$4 WHERE id=$5",
         &[&now(), &status, &detail, &tokens, &attempt],
     )
     .await?;
@@ -537,9 +537,9 @@ async fn dispatch_once(app: &App, workload: &str) -> Result<bool> {
 /// Where Drasi learns deployment health (`IGNITE_HEALTH_SOURCE` in ports.env).
 #[derive(Debug, PartialEq)]
 enum HealthSource {
-    /// The monitor writes `ignite_reports`, read by Drasi's PostgreSQL source.
+    /// The monitor writes `deployment_health_reports`, read by Drasi's PostgreSQL source.
     Postgres,
-    /// Drasi derives health from the probe metrics alone; `ignite_reports` is not written.
+    /// Drasi derives health from the probe metrics alone; `deployment_health_reports` is not written.
     Otel,
 }
 
@@ -559,7 +559,7 @@ fn health_source() -> Result<HealthSource> {
 }
 
 /// The simulated health monitor: checks each deployment every second and records what it saw,
-/// as probe metrics (always) and as `ignite_reports` rows (when health comes from PostgreSQL).
+/// as probe metrics (always) and as `deployment_health_reports` rows (when health comes from PostgreSQL).
 /// A deployment whose reporting is paused stays silent: its last report expires and its probe
 /// metrics stop.
 async fn report_once(app: &App) -> Result<()> {
@@ -599,7 +599,7 @@ async fn report_once(app: &App) -> Result<()> {
             continue;
         }
         let observed = now();
-        tx.execute("UPDATE ignite_reports SET observed_ms=$1,expires_ms=$2,status=$3,sequence=sequence+1 WHERE id=$4 AND run_epoch=$5",
+        tx.execute("UPDATE deployment_health_reports SET observed_ms=$1,expires_ms=$2,status=$3,sequence=sequence+1 WHERE id=$4 AND run_epoch=$5",
             &[&observed,&(observed+8_000),&status,&id,&epoch]).await?;
     }
     tx.commit().await?;

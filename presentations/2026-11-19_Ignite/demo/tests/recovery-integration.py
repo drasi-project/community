@@ -30,7 +30,7 @@ def stuck_request(stream):
     d.wait(lambda: any(a["status"] == 503 for a in d.task(body["id"])["attempts"]), 20, "a 503 from EU-A")
     before = d.task(body["id"])["task"]
     stream.until("overdue-tasks", lambda rows: any(r["id"] == body["id"] for r in rows), 30)
-    d.metric_until("ignite_drasi_overdue_requests", lambda v: v and v >= 1, workload="support")
+    d.metric_until("drasi_requests_overdue", lambda v: v and v >= 1, workload="support")
     assert d.task(body["id"])["task"] == before, "the deadline changes Drasi's answer, not the task"
     return body, trace, before
 
@@ -55,9 +55,9 @@ def verified(stream, ident):
         d.wait(lambda: d.task(body["id"])["task"]["completed_ms"], 20, "a support answer")
         traces.append(trace["trace_id"])
     stream.until("tile-recovery", lambda r: r and r[0]["value"] == 1, 30)
-    d.metric_until("ignite_drasi_recovery_state", lambda v: v == 1)
+    d.metric_until("drasi_recovery_state", lambda v: v == 1)
     latest(stream, ident, lambda r: r["status"] == "verified" and r["value"] == 3)
-    d.metric_until("ignite_drasi_last_approval_state", lambda v: v == 3, approval=ident)
+    d.metric_until("drasi_last_approval_state", lambda v: v == 3, approval=ident)
     return d.approval(ident), traces
 
 
@@ -92,7 +92,7 @@ def main():
         row = latest(stream, stale, lambda r: r["status"] == "rejected")
         assert row["reason"] == "The facts changed since this plan was proposed", row
         assert d.approval(stale)["reason"] == row["reason"] and d.routes() == start_routes
-        d.metric_until("ignite_drasi_last_approval_state", lambda v: v == 4, approval=stale)
+        d.metric_until("drasi_last_approval_state", lambda v: v == 4, approval=stale)
         checks.append("an approval whose basis is not the one Drasi solved is rejected by Drasi's "
                       "approval-stale query through the gateway reaction, with Drasi's reason; routes unchanged")
 
@@ -121,7 +121,7 @@ def main():
         ident = d.approve(plan)
         with concurrent.futures.ThreadPoolExecutor(2) as pool:
             assert set(pool.map(lambda _: d.approve(plan, ident), range(2))) == {ident}
-        assert d.sql(f"SELECT count(*) FROM ignite_approvals WHERE id='{ident}';") == "1"
+        assert d.sql(f"SELECT count(*) FROM change_approvals WHERE id='{ident}';") == "1"
         latest(stream, ident, lambda r: r["status"] == "pending")
         stream.holds("tile-last-approval", lambda r: r and r[0]["approval"] == ident and r[0]["status"] == "pending", 4)
         assert d.routes() == start_routes
@@ -133,7 +133,7 @@ def main():
         assert stored["applied_revision"] == d.health()["revision"]
         d.approve(plan, ident)
         assert d.approval(ident)["status"] in ("applied", "verified")
-        deliveries = json.loads(d.sql("SELECT coalesce(json_agg(result),'[]') FROM ignite_deliveries "
+        deliveries = json.loads(d.sql("SELECT coalesce(json_agg(result),'[]') FROM gateway_deliveries "
                                       f"WHERE result->>'result'='applied' AND received_ms >= {stored['requested_ms']};"))
         assert len(deliveries) == 1, deliveries
         evidence["applied"] = {"approval": stored, "task": task, "deliveries": deliveries}

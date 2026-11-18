@@ -1,4 +1,4 @@
-MATCH (a:ignite_approvals)-[:APPROVAL_SCENARIO]->(s:ignite_scenario)
+MATCH (a:change_approvals)-[:APPROVAL_CONFIG]->(s:routing_config)
 WHERE a.run_epoch = s.run_epoch
   AND NOT drasi.trueLater(true, coalesce(a.decided_ms, a.requested_ms) + 30000)
 RETURN a.id + '-' + a.status AS id, coalesce(a.decided_ms, a.requested_ms) AS at_ms,

@@ -24,7 +24,7 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.trace import SpanKind, Status, StatusCode
 
 logging.basicConfig(level=logging.INFO)
-RESOURCE = Resource.create({"service.name": "ignite-integration-probe", "service.version": "phase-1"})
+RESOURCE = Resource.create({"service.name": "integration-probe", "service.version": "phase-1"})
 TRACES = TracerProvider(resource=RESOURCE)
 TRACES.add_span_processor(BatchSpanProcessor(OTLPSpanExporter(), schedule_delay_millis=500))
 trace.set_tracer_provider(TRACES)
@@ -33,10 +33,10 @@ METRICS = MeterProvider(
     metric_readers=[PeriodicExportingMetricReader(OTLPMetricExporter(), export_interval_millis=1000)],
 )
 metrics.set_meter_provider(METRICS)
-TRACER = trace.get_tracer("ignite.integration-probe")
-METER = metrics.get_meter("ignite.integration-probe")
-REQUESTS = METER.create_counter("ignite_probe_http_requests", unit="{request}")
-DURATION = METER.create_histogram("ignite_probe_http_duration", unit="s")
+TRACER = trace.get_tracer("integration-probe")
+METER = metrics.get_meter("integration-probe")
+REQUESTS = METER.create_counter("integration_probe_http_requests", unit="{request}")
+DURATION = METER.create_histogram("integration_probe_http_duration", unit="s")
 LOCK = threading.Lock()
 WEBHOOK_LOCK = threading.Lock()
 LAST_FAILED = None
@@ -48,7 +48,7 @@ def last_failure(_options):
         return [] if LAST_FAILED is None else [Observation(LAST_FAILED)]
 
 
-METER.create_observable_gauge("ignite_probe_last_request_failed", callbacks=[last_failure])
+METER.create_observable_gauge("integration_probe_last_request_failed", callbacks=[last_failure])
 DATABASE = Path(os.environ.get("PROBE_DATABASE", "/data/webhooks.sqlite"))
 DATABASE.parent.mkdir(parents=True, exist_ok=True)
 with sqlite3.connect(DATABASE) as db:

@@ -58,7 +58,7 @@ def card(run_epoch, candidate):
                {"id": "decline", "name": "Reject", "type": "button", "style": "danger",
                 "integration": {"url": ACTIONS, "context": {"action": "decline", **context}}}]
     body = {"channel_id": IDS["channel_id"], "root_id": "", "message": "",
-            "props": {"ignite_card": "proposal", "ignite_id": f"proposal-{candidate}", "ignite_run_epoch": run_epoch,
+            "props": {"incident_card": "proposal", "incident_card_id": f"proposal-{candidate}", "incident_run_epoch": run_epoch,
                       "attachments": [{"fallback": "Proposed change", "color": "#f2a33a",
                                        "title": "Proposed change: Move summaries to US-C and support to EU-B",
                                        "text": "Test card (tests/mattermost-actions.py).",
@@ -70,7 +70,7 @@ def card(run_epoch, candidate):
 
 
 def approval(approval_id):
-    row = sql(f"SELECT to_jsonb(a) FROM ignite_approvals a WHERE id='{approval_id}'")
+    row = sql(f"SELECT to_jsonb(a) FROM change_approvals a WHERE id='{approval_id}'")
     return json.loads(row) if row else None
 
 

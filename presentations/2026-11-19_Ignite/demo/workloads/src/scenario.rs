@@ -18,7 +18,7 @@ pub struct Workload {
     pub region_requirement: String,
     pub model: String,
     pub demand_tpm: i64,
-    /// The current route (`ignite_routes`).
+    /// The current route (`workload_routes`).
     pub deployment: String,
 }
 
@@ -28,7 +28,7 @@ pub struct Deployment {
     pub region: String,
     pub model: String,
     pub capacity_tpm: i64,
-    /// Simulated fault mode (`ignite_simulation`), never published to Drasi.
+    /// Simulated fault mode (`simulated_deployment_faults`), never published to Drasi.
     pub mode: String,
     pub reporting: bool,
 }
@@ -64,7 +64,7 @@ impl Scenario {
 pub async fn current(client: &impl GenericClient) -> Result<(String, i64)> {
     let row = client
         .query_one(
-            "SELECT run_epoch, revision FROM ignite_scenario WHERE singleton",
+            "SELECT run_epoch, revision FROM routing_config WHERE singleton",
             &[],
         )
         .await?;
@@ -76,7 +76,7 @@ pub async fn load(client: &impl GenericClient) -> Result<Scenario> {
     let workloads = client
         .query(
             "SELECT w.id, w.data_class, w.region_requirement, w.model, w.demand_tpm, r.deployment
-             FROM ignite_workloads w JOIN ignite_routes r ON r.workload = w.id AND r.run_epoch = w.run_epoch
+             FROM ai_workloads w JOIN workload_routes r ON r.workload = w.id AND r.run_epoch = w.run_epoch
              WHERE w.run_epoch = $1 ORDER BY w.id",
             &[&run_epoch],
         )
@@ -94,7 +94,7 @@ pub async fn load(client: &impl GenericClient) -> Result<Scenario> {
     let deployments = client
         .query(
             "SELECT d.id, d.region, d.model, d.capacity_tpm, s.mode, s.reporting
-             FROM ignite_deployments d JOIN ignite_simulation s ON s.deployment = d.id
+             FROM model_deployments d JOIN simulated_deployment_faults s ON s.deployment = d.id
              WHERE d.run_epoch = $1 ORDER BY d.id",
             &[&run_epoch],
         )
@@ -119,7 +119,7 @@ pub async fn load(client: &impl GenericClient) -> Result<Scenario> {
         .collect();
     for r in client
         .query(
-            "SELECT workload, deployment FROM ignite_policy_destinations WHERE run_epoch = $1
+            "SELECT workload, deployment FROM data_residency_policy WHERE run_epoch = $1
              ORDER BY workload, deployment",
             &[&run_epoch],
         )
@@ -144,7 +144,7 @@ pub async fn health(State(app): State<App>) -> Api {
     let s = load(&client).await?;
     let pending: i64 = client
         .query_one(
-            "SELECT count(*) FROM ignite_tasks WHERE run_epoch=$1 AND completed_ms IS NULL AND cancelled_ms IS NULL",
+            "SELECT count(*) FROM ai_requests WHERE run_epoch=$1 AND completed_ms IS NULL AND cancelled_ms IS NULL",
             &[&s.run_epoch],
         )
         .await?
@@ -192,7 +192,7 @@ pub async fn control(Payload(input): Payload<Control>) -> Api {
     }
     let row = tx
         .query_opt(
-            "SELECT mode, reporting FROM ignite_simulation WHERE deployment=$1",
+            "SELECT mode, reporting FROM simulated_deployment_faults WHERE deployment=$1",
             &[&input.deployment],
         )
         .await?
@@ -200,7 +200,7 @@ pub async fn control(Payload(input): Payload<Control>) -> Api {
     let (mut mode, mut reporting): (String, bool) = (row.get(0), row.get(1));
     apply_control(&mut mode, &mut reporting, &input.action).map_err(Error::bad)?;
     tx.execute(
-        "UPDATE ignite_simulation SET mode=$1, reporting=$2 WHERE deployment=$3",
+        "UPDATE simulated_deployment_faults SET mode=$1, reporting=$2 WHERE deployment=$3",
         &[&mode, &reporting, &input.deployment],
     )
     .await?;
@@ -260,7 +260,7 @@ pub async fn configuration(Payload(input): Payload<Configuration>) -> Api {
     for (id, tpm) in &input.capacity {
         changed += tx
             .execute(
-                "UPDATE ignite_deployments SET capacity_tpm=$1 WHERE id=$2 AND run_epoch=$3 AND capacity_tpm<>$1",
+                "UPDATE model_deployments SET capacity_tpm=$1 WHERE id=$2 AND run_epoch=$3 AND capacity_tpm<>$1",
                 &[tpm, id, &epoch],
             )
             .await?;
@@ -268,14 +268,14 @@ pub async fn configuration(Payload(input): Payload<Configuration>) -> Api {
     for (workload, list) in &input.destinations {
         changed += tx
             .execute(
-                "DELETE FROM ignite_policy_destinations WHERE workload=$1 AND NOT deployment = ANY($2)",
+                "DELETE FROM data_residency_policy WHERE workload=$1 AND NOT deployment = ANY($2)",
                 &[workload, list],
             )
             .await?;
         for deployment in list {
             changed += tx
                 .execute(
-                    "INSERT INTO ignite_policy_destinations(id, run_epoch, workload, deployment)
+                    "INSERT INTO data_residency_policy(id, run_epoch, workload, deployment)
                      VALUES($1 || '/' || $2, $3, $1, $2) ON CONFLICT(id) DO NOTHING",
                     &[workload, deployment, &epoch],
                 )
@@ -295,7 +295,7 @@ pub async fn configuration(Payload(input): Payload<Configuration>) -> Api {
 pub async fn bump(client: &impl GenericClient) -> Result<i64> {
     Ok(client
         .query_one(
-            "UPDATE ignite_scenario SET revision = revision + 1 WHERE singleton RETURNING revision",
+            "UPDATE routing_config SET revision = revision + 1 WHERE singleton RETURNING revision",
             &[],
         )
         .await?
@@ -353,7 +353,7 @@ pub fn reset_sql() -> String {
 }
 
 /// Demo driver: start the decision-events list clean by deleting the previous run's annotations
-/// (tag `ignite-decision`, written by Drasi's annotation reaction).
+/// (tag `drasi-decision`, written by Drasi's annotation reaction).
 async fn clear_annotations(app: &App, before: i64) -> Result<()> {
     let Ok(password) = std::env::var("GRAFANA_ADMIN_PASSWORD") else {
         return Ok(());
@@ -362,7 +362,7 @@ async fn clear_annotations(app: &App, before: i64) -> Result<()> {
     let existing: Value = app
         .http
         .get(format!("{grafana}/api/annotations"))
-        .query(&[("tags", "ignite-decision"), ("limit", "5000")])
+        .query(&[("tags", "drasi-decision"), ("limit", "5000")])
         .basic_auth("admin", Some(&password))
         .send()
         .await?
@@ -434,6 +434,6 @@ mod tests {
     fn reset_sql_runs_inside_the_callers_transaction() {
         let sql = reset_sql();
         assert!(!sql.contains("BEGIN;") && !sql.contains("COMMIT;") && !sql.contains("\\set"));
-        assert!(sql.contains("ignite_routes") && sql.contains("ignite_simulation"));
+        assert!(sql.contains("workload_routes") && sql.contains("simulated_deployment_faults"));
     }
 }

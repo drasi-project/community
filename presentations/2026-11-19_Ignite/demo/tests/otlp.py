@@ -63,10 +63,10 @@ def send(url, metric, value, service, attributes=None):
         return response.status
 
 
-def probe(url, deployment, status, run_epoch, service="ignite-workload"):
+def probe(url, deployment, status, run_epoch, service="ai-gateway"):
     """One health probe as the AI service exports it (workloads/src/probe.rs)."""
     code = {"ok": 0, "throttled": 1, "failed": 2, "unknown": 3}[status]
-    return send(url, "ignite_probe_status", code, service, {"deployment": deployment, "run_epoch": run_epoch})
+    return send(url, "deployment_health_probe_status", code, service, {"deployment": deployment, "run_epoch": run_epoch})
 
 
 def _decode(data):
@@ -96,14 +96,14 @@ def _decode(data):
 
 
 def _self_test():
-    request = gauge_request("ignite_probe_status", 2, "ignite-workload",
+    request = gauge_request("deployment_health_probe_status", 2, "ai-gateway",
                             {"deployment": "EU-A", "run_epoch": "r"}, time_ns=1_000_000_000)
     first = lambda data, number: next(v for k, v in _decode(data) if k == number)  # noqa: E731
     resource_metrics = first(request, 1)
     service = first(first(resource_metrics, 1), 1)
-    assert (first(service, 1), first(first(service, 2), 1)) == (b"service.name", b"ignite-workload")
+    assert (first(service, 1), first(first(service, 2), 1)) == (b"service.name", b"ai-gateway")
     metric = first(first(resource_metrics, 2), 2)
-    assert first(metric, 1) == b"ignite_probe_status"
+    assert first(metric, 1) == b"deployment_health_probe_status"
     point = first(first(metric, 5), 1)
     attributes = [(first(v, 1), first(first(v, 2), 1)) for k, v in _decode(point) if k == 7]
     assert attributes == [(b"deployment", b"EU-A"), (b"run_epoch", b"r")], attributes

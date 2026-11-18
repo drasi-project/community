@@ -137,7 +137,7 @@ def approve(plan, ident=None, **override):
 # Effects of Drasi's HTTP reactions.
 
 def approval(ident):
-    return sql_json(f"SELECT row_to_json(a) FROM ignite_approvals a WHERE id='{ident}';")
+    return sql_json(f"SELECT row_to_json(a) FROM change_approvals a WHERE id='{ident}';")
 
 
 def routes():
@@ -156,7 +156,7 @@ def get(url, auth=None):
 
 def annotations(tag):
     return get(settings.url("GRAFANA") + "/api/annotations?" +
-               urllib.parse.urlencode([("tags", "ignite-decision"), ("tags", tag)]), grafana_auth())
+               urllib.parse.urlencode([("tags", "drasi-decision"), ("tags", tag)]), grafana_auth())
 
 
 def scores(trace_id, name):
@@ -181,12 +181,12 @@ def mattermost(path, token="MATTERMOST_ADMIN_TOKEN", body=None):
 
 def incident_cards():
     """The `incident-channel` reaction's posts in #incident-ai-support, oldest first: every post by
-    the `drasi` bot, as {id, root_id, create_at, card, ignite_id, run_epoch, attachment}."""
+    the `drasi` bot, as {id, root_id, create_at, card, incident_card_id, run_epoch, attachment}."""
     ids = json.loads((DEMO / ".native/mattermost.json").read_text())
     posts = mattermost(f"/channels/{ids['channel_id']}/posts?per_page=200")["posts"].values()
     return [{"id": p["id"], "root_id": p.get("root_id", ""), "create_at": p["create_at"],
-             "card": p["props"].get("ignite_card"), "ignite_id": p["props"].get("ignite_id"),
-             "run_epoch": p["props"].get("ignite_run_epoch"), "attachment": p["props"]["attachments"][0]}
+             "card": p["props"].get("incident_card"), "incident_card_id": p["props"].get("incident_card_id"),
+             "run_epoch": p["props"].get("incident_run_epoch"), "attachment": p["props"]["attachments"][0]}
             for p in sorted(posts, key=lambda p: p["create_at"]) if p["user_id"] == ids["bot_user_id"]]
 
 

@@ -1,4 +1,4 @@
-MATCH (r:ResilienceResult)-[:RESILIENCE_SCENARIO]->(s:ignite_scenario)<-[:PLAN_SCENARIO]-(p:PlanResult)
+MATCH (r:ResilienceResult)-[:RESILIENCE_CONFIG]->(s:routing_config)<-[:PLAN_CONFIG]-(p:PlanResult)
 WHERE r.run_epoch = s.run_epoch AND p.run_epoch = s.run_epoch
 WITH r, s, p,
      split(coalesce(drasi.previousDistinctValue(r.run_epoch + '|'

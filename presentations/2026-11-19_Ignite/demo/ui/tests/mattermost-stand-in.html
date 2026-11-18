@@ -61,7 +61,7 @@
     list.innerHTML = posts.map(post => {
       const a = post.props.attachments[0];
       const root = post.root_id && byId[post.root_id];
-      return `<div class="post" data-card="${escape(post.props.ignite_card)}" data-post="${post.id}"><div class="avatar">D</div><div>
+      return `<div class="post" data-card="${escape(post.props.incident_card)}" data-post="${post.id}"><div class="avatar">D</div><div>
         <span class="name">drasi</span><span class="bot">BOT</span><span class="time">${new Date(post.create_at).toTimeString().slice(0, 5)}</span>
         ${root ? `<div class="reply-to">Replied to Drasi's thread: ${escape(root.props.attachments[0].title)}</div>` : ""}
         <div class="attachment" style="border-left-color:${a.color}"><h4>${escape(a.title)}</h4><div>${markdown(a.text)}</div>

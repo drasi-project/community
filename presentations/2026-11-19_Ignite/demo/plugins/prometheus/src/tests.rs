@@ -28,8 +28,8 @@ fn configuration() -> Value {
             "action": {"component": ACTION}
         },
         "metrics": {
-            "overdue": [{"metric": "ignite_drasi_overdue_requests", "help": "Overdue.", "value": "value", "labels": {"workload": "workload"}}],
-            "action": [{"metric": "ignite_drasi_action_needed", "help": "Action.", "value": "value"}]
+            "overdue": [{"metric": "drasi_requests_overdue", "help": "Overdue.", "value": "value", "labels": {"workload": "workload"}}],
+            "action": [{"metric": "drasi_action_needed", "help": "Action.", "value": "value"}]
         }
     })
 }
@@ -325,7 +325,7 @@ fn graph_changes_decode_to_row_changes() -> Result<()> {
         if sequence == 2 {
             assert!(exporter
                 .render()
-                .contains("ignite_drasi_overdue_requests{workload=\"batch\"} 2\n"));
+                .contains("drasi_requests_overdue{workload=\"batch\"} 2\n"));
         }
     }
     assert_eq!(kinds, ["upsert", "patch", "upsert", "delete"]);
@@ -337,7 +337,7 @@ fn graph_changes_decode_to_row_changes() -> Result<()> {
     );
     assert!(exporter
         .render()
-        .contains("ignite_drasi_overdue_requests{workload=\"\"} 5\n"));
+        .contains("drasi_requests_overdue{workload=\"\"} 5\n"));
     Ok(())
 }
 
@@ -397,7 +397,7 @@ async fn concurrent_scrapes_under_load() -> Result<()> {
                 );
                 let samples: Vec<&str> = body
                     .lines()
-                    .filter(|line| line.starts_with("ignite_drasi_overdue_requests{"))
+                    .filter(|line| line.starts_with("drasi_requests_overdue{"))
                     .collect();
                 anyhow::ensure!(
                     samples.is_empty() || samples.len() == 20,
@@ -433,10 +433,10 @@ async fn concurrent_scrapes_under_load() -> Result<()> {
     writer.await?;
     let (_, body) = scrape(address, "/metrics").await?;
     assert!(
-        body.contains("ignite_drasi_overdue_requests{workload=\"w19\"} 500\n"),
+        body.contains("drasi_requests_overdue{workload=\"w19\"} 500\n"),
         "{body}"
     );
-    assert!(body.contains("ignite_drasi_action_needed 0\n"), "{body}");
+    assert!(body.contains("drasi_action_needed 0\n"), "{body}");
     server.abort();
     Ok(())
 }

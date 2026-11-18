@@ -1,5 +1,5 @@
-MATCH (a:ignite_approvals)-[:APPROVAL_PLAN]->(p:PlanResult),
-      (a)-[:APPROVAL_SCENARIO]->(s:ignite_scenario)
+MATCH (a:change_approvals)-[:APPROVAL_PLAN]->(p:PlanResult),
+      (a)-[:APPROVAL_CONFIG]->(s:routing_config)
 WHERE a.run_epoch = s.run_epoch AND p.run_epoch = s.run_epoch AND a.latest = true
 RETURN CASE WHEN p.state = 'unknown' THEN -1
             WHEN a.status = 'applied' THEN 3

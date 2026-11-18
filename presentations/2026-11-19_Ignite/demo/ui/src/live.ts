@@ -230,7 +230,7 @@ export function useQuery(name: string) {
     let retry: ReturnType<typeof setTimeout>;
     let watchdog: ReturnType<typeof setTimeout>;
     let controller: AbortController;
-    const root = "/server/api/v1/instances/ignite";
+    const root = "/server/api/v1/instances/ai-ops";
     async function attach() {
       controller = new AbortController();
       const signal = controller.signal;

@@ -12,7 +12,7 @@ use drasi_functions_cypher::CypherFunctionSet;
 use drasi_query_cypher::CypherParser;
 use serde_json::{json, Value};
 
-use super::{queries, Health, HEALTH, HEALTH_LABEL, JOINS};
+use super::{queries, Health, HEALTH, HEALTH_LABEL, JOINS, TABLES};
 
 /// `name` as the generator configures it for `health`: its text and its join labels.
 async fn build_in(name: &str, health: Health) -> ContinuousQuery {
@@ -174,8 +174,8 @@ impl Sim {
     /// the next probes arrive.
     async fn restart(&mut self) {
         let volatile = |label: &str| ["Service", "Metric", "REPORTS"].contains(&label);
-        let tables: Vec<_> = self.store.iter().filter(|((l, _), _)| l.starts_with("ignite_")).map(|(k, v)| (k.clone(), v.clone())).collect();
-        let models: Vec<_> = self.store.iter().filter(|((l, _), _)| !l.starts_with("ignite_") && !volatile(l)).map(|(k, v)| (k.clone(), v.clone())).collect();
+        let tables: Vec<_> = self.store.iter().filter(|((l, _), _)| TABLES.contains(&l.as_str())).map(|(k, v)| (k.clone(), v.clone())).collect();
+        let models: Vec<_> = self.store.iter().filter(|((l, _), _)| !TABLES.contains(&l.as_str()) && !volatile(l)).map(|(k, v)| (k.clone(), v.clone())).collect();
         let label = self.upstream.as_ref().map(|(_, l)| *l);
         self.query = build_in(self.name, self.health).await;
         self.store.clear();
@@ -222,14 +222,14 @@ impl World {
     async fn new(sim: Sim) -> Self {
         let mut w = World { sim, run: "run-1".into(), status: BTreeMap::new(), sequence: 0 };
         w.sim.now = 1000;
-        w.put("ignite_scenario", "singleton", json!({"singleton":true,"run_epoch":"run-1","revision":1})).await;
+        w.put("routing_config", "singleton", json!({"singleton":true,"run_epoch":"run-1","revision":1})).await;
         for (id, class, region, demand) in [("support", "restricted", "EU", 60000), ("batch", "public", "any", 80000)] {
-            w.put("ignite_workloads", id, json!({"id":id,"run_epoch":"run-1","data_class":class,"region_requirement":region,
+            w.put("ai_workloads", id, json!({"id":id,"run_epoch":"run-1","data_class":class,"region_requirement":region,
                 "model":"support-model","demand_tpm":demand})).await;
         }
         for (id, region) in [("EU-A", "EU"), ("EU-B", "EU"), ("US-C", "US")] {
             w.status.insert(id, "ok");
-            w.put("ignite_deployments", id, json!({"id":id,"run_epoch":"run-1","region":region,"model":"support-model","capacity_tpm":100000})).await;
+            w.put("model_deployments", id, json!({"id":id,"run_epoch":"run-1","region":region,"model":"support-model","capacity_tpm":100000})).await;
         }
         w.route("support", "EU-A").await;
         w.route("batch", "EU-B").await;
@@ -241,7 +241,7 @@ impl World {
     }
     async fn route(&mut self, workload: &str, deployment: &str) {
         let props = json!({"workload":workload,"run_epoch":self.run,"deployment":deployment,"applied_ms":self.sim.now});
-        self.put("ignite_routes", workload, props).await;
+        self.put("workload_routes", workload, props).await;
     }
     async fn tick(&mut self) {
         let statuses: Vec<_> = self.status.iter().map(|(k, v)| (*k, *v)).collect();
@@ -253,18 +253,18 @@ impl World {
                 continue;
             }
             let props = json!({"id":id,"run_epoch":self.run,"observed_ms":now,"expires_ms":now + 8000,"status":status,"sequence":self.sequence});
-            self.put("ignite_reports", id, props).await;
+            self.put("deployment_health_reports", id, props).await;
         }
     }
     /// One health probe as Drasi's OTel source projects it (drasi-core PR 1030, DESIGN.md):
-    /// the Service, its `ignite_probe_status` Metric per deployment and run, and REPORTS.
+    /// the Service, its `deployment_health_probe_status` Metric per deployment and run, and REPORTS.
     async fn probe(&mut self, deployment: &str, status: &str, now: u64) {
-        let service = "svc:ignite-workload";
-        let metric = format!("metric:{service}:ignite_probe_status:deployment={deployment},run_epoch={}", self.run);
+        let service = "svc:ai-gateway";
+        let metric = format!("metric:{service}:deployment_health_probe_status:deployment={deployment},run_epoch={}", self.run);
         let code = match status { "ok" => 0.0, "throttled" => 1.0, "failed" => 2.0, _ => 3.0 };
         let at = iso(now);
-        self.put("Service", service, json!({"name":"ignite-workload","lastSeen":at})).await;
-        self.put("Metric", &metric, json!({"name":"ignite_probe_status","unit":"","value":code,"observedAt":at,"receivedAt":at})).await;
+        self.put("Service", service, json!({"name":"ai-gateway","lastSeen":at})).await;
+        self.put("Metric", &metric, json!({"name":"deployment_health_probe_status","unit":"","value":code,"observedAt":at,"receivedAt":at})).await;
         let reports = format!("reports:{metric}");
         if !self.sim.store.contains_key(&("REPORTS".to_string(), reports.clone())) {
             let ends = json!({"__from":format!("Service:{service}"),"__to":format!("Metric:{metric}")});
@@ -298,7 +298,7 @@ impl World {
     }
     async fn reset(&mut self) {
         self.run = "run-2".into();
-        self.put("ignite_scenario", "singleton", json!({"run_epoch":"run-2","revision":1})).await;
+        self.put("routing_config", "singleton", json!({"run_epoch":"run-2","revision":1})).await;
     }
 }
 
@@ -351,16 +351,16 @@ async fn overdue_card_once_per_episode_after_3_s() {
     for i in 1..=12u64 {
         w.until(i * 5000).await;
         let now = w.sim.now;
-        w.put("ignite_tasks", &format!("t{i}"), task(i, now)).await;
+        w.put("ai_requests", &format!("t{i}"), task(i, now)).await;
         // Support answers within a second, except between 10 s and 60 s.
         if !(2..=11).contains(&i) {
-            w.put("ignite_tasks", &format!("t{i}"), json!({"completed_ms":now + 500})).await;
+            w.put("ai_requests", &format!("t{i}"), json!({"completed_ms":now + 500})).await;
         } else {
             pending.push(i);
         }
         if i == 12 {
             for p in &pending {
-                w.put("ignite_tasks", &format!("t{p}"), json!({"completed_ms":now})).await;
+                w.put("ai_requests", &format!("t{p}"), json!({"completed_ms":now})).await;
             }
         }
     }
@@ -438,21 +438,21 @@ async fn outcomes_once_per_status_in_the_approved_cards_thread() {
     w.until(70000).await;
     let approval = json!({"id":"mm-post1","run_epoch":"run-1","candidate_id":"c3","basis":"b","revision":1,"status":"pending",
         "latest":true,"requested_ms":70000,"requested_by":"@oncall","post_id":"post1","change":"Move summaries to US-C and support to EU-B"});
-    w.put("ignite_approvals", "mm-post1", approval).await;
+    w.put("change_approvals", "mm-post1", approval).await;
     w.until(70100).await;
     w.route("support", "EU-B").await;
     w.route("batch", "US-C").await;
-    w.put("ignite_approvals", "mm-post1", json!({"status":"applied","decided_ms":70100})).await;
+    w.put("change_approvals", "mm-post1", json!({"status":"applied","decided_ms":70100})).await;
     w.until(80000).await;
-    w.put("ignite_approvals", "mm-post1", json!({"status":"verified","decided_ms":80000})).await;
+    w.put("change_approvals", "mm-post1", json!({"status":"verified","decided_ms":80000})).await;
     w.until(90000).await;
     let desk = json!({"id":"desk-1","run_epoch":"run-1","candidate_id":"c8","basis":"b","revision":1,"status":"pending","latest":true,"requested_ms":90000});
-    w.put("ignite_approvals", "desk-1", desk).await;
-    w.put("ignite_approvals", "desk-1", json!({"status":"rejected","decided_ms":90010,"reason":"The facts changed since this plan was proposed"})).await;
+    w.put("change_approvals", "desk-1", desk).await;
+    w.put("change_approvals", "desk-1", json!({"status":"rejected","decided_ms":90010,"reason":"The facts changed since this plan was proposed"})).await;
     // A person's Reject is shown on the card itself, not by Drasi.
     let declined = json!({"id":"mm-post3","run_epoch":"run-1","candidate_id":"c9","basis":"b","revision":1,"status":"declined",
         "latest":true,"requested_ms":95000,"decided_ms":95000,"post_id":"post3"});
-    w.put("ignite_approvals", "mm-post3", declined).await;
+    w.put("change_approvals", "mm-post3", declined).await;
     w.until(200000).await;
     w.sim.restart().await;
     w.until(210000).await;
@@ -540,7 +540,7 @@ async fn proposal_facts_are_sorted_and_complete() {
 }
 
 /// Health from telemetry: the same timeline as `failed_card_once_per_failure_after_3_s_and_never_after_a_restart`
-/// with probes through Drasi's OTel source instead of `ignite_reports`, and the same cards.
+/// with probes through Drasi's OTel source instead of `deployment_health_reports`, and the same cards.
 #[tokio::test]
 async fn failed_card_from_telemetry_is_the_failed_card_from_reports() {
     let mut w = World::new(Sim::from_telemetry("incident-failed").await).await;
@@ -598,7 +598,7 @@ async fn deployment_tile_from_telemetry_detects_failure_silence_and_recovery() {
     assert_eq!(statuses(&w.sim, "deployment")[..2], [("EU-A".into(), json!(0)), ("EU-B".into(), json!(0))]);
     // A new run: the last run's probes no longer count; the new run's do.
     w.reset().await;
-    w.put("ignite_deployments", "EU-A", json!({"run_epoch":"run-2"})).await;
+    w.put("model_deployments", "EU-A", json!({"run_epoch":"run-2"})).await;
     w.until(20000).await;
     let rows = statuses(&w.sim, "deployment");
     assert_eq!(rows, [("EU-A".into(), json!(0))], "only EU-A belongs to run-2 here");

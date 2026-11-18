@@ -2,7 +2,7 @@ import { useDrasiStream } from "../demo/ui/src/live";
 
 // demo/drasi/overdue-tasks.cypher, laid out for the projector. A UI test checks it matches the file.
 export const displayQuery = [
-  ["MATCH (t:ignite_tasks)-[:TASK_SCENARIO]->(s:ignite_scenario)", 1],
+  ["MATCH (t:ai_requests)-[:REQUEST_CONFIG]->(s:routing_config)", 1],
   ["WHERE t.run_epoch = s.run_epoch", 0],
   ["  AND t.completed_ms IS NULL AND t.cancelled_ms IS NULL", 2],
   ["  AND drasi.trueLater(true, t.deadline_ms)", 3],

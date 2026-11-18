@@ -34,16 +34,16 @@ const metric = async (query) => {
 };
 // Drasi's answers as Grafana reads them: the Prometheus reaction's series (plan/contracts.md section 9).
 const drasi = async (name, labels = "") => (await metric(`${name}${labels}`))[0]?.value;
-const action = () => drasi("ignite_drasi_recommended_action");
-const failover = () => drasi("ignite_drasi_failover_readiness");
-const lastApproval = () => drasi("ignite_drasi_last_approval_state");
+const action = () => drasi("drasi_recommended_action");
+const failover = () => drasi("drasi_failover_readiness");
+const lastApproval = () => drasi("drasi_last_approval_state");
 
 // What each beat waits for before its screenshot, keyed by "<part>/<beat>". Approving beats press
 // the desk's backup, which presses Approve on the newest proposal card, as a click on it would.
 const waits = {
   "normal/0": async () => until("traffic history", async () => (await api("/health")).traffic?.running, 10).then(() => sleep(15000)),
   "failure/0": () => until("Recommended action: the change", async () => await action() === 1, 60),
-  "failure/2": () => until("errors and alert", async () => await drasi("ignite_drasi_overdue_requests", '{workload="support"}') > 0, 60).then(() => sleep(15000)),
+  "failure/2": () => until("errors and alert", async () => await drasi("drasi_requests_overdue", '{workload="support"}') > 0, 60).then(() => sleep(15000)),
   "who/0": () => sleep(5000),
   "who/1": () => sleep(3000),
   "who/2": () => sleep(3000),
@@ -51,7 +51,7 @@ const waits = {
   "recovery/2": () => until("rejected", async () => await lastApproval() === 4, 30).then(() => sleep(6000)),
   "recovery/3": () => until("new proposal", async () => await action() === 1, 30).then(() => sleep(6000)),
   "recovery/4": () => until("applied", async () => [2, 3].includes(await lastApproval()), 30).then(() => sleep(6000)),
-  "recovery/5": () => until("verified", async () => await drasi("ignite_drasi_change_status") === 4, 150).then(() => sleep(6000)),
+  "recovery/5": () => until("verified", async () => await drasi("drasi_change_status") === 4, 150).then(() => sleep(6000)),
   "recovery/6": () => sleep(30000),
   "resilience/0": () => until("not safe", async () => await failover() === 0, 30).then(() => sleep(8000)),
   "resilience/2": () => sleep(4000),

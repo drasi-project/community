@@ -1,4 +1,4 @@
-"""Generate the projected Grafana dashboard, `ignite-workload` (dashboards/workload.json).
+"""Generate the projected Grafana dashboard, `ai-operations` (dashboards/workload.json).
 
 One dashboard, two rows (plan/contracts.md section 16): **AI Deployments**, ordinary
 monitoring measured from real requests, and **Decision Support**, Drasi's answers.
@@ -10,7 +10,7 @@ Unknown when Drasi answered -1, or when its reaction input is not ready
 missing count means 0 (or the tile's "nothing yet" value) only while its input is ready.
 
 Every panel has a description (Grafana's (i) icon) and a top-level "key": the projector
-highlights panels as `ignite-workload.<key>`, placed from this file's gridPos
+highlights panels as `ai-operations.<key>`, placed from this file's gridPos
 (presentation/panels.ts). Keep keys stable; a beat that names a missing key fails a test.
 
 Run `python3 observability/grafana/dashboards.py` from demo/, then
@@ -109,9 +109,9 @@ def color(name, c):
     return {"matcher": {"id": "byName", "options": name}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": c}}]}
 
 
-calls = 'ignite_workload_requests_total'
-OVERDUE = drasi("ignite_drasi_overdue_requests", "overdue", 'workload="support"', missing=0)
-DEPLOYMENT_STATUS = drasi("ignite_drasi_deployment_status", "deployments")
+calls = 'ai_gateway_model_calls_total'
+OVERDUE = drasi("drasi_requests_overdue", "overdue", 'workload="support"', missing=0)
+DEPLOYMENT_STATUS = drasi("drasi_deployment_health_status", "deployments")
 DEPLOYMENT = states({0: ("Healthy", GREEN), 1: ("Over quota", YELLOW), 2: ("Failed", RED)})
 WORKLOAD = states({0: ("Healthy", GREEN), 1: ("Over quota", YELLOW), 2: ("Failing", RED), 3: ("Not allowed", RED)})
 
@@ -121,8 +121,8 @@ WORKLOAD = states({0: ("Healthy", GREEN), 1: ("Over quota", YELLOW), 2: ("Failin
 # Unknown; applying or verifying an approved change; approve a proposed change; no change fits;
 # add capacity; the last change verified; none. tile-change has no row until this run has an
 # approval, so before that the tile follows tile-action alone.
-ACTION = drasi("ignite_drasi_recommended_action", "action")
-CHANGE = drasi("ignite_drasi_change_status", "change")
+ACTION = drasi("drasi_recommended_action", "action")
+CHANGE = drasi("drasi_change_status", "change")
 
 
 def shown(expr, code, prefix=""):
@@ -147,7 +147,7 @@ RECOMMENDED_COLOURS = states({0: ("None", GREEN), 1: ("Change proposed", YELLOW)
 
 # Failover readiness: tile-resilience's text label, except "Already degraded", which names the
 # unhealthy deployments from Deployment status (the query knows only how many there are).
-READINESS = drasi("ignite_drasi_failover_readiness", "resilience")
+READINESS = drasi("drasi_failover_readiness", "resilience")
 DOWN = f'({DEPLOYMENT_STATUS} >= 1)'
 DEGRADED = (f'((label_replace(({DOWN} * 0 + 2) and on() (count({DOWN}) == 1), "text", "Already degraded: $1 down", "deployment", "(.+)")'
             f' or on() label_replace((count({DOWN}) > 1) * 0 + 2, "text", "Already degraded: more than one deployment down", "", ""))'
@@ -173,7 +173,7 @@ ops["annotations"]["list"] = [{
     "datasource": {"type": "grafana", "uid": "-- Grafana --"},
     "enable": True, "hide": False, "iconColor": GREEN,
     # Current Grafana reads tag filters from "target"; top-level "tags" is ignored.
-    "target": {"type": "tags", "tags": ["ignite-decision"], "matchAny": False, "limit": 100},
+    "target": {"type": "tags", "tags": ["drasi-decision"], "matchAny": False, "limit": 100},
 }]
 
 recommended = stat(11, "recommended-action", "Recommended action", [(known(f'({RECOMMENDED}) and on() {ready("change")}'), "{{text}}")],
@@ -197,11 +197,11 @@ ops["panels"] = [
          6, TOP, 6, 4, "Share of customer-support model calls that failed in the last 30 seconds.", unit="percent", decimals=0,
          thresholds=[{"color": GREEN, "value": None}, {"color": YELLOW, "value": 5}, {"color": RED, "value": 20}]),
     stat(3, "answer-time", "Answer time p95",
-         'histogram_quantile(0.95, sum by(le)(rate(ignite_workload_answer_seconds_bucket{workload="support"}[1m])))', 12, TOP, 6, 4,
+         'histogram_quantile(0.95, sum by(le)(rate(ai_gateway_answer_time_seconds_bucket{workload="support"}[1m])))', 12, TOP, 6, 4,
          "95th percentile time from a customer's question to its answer, over the last minute. The target is 15 seconds.", unit="s", decimals=1,
          extra_mappings=[{"type": "special", "options": {"match": "null+nan", "result": {"text": "No answers", "color": RED}}}],
          thresholds=[{"color": GREEN, "value": None}, {"color": YELLOW, "value": 10}, {"color": RED, "value": 15}]),
-    stat(4, "support-queue", "Support queue", 'ignite_workload_queue_depth{workload="support"}', 18, TOP, 6, 4,
+    stat(4, "support-queue", "Support queue", 'ai_gateway_queue_depth{workload="support"}', 18, TOP, 6, 4,
          "Customer-support requests waiting for an answer. One or two in flight is normal.", decimals=0,
          thresholds=[{"color": GREEN, "value": None}, {"color": YELLOW, "value": 3}, {"color": RED, "value": 6}]),
     {"id": 10, "key": "alerts-firing", "type": "alertlist", "title": "Alerts firing",
@@ -221,7 +221,7 @@ ops["panels"] = [
     ], 0, MIDDLE, 10, 6, "Model calls per second, by workload and whether they succeeded. Failed calls are retried.", "reqps",
            [color("support answered", BLUE), color("summaries answered", PURPLE), color("support failed", RED), color("summaries failed", YELLOW)]),
     series(6, "support-waiting", "Support requests waiting", [
-        ('ignite_workload_queue_depth{workload="support"}', "waiting"),
+        ('ai_gateway_queue_depth{workload="support"}', "waiting"),
         (OVERDUE, "overdue (Drasi)"),
     ], 10, MIDDLE, 8, 6, "Support requests waiting for an answer, and how many are past their 15-second deadline according to Drasi.", "short",
            [color("waiting", YELLOW), color("overdue (Drasi)", RED)]),
@@ -234,7 +234,7 @@ ops["panels"] = [
          "Each deployment's health as Drasi derives it from its health-probe telemetry. Unknown means no probe for 8 seconds: "
          "Drasi notices silence as time passes.",
          mappings=DEPLOYMENT, name=True, value_size=24)),
-    rows_of(stat(9, "workload-status", "Workload status", [(drasi("ignite_drasi_workload_status", "workloads", f'workload="{w}"'), "{{name}} · {{deployment}}") for w in ("support", "batch")], 8, BOTTOM, 4, 6,
+    rows_of(stat(9, "workload-status", "Workload status", [(drasi("drasi_workload_status", "workloads", f'workload="{w}"'), "{{name}} · {{deployment}}") for w in ("support", "batch")], 8, BOTTOM, 4, 6,
          "Each workload where it runs now, from a Drasi continuous query over its route, the placement policy and its "
          "deployment's health: Healthy, Over quota or Failing as its deployment is; Not allowed when policy no longer "
          "allows it there; Unknown when its deployment has been silent for 8 seconds.",

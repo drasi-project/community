@@ -1,4 +1,4 @@
-MATCH (t:ignite_tasks)-[:TASK_SCENARIO]->(s:ignite_scenario)
+MATCH (t:ai_requests)-[:REQUEST_CONFIG]->(s:routing_config)
 WHERE t.run_epoch = s.run_epoch AND t.workload = 'support'
 WITH s.run_epoch AS run_epoch, s.revision AS revision,
      count(t) AS task_count,

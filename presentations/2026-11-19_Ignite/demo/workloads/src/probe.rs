@@ -13,16 +13,16 @@ use std::{
     time::{Duration, Instant},
 };
 
-/// Gauge names; the Drasi source allowlists `ignite_probe_*`.
-pub const STATUS: &str = "ignite_probe_status";
-pub const UP: &str = "ignite_probe_up";
-pub const LATENCY: &str = "ignite_probe_latency_ms";
+/// Gauge names; the Drasi source allowlists `deployment_health_probe_*`.
+pub const STATUS: &str = "deployment_health_probe_status";
+pub const UP: &str = "deployment_health_probe_up";
+pub const LATENCY: &str = "deployment_health_probe_latency_ms";
 
 /// A reading is exported while it is younger than this: the monitor probes every second
 /// and the reader exports every second, so each reading is exported once or twice.
 const FRESH: Duration = Duration::from_millis(1_500);
 
-/// `ignite_probe_status` values, matching the tile's status codes.
+/// `deployment_health_probe_status` values, matching the tile's status codes.
 pub fn status_code(status: &str) -> Option<i64> {
     match status {
         "ok" => Some(0),

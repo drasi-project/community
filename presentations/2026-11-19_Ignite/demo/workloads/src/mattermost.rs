@@ -174,8 +174,8 @@ pub struct ApproveLatest {
 pub fn latest_proposal(page: &Value, run_epoch: &str) -> Option<String> {
     page["order"].as_array()?.iter().filter_map(Value::as_str).find(|id| {
         let props = &page["posts"][*id]["props"];
-        props["ignite_card"] == PROPOSAL
-            && props["ignite_run_epoch"] == run_epoch
+        props["incident_card"] == PROPOSAL
+            && props["incident_run_epoch"] == run_epoch
             && props["attachments"].as_array().is_some_and(|a| {
                 a.iter().any(|attachment| {
                     attachment["actions"].as_array().is_some_and(|actions| actions.iter().any(|x| x["id"] == "approve"))
@@ -328,18 +328,18 @@ mod tests {
 
     #[test]
     fn decided_card_loses_its_buttons() {
-        let props = json!({"ignite_card":"proposal","attachments":[{"title":"Proposed change","fields":[{"title":"Why","value":"EU-A is down"}],
+        let props = json!({"incident_card":"proposal","attachments":[{"title":"Proposed change","fields":[{"title":"Why","value":"EU-A is down"}],
             "actions":[{"id":"approve","name":"Approve"},{"id":"decline","name":"Reject"}]}]});
         let decided = decided_props(props, "Approved by @oncall.");
         let attachment = &decided["attachments"][0];
         assert!(attachment.get("actions").is_none());
         assert_eq!(attachment["fields"][1]["title"], "Decision");
-        assert_eq!(decided["ignite_card"], "proposal");
+        assert_eq!(decided["incident_card"], "proposal");
     }
 
     #[test]
     fn latest_proposal_is_the_newest_open_card_of_this_run() {
-        let card = |epoch: &str, open: bool| json!({"props":{"ignite_card":"proposal","ignite_run_epoch":epoch,
+        let card = |epoch: &str, open: bool| json!({"props":{"incident_card":"proposal","incident_run_epoch":epoch,
             "attachments":[if open { json!({"actions":[{"id":"approve"}]}) } else { json!({}) }]}});
         let page = json!({"order":["new-decided","old-run","open","older-open"],"posts":{
             "new-decided":card("run-1", false),"old-run":card("run-0", true),
