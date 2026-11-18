@@ -17,7 +17,7 @@ Builds go to `ignite-native/.cargo-target-next`, so the running demo's build fol
 | Area | State |
 |---|---|
 | Drasi Server binary | Builds (`cargo build -p drasi-server`) |
-| Demo plugins (`ignite-prometheus`, `ignite-policy`, `ignite-optimizer`) | Build and pass their tests. Policy and optimizer are being replaced by the official plugins (other workstreams) |
+| Demo plugins (`ignite-prometheus`, `ignite-optimizer`) | Build and pass their tests. Drasi's `drasi.standard/policy` replaced `ignite-policy`; the optimizer is being replaced by the official plugin (another workstream) |
 | Config generator (`ignite-config`) | Adapted. Its tests pass, and `drasi-server validate` accepts the current graph: 57 components, 9 plugins |
 | Build and run scripts | Point at the `-next` checkouts and build folder |
 | Live switch | Not done. It needs the user's go-ahead (see [Switch-over](#switch-over)) |
@@ -74,7 +74,7 @@ Origin `0e039e5` already does what the demo needs:
 | 2 | Demo plugins and `ignite-config` build and test against drasi-core-next | this workstream | Done |
 | 3 | Drasi Server builds from `drasi-server-next` | this workstream | Done |
 | 4 | Generated graph passes `drasi-server validate` | this workstream | Done (Postgres health source) |
-| 5 | Official policy plugin replaces `ignite-policy` (generator, queries, `native-build.sh`) | policy workstream | In progress |
+| 5 | Official policy plugin replaces `ignite-policy` (generator, queries, `native-build.sh`) | policy workstream | Done: `7d0cd2d`. `native-build.sh` builds `drasi-computation-transformer-policy` and removes the old `ignite_policy` library |
 | 6 | Official optimization plugin replaces `ignite-optimizer` | optimization workstream | In progress |
 | 7 | Native OTel source path (`IGNITE_HEALTH_SOURCE=otel`): the generator's `REPORTS` join fix (`fc035a1`), then validate | OTel workstream | In progress |
 | 8 | Full `ops/native-build.sh` in community-next: UI, Server, all plugins, generator, `validate`, `stamp` | this workstream | Re-run after items 5–7 |
