@@ -35,10 +35,7 @@ export const slides = [
   { id: "concepts-questions", title: "The scenario · three answers" },
   { id: "setup", title: "What happens when EU-A fails" },
   { id: "drasi", title: "Drasi: change-driven computation" },
-  { id: "health", title: "How Drasi knows EU-A failed" },
   { id: "query", title: "Who is affected: the continuous query" },
-  { id: "policy-config", title: "The policy behind the proposal" },
-  { id: "optimization-config", title: "The optimization behind the proposal" },
   { id: "closing", title: "Close" },
   { id: "survey", title: "Session survey" },
 ] as const;

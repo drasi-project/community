@@ -7,7 +7,7 @@ import { notes } from "../../../presentation/notes";
 import { presenterScript } from "../../../presentation/script";
 import { replayClips } from "../../../presentation/replay";
 import { displayQuery } from "../../../presentation/QuerySlide";
-import { buildCodeSlides } from "../../../presentation/codeSlides";
+import { buildConfig, configIds } from "../../../presentation/codeSlides";
 import { unknownKeys, type Dashboard } from "../../../presentation/panels";
 import fs from "node:fs";
 
@@ -47,7 +47,7 @@ test("the talk is 22 minutes and every beat says something and shows something",
     expect(cue.ifBroken.trim()).not.toBe("");
   }
   for (const recap of recaps) expect(Object.values(notes).some(cue => cue.beats.some(beat => beat.show === recap.id))).toBe(true);
-  expect(slides.map(s => s.id)).toEqual(["walkin", "title", "concepts", "concepts-rules", "concepts-questions", "setup", "drasi", "health", "query", "policy-config", "optimization-config", "closing", "survey"]);
+  expect(slides.map(s => s.id)).toEqual(["walkin", "title", "concepts", "concepts-rules", "concepts-questions", "setup", "drasi", "query", "closing", "survey"]);
   // The walk-in opens the talk, the scenario reveals a section per beat, and the survey is last.
   const shown = scenes.flatMap(scene => notes[scene.id].beats.map(beat => beat.show));
   expect(shown[0]).toBe("walkin");
@@ -75,6 +75,22 @@ test("every highlight in the script names a panel on the dashboards", () => {
   const keys = Object.values(notes).flatMap(cue => cue.beats.flatMap(beat => beat.highlight ?? []));
   expect(keys.length).toBeGreaterThan(0);
   expect(unknownKeys(boards, keys)).toEqual([]);
+});
+
+test("each Decision Support beat shows its configuration above the highlighted panel, clear of it and of the captions", async ({ page }) => {
+  await stubGrafana(page);
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  for (const beat of notes.normal.beats.filter(beat => beat.config)) {
+    await page.goto(`/present?view=ops&preview=1&highlight=${beat.highlight!.join(",")}&config=${beat.config!.join(",")}`);
+    await expect(page.locator(".config-overlay .code-panel")).toHaveCount(beat.config!.length);
+    const [overlay] = await onSlide(page, ".config-overlay");
+    const outlines = await onSlide(page, ".panel-highlight .outline");
+    expect(outlines.length).toBe(1);
+    expect(overlay.bottom, beat.config!.join()).toBeLessThan(outlines[0].top);
+    expect(overlay.left).toBeGreaterThanOrEqual(92 - 1);
+    expect(overlay.right).toBeLessThanOrEqual(frame.width - 92 + 1);
+    await page.screenshot({ path: `evidence/config-${beat.config!.join("-")}.png` });
+  }
 });
 
 test("the scenario reveals its sections one desk beat at a time", async ({ page }) => {
@@ -116,16 +132,20 @@ test("a beat's highlight outlines its dashboard panels on the projector, above t
   await expect(projector.locator(".panel-highlight")).toHaveCount(0);
 });
 
-test("the configuration slides show the real files, and every numbered note marks a line", () => {
+test("the configuration shown beside each panel is the real files', text, and every beat's config exists", () => {
   const read = (path: string) => fs.readFileSync(new URL(`../../drasi/${path}`, import.meta.url), "utf8");
-  const codeSlides = buildCodeSlides({ healthQuery: read("deployment-health.cypher"), tileQuery: read("tile-deployments.cypher"),
-    rego: read("policy/ignite.rego"), optimization: JSON.parse(read("optimization/optimization.json")) });
-  expect(codeSlides.health.panels[0].lines.join("\n")).toContain(read("deployment-health.cypher").split("\n").find(line => line.startsWith("MATCH"))!);
-  expect(codeSlides["policy-config"].panels[0].lines).toContain("allowed_destination if input.target.id in input.destinations");
-  for (const [id, slide] of Object.entries(codeSlides)) {
-    const marks = slide.panels.flatMap(panel => panel.marks.filter(([text]) => panel.lines.some(line => line.includes(text))).map(([, n]) => n));
-    expect(marks.sort((a, b) => a - b), id).toEqual(slide.notes.map((_, i) => i + 1));
-  }
+  const config = buildConfig({ overdueQuery: read("overdue-tasks.cypher"), healthQuery: read("deployment-health.cypher"),
+    workloadsQuery: read("tile-workloads.cypher"), rego: read("policy/ignite.rego"), optimization: JSON.parse(read("optimization/optimization.json")) });
+  expect(config["deployment-health"].lines[0]).toBe(read("deployment-health.cypher").split("\n").find(line => line.startsWith("MATCH")));
+  expect(config["overdue-tasks"].lines.join("\n")).toContain("drasi.trueLater(true, t.deadline_ms)");
+  expect(config["tile-workloads"].lines.join("\n")).toContain("(h:DeploymentHealth)");
+  expect(config.policy.lines).toContain("allowed_destination if input.target.id in input.destinations");
+  expect(config["what-if"].lines.join("\n")).toContain('"name": "loss"');
+  for (const id of configIds) expect(config[id].hot.every(text => config[id].lines.some(line => line.includes(text))), id).toBe(true);
+  const used = Object.values(notes).flatMap(cue => cue.beats.flatMap(beat => beat.config ?? []));
+  expect(new Set(used)).toEqual(new Set(configIds));
+  // Each panel's configuration is shown while that panel is highlighted.
+  for (const beat of notes.normal.beats.filter(beat => beat.config)) expect(beat.highlight?.length).toBe(1);
 });
 
 test("the query slide shows exactly the query Drasi runs", () => {
@@ -176,7 +196,7 @@ test("keys pressed on the projector (a clicker) drive the desk", async ({ page }
 });
 
 test("short on time skips the optional policy beats", async ({ page }) => {
-  await desk(page, "recovery", 2);
+  await desk(page, "recovery", 0);
   await page.getByLabel("Short on time").check();
   await page.getByRole("button", { name: "Next ▶" }).click();
   await expect(page.locator(".say")).toContainText("Now I approve the current proposal");
@@ -212,7 +232,7 @@ test("the desk shows how long demo traffic has been running", async ({ page }) =
 
 test("approving the out-of-date proposal is rejected by Drasi, and the desk says that's expected", async ({ page, request }) => {
   await failEuA(request);
-  await desk(page, "recovery", 3);
+  await desk(page, "recovery", 1);
   await expect.poll(async () => (await posts(request)).map(p => p.props.ignite_card)).toEqual(["failed", "proposal"]);
   await page.locator(".now").getByRole("button", { name: "Summaries: Europe only" }).click();
   await expect(page.locator(".now").getByRole("button", { name: /Summaries: Europe only/ })).toContainText("✓");
@@ -240,7 +260,7 @@ test("approving the out-of-date proposal is rejected by Drasi, and the desk says
 
 test("pressing Approve on the projected card applies the change, and the desk reports Drasi's answer", async ({ page, request }) => {
   await failEuA(request);
-  await desk(page, "recovery", 6);
+  await desk(page, "recovery", 4);
   const projector = await page.context().newPage();
   await stubMattermost(projector);
   await projector.goto("/present");
@@ -273,7 +293,7 @@ test("the projected incident view frames the channel above the caption line, kep
   await stubMattermost(page);
   await failEuA(request);
   await page.setViewportSize({ width: 1920, height: 1080 });
-  await desk(page, "failure", 3);
+  await desk(page, "failure", 2);
   const projector = await page.context().newPage();
   await stubGrafana(projector);
   await stubMattermost(projector);
@@ -312,7 +332,7 @@ test("switching to recordings puts the part's recording on the projector and hid
 
 test("out-of-date evidence disables approval and live buttons", async ({ page, request }) => {
   await failEuA(request);
-  await desk(page, "recovery", 6);
+  await desk(page, "recovery", 4);
   await expect(page.locator(".now").getByRole("button", { name: "Approve the proposed change" })).toBeEnabled();
   await request.post(`${fixture}/test/expire`);
   await expect(page.locator(".now").getByRole("button", { name: "Approve the proposed change" })).toBeDisabled();
@@ -402,7 +422,7 @@ test("the desk shows Drasi's answers from Drasi Server and never asks the AI ser
 
 test("Drasi's stream unavailable means NOT READY", async ({ page }) => {
   await page.route("**/drasi-stream/**", route => route.fulfill({ status: 503, body: "down" }));
-  await desk(page, "recovery", 6);
+  await desk(page, "recovery", 4);
   await expect(page.locator(".badge", { hasText: "NOT READY" })).toBeVisible();
   await expect(page.locator(".now").getByRole("button", { name: "Approve the proposed change" })).toBeDisabled();
   await expect(page.locator(".approval")).toHaveText("Approval status unavailable.");
@@ -489,7 +509,7 @@ test("with the template assets present, the desk doesn't flag them", async ({ pa
 test("the desk fits a laptop screen without scrolling", async ({ browser }) => {
   for (const cue of ["failure", "recovery"] as const) {
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-    await desk(page, cue, cue === "recovery" ? 6 : 0);
+    await desk(page, cue, cue === "recovery" ? 4 : 0);
     const main = await page.locator(".desk-main").boundingBox();
     expect(main!.y + main!.height).toBeLessThanOrEqual(900);
     await page.close();
@@ -593,7 +613,7 @@ test("the incident channel follows the talk: failure, overdue, proposal, out of 
 
   await press("Fail EU-A");
   await expect(page.locator(".now").getByRole("button", { name: /Fail EU-A/ })).toContainText("✓");
-  await next(); await next(); await next();
+  await next(); await next();
   await expect(page.locator(".projector-line")).toContainText("Mattermost · #incident-ai-support");
   await expect(card("failed")).toContainText("Deployment failed: EU-A");
   await expect(card("proposal")).toContainText("Proposed change: Move summaries to US-C and support to EU-B");
@@ -611,7 +631,6 @@ test("the incident channel follows the talk: failure, overdue, proposal, out of 
   await expect(card("proposal").getByRole("button", { name: "Approve" })).toBeVisible();
   await shot(3, "proposal");
 
-  await next(); await next(); // the policy and optimization slides
   await next();
   await press("Summaries: Europe only");
   await expect(page.locator(".now").getByRole("button", { name: /Summaries: Europe only/ })).toContainText("✓");

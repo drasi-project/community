@@ -7,6 +7,8 @@ import { RequestView } from "./RequestView";
 import { replayClips } from "./replay";
 import { Explanation } from "./Explanation";
 import { PanelHighlight } from "./Highlight";
+import { ConfigOverlay } from "./ConfigSlides";
+import type { ConfigId } from "./codeSlides";
 import type { StageControl } from "../demo/ui/src/stage";
 
 // Dashboards are drawn at 1/zoom of the stage and scaled up, so they read from the back of the room.
@@ -43,6 +45,7 @@ export function Audience({ control, preview }: { control: StageControl; preview:
   const { view, replay: replayId, trace } = control.stage;
   // In a read-only preview, ?highlight=uid.panel,… shows a highlight without the desk.
   const highlight = preview ? new URLSearchParams(location.search).get("highlight")?.split(",") ?? [] : control.stage.highlight;
+  const config = (preview ? new URLSearchParams(location.search).get("config")?.split(",") ?? [] : control.stage.config) as ConfigId[];
   const index = allSlides.findIndex(slide => slide.id === view);
   const scale = useFit();
   const dashboard = view === "ops" ? view : null;
@@ -97,6 +100,7 @@ export function Audience({ control, preview }: { control: StageControl; preview:
         style={{ width: frame.width / incidentZoom, height: frame.captionTop / incidentZoom, transform: `scale(${incidentZoom})`,
           visibility: !!replay || view !== "incident" ? "hidden" : "visible" }} />}
       {dashboard && !replay && <PanelHighlight src={dashboards[dashboard]} keys={highlight} zoom={zoom} />}
+      {dashboard && !replay && <ConfigOverlay ids={config} />}
       {framed && !replay && <div className="caption-zone" />}
       {view === "request" && !replay && <section className="stage-request"><RequestView taskId={trace} /></section>}
       {replay && <section className="replay-screen">

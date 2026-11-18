@@ -147,7 +147,7 @@ export default function Presenter({ live, now, control }: { live: Live; now: num
     // In recording mode, parts of the live demo show their recording instead.
     const recording = stage.fallback && (target.show === "ops" || target.show === "incident" || target.show === "request")
       ? target.recording ?? notes[scenes[cueIndex].id].recording ?? null : null;
-    control.update({ cue: cueIndex, beat: beatIndex, view: target.show, trace, highlight: target.highlight ?? [], ...(stage.fallback ? { replay: recording } : {}) });
+    control.update({ cue: cueIndex, beat: beatIndex, view: target.show, trace, highlight: target.highlight ?? [], config: target.config ?? [], ...(stage.fallback ? { replay: recording } : {}) });
   }
   function step(direction: 1 | -1, fromCue = stage.cue, fromBeat = stage.beat) {
     const here = `${fromCue}/${fromBeat}`;

@@ -182,16 +182,13 @@
 .slide-deck .stage-frame .query-live li code { color: var(--light-gray); font: 26px var(--code); }
 .slide-deck .stage-frame .query-live li.more { color: var(--light-gray); justify-content: center; }
 
-/* The configuration behind an answer: code panels and numbered notes, like the query slide */
-.slide-deck .stage-frame .code-slide .body { display: grid; grid-template-columns: 1200px 1fr; gap: 0 44px; align-items: start; }
-.slide-deck .stage-frame .code-slide .code-panels { display: grid; gap: 24px; }
-.slide-deck .stage-frame .code-slide .code-panel pre { font-size: 20px; line-height: 1.55; padding: 14px 24px 18px; }
-.slide-deck .stage-frame .code-slide .code-tab { font-size: 24px; }
-.slide-deck .stage-frame .code-slide .query-notes { font-size: 28px; }
-.slide-deck .stage-frame .code-slide.wide .body { grid-template-columns: 1fr; gap: 28px 0; }
-.slide-deck .stage-frame .code-slide.wide .code-panel pre { font-size: 23px; line-height: 1.5; }
-.slide-deck .stage-frame .code-slide.wide .query-notes { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 56px; }
-.slide-deck .stage-frame .code-slide.wide .query-notes li { margin-bottom: 0; }
+/* The configuration behind the highlighted dashboard panel, over the dimmed rows above it */
+.slide-deck .stage-frame .config-overlay { position: absolute; left: 92px; top: 24px; max-width: 1736px; max-height: 584px; display: grid; gap: 16px;
+  pointer-events: none; box-shadow: 0 12px 40px rgba(0, 0, 0, .55); animation: panel-highlight .4s ease-out; }
+.slide-deck .stage-frame .config-overlay .code-tab { font-size: 22px; padding: 8px 22px 12px; }
+.slide-deck .stage-frame .config-overlay pre { font-size: 20px; line-height: 1.45; padding: 12px 22px 16px; }
+.slide-deck .stage-frame .config-overlay pre span { padding-left: 0; }
+.slide-deck .stage-frame .config-overlay pre i { display: none; }
 
 /* Close */
 .slide-deck .stage-frame .closing-slide .body { flex-direction: row; gap: 96px; }

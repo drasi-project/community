@@ -1,4 +1,5 @@
 import type { SceneId, StageView } from "./scenes";
+import type { ConfigId } from "./codeSlides";
 
 // The single source for what the presenter says and does. The presenter desk shows it beat by
 // beat, and PRESENTER.md's run of show and script are generated from it
@@ -20,6 +21,8 @@ export type Beat = {
   // Dashboard panels to highlight on the projector, as "<dashboard uid>.<panel key>": the panel's
   // "key" in the dashboard JSON, or its title in lower case with dashes (a row covers its panels).
   highlight?: string[];
+  // The Drasi configuration behind the highlighted panel, shown above it (presentation/codeSlides.ts).
+  config?: ConfigId[];
 };
 export type Cue = { summary: string; beats: Beat[]; ifBroken: string; recording?: string };
 
@@ -66,18 +69,24 @@ export const notes: Record<SceneId, Cue> = {
       { show: "ops", highlight: ["ignite-workload.decision-support"],
         say: "The bottom row, Decision Support, is Drasi's answers, worked out from changes as they happen: changes in the AI service's database, where it records every request, route, policy and approval, and its health checks, which arrive as ordinary OpenTelemetry metrics every second. A Drasi reaction publishes each answer as a Prometheus metric, so Grafana draws it and you can alert on it like anything else; another posts to the team's incident channel when something needs them. Let's take them one at a time.",
         watch: "The whole Decision Support row outlined." },
-      { show: "ops", highlight: ["ignite-workload.support-overdue"],
-        say: "Support overdue: customer requests past their 15-second deadline. A continuous query over the requests table: a request joins the list the moment its deadline passes, even though nothing about the request changed, and leaves it when it's answered.",
-        watch: "Support overdue 0." },
-      { show: "ops", highlight: ["ignite-workload.deployment-status", "ignite-workload.workload-status"],
-        say: "Deployment status is each deployment's latest health check, from the telemetry: Healthy, Over quota or Failed, and Unknown if the checks go quiet for 8 seconds. Workload status joins that with where each workload runs and what the policy allows there, so it tells you whether each workload is being served somewhere it's allowed to run.",
-        watch: "Deployment status: EU-A, EU-B, US-C Healthy. Workload status: Support · EU-A and Summaries · EU-B Healthy." },
-      { show: "ops", highlight: ["ignite-workload.recommended-action"],
-        say: "Recommended action is Drasi's planner: an optimization model that re-solves whenever health, capacity or policy changes, and proposes the change with the fewest moves that keeps every workload running within policy. It also follows that change through approval, applying and verification. Right now there's nothing to do.",
-        watch: "Recommended action: None (green)." },
-      { show: "ops", highlight: ["ignite-workload.failover-readiness"],
-        say: "Failover readiness is a what-if the same model answers continuously: if any one deployment failed, would every workload still have somewhere allowed to run? A game-day question, answered all the time. No new tool to watch: the answers arrive where you already look.",
-        watch: "Failover readiness: Survives losing any one deployment." },
+      { show: "ops", highlight: ["ignite-workload.support-overdue"], config: ["overdue-tasks"],
+        say: "Support overdue: customer requests past their 15-second deadline. Above it is the query that drives it: every request not yet answered or cancelled, and drasi.trueLater, which becomes true at the request's deadline. Drasi re-checks just that request at that moment, so it joins the list with no new event, and leaves it when it's answered.",
+        watch: "Support overdue 0; the overdue-tasks query above it, the trueLater line highlighted." },
+      { show: "ops", highlight: ["ignite-workload.deployment-status"], config: ["deployment-health"],
+        say: "Deployment status: each deployment's latest health check. Every second the AI service probes each deployment and exports the result as an ordinary OpenTelemetry metric; the Collector forwards it to Drasi's OpenTelemetry source, and this query keeps the latest probe per deployment: 2 means failed. Each reading is good for 8 seconds, so if the probes stop, the status turns Unknown as time passes.",
+        watch: "Deployment status: EU-A, EU-B, US-C Healthy; the deployment-health query above it." },
+      { show: "ops", highlight: ["ignite-workload.workload-status"], config: ["tile-workloads"],
+        say: "Workload status joins three things: where each workload runs, what the policy says about that deployment, and that deployment's health. So it tells you whether each workload is being served somewhere it's allowed to run.",
+        watch: "Workload status: Support · EU-A and Summaries · EU-B Healthy; the tile-workloads query above it." },
+      { show: "ops", highlight: ["ignite-workload.recommended-action"], config: ["policy"],
+        say: "Recommended action comes from two of Drasi's standard models. First the policy, as these Rego rules: a workload may only use the deployments it's allowed, and restricted data must stay in its region. The allowed destinations are data, so a compliance change is just a change to some rows, and Drasi re-checks every workload and deployment when one changes.",
+        watch: "Recommended action: None (green); the Rego rules above it." },
+      { show: "ops", highlight: ["ignite-workload.recommended-action"], config: ["optimization"],
+        say: "Then the optimization model, configured by this file: one yes or no choice per workload and allowed deployment, every workload placed exactly once, each healthy deployment within its capacity, and the fewest moves first. Drasi re-solves whenever health, capacity or policy changes, proposes the result, and follows it through approval, applying and verification. Right now there's nothing to do.",
+        watch: "Recommended action: None (green); the optimization model above it." },
+      { show: "ops", highlight: ["ignite-workload.failover-readiness"], config: ["what-if"],
+        say: "Failover readiness is a what-if from the same model: the loss scenario solves again without each healthy deployment in turn. If any one failed, would every workload still have somewhere allowed to run? A game-day question, answered all the time. No new tool to watch: the answers arrive where you already look.",
+        watch: "Failover readiness: Survives losing any one deployment; the scenario above it." },
     ],
     ifBroken: "If the charts are empty, traffic isn't running: press Start demo traffic and keep talking.",
   },
@@ -89,10 +98,8 @@ export const notes: Record<SceneId, Cue> = {
         say: "Now I'll make EU-A, the deployment serving customer support, fail.",
         watch: "Within about 8 seconds: Deployment status EU-A Failed, and Recommended action names a change." },
       { show: "ops", highlight: ["ignite-workload.deployment-status", "ignite-workload.recommended-action"],
-        say: "Look at the bottom row first, Decision Support: EU-A Failed, and Recommended action already names a fix: move summaries to US-C and support to EU-B. And it has worked out a change that fits the rules. We'll come back to it.",
+        say: "Look at the bottom row first, Decision Support: EU-A Failed, and Recommended action already names a fix: move summaries to US-C and support to EU-B. Nobody told Drasi EU-A was down: its health probes failed, and the deployment-health query you saw turned that into Failed. And it has worked out a change that fits the rules. We'll come back to it.",
         watch: "Recommended action: Move summaries to US-C and support to EU-B (orange)." },
-      { show: "health",
-        say: "How did Drasi decide EU-A had failed? Nobody told it. 1: every second the AI service probes each deployment and exports the result as an ordinary OpenTelemetry metric, and the Collector forwards it to Drasi's OpenTelemetry source. 2: this continuous query keeps each deployment's latest probe; 2 means the probe failed. 3: each reading is good for 8 seconds. 4: if the probes stop, the status turns Unknown as time passes, with no new event. 5: so EU-A shows Failed because its own probes are failing, and the planner reads the same answer." },
       { show: "incident",
         say: "The team doesn't live on a dashboard, though. This is their incident channel in Mattermost. Drasi posted here as soon as EU-A failed, and its proposed change is already waiting, with an Approve button. Grafana hasn't alerted yet. We'll come back to the proposal.",
         watch: "Red card Deployment failed: EU-A, then the orange Proposed change card with Approve and Reject, the newest at the bottom." },
@@ -112,7 +119,7 @@ export const notes: Record<SceneId, Cue> = {
         click: "If the red Support requests overdue card isn't in view, scroll up to it (Grafana's alerts may have posted below it)",
         say: "Which customers are affected? Drasi posted that too: Support requests overdue, as soon as the first support request passed its deadline, with a link to the tile on the dashboard. A count tells you it's bad. Let's see who.",
         watch: "Red card Support requests overdue, with the count when posted and a link to Operations › Support overdue." },
-      { show: "query", say: "This is the actual query behind Support overdue and that card. 1: every request, as it arrives from the database. 2: not answered yet. 3: this condition becomes true at the deadline, and Drasi re-checks just that request then. 4: the result is the list itself, not just a count, and here it is, live. With Prometheus you'd get a number from a gauge or a rule evaluated every so often; here it's the exact set of late requests, kept current request by request, from one query.",
+      { show: "query", say: "This is the Support overdue query from earlier, now with its live result: not just a count, but the exact list of late requests with their traces, kept current request by request. With Prometheus you'd get a number from a gauge or a rule evaluated every so often; here it's the set itself, from one query",
         watch: "Under the query: how many support requests are late, and the oldest few with their traces." },
       { show: "request", optional: true, say: "Here's one of those customers: their question, every attempt to send it to EU-A failing, and the moment its deadline passed and Drasi listed it. The same request is a trace in Langfuse, so whoever picks it up has the detail.",
         watch: "The oldest late request, with its attempts and the moment Drasi listed it." },
@@ -125,12 +132,8 @@ export const notes: Record<SceneId, Cue> = {
     beats: [
       { show: "incident",
         click: "Scroll up to the orange Proposed change card so the whole card shows",
-        say: "Back to the proposal. On paper there's plenty of room: two healthy deployments with 200k, and we need 140k. But US-C has the free room, and customer support isn't allowed there: restricted data stays in Europe. The planner, an optimizer Drasi re-runs on every change, respects that: move summaries to US-C, which frees EU-B for support. Two moves, both within policy, and the card shows the facts it was based on.",
+        say: "Back to the proposal. On paper there's plenty of room: two healthy deployments with 200k, and we need 140k. But US-C has the free room, and customer support isn't allowed there: restricted data stays in Europe. The planner, an optimizer Drasi re-runs on every change, respects that: move summaries to US-C, which frees EU-B for support. Two moves, both within policy, and the card shows the facts it was based on: that's the Rego policy and the optimization model you saw earlier, re-solved on the new facts.",
         watch: "The orange Proposed change card: Move summaries to US-C and support to EU-B. Why EU-A is down; Policy; Capacity; Based on revision and plan." },
-      { show: "policy-config",
-        say: "Where do the rules come from? This is the policy, as Drasi runs it: Drasi's standard policy model with these Rego rules. 1: the allowed destinations are data, so a compliance change is just a change to some rows. 2: restricted data must stay in its region. 3: the deployment must serve the workload's model. 4: Drasi re-checks every workload and deployment whenever an input changes, and each decision, with its reason, feeds the optimizer." },
-      { show: "optimization-config",
-        say: "And this is the optimization: Drasi's standard optimization model, configured by this file. 1: one yes or no choice per workload and allowed deployment. 2: every workload is placed exactly once, so nothing is dropped. 3: each healthy deployment stays within its capacity. 4: fewest moves first, then the lowest peak load. 5: and the what-if: solve again without each healthy deployment. No code of ours: rules and a model, and Drasi re-solves on every change." },
       { show: "incident", optional: true, recording: "policy", do: ["summaries-europe"],
         say: "Before anyone approves it, compliance restricts summaries to Europe too. Drasi re-runs the policy and the planner at once: with EU-A down, support and summaries can't both fit in EU-B, so no change fits now, and Drasi says the proposal is out of date. Dropping work is a decision for a person, not the planner.",
         watch: "A grey card Out of date: the facts changed, Now: No valid plan. The proposal above it still has its Approve button." },

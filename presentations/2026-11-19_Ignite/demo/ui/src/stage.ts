@@ -11,16 +11,18 @@ const schema = z.object({
   view: viewSchema, trace: z.string().nullable(), replay: z.string().nullable(),
   // Dashboard panels highlighted on the projector (presentation/Highlight.tsx).
   highlight: z.array(z.string()).default([]),
+  // Drasi configuration shown beside the highlight (presentation/ConfigSlides.tsx).
+  config: z.array(z.string()).default([]),
   short: z.boolean(),
   // Recording mode: the rest of the talk uses recordings instead of the live demo.
   fallback: z.boolean().default(false),
 });
 // What the desk tells the projector, and what the projector tells the desk.
-const showSchema = z.object({ type: z.literal("stage"), view: viewSchema, trace: z.string().nullable(), replay: z.string().nullable(), highlight: z.array(z.string()).default([]) });
+const showSchema = z.object({ type: z.literal("stage"), view: viewSchema, trace: z.string().nullable(), replay: z.string().nullable(), highlight: z.array(z.string()).default([]), config: z.array(z.string()).default([]) });
 const keySchema = z.object({ type: z.literal("key"), key: z.string(), id: z.string() });
 const ackSchema = z.object({ type: z.literal("key-ack"), id: z.string() });
 export type Stage = z.infer<typeof schema>;
-const initial: Stage = { cue: 0, beat: 0, view: "walkin", trace: null, replay: null, highlight: [], short: false, fallback: false };
+const initial: Stage = { cue: 0, beat: 0, view: "walkin", trace: null, replay: null, highlight: [], config: [], short: false, fallback: false };
 const key = settings.storageKey;
 
 // The view requested in the address (?view=… or ?slide=…), if any.
@@ -46,7 +48,7 @@ export function useStage(preview: boolean, presenter = false) {
   useEffect(() => {
     if (preview) return;
     const bus = new BroadcastChannel(key);
-    const publish = () => bus.postMessage({ type: "stage", view: current.current.view, trace: current.current.trace, replay: current.current.replay, highlight: current.current.highlight });
+    const publish = () => bus.postMessage({ type: "stage", view: current.current.view, trace: current.current.trace, replay: current.current.replay, highlight: current.current.highlight, config: current.current.config });
     channel.current = bus;
     bus.onmessage = event => {
       if (event.data?.type === "request-stage") { if (presenter) publish(); return; }
@@ -76,13 +78,13 @@ export function useStage(preview: boolean, presenter = false) {
     setStage(next);
     if (!preview) {
       if (presenter) localStorage.setItem(key, JSON.stringify(next));
-      if ("view" in patch || "replay" in patch || "trace" in patch || "highlight" in patch)
-        channel.current?.postMessage({ type: "stage", view: next.view, trace: next.trace, replay: next.replay, highlight: next.highlight });
+      if ("view" in patch || "replay" in patch || "trace" in patch || "highlight" in patch || "config" in patch)
+        channel.current?.postMessage({ type: "stage", view: next.view, trace: next.trace, replay: next.replay, highlight: next.highlight, config: next.config });
     }
   }
   return {
     stage, update, keyHandler,
-    show: (view: StageView, trace: string | null = null) => update({ view, trace, highlight: [] }),
+    show: (view: StageView, trace: string | null = null) => update({ view, trace, highlight: [], config: [] }),
     // The projector forwards the presenter's keys (clicker, arrows) to the desk. If no desk answers
     // within half a second, onUnanswered runs, so the slides still work with no desk open.
     sendKey: (pressed: string, onUnanswered: () => void) => {
