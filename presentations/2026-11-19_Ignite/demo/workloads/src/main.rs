@@ -365,7 +365,10 @@ async fn infer(
     Ok(Json(json!({"response":response,"tokens":tokens})).into_response())
 }
 
-async fn dispatch_once(app: &App, workload: &str) -> Result<()> {
+/// Sends one waiting request. Returns true when it made progress (an answer or a reconciled
+/// receipt), so the caller can go straight on to the next one and drain a backlog at the healthy
+/// deployment's pace; false when the queue is empty or the attempt failed.
+async fn dispatch_once(app: &App, workload: &str) -> Result<bool> {
     let mut client = db().await?;
     let tx = client.transaction().await?;
     tx.batch_execute("SELECT pg_advisory_xact_lock_shared(190619)")
@@ -379,7 +382,7 @@ async fn dispatch_once(app: &App, workload: &str) -> Result<()> {
     );
     // Untried requests first, then the least recently tried, so a failing deployment doesn't
     // leave every request behind the oldest one with no attempt in its trace.
-    let Some(row) = tx.query_opt("SELECT t.id,t.content,t.trace_id,t.root_span_id FROM ignite_tasks t WHERE t.run_epoch=$1 AND t.workload=$2 AND t.completed_ms IS NULL AND t.cancelled_ms IS NULL ORDER BY (SELECT max(a.started_ms) FROM ignite_attempts a WHERE a.task_id=t.id) NULLS FIRST,t.created_ms,t.id LIMIT 1", &[&epoch,&workload]).await? else { return Ok(()) };
+    let Some(row) = tx.query_opt("SELECT t.id,t.content,t.trace_id,t.root_span_id FROM ignite_tasks t WHERE t.run_epoch=$1 AND t.workload=$2 AND t.completed_ms IS NULL AND t.cancelled_ms IS NULL ORDER BY (SELECT max(a.started_ms) FROM ignite_attempts a WHERE a.task_id=t.id) NULLS FIRST,t.created_ms,t.id LIMIT 1", &[&epoch,&workload]).await? else { return Ok(false) };
     let id: String = row.get(0);
     let trace: String = row.get(2);
     let root_span: String = row.get(3);
@@ -412,7 +415,7 @@ async fn dispatch_once(app: &App, workload: &str) -> Result<()> {
             KeyValue::new("langfuse.observation.metadata.answered_by", deployment),
         ]);
         done.end();
-        return Ok(());
+        return Ok(true);
     }
     // The gateway sends to the configured route; Drasi decides routes, the gateway only follows them.
     let deployment = scenario.route(workload)?.to_owned();
@@ -436,7 +439,7 @@ async fn dispatch_once(app: &App, workload: &str) -> Result<()> {
     if current_epoch != epoch || current_revision != revision {
         tx.execute("UPDATE ignite_attempts SET finished_ms=$1,status=409,detail='route configuration changed before transmission' WHERE id=$2", &[&now(),&attempt]).await?;
         tx.commit().await?;
-        return Ok(());
+        return Ok(true);
     }
     let mut span = app.telemetry.span(
         format!("attempt · {}", deployment),
@@ -527,7 +530,7 @@ async fn dispatch_once(app: &App, workload: &str) -> Result<()> {
     } else {
         span.set_attribute(KeyValue::new("langfuse.observation.output", "Answered"));
     }
-    Ok(())
+    Ok(status == 200)
 }
 
 /// The simulated health monitor: checks each deployment every second and records what it saw.
@@ -699,9 +702,13 @@ async fn main() -> Result<()> {
         jobs.spawn(async move {
             // A transient error (database or simulator briefly unavailable) is retried on the
             // next pass instead of stopping the service.
+            // Pause only when there is nothing to send or the last attempt failed, so retries
+            // against a failed deployment stay paced while a backlog drains at full speed.
             loop {
-                if let Err(error) = dispatch_once(&app, workload).await {
-                    eprintln!("{workload} dispatch failed, retrying: {error:#}");
+                match dispatch_once(&app, workload).await {
+                    Ok(true) => continue,
+                    Ok(false) => {}
+                    Err(error) => eprintln!("{workload} dispatch failed, retrying: {error:#}"),
                 }
                 tokio::time::sleep(Duration::from_millis(500)).await;
             }
