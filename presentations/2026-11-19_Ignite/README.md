@@ -8,6 +8,7 @@ change-driven monitoring** (session THR1029, Microsoft Ignite, November 19, 2026
 |---|---|
 | Understand what the talk and demo are about | This page |
 | Set up and run the demo | [SETUP.md](SETUP.md) |
+| Hear the incident from the on-call engineer's side | [STORY.md](STORY.md) |
 | Give the talk or run the demo | [PRESENTER.md](PRESENTER.md) |
 | Understand exactly what Drasi does in the demo | [DRASI.md](DRASI.md) |
 | Change or test the demo | [DEVELOPERS.md](DEVELOPERS.md) |
