@@ -89,20 +89,26 @@ export function Explanation({ slide, active = false }: { slide: SlideId; active?
     const step = slide === "concepts-questions" ? 3 : slide === "concepts-rules" ? 2 : 1;
     const shown = (n: number) => step >= n ? undefined : "pending";
     return <div className="content-slide concepts-slide">
-      <h1>The Scenario – Keep Customer Support Running</h1>
+      <h1 className="long">The Scenario – Keep European Customer Support Running</h1>
       <div className="body">
         <p className="lead">Two AI workloads share the same limited model capacity, split across three deployments.</p>
         <ul className="deployments">
-          <li className="blue"><b>{nb("EU-A")}</b><small>Europe</small><span>Customer support</span><em>60k of 100k tokens/min</em></li>
-          <li className="purple"><b>{nb("EU-B")}</b><small>Europe</small><span>Document summaries</span><em>80k of 100k tokens/min</em></li>
-          <li className="gray"><b>{nb("US-C")}</b><small>United States</small><span>Spare</span><em>0 of 100k tokens/min</em></li>
+          <li className="blue"><span>Customer support</span><b>Runs on {nb("EU-A")}</b><small>Europe</small><em>60k of 100k tokens/min</em></li>
+          <li className="purple"><span>Document summaries</span><b>Runs on {nb("EU-B")}</b><small>Europe</small><em>80k of 100k tokens/min</em></li>
+          <li className="gray"><span>Spare capacity</span><b>{nb("US-C")}</b><small>United States</small><em>0 of 100k tokens/min</em></li>
         </ul>
-        <ul className={`rules ${shown(2) ?? ""}`} aria-hidden={step < 2}>
-          <li><b>Customer support</b> uses restricted data: Europe only</li>
-          <li><b>Document summaries</b> use public data: anywhere</li>
-          <li>Customers expect an answer within <b>15 seconds</b></li>
-          <li>Moving work needs a <b>person's approval</b></li>
-        </ul>
+        <div className={`requirements ${shown(2) ?? ""}`} aria-hidden={step < 2}>
+          <section>
+            <h2>Policy</h2>
+            <p><b className="blue">Customer support</b>: restricted data, <strong>Europe only</strong></p>
+            <p><b className="purple">Document summaries</b>: public data, <strong>anywhere</strong></p>
+          </section>
+          <section>
+            <h2>Business requirements</h2>
+            <p>Customers get an answer within <strong>15 seconds</strong></p>
+            <p>Moving work needs <strong>a person's approval</strong></p>
+          </section>
+        </div>
         <div className={`callout questions ${shown(3) ?? ""}`} aria-hidden={step < 3}>
           <p>When something goes wrong, the business needs three answers:</p>
           <ol><li>Who is affected right now?</li><li>What's the fastest fix that stays within policy?</li><li>How do we know it's really fixed?</li></ol>
@@ -111,11 +117,11 @@ export function Explanation({ slide, active = false }: { slide: SlideId; active?
     </div>;
   }
 
-  // What you'll see: the demo's setup, simplified, and where Drasi sits beside existing observability.
+  // What happens when EU-A fails: the demo's setup, simplified, and where Drasi sits beside existing observability.
   if (slide === "setup") return <div className="content-slide setup-slide">
-    <h1>What you'll see</h1>
+    <h1>What happens when {nb("EU-A")} Fails</h1>
     <div className="body">
-      <p className="lead">What happens when {nb("EU-A")} fails, and how Drasi works with your existing observability to respond to events intelligently, and sooner.</p>
+      <p className="lead">Imagine your observability setup looks something like this. We'll see how Drasi works with it to respond to events intelligently, and sooner.</p>
       <svg className="setup-diagram" viewBox="0 0 1736 620" role="img" aria-label="The AI service's deployments in Europe and the United States, the existing monitoring and incident channel, and Drasi beside them">
         <defs><marker id="setup-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" className="arrowhead" /></marker></defs>
         <rect className="group" x="0" y="0" width="740" height="620" />

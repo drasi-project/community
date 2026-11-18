@@ -76,16 +76,21 @@
 .slide-deck .stage-frame .callout b { color: var(--light-yellow); margin-right: 12px; }
 
 /* The scenario */
-.slide-deck .stage-frame .deployments { list-style: none; padding: 0; margin-top: 36px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; }
-.slide-deck .stage-frame .deployments li { padding: 22px 30px 24px; border-top: 8px solid var(--tone); background: var(--panel); }
-.slide-deck .stage-frame .deployments b { font: 600 48px/1.1 var(--display); }
-.slide-deck .stage-frame .deployments small { display: inline; margin-left: 16px; font-size: 28px; color: var(--light-gray); }
-.slide-deck .stage-frame .deployments span, .slide-deck .stage-frame .deployments em { display: block; }
-.slide-deck .stage-frame .deployments span { margin-top: 8px; font-size: 36px; font-weight: 600; color: var(--tone); }
-.slide-deck .stage-frame .deployments em { margin-top: 2px; font-style: normal; font-size: 28px; color: var(--off-white); }
-.slide-deck .stage-frame .rules { list-style: none; padding: 0; margin-top: 32px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px 48px; font-size: 32px; color: var(--off-white); }
-.slide-deck .stage-frame .rules li::before { content: "■"; color: var(--light-blue); font-size: .5em; vertical-align: .3em; margin-right: 16px; }
-.slide-deck .stage-frame .rules b { color: var(--white); }
+.slide-deck .stage-frame .content-slide > h1.long { font-size: 64px; }
+.slide-deck .stage-frame .deployments { list-style: none; padding: 0; margin-top: 32px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; }
+.slide-deck .stage-frame .deployments li { padding: 20px 30px 22px; border-top: 8px solid var(--tone); background: var(--panel); }
+/* The workload leads; where it runs follows */
+.slide-deck .stage-frame .deployments span { display: block; font: 600 44px/1.15 var(--display); color: var(--tone); }
+.slide-deck .stage-frame .deployments b { font-size: 32px; font-weight: 600; color: var(--white); }
+.slide-deck .stage-frame .deployments small { display: inline; margin-left: 12px; font-size: 28px; color: var(--light-gray); }
+.slide-deck .stage-frame .deployments em { display: block; margin-top: 2px; font-style: normal; font-size: 28px; color: var(--off-white); }
+/* Policy and business requirements: the rules the fix must keep */
+.slide-deck .stage-frame .requirements { margin-top: 48px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+.slide-deck .stage-frame .requirements section { padding: 22px 30px 26px; border-left: 8px solid var(--light-gray); background: var(--panel); }
+.slide-deck .stage-frame .requirements h2 { margin: 0 0 10px; font: 600 30px/1.2 var(--display); color: var(--light-gray); letter-spacing: .04em; text-transform: uppercase; }
+.slide-deck .stage-frame .requirements p { font-size: 34px; line-height: 1.45; color: var(--off-white); }
+.slide-deck .stage-frame .requirements p b { color: var(--tone); }
+.slide-deck .stage-frame .requirements strong { color: var(--white); font-weight: 600; white-space: nowrap; }
 .slide-deck .stage-frame .questions { margin-top: auto; }
 .slide-deck .stage-frame .questions p { font-size: 30px; font-weight: 600; color: var(--light-yellow); }
 .slide-deck .stage-frame .questions ol { list-style: none; padding: 0; margin-top: 10px; display: grid; grid-template-columns: 1fr 1.45fr 1.2fr; gap: 40px; counter-reset: question; }

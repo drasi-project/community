@@ -117,9 +117,9 @@ its answers current. It has four kinds of component, all working in this demo:
 | **Continuous models** | Logic re-run whenever its inputs change. Here: **policy** (where each workload may run: Rego rules, given as configuration), **planner** (an optimizer that finds the best complete plan within policy and capacity) and **what-if** (if any one deployment failed, would every workload still fit?) | Drasi runs them; the Rego and optimizer plugins were written for this demo |
 | **Reactions** | Deliver every change in an answer: as Prometheus metrics for Grafana; to the gateway's configuration API, applying an approved plan only if it still matches Drasi's current plan and otherwise rejecting it; as Grafana annotations and Langfuse scores; and to the presenter desk | Yes: the HTTP and SSE reactions. The Prometheus reaction was written for this demo |
 
-During the talk, a short **What Drasi just did** visual follows each part of the
-live demo, highlighting which of these components produced what the audience
-just saw.
+During the talk, the presenter says which of these components produced what
+the audience just saw; after the healthy-but-fragile part, a short **What Drasi
+just did** visual shows it.
 
 ## How the story unfolds on stage
 

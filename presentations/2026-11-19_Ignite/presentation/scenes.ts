@@ -33,61 +33,20 @@ export const slides = [
   { id: "concepts", title: "The scenario · deployments" },
   { id: "concepts-rules", title: "The scenario · rules" },
   { id: "concepts-questions", title: "The scenario · three answers" },
-  { id: "setup", title: "What you'll see" },
+  { id: "setup", title: "What happens when EU-A fails" },
   { id: "drasi", title: "Drasi: change-driven computation" },
   { id: "query", title: "Who is affected: the continuous query" },
   { id: "closing", title: "Close" },
   { id: "survey", title: "Session survey" },
 ] as const;
 
-// "What Drasi just did" visuals, shown after each part of the live demo.
+// "What Drasi just did" visual, shown after Healthy but fragile (the other parts say their points instead).
 // Roles left out did not take part in that step and are shown dimmed.
 export type Recap = {
   id: string; after: string; title: string; saw: string[];
   sources?: string; queries?: string; models?: string; reactions?: string; why: string;
 };
 export const recaps = [
-  {
-    id: "drasi-healthy", after: "normal", title: "Drasi's answers sit beside your metrics",
-    saw: ["Real requests, measured by OpenTelemetry, Prometheus and Grafana",
-      "A Decision Support row computed by Drasi: overdue requests, deployment status, change status, recommended action, failover readiness"],
-    sources: "Every change in the service's database: requests, deployment reports, capacity, policy",
-    queries: "Overdue support requests · Deployment status · one query per Grafana tile",
-    models: "Policy, plan and what-if: today's plan fits, and survives losing any one deployment",
-    reactions: "Publish each answer as a Prometheus metric for Grafana; post to #incident-ai-support when something needs the team",
-    why: "No new tool to watch: Drasi's answers arrive in the dashboards you already use.",
-  },
-  {
-    id: "drasi-failure", after: "failure", title: "Drasi knew which customers were late, the moment they were late",
-    saw: ["EU-A failed: errors and the queue rose, then Grafana alerted",
-      "Each support request was counted as overdue the moment it passed its 15-second deadline, with no new event"],
-    sources: "Failed attempts, and EU-A's health reports turning to Failed",
-    queries: "Overdue support requests: time-aware, so a request becomes late as time passes",
-    models: "Plan: the current routes no longer work, so a new change is proposed",
-    reactions: "Support overdue, Deployment status and Recommended action in Grafana; the failure and the proposed change, with Approve, in #incident-ai-support",
-    why: "Nothing re-scans for late requests: Drasi re-checks each one at its deadline.",
-  },
-  {
-    id: "drasi-policy", after: "policy", title: "Change the rules and the answer changes",
-    saw: ["Summaries were restricted to Europe: with EU-A down, no plan fits the rules, and Drasi said so at once",
-      "Approving the plan selected before the change was rejected",
-      "Allowing the US again brought the valid plan straight back"],
-    sources: "The policy change",
-    queries: "Is the approval still valid? It no longer matched Drasi's current plan",
-    models: "Policy re-evaluated, plan recomputed: no valid plan, so the earlier plan no longer matches the facts",
-    reactions: "Grafana tiles updated; in #incident-ai-support, the out-of-date approval rejected with the reason, and a new proposal posted",
-    why: "Every plan carries the facts it was based on, so an out-of-date approval can't be applied.",
-  },
-  {
-    id: "drasi-recovery", after: "recovery", title: "A fix within policy, and proof it worked",
-    saw: ["Support can't use US-C; summaries can", "One approval moved summaries to US-C and support to EU-B",
-      "Change status showed Verified only after the queue cleared and support requests were answered on the new route"],
-    sources: "Health reports, capacity and policy; then your approval and the answered requests",
-    queries: "Verified recovery: queue cleared, and at least three support requests answered on the new route",
-    models: "Policy: support may only run in Europe. Plan: the complete plan that fits",
-    reactions: "The approved change applied through the gateway; then Change status: Verified in Grafana, #incident-ai-support and Langfuse",
-    why: "Approving a change isn't the same as fixing the problem. Drasi checks the outcome.",
-  },
   {
     id: "drasi-resilience", after: "resilience", title: "Healthy now, but not safe from the next failure",
     saw: ["Everything green, but EU-A came back with only 50k of capacity",
@@ -125,20 +84,8 @@ export const timeLabel = (minutes: number) => `${Math.floor(minutes)}:${Math.rou
 export const duration = (minutes: number) => minutes < 1 ? `${Math.round(minutes * 60)} seconds`
   : `${Math.floor(minutes)}${minutes % 1 ? "½" : ""} minute${minutes > 1 ? "s" : ""}`;
 
-// The recap for how far the live demo has got, worked out from the scenario's current state in the
-// AI service (failed deployments, the policy edit, applied routes, reduced capacity). Used when the
-// projected window is navigated by hand (?slide=recap).
-type ScenarioState = {
-  deployments: readonly { id: string; mode: string; capacity_tpm: number }[];
-  workloads: readonly { id: string; deployment: string }[];
-  destinations: Record<string, readonly string[]>;
-};
-export function recapFromState(state: ScenarioState) {
-  const order = ["drasi-healthy", "drasi-failure", "drasi-policy", "drasi-recovery", "drasi-resilience"] as const;
-  let step = 0;
-  if (state.deployments.some(d => d.mode !== "ok")) step = 1;
-  if (!(state.destinations.batch ?? []).includes("US-C")) step = 2;
-  if (state.workloads.some(w => w.id === "support" && w.deployment !== "EU-A")) step = 3;
-  if (state.deployments.some(d => d.capacity_tpm < 100000)) step = 4;
-  return recaps.find(recap => recap.id === order[step])!;
+// The recap shown when the projected window is navigated by hand (?slide=recap): the only one,
+// Healthy but fragile's. The scenario state is accepted for the caller's sake.
+export function recapFromState(_state: unknown) {
+  return recaps[0];
 }

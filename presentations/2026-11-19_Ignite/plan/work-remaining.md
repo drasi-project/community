@@ -57,11 +57,5 @@ Remove an item when it is done.
   the desk's select and approve buttons are replaced by Drasi's cards in a real
   Mattermost incident channel (`#incident-ai-support`), approved on the projected
   card. See `plan/incident-channel-plan.md`.
-- I think the "Start Demo traffic" button should appear earlier. I dont need to tell the users i am starting it, and if i wait till i get to the dashbiard, the data comes in slowly. it would be better if the data had had some time to populate before i get to the dashboard.
-- The Scenario should have the txt "Keep European Customer Support Running"
-- On the scenario slides, We should talk about the primarily about the workloads and then the deployment/infrastructure, so the boxes should put Customer Support / Document Summaries ahead of the cluster name. We should also make the 'rules/polic' more prominant with extra spacing, and maybe the workfload heading. Also make the business requirements more prominant.
-- THe slide titles "What you'll see" should be "What happens when EU-A Fails". And the text diagram says something like "Imagine your observability setup looks somethign like this"
-- When the dashboard first shows, it should appear without overlays i can mention grafana in general. The overlay should first appear when i do next and i wil lpoint out the top row of controls.
-- Get rid of the 'What drasi just did' screen in the Healthy Service, Failure, and Recovery sections. I can just tal to the points it contains.
 
 

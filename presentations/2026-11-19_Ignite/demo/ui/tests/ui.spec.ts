@@ -82,10 +82,10 @@ test("the scenario reveals its sections one desk beat at a time", async ({ page 
   await projector.goto("/present");
   const slide = (id: string) => projector.locator(`[data-slide="${id}"]`);
   await expect(slide("concepts").locator(".deployments")).toBeVisible();
-  await expect(slide("concepts").locator(".rules")).toBeHidden();
+  await expect(slide("concepts").locator(".requirements")).toBeHidden();
   await expect(slide("concepts").locator(".questions")).toBeHidden();
   await page.getByRole("button", { name: "Next ▶" }).click();
-  await expect(slide("concepts-rules").locator(".rules")).toBeVisible();
+  await expect(slide("concepts-rules").locator(".requirements")).toBeVisible();
   await expect(slide("concepts-rules").locator(".questions")).toBeHidden();
   await page.getByRole("button", { name: "Next ▶" }).click();
   await expect(slide("concepts-questions").locator(".questions")).toContainText("When something goes wrong");
@@ -99,14 +99,19 @@ test("a beat's highlight outlines its dashboard panels on the projector, above t
   const projector = await page.context().newPage();
   await stubGrafana(projector);
   await projector.goto("/present");
-  await page.getByRole("button", { name: "Next ▶" }).click(); // the nudge for Start demo traffic
+  // The dashboard first appears with no highlight; the top row is highlighted on the next beat.
+  await expect(projector.locator("iframe.stage-dashboard").first()).toBeVisible();
+  await expect(projector.locator(".panel-highlight")).toHaveCount(0);
   await page.getByRole("button", { name: "Next ▶" }).click();
-  await expect(page.locator(".say")).toContainText("The bottom half");
+  await expect(page.locator(".say")).toContainText("The top row");
   const outline = projector.locator(".panel-highlight .outline");
   await expect(outline).toHaveCount(notes.normal.beats[1].highlight!.length);
   const box = await onSlide(projector, ".panel-highlight .outline");
   expect(box[0].bottom).toBeLessThanOrEqual(frame.captionTop);
   await page.getByRole("button", { name: "Next ▶" }).click();
+  await expect(page.locator(".say")).toContainText("The bottom row");
+  await expect(outline).toHaveCount(notes.normal.beats[2].highlight!.length);
+  for (let i = 0; i < 2; i++) await page.getByRole("button", { name: "◀ Back" }).click();
   await expect(projector.locator(".panel-highlight")).toHaveCount(0);
 });
 
@@ -123,6 +128,9 @@ test("Next on the desk moves through beats and changes what the projector shows"
   await stubGrafana(projector);
   await projector.goto("/present");
   await expect(projector.locator(".walkin-slide")).toBeVisible();
+  // The walk-in beat's Start demo traffic isn't pressed here: the first Next only reminds.
+  await page.getByRole("button", { name: "Next ▶" }).click();
+  await expect(page.getByRole("alert")).toContainText("Start demo traffic");
   await page.getByRole("button", { name: "Next ▶" }).click();
   await expect(projector.locator(".title-slide")).toBeVisible();
   await page.getByRole("button", { name: "Next ▶" }).click();
@@ -143,6 +151,8 @@ test("keys pressed on the projector (a clicker) drive the desk", async ({ page }
   await desk(page, "title");
   const projector = await page.context().newPage();
   await projector.goto("/present");
+  await projector.keyboard.press("PageDown"); // the reminder to start demo traffic
+  await expect(page.getByRole("alert")).toContainText("Start demo traffic");
   await projector.keyboard.press("PageDown");
   await expect(projector.locator(".title-slide")).toBeVisible();
   await projector.keyboard.press("PageDown");
@@ -167,12 +177,24 @@ test("the current beat's buttons sit beside its notes, and results appear there"
   expect(await mutations(request)).toEqual([{ path: "/control", input: { run_epoch: "TEST-FIXTURE-EPOCH", deployment: "EU-A", action: "fail" } }]);
 });
 
-test("traffic starts only through an explicit action", async ({ page, request }) => {
-  await desk(page, "normal", 0);
+test("traffic starts only through an explicit action, on the walk-in beat before the talk", async ({ page, request }) => {
+  const traffic = scenes.flatMap(scene => notes[scene.id].beats.filter(beat => beat.do?.includes("start-traffic")).map(beat => beat.show));
+  expect(traffic).toEqual(["walkin"]);
+  await desk(page, "title", 0);
   expect(await mutations(request)).toEqual([]);
   await page.locator(".now").getByRole("button", { name: "Start demo traffic" }).click();
   await expect(page.locator(".now").getByRole("button", { name: /Start demo traffic/ })).toBeDisabled();
   expect((await mutations(request)).map((m: { path: string }) => m.path)).toEqual(["/traffic"]);
+});
+
+test("the desk shows how long demo traffic has been running", async ({ page }) => {
+  await page.route("**/api/health", async route => {
+    const health = await (await route.fetch()).json();
+    await route.fulfill({ json: { ...health, traffic: { ...health.traffic, running: true, ends_ms: Date.now() + 90 * 60 * 1000 - 125000 } } });
+  });
+  await desk(page, "title");
+  await expect(page.locator(".traffic")).toContainText(/Traffic: running for 2 min \d+ s/);
+  await expect(page.locator(".now").getByRole("button", { name: /Start demo traffic/ })).toBeDisabled();
 });
 
 test("approving the out-of-date proposal is rejected by Drasi, and the desk says that's expected", async ({ page, request }) => {
@@ -205,7 +227,7 @@ test("approving the out-of-date proposal is rejected by Drasi, and the desk says
 
 test("pressing Approve on the projected card applies the change, and the desk reports Drasi's answer", async ({ page, request }) => {
   await failEuA(request);
-  await desk(page, "recovery", 5);
+  await desk(page, "recovery", 4);
   const projector = await page.context().newPage();
   await stubMattermost(projector);
   await projector.goto("/present");
@@ -277,7 +299,7 @@ test("switching to recordings puts the part's recording on the projector and hid
 
 test("out-of-date evidence disables approval and live buttons", async ({ page, request }) => {
   await failEuA(request);
-  await desk(page, "recovery", 5);
+  await desk(page, "recovery", 4);
   await expect(page.locator(".now").getByRole("button", { name: "Approve the proposed change" })).toBeEnabled();
   await request.post(`${fixture}/test/expire`);
   await expect(page.locator(".now").getByRole("button", { name: "Approve the proposed change" })).toBeDisabled();
@@ -367,7 +389,7 @@ test("the desk shows Drasi's answers from Drasi Server and never asks the AI ser
 
 test("Drasi's stream unavailable means NOT READY", async ({ page }) => {
   await page.route("**/drasi-stream/**", route => route.fulfill({ status: 503, body: "down" }));
-  await desk(page, "recovery", 5);
+  await desk(page, "recovery", 4);
   await expect(page.locator(".badge", { hasText: "NOT READY" })).toBeVisible();
   await expect(page.locator(".now").getByRole("button", { name: "Approve the proposed change" })).toBeDisabled();
   await expect(page.locator(".approval")).toHaveText("Approval status unavailable.");
@@ -454,7 +476,7 @@ test("with the template assets present, the desk doesn't flag them", async ({ pa
 test("the desk fits a laptop screen without scrolling", async ({ browser }) => {
   for (const cue of ["failure", "recovery"] as const) {
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-    await desk(page, cue, cue === "recovery" ? 5 : 0);
+    await desk(page, cue, cue === "recovery" ? 4 : 0);
     const main = await page.locator(".desk-main").boundingBox();
     expect(main!.y + main!.height).toBeLessThanOrEqual(900);
     await page.close();

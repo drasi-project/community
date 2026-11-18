@@ -81,6 +81,13 @@ function useTemplateAssets() {
 }
 const templateHelp = "Run python3 ops/template-assets.py in demo/ (see SETUP.md)";
 
+// How long demo traffic has run: the AI service stops it 90 minutes after it starts
+// (demo/workloads/src/traffic.rs) and reports when that will be.
+function trafficAge(endsMs: number, now: number) {
+  const seconds = Math.max(0, Math.floor((now - (endsMs - 90 * 60 * 1000)) / 1000));
+  return seconds < 60 ? `${seconds} s` : `${Math.floor(seconds / 60)} min ${seconds % 60} s`;
+}
+
 // The projector window opened from the desk, so the desk can show whether it's still open.
 let projector: Window | null = null;
 
@@ -306,7 +313,7 @@ export default function Presenter({ live, now, control }: { live: Live; now: num
           const mode = e.reporting ? modeLabel[e.mode] ?? e.mode : "Not reporting";
           return <li key={e.id} className={e.mode === "ok" && e.reporting ? "ok" : "bad"}><b>{e.id}</b> {mode}<small>{e.capacity_tpm / 1000}k</small></li>;
         })}</ul>
-        <p className="traffic">Traffic: {health?.traffic?.running ? "running" : "stopped"} · Summaries allowed in {batch.includes("US-C") ? "Europe + US" : "Europe only"}</p>
+        <p className="traffic">Traffic: {health?.traffic?.running ? `running for ${trafficAge(health.traffic.ends_ms, now)}` : "stopped"} · Summaries allowed in {batch.includes("US-C") ? "Europe + US" : "Europe only"}</p>
         <h2>Routes</h2>
         <table className="plan-table">
           <thead><tr><th /><th>Support</th><th>Summaries</th></tr></thead>

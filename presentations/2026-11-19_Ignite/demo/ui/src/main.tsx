@@ -28,7 +28,7 @@ function App() {
   if (!preview && location.pathname === "/inspect") return <Diagnostics />;
   return <Slides />;
 }
-// "?slide=recap" shows the "What Drasi did" visual for how far the live demo has got
+// "?slide=recap" shows the "What Drasi just did" visual (Healthy but fragile's)
 // (for a projected window navigated by hand). If the demo can't be reached, it shows the walk-in slide.
 async function resolveDrasiSlide() {
   const params = new URLSearchParams(location.search);
