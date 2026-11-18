@@ -35,15 +35,22 @@ DEPLOYMENTS = ("EU-A", "EU-B", "US-C")
 MOVE = "Move summaries to US-C and support to EU-B"
 
 
+HOME = (("support", "Support", "EU-A", 0), ("batch", "Summaries", "EU-B", 0))
+MOVED = (("support", "Support", "EU-B", 0), ("batch", "Summaries", "US-C", 0))
+SUPPORT_FAILING = (("support", "Support", "EU-A", 2), ("batch", "Summaries", "EU-B", 0))
+
+
 def state(status=(0, 0, 0), capacity=(100000, 100000, 100000), overdue=0, change=None,
-          action=(0, "None"), readiness=(1, "Survives losing any one deployment", "", "")):
+          action=(0, "None"), readiness=(1, "Survives losing any one deployment", "", ""), workloads=HOME):
     """Series in the reaction's shape; None or 0 counts and "nothing yet" states export no series."""
     s = []
     if overdue: s.append(("ignite_drasi_overdue_requests", {"workload": "support"}, overdue))
     for d, st, cap in zip(DEPLOYMENTS, status, capacity):
         s.append(("ignite_drasi_deployment_status", {"deployment": d}, st))
         s.append(("ignite_drasi_deployment_capacity_tpm", {"deployment": d}, cap))
-    if change is not None: s.append(("ignite_drasi_change_status", {}, change))
+    for workload, name, deployment, st in workloads:
+        s.append(("ignite_drasi_workload_status", {"workload": workload, "name": name, "deployment": deployment}, st))
+    if change is not None: s.append(("ignite_drasi_change_status", {"text": MOVE if change >= 0 else ""}, change))
     s.append(("ignite_drasi_recommended_action", {"text": action[1]}, action[0]))
     value, text, lost, workload = readiness
     s.append(("ignite_drasi_failover_readiness", {k: v for k, v in (("text", text), ("lost", lost), ("workload", workload)) if v}, value))
@@ -53,16 +60,19 @@ def state(status=(0, 0, 0), capacity=(100000, 100000, 100000), overdue=0, change
 DEGRADED = (2, "Already degraded", "", "")
 STATES = {
     "healthy": state(),
-    "failure": state(status=(2, 0, 0), overdue=4, action=(1, MOVE), readiness=DEGRADED),
-    "approved": state(status=(2, 0, 0), overdue=5, change=2, action=(1, MOVE), readiness=DEGRADED),
-    "applied": state(status=(2, 0, 0), overdue=2, change=3, readiness=DEGRADED),
-    "verified": state(status=(2, 0, 0), change=4, readiness=DEGRADED),
-    "rejected": state(status=(2, 0, 0), overdue=3, change=5, action=(2, "No change fits policy and capacity"), readiness=DEGRADED),
-    "no-plan": state(status=(2, 0, 1), overdue=3, action=(2, "No change fits policy and capacity"), readiness=DEGRADED),
+    "failure": state(status=(2, 0, 0), overdue=4, action=(1, MOVE), readiness=DEGRADED, workloads=SUPPORT_FAILING),
+    "approved": state(status=(2, 0, 0), overdue=5, change=2, action=(1, MOVE), readiness=DEGRADED, workloads=SUPPORT_FAILING),
+    "applied": state(status=(2, 0, 0), overdue=2, change=3, readiness=DEGRADED, workloads=MOVED),
+    "verified": state(status=(2, 0, 0), change=4, readiness=DEGRADED, workloads=MOVED),
+    "rejected": state(status=(2, 0, 0), overdue=3, change=5, action=(2, "No change fits policy and capacity"), readiness=DEGRADED,
+                      workloads=SUPPORT_FAILING),
+    "no-plan": state(status=(2, 0, 1), overdue=3, action=(2, "No change fits policy and capacity"), readiness=DEGRADED,
+                     workloads=SUPPORT_FAILING),
     "at-risk": state(capacity=(50000, 100000, 100000), change=4,
                      action=(3, "Add capacity: losing EU-B leaves support nowhere to run"),
-                     readiness=(0, "At risk: losing EU-B leaves support nowhere to run", "EU-B", "support")),
-    "unknown": state(status=(0, -1, -1), change=-1, action=(-1, "Unknown"), readiness=(-1, "Unknown", "", "")),
+                     readiness=(0, "At risk: losing EU-B leaves support nowhere to run", "EU-B", "support"), workloads=MOVED),
+    "unknown": state(status=(0, -1, -1), change=-1, action=(-1, "Unknown"), readiness=(-1, "Unknown", "", ""),
+                     workloads=(("support", "Support", "EU-A", 0), ("batch", "Summaries", "EU-B", -1))),
     "not-ready": None,
     "unreachable": None,
 }

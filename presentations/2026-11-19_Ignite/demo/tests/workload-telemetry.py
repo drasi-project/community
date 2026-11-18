@@ -24,7 +24,7 @@ def firing(title):
 def main():
     auth = d.grafana_auth()
     dashboard = d.get(settings.url("GRAFANA") + "/api/dashboards/uid/ignite-workload", auth)
-    assert {"Support errors", "Support queue", "Support overdue", "Change status"} <= {
+    assert {"Support errors", "Support queue", "Support overdue", "Workload status", "Recommended action", "Alerts firing"} <= {
         panel["title"] for panel in dashboard["dashboard"]["panels"]}
     errors = settings.url("GRAFANA") + "/api/datasources/proxy/uid/ignite-prometheus/api/v1/query?" + \
         urllib.parse.urlencode({"query": 'sum(ignite_workload_requests_total{workload="support",endpoint="EU-A",status="503"})'})

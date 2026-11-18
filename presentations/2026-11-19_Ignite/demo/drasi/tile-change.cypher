@@ -7,4 +7,5 @@ RETURN CASE WHEN p.state = 'unknown' THEN -1
             WHEN p.state = 'feasible' AND p.moves > 0 THEN 1
             WHEN a.status = 'rejected' THEN 5
             WHEN a.status = 'verified' THEN 4
-            ELSE 0 END AS value
+            ELSE 0 END AS value,
+       coalesce(a.change, '') AS text

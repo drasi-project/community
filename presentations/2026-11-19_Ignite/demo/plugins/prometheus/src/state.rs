@@ -399,6 +399,23 @@ mod tests {
             "capacity",
             vec![("a", json!({"total_tpm": 300000, "healthy_tpm": 200000}))],
         );
+        load(
+            "workloads",
+            vec![
+                (
+                    "a",
+                    json!({"workload": "support", "name": "Support", "deployment": "EU-A", "status": 2}),
+                ),
+                (
+                    "b",
+                    json!({"workload": "batch", "name": "Summaries", "deployment": "EU-B", "status": 0}),
+                ),
+            ],
+        );
+        load(
+            "change",
+            vec![("a", json!({"value": 3, "text": "Move summaries to US-C and support to EU-B"}))],
+        );
         load("demand", vec![("a", json!({"needed_tpm": 140000}))]);
         load("recovery", vec![("a", json!({"value": 0}))]);
         load("action", vec![("a", json!({"value": 1}))]);
@@ -445,7 +462,7 @@ mod tests {
                 ),
             ],
         );
-        // last-approval and change stay Loading: no series, ready 0.
+        // last-approval stays Loading: no series, ready 0.
         assert_eq!(
             exporter.render(),
             r#"# HELP ignite_drasi_capacity_tpm Capacity in tokens per minute: total, on healthy deployments, and needed.
@@ -453,6 +470,9 @@ mod tests {
 ignite_drasi_capacity_tpm{kind="healthy"} 200000
 ignite_drasi_capacity_tpm{kind="needed"} 140000
 ignite_drasi_capacity_tpm{kind="total"} 300000
+# HELP ignite_drasi_change_status Latest change: 0 none in progress, 1 awaiting approval, 2 approved and applying, 3 applied and verifying, 4 verified, 5 rejected, -1 unknown; text names the approved change.
+# TYPE ignite_drasi_change_status gauge
+ignite_drasi_change_status{text="Move summaries to US-C and support to EU-B"} 3
 # HELP ignite_drasi_deployment_capacity_tpm Configured capacity of each deployment, tokens per minute.
 # TYPE ignite_drasi_deployment_capacity_tpm gauge
 ignite_drasi_deployment_capacity_tpm{deployment="EU-A"} 100000
@@ -487,11 +507,15 @@ ignite_drasi_recovery_state 0
 # TYPE ignite_drasi_running_tpm gauge
 ignite_drasi_running_tpm{deployment="EU-A",workload="support"} 60000
 ignite_drasi_running_tpm{deployment="EU-B",workload="batch"} 80000
+# HELP ignite_drasi_workload_status Each workload where it runs now: 0 healthy, 1 over quota, 2 failing (its deployment failed), 3 not allowed there by policy, -1 unknown.
+# TYPE ignite_drasi_workload_status gauge
+ignite_drasi_workload_status{deployment="EU-A",name="Support",workload="support"} 2
+ignite_drasi_workload_status{deployment="EU-B",name="Summaries",workload="batch"} 0
 # HELP drasi_reaction_input_ready 1 once the output's snapshot is loaded and its changes are applied; 0 otherwise.
 # TYPE drasi_reaction_input_ready gauge
 drasi_reaction_input_ready{output="action"} 1
 drasi_reaction_input_ready{output="capacity"} 1
-drasi_reaction_input_ready{output="change"} 0
+drasi_reaction_input_ready{output="change"} 1
 drasi_reaction_input_ready{output="demand"} 1
 drasi_reaction_input_ready{output="deployments"} 1
 drasi_reaction_input_ready{output="last-approval"} 0
@@ -501,6 +525,7 @@ drasi_reaction_input_ready{output="proposed"} 1
 drasi_reaction_input_ready{output="recovery"} 1
 drasi_reaction_input_ready{output="resilience"} 1
 drasi_reaction_input_ready{output="running"} 1
+drasi_reaction_input_ready{output="workloads"} 1
 "#
         );
     }

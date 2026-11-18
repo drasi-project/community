@@ -56,7 +56,7 @@ def wait_for(label, check, timeout=120):
 # plan/contracts.md section 16: the projector highlights panels by these keys.
 PANEL_KEYS = ["panel-menus", "ai-deployments", "model-calls", "support-errors", "answer-time", "support-queue", "alerts-firing",
               "model-calls-chart", "support-waiting", "decision-support", "support-overdue", "deployment-status",
-              "change-status", "recommended-action", "failover-readiness"]
+              "workload-status", "recommended-action", "failover-readiness"]
 
 
 def operations_dashboard(auth):

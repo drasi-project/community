@@ -179,6 +179,7 @@ fn all_queries() -> Vec<Query> {
         // One query per Grafana tile (metric contract, contracts.md section 9).
         query!("tile-overdue", ["postgres"]),
         query!("tile-deployments", ["postgres"]),
+        query!("tile-workloads", ["postgres", "policy-results"]),
         query!("tile-capacity", ["postgres"]),
         query!("tile-demand", ["postgres"]),
         query!("tile-recovery", ["recovery-results"]),
@@ -225,6 +226,7 @@ const PLUGIN_INPUTS: &[(&str, &str, &str)] = &[
 const TILES: &[(&str, &str)] = &[
     ("overdue", "tile-overdue"),
     ("deployments", "tile-deployments"),
+    ("workloads", "tile-workloads"),
     ("capacity", "tile-capacity"),
     ("demand", "tile-demand"),
     ("recovery", "tile-recovery"),
@@ -286,12 +288,14 @@ fn fields(list: &[(&str, &str, bool)]) -> String {
 }
 
 /// The body of `POST /api/v4/posts` for one card. Every string comes from the query;
-/// the template only places it (`{{json …}}`).
+/// the template only places it (`{{json …}}`). `pending_post_id` (run and card id) makes the
+/// post idempotent: Mattermost returns the existing post for a repeated id, so a retried
+/// delivery never posts a card twice.
 fn card(channel: &str, card: &str, query: &str, color: &str, fields: &str, actions: &str) -> String {
     let color = if color.starts_with("{{") { color.to_string() } else { json!(color).to_string() };
     let actions = if actions.is_empty() { String::new() } else { format!(r#","actions":{actions}"#) };
     format!(
-        r#"{{"channel_id":{channel},"root_id":{{{{json after.root_id}}}},"message":"","props":{{"ignite_card":{card},"ignite_id":{{{{json after.id}}}},"ignite_run_epoch":{{{{json after.run_epoch}}}},"attachments":[{{"fallback":{{{{json after.title}}}},"color":{color},"title":{{{{json after.title}}}},"text":{{{{json after.text}}}},"fields":[{fields}],"footer":{footer}{actions}}}]}}}}"#,
+        r#"{{"channel_id":{channel},"root_id":{{{{json after.root_id}}}},"pending_post_id":"{{{{after.run_epoch}}}}/{{{{after.id}}}}","message":"","props":{{"ignite_card":{card},"ignite_id":{{{{json after.id}}}},"ignite_run_epoch":{{{{json after.run_epoch}}}},"attachments":[{{"fallback":{{{{json after.title}}}},"color":{color},"title":{{{{json after.title}}}},"text":{{{{json after.text}}}},"fields":[{fields}],"footer":{footer}{actions}}}]}}}}"#,
         channel = json!(channel),
         card = json!(card),
         footer = json!(format!("Drasi · {query}")),
@@ -735,6 +739,9 @@ fn main() -> Result<()> {
         }), vec![("secretHeaders", reference("env-json:IGNITE_LANGFUSE_HEADERS")?)])),
         ("incident-channel", (json!({
             "baseUrl":mattermost, "onPermanentFailure":"skip", "maxRetries":3, "timeoutMs":5000,
+            // Below Mattermost's 60 s keep-alive idle timeout, so a post never goes out on a
+            // connection Mattermost is closing.
+            "poolIdleTimeoutMs":30000,
             "successStatusCodes":[201],
             "outputTemplates":{"routes":incident_routes(&channel, settings.port("GRAFANA")?, settings.port("WORKLOAD")?)},
         }), vec![("token", reference("env:IGNITE_MATTERMOST_BOT_TOKEN")?)])),
@@ -852,17 +859,23 @@ fn main() -> Result<()> {
 mod tests {
     use super::*;
 
-    /// Renders the sink's `{{json after.x}}` placeholders, the only helper the card templates use.
+    /// Renders the sink's `{{json after.x}}` placeholders, and `{{after.x}}` (a string column
+    /// placed inside a JSON string, as in `pending_post_id`).
     fn render(template: &str, row: &Value) -> Value {
         let mut out = String::new();
         let mut rest = template;
         while let Some(start) = rest.find("{{") {
             out.push_str(&rest[..start]);
             let end = rest[start..].find("}}").expect("closed placeholder") + start;
-            let column = rest[start + 2..end]
-                .strip_prefix("json after.")
-                .unwrap_or_else(|| panic!("only {{{{json after.…}}}} is used: {}", &rest[start..end + 2]));
-            out.push_str(&row.get(column).unwrap_or_else(|| panic!("no column {column}")).to_string());
+            let placeholder = &rest[start + 2..end];
+            if let Some(column) = placeholder.strip_prefix("json after.") {
+                out.push_str(&row.get(column).unwrap_or_else(|| panic!("no column {column}")).to_string());
+            } else {
+                let column = placeholder
+                    .strip_prefix("after.")
+                    .unwrap_or_else(|| panic!("only {{{{json after.…}}}} and {{{{after.…}}}} are used: {}", &rest[start..end + 2]));
+                out.push_str(row.get(column).and_then(Value::as_str).unwrap_or_else(|| panic!("no string column {column}")));
+            }
             rest = &rest[end + 2..];
         }
         out.push_str(rest);
@@ -922,6 +935,7 @@ mod tests {
             assert_eq!(body["props"]["ignite_card"], *alias);
             assert_eq!(body["props"]["ignite_id"], "card-1");
             assert_eq!(body["props"]["ignite_run_epoch"], "run-1");
+            assert_eq!(body["pending_post_id"], "run-1/card-1", "{alias}: a repeated delivery is the same post");
             let attachment = &body["props"]["attachments"][0];
             assert_eq!(attachment["fallback"], "Title");
             assert_eq!(attachment["title"], "Title");
@@ -1002,8 +1016,8 @@ mod tests {
         }
     }
 
-    const HEALTH_QUERIES: [&str; 6] = [
-        "plan-bins", "recovery-observation-context", "tile-deployments", "tile-capacity",
+    const HEALTH_QUERIES: [&str; 7] = [
+        "plan-bins", "recovery-observation-context", "tile-deployments", "tile-workloads", "tile-capacity",
         "incident-deployments", "incident-failed",
     ];
 
@@ -1030,7 +1044,8 @@ mod tests {
         for name in HEALTH_QUERIES {
             let query = queries.iter().find(|q| q.name == name).unwrap();
             assert!(query.text.contains(HEALTH_LABEL), "{name}");
-            assert_eq!(query.inputs, [PG, HEALTH], "{name}");
+            let from_postgres = all_queries().into_iter().find(|q| q.name == name).unwrap().inputs;
+            assert_eq!(query.inputs, [from_postgres, vec![HEALTH]].concat(), "{name}: its inputs and the health rows");
         }
         let others = queries.iter().filter(|q| q.name != HEALTH && !HEALTH_QUERIES.contains(&q.name));
         assert!(others.into_iter().all(|q| !q.inputs.contains(&HEALTH) && !q.inputs.contains(&OTEL)));
