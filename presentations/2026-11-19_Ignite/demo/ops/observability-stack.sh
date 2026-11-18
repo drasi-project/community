@@ -15,7 +15,14 @@ eval "$(python3 "$ROOT/ops/settings.py")"
 mkdir -p "$ROOT/.native/prometheus-targets"
 printf '[{"targets":["host.containers.internal:%s"],"labels":{"component":"drasi"}}]\n' \
   "$IGNITE_DRASI_METRICS_PORT" > "$ROOT/.native/prometheus-targets/drasi.json"
-compose() { podman compose --project-name "$IGNITE_PROJECT" --env-file "$ROOT/.env" -f "$ROOT/compose.yaml" "$@"; }
+# Health from telemetry: the Collector also sends the health probes to Drasi's OTel source.
+files=(-f "$ROOT/compose.yaml")
+case "${IGNITE_HEALTH_SOURCE:-postgres}" in
+  postgres) ;;
+  otel) files+=(-f "$ROOT/compose.health-otel.yaml") ;;
+  *) echo "IGNITE_HEALTH_SOURCE must be postgres or otel" >&2; exit 2 ;;
+esac
+compose() { podman compose --project-name "$IGNITE_PROJECT" --env-file "$ROOT/.env" "${files[@]}" "$@"; }
 case "${1:-}" in
   up)
     services=(); for argument in "${@:2}"; do [[ "$argument" == -* ]] || services+=("$argument"); done
@@ -44,7 +51,7 @@ case "${1:-}" in
     fi
     ;;
   down|stop|start|restart|ps|logs|pull|exec)
-    exec podman compose --project-name "$IGNITE_PROJECT" --env-file "$ROOT/.env" -f "$ROOT/compose.yaml" "$@"
+    exec podman compose --project-name "$IGNITE_PROJECT" --env-file "$ROOT/.env" "${files[@]}" "$@"
     ;;
   *) echo "Usage: $0 env|up|down|stop|start|restart|ps|logs|pull|exec [compose arguments]" >&2; exit 2 ;;
 esac

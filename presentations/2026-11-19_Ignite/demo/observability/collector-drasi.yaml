@@ -1,0 +1,34 @@
+# Collector overlay when deployment health comes from telemetry (IGNITE_HEALTH_SOURCE=otel).
+# ops/observability-stack.sh adds compose.health-otel.yaml, which passes this file as a second
+# --config; the Collector merges it into collector.yaml. It only adds components and a
+# pipeline, so the existing metrics and traces pipelines are unchanged.
+#
+# The AI service's health probes (ignite_probe_*) go to Drasi's OpenTelemetry source on the
+# host, over OTLP/gRPC. The source listens on loopback, which host.containers.internal reaches
+# (as Prometheus reaches Drasi's metrics reaction).
+processors:
+  # Only the probes: Drasi's source allowlists them too, this keeps other metrics off the wire.
+  filter/drasi-probes:
+    error_mode: ignore
+    metrics:
+      metric:
+        - 'not IsMatch(name, "^ignite_probe_")'
+exporters:
+  otlp_grpc/drasi:
+    endpoint: host.containers.internal:${env:IGNITE_DRASI_OTLP_PORT}
+    tls:
+      insecure: true
+    timeout: 2s
+    # A late probe would look fresh to Drasi (it times silence from receipt), so a probe that
+    # cannot be delivered now is dropped, not queued or retried.
+    retry_on_failure:
+      enabled: false
+    sending_queue:
+      enabled: false
+service:
+  pipelines:
+    # No batch processor: each one-second export reaches Drasi as it arrives.
+    metrics/drasi:
+      receivers: [otlp]
+      processors: [memory_limiter, filter/drasi-probes]
+      exporters: [otlp_grpc/drasi]

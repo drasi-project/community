@@ -1,0 +1,11 @@
+# Added by ops/observability-stack.sh when IGNITE_HEALTH_SOURCE=otel (ports.env): the
+# Collector also sends the health probes to Drasi's OpenTelemetry source
+# (observability/collector-drasi.yaml). With IGNITE_HEALTH_SOURCE=postgres this file is not
+# used and the Collector is exactly as compose.yaml defines it.
+services:
+  collector:
+    command: ["--config=/etc/otelcol/config.yaml", "--config=/etc/otelcol/drasi.yaml"]
+    environment:
+      IGNITE_DRASI_OTLP_PORT: ${IGNITE_DRASI_OTLP_PORT:?}
+    volumes:
+      - ./observability/collector-drasi.yaml:/etc/otelcol/drasi.yaml:ro
