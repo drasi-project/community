@@ -33,11 +33,12 @@ of live demo:
 1. **Title:** Monitoring without polling (after the Ignite walk-in slide).
 2. **The scenario:** two AI workloads sharing limited AI capacity across three
    deployments, the rules they must follow, and three business questions for when
-   EU-A fails: who is affected, what's the fastest fix within policy, and how do
-   we know it's really fixed?
-3. **Drasi in one picture:** sources, continuous queries, continuous models and
-   reactions; what is built into Drasi and what was written for the demo; and
-   what "without polling" means.
+   something goes wrong: who is affected, what's the fastest fix within policy,
+   and how do we know it's really fixed? The slide reveals one part per beat.
+   Then **what you'll see:** the deployments in Europe and the United States, the
+   team's existing monitoring and incident channel, and Drasi beside them.
+3. **Drasi, change-driven computation:** sources, continuous models (query,
+   policy, optimization) and reactions.
 4. **Live demo** in Grafana, with the continuous query behind "who is affected"
    and one late customer request on the way.
 5. **Close:** keep your monitoring tools, add change-driven computation; then

@@ -138,7 +138,7 @@ It reads three things, by default from these places (pass `--template`,
 | The session survey slides | `~/Downloads/Session Survey Slides.pptx` |
 | Segoe UI (`segoeui-*.woff`) | Microsoft PowerPoint's font cache: `/Applications/Microsoft PowerPoint.app/Contents/Resources/sdx/FA000000002/OfflineFiles` |
 
-It writes the walk-in slide, the title and demo backgrounds, the survey slide's
+It writes the walk-in slide, the title background, the survey slide's
 background, frame and QR code, Segoe UI and a `manifest.json` to
 `ui/public/template/` (git-ignored), which the web app serves at `/template/`
 straight away: no rebuild or restart. The walk-in slide is rendered from the

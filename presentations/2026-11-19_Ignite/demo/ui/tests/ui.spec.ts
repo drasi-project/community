@@ -7,6 +7,7 @@ import { notes } from "../../../presentation/notes";
 import { presenterScript } from "../../../presentation/script";
 import { replayClips } from "../../../presentation/replay";
 import { displayQuery } from "../../../presentation/QuerySlide";
+import { unknownKeys, type Dashboard } from "../../../presentation/panels";
 import fs from "node:fs";
 
 const fixture = url("UI_FIXTURE");
@@ -35,11 +36,11 @@ test("the talk is 22 minutes and every beat says something and shows something",
     expect(cue.ifBroken.trim()).not.toBe("");
   }
   for (const recap of recaps) expect(Object.values(notes).some(cue => cue.beats.some(beat => beat.show === recap.id))).toBe(true);
-  expect(slides.map(s => s.id)).toEqual(["walkin", "title", "concepts", "drasi", "demo", "query", "closing", "survey"]);
-  // The walk-in opens the talk, the live demo starts on the demo divider, and the survey is last.
+  expect(slides.map(s => s.id)).toEqual(["walkin", "title", "concepts", "concepts-rules", "concepts-questions", "setup", "drasi", "query", "closing", "survey"]);
+  // The walk-in opens the talk, the scenario reveals a section per beat, and the survey is last.
   const shown = scenes.flatMap(scene => notes[scene.id].beats.map(beat => beat.show));
   expect(shown[0]).toBe("walkin");
-  expect(notes.normal.beats[0].show).toBe("demo");
+  expect(notes.concepts.beats.map(beat => beat.show)).toEqual(["concepts", "concepts-rules", "concepts-questions", "setup"]);
   expect(shown.at(-1)).toBe("survey");
 });
 
@@ -54,6 +55,49 @@ test("PRESENTER.md matches the presenter desk notes", () => {
   const current = doc.slice(start, end + endMarker.length);
   if (process.env.UPDATE_PRESENTER_DOC === "1") fs.writeFileSync(file, doc.replace(current, presenterScript()));
   else expect(current).toBe(presenterScript());
+});
+
+test("every highlight in the script names a panel on the dashboards", () => {
+  const folder = new URL("../../observability/grafana/dashboards/", import.meta.url);
+  const boards = fs.readdirSync(folder).filter(name => name.endsWith(".json"))
+    .map(name => JSON.parse(fs.readFileSync(new URL(name, folder), "utf8")) as Dashboard);
+  const keys = Object.values(notes).flatMap(cue => cue.beats.flatMap(beat => beat.highlight ?? []));
+  expect(keys.length).toBeGreaterThan(0);
+  expect(unknownKeys(boards, keys)).toEqual([]);
+});
+
+test("the scenario reveals its sections one desk beat at a time", async ({ page }) => {
+  await desk(page, "concepts");
+  const projector = await page.context().newPage();
+  await projector.goto("/present");
+  const slide = (id: string) => projector.locator(`[data-slide="${id}"]`);
+  await expect(slide("concepts").locator(".deployments")).toBeVisible();
+  await expect(slide("concepts").locator(".rules")).toBeHidden();
+  await expect(slide("concepts").locator(".questions")).toBeHidden();
+  await page.getByRole("button", { name: "Next ▶" }).click();
+  await expect(slide("concepts-rules").locator(".rules")).toBeVisible();
+  await expect(slide("concepts-rules").locator(".questions")).toBeHidden();
+  await page.getByRole("button", { name: "Next ▶" }).click();
+  await expect(slide("concepts-questions").locator(".questions")).toContainText("When something goes wrong");
+  await page.getByRole("button", { name: "Next ▶" }).click();
+  await expect(slide("setup")).toBeVisible();
+});
+
+test("a beat's highlight outlines its dashboard panels on the projector, above the caption line", async ({ page }) => {
+  await stubGrafana(page);
+  await desk(page, "normal", 0);
+  const projector = await page.context().newPage();
+  await stubGrafana(projector);
+  await projector.goto("/present");
+  await page.getByRole("button", { name: "Next ▶" }).click(); // the nudge for Start demo traffic
+  await page.getByRole("button", { name: "Next ▶" }).click();
+  await expect(page.locator(".say")).toContainText("The bottom half");
+  const outline = projector.locator(".panel-highlight .outline");
+  await expect(outline).toHaveCount(notes.normal.beats[1].highlight!.length);
+  const box = await onSlide(projector, ".panel-highlight .outline");
+  expect(box[0].bottom).toBeLessThanOrEqual(frame.captionTop);
+  await page.getByRole("button", { name: "Next ▶" }).click();
+  await expect(projector.locator(".panel-highlight")).toHaveCount(0);
 });
 
 test("the query slide shows exactly the query Drasi runs", () => {
@@ -73,14 +117,12 @@ test("Next on the desk moves through beats and changes what the projector shows"
   await expect(projector.locator(".title-slide")).toBeVisible();
   await page.getByRole("button", { name: "Next ▶" }).click();
   await expect(projector.locator('[data-slide="concepts"]')).toBeVisible();
-  for (let i = 0; i < 5; i++) await page.getByRole("button", { name: "Next ▶" }).click();
+  for (let i = 0; i < 6; i++) await page.getByRole("button", { name: "Next ▶" }).click();
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Healthy service");
-  await expect(projector.locator('[data-slide="demo"]')).toBeVisible();
-  await page.getByRole("button", { name: "Next ▶" }).click();
   await expect(projector.locator("iframe.stage-dashboard").first()).toBeVisible();
   await expect(projector.locator("iframe.stage-dashboard").first()).toHaveAttribute("src", dashboards.ops);
   await page.getByRole("button", { name: "◀ Back" }).click();
-  await expect(projector.locator('[data-slide="demo"]')).toBeVisible();
+  await expect(projector.locator('[data-slide="drasi"]')).toBeVisible();
   // Off-screen dashboards stay rendered (visibility, not display:none) so Grafana keeps refreshing them.
   await expect(projector.locator("iframe.stage-dashboard").first()).toBeHidden();
   await expect(projector.locator("iframe.stage-dashboard").first()).toHaveCSS("display", "block");
@@ -116,7 +158,7 @@ test("the current beat's buttons sit beside its notes, and results appear there"
 });
 
 test("traffic starts only through an explicit action", async ({ page, request }) => {
-  await desk(page, "normal", 1);
+  await desk(page, "normal", 0);
   expect(await mutations(request)).toEqual([]);
   await page.locator(".now").getByRole("button", { name: "Start demo traffic" }).click();
   await expect(page.locator(".now").getByRole("button", { name: /Start demo traffic/ })).toBeDisabled();
@@ -380,7 +422,7 @@ test("Next warns once when the beat's button hasn't been pressed", async ({ page
 });
 
 test("recording mode shows each live part's recording as the presenter presses Next", async ({ page, request }) => {
-  await desk(page, "normal", 3);
+  await desk(page, "normal", 2);
   const projector = await page.context().newPage();
   await projector.goto("/present");
   await page.getByRole("button", { name: "Use recordings from here on" }).click();

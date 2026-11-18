@@ -33,7 +33,7 @@
 
 /* Full-bleed template artwork */
 .slide-deck .stage-frame .artwork { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.slide-deck .stage-frame :is(.title-slide, .demo-slide, .survey-slide) { background: var(--navy) center / cover no-repeat; }
+.slide-deck .stage-frame :is(.title-slide, .survey-slide) { background: var(--navy) center / cover no-repeat; }
 
 /* The Microsoft logo, 92 px from the top and left edges */
 .slide-deck .stage-frame .ms-logo { position: absolute; left: 92px; top: 92px; height: 46px; display: flex; align-items: center; gap: 12px; }
@@ -56,10 +56,6 @@
 .slide-deck .stage-frame .title-speaker .name { font-weight: 600; }
 .slide-deck .stage-frame .title-speaker .session { margin-top: 24px; font-size: 28px; color: var(--light-gray); }
 .slide-deck .stage-frame .title-speaker .session:first-child { margin-top: 0; }
-
-/* Demo divider: the template's Demo slide layout */
-.slide-deck .stage-frame .demo-slide h1 { position: absolute; left: 92px; top: 469px; width: 1080px; font: 600 80px/1.1 var(--display); }
-.slide-deck .stage-frame .demo-slide p { position: absolute; left: 92px; top: 580px; width: 1080px; font-size: 32px; color: var(--off-white); }
 
 /* Session survey: the dark slide of the event's survey deck */
 .slide-deck .stage-frame .survey-copy { position: absolute; left: 178px; top: 257px; width: 907px; color: var(--off-white); }
@@ -95,7 +91,8 @@
 .slide-deck .stage-frame .questions ol { list-style: none; padding: 0; margin-top: 10px; display: grid; grid-template-columns: 1fr 1.45fr 1.2fr; gap: 40px; counter-reset: question; }
 .slide-deck .stage-frame .questions li { counter-increment: question; font: 600 34px/1.25 var(--display); color: var(--white); }
 .slide-deck .stage-frame .questions li::before { content: counter(question) ". "; color: var(--light-yellow); }
-.slide-deck .stage-frame .concepts-slide .slide-meta { margin-top: 20px; }
+/* A section the presenter hasn't reached yet keeps its place */
+.slide-deck .stage-frame .pending { visibility: hidden; }
 
 /* Colours for the four parts of Drasi, the same on every slide and diagram */
 .slide-deck .stage-frame :is(.blue) { --tone: var(--light-blue); }
@@ -115,15 +112,37 @@
 .slide-deck .stage-frame .roles span { margin-top: 12px; font-size: 28px; line-height: 1.3; }
 .slide-deck .stage-frame .roles small { margin-top: 12px; font-size: 26px; line-height: 1.3; color: var(--navy); }
 
-/* Drasi in one picture */
-.slide-deck .stage-frame .drasi-slide .lead b { font-weight: 600; }
-.slide-deck .stage-frame .drasi-slide .flow { margin-top: 28px; }
-.slide-deck .stage-frame .ownership { margin-top: 32px; display: grid; grid-template-columns: 1fr 1fr; gap: 48px; }
-.slide-deck .stage-frame .ownership div { padding: 18px 26px 20px; background: var(--panel); border-top: 6px solid var(--light-gray); }
-.slide-deck .stage-frame .ownership b, .slide-deck .stage-frame .ownership span { display: block; }
-.slide-deck .stage-frame .ownership b { font-size: 30px; }
-.slide-deck .stage-frame .ownership span { margin-top: 6px; font-size: 28px; line-height: 1.3; color: var(--off-white); }
-.slide-deck .stage-frame .drasi-slide .callout { margin-top: auto; }
+/* Drasi: three parts */
+.slide-deck .stage-frame .drasi-parts { list-style: none; padding: 0; margin: auto 0; display: grid; grid-template-columns: 1fr 1.85fr 1fr; gap: 72px; align-items: stretch; }
+.slide-deck .stage-frame .drasi-parts > li { position: relative; min-height: 380px; padding: 40px 36px; display: flex; flex-direction: column; justify-content: center; }
+.slide-deck .stage-frame .drasi-parts > li:not(:last-child)::after { content: "→"; position: absolute; right: -58px; top: 50%; transform: translateY(-50%); font-size: 48px; color: var(--light-gray); }
+.slide-deck .stage-frame .drasi-parts > li.blue, .slide-deck .stage-frame .drasi-parts > li.lime { background: var(--tone); color: var(--navy); text-align: center; }
+.slide-deck .stage-frame .drasi-parts b { font: 600 56px/1.1 var(--display); }
+.slide-deck .stage-frame .drasi-parts .models { background: var(--panel); border-top: 8px solid var(--light-gray); text-align: center; }
+.slide-deck .stage-frame .drasi-parts .models ul { list-style: none; padding: 0; margin-top: 36px; display: grid; grid-template-columns: 1fr 1fr 1.35fr; gap: 20px; }
+.slide-deck .stage-frame .drasi-parts .models li { padding: 40px 8px; background: var(--tone); color: var(--navy); text-align: center; font: 600 34px/1.15 var(--display); }
+
+/* What you'll see: the demo's setup */
+.slide-deck .stage-frame .setup-diagram { width: 1736px; height: 620px; margin-top: auto; overflow: visible; }
+.slide-deck .stage-frame .setup-diagram text { font-family: var(--text); }
+.slide-deck .stage-frame .setup-diagram .group { fill: none; stroke: var(--light-gray); stroke-opacity: .6; stroke-width: 2; stroke-dasharray: 10 8; }
+.slide-deck .stage-frame .setup-diagram .group-label { fill: var(--light-gray); font-size: 24px; font-weight: 600; letter-spacing: 2px; }
+.slide-deck .stage-frame .setup-diagram .box { fill: var(--blue-black); fill-opacity: .45; stroke: var(--light-gray); stroke-opacity: .45; stroke-width: 2; }
+.slide-deck .stage-frame .setup-diagram .box-name { fill: var(--white); font-size: 32px; font-weight: 600; }
+.slide-deck .stage-frame .setup-diagram .box-note { fill: var(--light-gray); font-size: 24px; font-weight: 400; }
+.slide-deck .stage-frame .setup-diagram .region { fill: none; stroke: var(--light-gray); stroke-opacity: .45; stroke-width: 2; }
+.slide-deck .stage-frame .setup-diagram .region-label { fill: var(--off-white); font-size: 28px; font-weight: 600; }
+.slide-deck .stage-frame .setup-diagram .deployment { fill: var(--blue-black); fill-opacity: .45; stroke: var(--tone); stroke-width: 3; }
+.slide-deck .stage-frame .setup-diagram .dep-name { fill: var(--white); font-size: 44px; font-weight: 600; }
+.slide-deck .stage-frame .setup-diagram .dep-work { fill: var(--tone); font-size: 28px; font-weight: 600; }
+.slide-deck .stage-frame .setup-diagram .drasi { fill: var(--light-blue); }
+.slide-deck .stage-frame .setup-diagram .drasi-name { fill: var(--navy); font-size: 56px; font-weight: 600; }
+.slide-deck .stage-frame .setup-diagram .drasi-note { fill: var(--navy); font-size: 30px; }
+.slide-deck .stage-frame .setup-diagram .flow { fill: none; stroke: var(--light-gray); stroke-width: 3; marker-end: url(#setup-arrow); }
+.slide-deck .stage-frame .setup-diagram .flow.answer { stroke: var(--light-blue); stroke-dasharray: 10 7; }
+.slide-deck .stage-frame .setup-diagram .arrowhead { fill: var(--light-gray); }
+.slide-deck .stage-frame .setup-diagram .edge { fill: var(--light-gray); font-size: 22px; }
+.slide-deck .stage-frame .setup-diagram .edge.answer { fill: var(--light-blue); }
 
 /* What Drasi just did */
 .slide-deck .stage-frame .recap-slide .lead { font: 600 40px/1.25 var(--display); color: var(--white); }
@@ -168,6 +187,12 @@
 /* Grafana dashboards: drawn above the caption line; the clear space below matches Grafana's background */
 .slide-deck .stage-frame .stage-dashboard { position: absolute; left: 0; top: 0; border: 0; transform-origin: 0 0; background: #111217; }
 .slide-deck .stage-frame .caption-zone { position: absolute; left: 0; right: 0; top: 1002px; bottom: 0; background: #111217; }
+
+/* Highlighted dashboard panels: the rest dimmed, the panels outlined, above the caption line */
+.slide-deck .stage-frame .panel-highlight { position: absolute; left: 0; top: 0; pointer-events: none; animation: panel-highlight .4s ease-out; }
+.slide-deck .stage-frame .panel-highlight .dim { fill: var(--blue-black); fill-opacity: .6; }
+.slide-deck .stage-frame .panel-highlight .outline { fill: none; stroke: var(--light-yellow); stroke-width: 4; }
+@keyframes panel-highlight { from { opacity: 0; } to { opacity: 1; } }
 
 /* One late request */
 .slide-deck .stage-frame .stage-request { position: absolute; inset: 0; background: var(--navy); }

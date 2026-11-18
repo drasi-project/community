@@ -23,12 +23,8 @@ function Artwork({ files, alt = "", className = "artwork", fallback = null }: { 
 // The Microsoft logo as the template places it (the template only has it as EMF).
 const Logo = () => <div className="ms-logo" role="img" aria-label="Microsoft"><span aria-hidden="true"><i /><i /><i /><i /></span><b aria-hidden="true">Microsoft</b></div>;
 
-const roles = [
-  { name: "Sources", tone: "blue", what: "Bring in every change as it happens", here: "the AI service's database change feed" },
-  { name: "Continuous queries", tone: "purple", what: "Keep a result current as data changes and as time passes", here: "overdue requests, deployment status, verified recovery" },
-  { name: "Continuous models", tone: "green", what: "Run logic on query results, again on every change", here: "policy (Rego), planner and what-if (an optimizer)" },
-  { name: "Reactions", tone: "lime", what: "Deliver each change to other systems", here: "Prometheus metrics, approved plans to the gateway, Grafana annotations, Langfuse scores" },
-] as const;
+// Colours of Drasi's parts, the same on the Drasi slide, the recaps and the diagrams.
+const roles = [{ tone: "blue" }, { tone: "purple" }, { tone: "green" }, { tone: "lime" }] as const;
 
 function DrasiCode() {
   const [svg, setSvg] = useState("");
@@ -53,11 +49,6 @@ export function Explanation({ slide, active = false }: { slide: SlideId; active?
       {speaker.role && <p>{speaker.role}</p>}
       <p className="session">{session.event} · {session.code}</p>
     </div>
-  </div>;
-
-  if (slide === "demo") return <div className="demo-slide" style={background("demo-bg.jpg")}>
-    <h1>Demo</h1>
-    <p>An incident, end to end, with real traffic</p>
   </div>;
 
   if (slide === "survey") return <div className="survey-slide" style={background("survey-bg.jpg")}>
@@ -92,40 +83,92 @@ export function Explanation({ slide, active = false }: { slide: SlideId; active?
     </div>;
   }
 
-  if (slide === "concepts") return <div className="content-slide concepts-slide">
-    <h1>The scenario</h1>
-    <div className="body">
-      <p className="lead"><b>Keep customer support running.</b> Two AI workloads share the same limited model capacity, split across three deployments.</p>
-      <ul className="deployments">
-        <li className="blue"><b>{nb("EU-A")}</b><small>Europe</small><span>Customer support</span><em>60k of 100k tokens/min</em></li>
-        <li className="purple"><b>{nb("EU-B")}</b><small>Europe</small><span>Document summaries</span><em>80k of 100k tokens/min</em></li>
-        <li className="gray"><b>{nb("US-C")}</b><small>United States</small><span>Spare</span><em>0 of 100k tokens/min</em></li>
-      </ul>
-      <ul className="rules">
-        <li><b>Customer support</b> uses restricted data: Europe only</li>
-        <li><b>Document summaries</b> use public data: anywhere</li>
-        <li>Customers expect an answer within <b>15 seconds</b></li>
-        <li>Moving work needs a <b>person's approval</b></li>
-      </ul>
-      <div className="callout questions">
-        <p>When {nb("EU-A")} fails, the business needs three answers:</p>
-        <ol><li>Who is affected right now?</li><li>What's the fastest fix that stays within policy?</li><li>How do we know it's really fixed?</li></ol>
+  // The scenario's three sections appear one desk beat at a time; hidden ones keep their space.
+  if (slide.startsWith("concepts")) {
+    const step = slide === "concepts-questions" ? 3 : slide === "concepts-rules" ? 2 : 1;
+    const shown = (n: number) => step >= n ? undefined : "pending";
+    return <div className="content-slide concepts-slide">
+      <h1>The Scenario – Keep Customer Support Running</h1>
+      <div className="body">
+        <p className="lead">Two AI workloads share the same limited model capacity, split across three deployments.</p>
+        <ul className="deployments">
+          <li className="blue"><b>{nb("EU-A")}</b><small>Europe</small><span>Customer support</span><em>60k of 100k tokens/min</em></li>
+          <li className="purple"><b>{nb("EU-B")}</b><small>Europe</small><span>Document summaries</span><em>80k of 100k tokens/min</em></li>
+          <li className="gray"><b>{nb("US-C")}</b><small>United States</small><span>Spare</span><em>0 of 100k tokens/min</em></li>
+        </ul>
+        <ul className={`rules ${shown(2) ?? ""}`} aria-hidden={step < 2}>
+          <li><b>Customer support</b> uses restricted data: Europe only</li>
+          <li><b>Document summaries</b> use public data: anywhere</li>
+          <li>Customers expect an answer within <b>15 seconds</b></li>
+          <li>Moving work needs a <b>person's approval</b></li>
+        </ul>
+        <div className={`callout questions ${shown(3) ?? ""}`} aria-hidden={step < 3}>
+          <p>When something goes wrong, the business needs three answers:</p>
+          <ol><li>Who is affected right now?</li><li>What's the fastest fix that stays within policy?</li><li>How do we know it's really fixed?</li></ol>
+        </div>
       </div>
-      <p className="slide-meta">Simulated AI models and capacity · real requests, monitoring and Drasi</p>
+    </div>;
+  }
+
+  // What you'll see: the demo's setup, simplified, and where Drasi sits beside existing observability.
+  if (slide === "setup") return <div className="content-slide setup-slide">
+    <h1>What you'll see</h1>
+    <div className="body">
+      <p className="lead">What happens when {nb("EU-A")} fails, and how Drasi works with your existing observability to respond to events intelligently, and sooner.</p>
+      <svg className="setup-diagram" viewBox="0 0 1736 620" role="img" aria-label="The AI service's deployments in Europe and the United States, the existing monitoring and incident channel, and Drasi beside them">
+        <defs><marker id="setup-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" className="arrowhead" /></marker></defs>
+        <rect className="group" x="0" y="0" width="740" height="620" />
+        <text className="group-label" x="28" y="48">AI SERVICE</text>
+        <rect className="box" x="28" y="76" width="684" height="84" />
+        <text className="box-name" x="56" y="129">Gateway <tspan className="box-note">routes each customer request</tspan></text>
+        <rect className="region" x="28" y="200" width="446" height="290" />
+        <text className="region-label" x="52" y="240">Europe</text>
+        <rect className="deployment blue" x="52" y="262" width="193" height="200" />
+        <text className="dep-name" x="74" y="318">{nb("EU-A")}</text>
+        <text className="dep-work blue" x="74" y="362">Customer</text><text className="dep-work blue" x="74" y="396">support</text>
+        <rect className="deployment purple" x="257" y="262" width="193" height="200" />
+        <text className="dep-name" x="279" y="318">{nb("EU-B")}</text>
+        <text className="dep-work purple" x="279" y="362">Document</text><text className="dep-work purple" x="279" y="396">summaries</text>
+        <rect className="region" x="498" y="200" width="214" height="290" />
+        <text className="region-label" x="520" y="240">United States</text>
+        <rect className="deployment gray" x="520" y="262" width="170" height="200" />
+        <text className="dep-name" x="542" y="318">{nb("US-C")}</text>
+        <text className="dep-work gray" x="542" y="362">Spare</text>
+        <rect className="box" x="28" y="514" width="684" height="84" />
+        <text className="box-name" x="56" y="567">Database <tspan className="box-note">every request, health report, policy change</tspan></text>
+
+        <rect className="group" x="960" y="0" width="776" height="300" />
+        <text className="group-label" x="988" y="48">YOUR OBSERVABILITY</text>
+        <rect className="box" x="988" y="76" width="344" height="196" />
+        <text className="box-name" x="1016" y="130">Prometheus</text><text className="box-name" x="1016" y="170">and Grafana</text>
+        <text className="box-note" x="1016" y="220">Metrics, dashboards, alerts</text>
+        <rect className="box" x="1356" y="76" width="352" height="196" />
+        <text className="box-name" x="1384" y="130">Incident</text><text className="box-name" x="1384" y="170">channel</text>
+        <text className="box-note" x="1384" y="220">Where the team responds</text>
+
+        <rect className="drasi" x="960" y="380" width="776" height="218" />
+        <text className="drasi-name" x="992" y="446">Drasi</text>
+        <text className="drasi-note" x="992" y="500">Reacts to every change and keeps the</text>
+        <text className="drasi-note" x="992" y="540">answers current, where the team looks</text>
+
+        <path className="flow" d="M712,118 H982" /><text className="edge" x="760" y="100">Metrics, traces</text>
+        <path className="flow" d="M712,556 H954" /><text className="edge" x="760" y="538">Every change</text>
+        <path className="flow answer" d="M1160,380 V278" /><text className="edge answer" x="1174" y="342">Answers</text>
+        <path className="flow answer" d="M1420,380 V278" /><text className="edge answer" x="1434" y="342">Who's affected, what to do</text>
+        <path className="flow" d="M370,160 V198" />
+      </svg>
     </div>
   </div>;
 
   if (slide === "drasi") return <div className="content-slide drasi-slide">
-    <h1>Drasi in one picture</h1>
+    <h1>Drasi – change-driven computation</h1>
     <div className="body">
-      <p className="lead"><b>Change-driven computation</b></p>
-      <ol className="roles flow">{roles.map(role => <li key={role.name} className={`active ${role.tone}`}>
-        <b>{role.name}</b><span>{role.what}</span><small>Here: {role.here}</small></li>)}</ol>
-      <div className="ownership">
-        <div><b>Built into Drasi</b><span>Sources, continuous queries kept current as data and time change, re-running models when their inputs change, and HTTP and streaming reactions</span></div>
-        <div><b>Written for this demo, as Drasi plugins</b><span>A Rego policy model, an optimizer (planner and what-if) and a Prometheus reaction. The rules and settings are configuration</span></div>
-      </div>
-      <p className="callout"><b>"Without polling"</b> No answer is recomputed on a schedule: answers change when the facts or the time do. Health checks still run, and Prometheus and Grafana still collect and draw on their own schedule.</p>
+      <ol className="drasi-parts">
+        <li className="part blue"><b>Sources</b></li>
+        <li className="part models"><b>Continuous models</b>
+          <ul><li className="purple">Query</li><li className="green">Policy</li><li className="green">Optimization</li></ul></li>
+        <li className="part lime"><b>Reactions</b></li>
+      </ol>
     </div>
   </div>;
 

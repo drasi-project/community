@@ -16,6 +16,9 @@ export type Beat = {
   optional?: true;     // skipped when "Short on time" is ticked
   expect?: "rejected"; // the approval is meant to be rejected
   recording?: string;  // the recording shown instead in recording mode (default: the part's)
+  // Dashboard panels to highlight on the projector, as "<dashboard uid>.<panel key>": the panel's
+  // "key" in the dashboard JSON, or its title in lower case with dashes (a row covers its panels).
+  highlight?: string[];
 };
 export type Cue = { summary: string; beats: Beat[]; ifBroken: string; recording?: string };
 
@@ -32,30 +35,30 @@ export const notes: Record<SceneId, Cue> = {
     ifBroken: "The slides don't depend on the demo. Carry on.",
   },
   concepts: {
-    summary: "Set up the scenario and the three questions",
+    summary: "Set up the scenario and the three questions; what you'll see",
     beats: [
       { show: "concepts", say: "A company runs two AI workloads on the same limited AI model capacity: an assistant that answers customer-support questions, and a background job that writes document summaries. The capacity is split across three deployments, EU-A and EU-B in Europe and US-C in the United States, each with 100k tokens a minute." },
-      { show: "concepts", say: "Two rules. Customer support handles restricted data, so it may only run in Europe; summaries use public data and can run anywhere. Customers expect an answer within 15 seconds, and moving work between deployments needs a person's approval." },
-      { show: "concepts", say: "When EU-A fails, the business needs three answers: who is affected right now, what's the fastest fix that stays within policy, and how do we know it's really fixed? You're about to see Drasi answer all three." },
+      { show: "concepts-rules", say: "Two rules. Customer support handles restricted data, so it may only run in Europe; summaries use public data and can run anywhere. Customers expect an answer within 15 seconds, and moving work between deployments needs a person's approval." },
+      { show: "concepts-questions", say: "When something goes wrong, the business needs three answers: who is affected right now, what's the fastest fix that stays within policy, and how do we know it's really fixed? You're about to see Drasi answer all three." },
+      { show: "setup", say: "Here's the setup: two deployments in Europe, one in the United States, and the two workloads on them. The team already has monitoring, Prometheus and Grafana, and an incident channel. We're going to see what happens when EU-A fails, and how Drasi works with that existing observability, adding to it, to respond to events intelligently, and sooner." },
     ],
     ifBroken: "Carry on; the demo doesn't depend on the slides.",
   },
   drasi: {
     summary: "Explain Drasi's parts and what is built in",
     beats: [
-      { show: "drasi", say: "Drasi is open-source change-driven computation. Sources bring in every change as it happens: here, from the AI service's database. Continuous queries keep a result up to date as changes arrive, and as time passes. Continuous models run logic such as policies and planners on those results and re-run it whenever an input changes. Reactions deliver each change to other systems." },
+      { show: "drasi", say: "Drasi is open-source change-driven computation, in three parts. Sources bring in every change as it happens: here, from the AI service's database. Continuous models do the work: continuous queries keep a result up to date as changes arrive, and as time passes, and policy and optimization models run logic on those results, re-running whenever an input changes. Reactions deliver each change to other systems." },
       { show: "drasi", say: "What's what. Drasi does the hard part: it keeps results up to date incrementally as changes arrive, re-checks them when time passes a deadline, and re-runs the models whenever their inputs change. For this demo we wrote three plugins: a policy model that runs Rego rules, an optimizer for the planner and the what-if, and a reaction that publishes answers to Prometheus. The rules and settings are their configuration. The AI service, its change-approval tool and its gateway configuration API are the systems Drasi works with. 'Without polling' is about computing the answers: nothing is recomputed on a schedule. Health checks still run every second, as in any system, and Prometheus and Grafana still collect and draw on their own schedule; Drasi reacts to what changes." },
     ],
     ifBroken: "Carry on.",
   },
   normal: {
-    summary: "Start the live demo; walk through the healthy dashboard",
+    summary: "Walk through the healthy dashboard",
     beats: [
-      { show: "demo", say: "Let's see it live: one incident, end to end, with real requests." },
-      { show: "ops", do: ["start-traffic"],
+      { show: "ops", do: ["start-traffic"], highlight: ["ignite-workload.monitoring-measured-from-requests"],
         say: "This is the AI service's Grafana dashboard. The top half is ordinary monitoring, measured from real requests: calls, errors, answer time, the support queue and Grafana alerts. OpenTelemetry, Prometheus and Grafana; nothing new.",
         watch: "Charts moving. Support errors 0%, Support queue 0 to 2 (green). (Start demo traffic only if it isn't already running.)" },
-      { show: "ops",
+      { show: "ops", highlight: ["ignite-workload.drasi-s-answers-computed-from-changes"],
         say: "The bottom half is Drasi's answers, worked out from changes in the AI service's database rather than from metrics. The service records every request and attempt, and checks each deployment's health every second. Drasi turns that into: overdue support requests, each deployment's status, recovery, what action is needed, and whether we'd survive losing any one deployment. A Drasi reaction publishes them as ordinary Prometheus metrics, so you can alert on them like anything else.",
         watch: "Support overdue 0, all deployments Healthy, Recovery Nothing to verify, Action needed None, Safe if one fails? Yes." },
       { show: "drasi-healthy",

@@ -142,9 +142,9 @@ after a rejected approval: select the plan again before approving.
 | Time | Part | Projector shows | You |
 |---|---|---|---|
 | 0:00 | Title | Walk-in, Title | Walk-in slide while people arrive; then introduce yourself and the talk |
-| 0:30 | The scenario | The scenario | Set up the scenario and the three questions |
-| 2:00 | Drasi in one picture | Drasi in one picture | Explain Drasi's parts and what is built in |
-| 3:30 | Healthy service | Demo, Grafana · Operations, What Drasi just did | Start the live demo; walk through the healthy dashboard |
+| 0:30 | The scenario | The scenario · deployments, The scenario · rules, The scenario · three answers, What you'll see | Set up the scenario and the three questions; what you'll see |
+| 2:00 | Drasi in one picture | Drasi: change-driven computation | Explain Drasi's parts and what is built in |
+| 3:30 | Healthy service | Grafana · Operations, What Drasi just did | Walk through the healthy dashboard |
 | 6:00 | Failure | Grafana · Operations, What Drasi just did | Fail EU-A |
 | 9:00 | Who is affected | Who is affected: the continuous query, One late request | Show who is affected: the query and its live list |
 | 11:30 | Recovery | Grafana · Recovery plan, What Drasi just did, Grafana · Operations | Approve the proposed plan; optionally show a stale approval rejected |
@@ -167,28 +167,28 @@ Say it in your own words.
 
 ### 2. The scenario (1½ minutes)
 
-1. **The scenario.** A company runs two AI workloads on the same limited AI model capacity: an assistant that answers customer-support questions, and a background job that writes document summaries. The capacity is split across three deployments, EU-A and EU-B in Europe and US-C in the United States, each with 100k tokens a minute.
-2. **The scenario.** Two rules. Customer support handles restricted data, so it may only run in Europe; summaries use public data and can run anywhere. Customers expect an answer within 15 seconds, and moving work between deployments needs a person's approval.
-3. **The scenario.** When EU-A fails, the business needs three answers: who is affected right now, what's the fastest fix that stays within policy, and how do we know it's really fixed? You're about to see Drasi answer all three.
+1. **The scenario · deployments.** A company runs two AI workloads on the same limited AI model capacity: an assistant that answers customer-support questions, and a background job that writes document summaries. The capacity is split across three deployments, EU-A and EU-B in Europe and US-C in the United States, each with 100k tokens a minute.
+2. **The scenario · rules.** Two rules. Customer support handles restricted data, so it may only run in Europe; summaries use public data and can run anywhere. Customers expect an answer within 15 seconds, and moving work between deployments needs a person's approval.
+3. **The scenario · three answers.** When something goes wrong, the business needs three answers: who is affected right now, what's the fastest fix that stays within policy, and how do we know it's really fixed? You're about to see Drasi answer all three.
+4. **What you'll see.** Here's the setup: two deployments in Europe, one in the United States, and the two workloads on them. The team already has monitoring, Prometheus and Grafana, and an incident channel. We're going to see what happens when EU-A fails, and how Drasi works with that existing observability, adding to it, to respond to events intelligently, and sooner.
 
 **If it breaks:** Carry on; the demo doesn't depend on the slides.
 
 ### 3. Drasi in one picture (1½ minutes)
 
-1. **Drasi in one picture.** Drasi is open-source change-driven computation. Sources bring in every change as it happens: here, from the AI service's database. Continuous queries keep a result up to date as changes arrive, and as time passes. Continuous models run logic such as policies and planners on those results and re-run it whenever an input changes. Reactions deliver each change to other systems.
-2. **Drasi in one picture.** What's what. Drasi does the hard part: it keeps results up to date incrementally as changes arrive, re-checks them when time passes a deadline, and re-runs the models whenever their inputs change. For this demo we wrote three plugins: a policy model that runs Rego rules, an optimizer for the planner and the what-if, and a reaction that publishes answers to Prometheus. The rules and settings are their configuration. The AI service, its change-approval tool and its gateway configuration API are the systems Drasi works with. 'Without polling' is about computing the answers: nothing is recomputed on a schedule. Health checks still run every second, as in any system, and Prometheus and Grafana still collect and draw on their own schedule; Drasi reacts to what changes.
+1. **Drasi: change-driven computation.** Drasi is open-source change-driven computation, in three parts. Sources bring in every change as it happens: here, from the AI service's database. Continuous models do the work: continuous queries keep a result up to date as changes arrive, and as time passes, and policy and optimization models run logic on those results, re-running whenever an input changes. Reactions deliver each change to other systems.
+2. **Drasi: change-driven computation.** What's what. Drasi does the hard part: it keeps results up to date incrementally as changes arrive, re-checks them when time passes a deadline, and re-runs the models whenever their inputs change. For this demo we wrote three plugins: a policy model that runs Rego rules, an optimizer for the planner and the what-if, and a reaction that publishes answers to Prometheus. The rules and settings are their configuration. The AI service, its change-approval tool and its gateway configuration API are the systems Drasi works with. 'Without polling' is about computing the answers: nothing is recomputed on a schedule. Health checks still run every second, as in any system, and Prometheus and Grafana still collect and draw on their own schedule; Drasi reacts to what changes.
 
 **If it breaks:** Carry on.
 
 ### 4. Healthy service (2½ minutes)
 
-1. **Demo.** Let's see it live: one incident, end to end, with real requests.
-2. **Grafana · Operations.** This is the AI service's Grafana dashboard. The top half is ordinary monitoring, measured from real requests: calls, errors, answer time, the support queue and Grafana alerts. OpenTelemetry, Prometheus and Grafana; nothing new.
+1. **Grafana · Operations.** This is the AI service's Grafana dashboard. The top half is ordinary monitoring, measured from real requests: calls, errors, answer time, the support queue and Grafana alerts. OpenTelemetry, Prometheus and Grafana; nothing new.
    - **Press:** Start demo traffic
    - **Watch for:** Charts moving. Support errors 0%, Support queue 0 to 2 (green). (Start demo traffic only if it isn't already running.)
-3. **Grafana · Operations.** The bottom half is Drasi's answers, worked out from changes in the AI service's database rather than from metrics. The service records every request and attempt, and checks each deployment's health every second. Drasi turns that into: overdue support requests, each deployment's status, recovery, what action is needed, and whether we'd survive losing any one deployment. A Drasi reaction publishes them as ordinary Prometheus metrics, so you can alert on them like anything else.
+2. **Grafana · Operations.** The bottom half is Drasi's answers, worked out from changes in the AI service's database rather than from metrics. The service records every request and attempt, and checks each deployment's health every second. Drasi turns that into: overdue support requests, each deployment's status, recovery, what action is needed, and whether we'd survive losing any one deployment. A Drasi reaction publishes them as ordinary Prometheus metrics, so you can alert on them like anything else.
    - **Watch for:** Support overdue 0, all deployments Healthy, Recovery Nothing to verify, Action needed None, Safe if one fails? Yes.
-4. **What Drasi just did.** So far Drasi has read every change in the database, kept its queries current, run the policy, planner and what-if, and its reaction has published the answers for Grafana. Nothing new to watch: the answers sit where you already look.
+3. **What Drasi just did.** So far Drasi has read every change in the database, kept its queries current, run the policy, planner and what-if, and its reaction has published the answers for Grafana. Nothing new to watch: the answers sit where you already look.
 
 **If it breaks:** If the charts are empty, traffic isn't running: press Start demo traffic and keep talking.
 

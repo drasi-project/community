@@ -5,7 +5,7 @@ import { products, dashboards } from "../../../presentation/scenes";
 test("live projected slides contain no private controls", async ({ page }) => {
   const writes: string[] = [];
   page.on("request", r => { if (!["GET", "HEAD"].includes(r.method())) writes.push(r.url()); });
-  for (const view of ["walkin", "title", "concepts", "drasi", "demo", "closing", "survey"]) {
+  for (const view of ["walkin", "title", "concepts", "setup", "drasi", "closing", "survey"]) {
     await page.goto(`/present?view=${view}&preview=1`);
     await expect(page.locator(`[data-slide="${view}"]`)).toBeVisible();
     await expect(page.locator(".desk, .live-banner, .controls-grid")).toHaveCount(0);

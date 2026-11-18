@@ -39,7 +39,7 @@ const lastApproval = () => drasi("ignite_drasi_last_approval_state");
 
 // What each beat waits for before its screenshot, keyed by "<part>/<beat>".
 const waits = {
-  "normal/1": async () => until("traffic history", async () => (await api("/health")).traffic?.running, 10).then(() => sleep(15000)),
+  "normal/0": async () => until("traffic history", async () => (await api("/health")).traffic?.running, 10).then(() => sleep(15000)),
   "failure/0": () => until("Action needed: Approve", async () => await action() === 1, 60),
   "failure/2": () => until("errors and alert", async () => await drasi("ignite_drasi_overdue_requests", '{workload="support"}') > 0, 60).then(() => sleep(15000)),
   "who/1": () => sleep(3000),

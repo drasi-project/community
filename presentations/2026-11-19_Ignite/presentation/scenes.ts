@@ -27,9 +27,12 @@ export const frame = { width: 1920, height: 1080, captionTop: 1002 } as const;
 export const slides = [
   { id: "walkin", title: "Walk-in" },
   { id: "title", title: "Title" },
-  { id: "concepts", title: "The scenario" },
-  { id: "drasi", title: "Drasi in one picture" },
-  { id: "demo", title: "Demo" },
+  // The scenario reveals its three sections one desk beat at a time.
+  { id: "concepts", title: "The scenario · deployments" },
+  { id: "concepts-rules", title: "The scenario · rules" },
+  { id: "concepts-questions", title: "The scenario · three answers" },
+  { id: "setup", title: "What you'll see" },
+  { id: "drasi", title: "Drasi: change-driven computation" },
   { id: "query", title: "Who is affected: the continuous query" },
   { id: "closing", title: "Close" },
   { id: "survey", title: "Session survey" },
