@@ -99,7 +99,7 @@ over model output read the models' elements (`PolicyDecision`, `Plan`,
 
 | Group | Queries | Reads | Feeds |
 |---|---|---|---|
-| Model inputs | `policy-workloads`, `policy-deployments`, `policy-destinations` | Workloads, deployments, allowed destinations | `policy` (`subjects`, `targets`, `parameters`) |
+| Model inputs | `policy-input` | One row per workload × deployment: the pair's properties and whether it is an allowed destination | `policy` (`in`) |
 | | `plan-items` | Workloads ⋈ routes, with the scenario `revision` | `plan`, `resilience` (`items`) |
 | | `plan-bins` | Deployments ⋈ latest report; `unknown` once the report expires (`trueLater(expires_ms)`) | `plan`, `resilience` (`bins`) |
 | Model results | `policy-results` | `PolicyDecision` | `plan`, `resilience` (`eligibility`); `tile-policy`, `tile-running` |
@@ -127,21 +127,21 @@ Server's API.
 
 ### 2.3 Continuous models
 
-Native plugins in `plugins/`, written for this demo and loaded from the plugin
-directory. Each is volatile: on start it reads its upstream outputs' snapshots
+Native plugins loaded from the plugin directory: Drasi's standard Rego policy
+(`drasi.standard/policy`) and this demo's optimizer (`plugins/`). Each is volatile: on start it reads its upstream outputs' snapshots
 through a `nativeOutputSnapshots` resource, then applies later changes. It emits
 only changed elements, and emits `unknown` rather than a guess when an input is
 missing, inconsistent or times out.
 
 | Component | Implementation | Inputs | Output |
 |---|---|---|---|
-| `policy` | `ignite/rego-policy` (`drasi_computation_ignite_policy`, `regorus`) | `subjects` ← `policy-workloads`, `targets` ← `policy-deployments`, `parameters` ← `policy-destinations` | One `PolicyDecision` per workload × deployment: `state` (`allowed`, `denied`, `unknown`), `reason`, `policy_hash`, `basis` |
+| `policy` | Drasi's `drasi.standard/policy` (`drasi_computation_transformer_policy`, `regorus`) | `in` ← `policy-input` | One `PolicyDecision` per `policy-input` row: `allowed`, `reason`, `policy_status`, `policy_hash`, `policy_input_fingerprint`; `policy-results` maps them to `state` (`allowed`, `denied`, `unknown`) |
 | `plan` | `ignite/assignment-plan` (`drasi_computation_ignite_optimizer`, `good_lp` with `microlp`) | `items` ← `plan-items`, `bins` ← `plan-bins`, `eligibility` ← `policy-results` | One `Plan` (`state`, `candidate_id`, `basis`, `revision`, `assignments`, `moves`, `reason`) and one `Assignment` per workload while feasible |
 | `resilience` | `ignite/assignment-resilience` (same plugin) | As `plan` | One `Resilience` (`state` `safe`, `at_risk` or `unknown`, `first_failure`, `unhealthy_bins`) and one `LossScenario` per healthy deployment |
 
 Configuration:
 
-- **Policy.** The rules are the component's configuration: `plugins/policy/ignite.rego`, inlined by the config generator, evaluated as `data.ignite.assessment` for each pair with the workload, the deployment and that workload's allowed-destination rows. A pair is allowed when the deployment is an allowed destination, the region matches the workload's requirement (`EU` or `any`) and the model matches. Changing the allowed destinations (the talk's policy edit) is a data change; changing the module is a configuration update. Each evaluation is bounded to 250 ms (`plugins/policy/examples/ignite.json`).
+- **Policy.** Drasi's standard Rego component. The demo supplies only the rules (`drasi/policy/ignite.rego`, inlined by the config generator) and a query, `policy-input`, that says what to decide: one row per workload × deployment. The rule `data.ignite.assessment` runs for each row with the workload, the deployment and its allowed destination. A pair is allowed when the deployment is an allowed destination, the region matches the workload's requirement (`EU` or `any`) and the model matches. Changing the allowed destinations (the talk's policy edit) is a data change, and only that pair's decision changes. Changing the module is an in-place configuration update. Each evaluation is bounded to 250 ms (`drasi/policy/policy.json`). The component starts from `policy-input`'s snapshot. Anything except a clear yes or no reads as `unknown`, never allowed.
 - **Optimizer.** `plugins/optimizer/examples/ignite.json` names the input properties (demand, current deployment, capacity, health, eligibility), the constraints (`assignEachItemOnce`: nothing is shed; `binCapacity`) and the objective (`fewestMoves`, then `lowestPeakUtilisation`; ties broken by sorted keys). Only deployments whose health is `ok` receive work. Changes within 100 ms are solved together on one worker thread, with a 2 s time limit; a result for superseded inputs is discarded. `basis` hashes exactly what was solved and `candidate_id` hashes `basis` and the assignments, so an approval binds to both. `resilience` removes each healthy deployment in turn and reports the first whose loss leaves no plan.
 
 ### 2.4 Reactions
