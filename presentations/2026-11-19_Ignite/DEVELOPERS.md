@@ -247,7 +247,9 @@ plan, infeasible after the policy edit, at risk at EU-A 50k).
 
 **Against the running demo:** these read every answer from Drasi's outputs
 (`tests/drasi_outputs.py`: the desk stream, the Prometheus reaction and Server's
-query results), never from the AI service.
+query results), never from the AI service. Their `reset()` resets the scenario and then allows
+summaries in the US, as the desk's **Summaries: Europe + US** does, so they start
+safe; `reset(us=False)` leaves the seed, with failover at risk.
 
 | Command | Checks | Changes data? |
 |---|---|---|
@@ -257,7 +259,7 @@ query results), never from the AI service.
 | `python3 tests/decision-integration.py` | Policy, plan and what-if | Yes |
 | `python3 tests/health-telemetry-integration.py` | Health from telemetry: probes through the Collector reach Drasi; Failed and the planner's move, Unknown after 8 s of silence, recovery; `deployment_health_reports` not written. Applies with `IGNITE_HEALTH_SOURCE=otel` | Yes; resets at the start and the end |
 | `python3 tests/mattermost-actions.py` | Mattermost's card buttons reach the approval tool (approve, reject, an earlier run's card), the desk's backup press, the projector sign-in | Yes: adds approvals Drasi rejects (made-up plans); deletes its cards |
-| `python3 tests/incident-channel-integration.py` | Drasi's incident cards in #incident-ai-support through the talk: failure, proposal, overdue, Out of date and the rejected stale approval, approve → Applied → Verified in the card's thread, at risk, restored; each posted once | Yes; resets at the start and the end (clears the channel) |
+| `python3 tests/incident-channel-integration.py` | Drasi's incident cards in #incident-ai-support in the talk's order: the seed's at risk, restored once summaries may run in the US, failure, proposal, overdue, approve → Applied → Verified in the card's thread, at risk and restored at EU-A 50k; each posted once | Yes; resets at the start and the end (clears the channel) |
 | `python3 tests/recovery-integration.py` | Approval checked by Drasi, routes changed by its gateway reaction, stale rejection, verified recovery, annotations and scores | Yes |
 | `node ui/scripts/walkthrough.mjs capture <folder>` | The whole talk through the desk, beat by beat, as a presenter would; saves the projector and the desk at every beat (about 12 minutes) | Yes; resets at the start and the end |
 | `node ui/scripts/walkthrough.mjs record` | The same, and re-records the four fallback recordings at 1920×1080 (16:9) | Yes; resets at the start and the end |

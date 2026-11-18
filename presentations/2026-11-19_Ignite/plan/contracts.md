@@ -103,7 +103,7 @@ health reports, tasks or approvals.
 | `ai_workloads` | `id` PK (`support`, `batch`), `run_epoch`, `data_class` (`restricted`, `public`), `region_requirement` (`EU`, `any`), `model`, `demand_tpm` | reset, desk controls | yes |
 | `model_deployments` | `id` PK (`EU-A`, `EU-B`, `US-C`), `run_epoch`, `region`, `model`, `capacity_tpm` | reset, desk controls | yes |
 | `workload_routes` | `workload` PK, `run_epoch`, `deployment`, `approval` (nullable), `applied_ms` | reset, `POST /routes/apply` only | yes |
-| `data_residency_policy` | `id` PK (`{workload}/{deployment}`), `run_epoch`, `workload`, `deployment` | reset, desk policy edit (the talk's policy change) | yes |
+| `data_residency_policy` | `id` PK (`{workload}/{deployment}`), `run_epoch`, `workload`, `deployment` | reset, the desk's Summaries: Europe + US and Summaries: Europe only (the talk's compliance change) | yes |
 | `change_approvals` | `id` PK, `run_epoch`, `candidate_id`, `basis`, `revision` (plan's scenario revision), `status` (`pending`, `applied`, `rejected`, `verified`), `reason`, `latest` (bool), `requested_ms`, `decided_ms`, `applied_revision`, `verified_ms` | approval tool (insert), gateway configuration API (status) | yes |
 | `gateway_deliveries` | `id` PK (`x-drasi-delivery-id`), `received_ms`, `result` | gateway configuration API | no |
 | `simulated_deployment_faults` | `deployment` PK, `mode` (`ok`, `failed`, `throttled`), `reporting` | demo controls; read only by the simulated deployments and health monitor | **no**: Drasi sees health only through reports |
@@ -117,7 +117,8 @@ Removed: `ignite_model` (payload), `ignite_endpoints`, `ignite_commands`,
 Seed (`reset.sql`): workloads `support` (restricted, EU, `support-model`,
 60 000) and `batch` (public, any, `support-model`, 80 000); deployments EU-A
 and EU-B (EU) and US-C (US), all `support-model`, 100 000; routes support → EU-A,
-batch → EU-B; destinations support: EU-A, EU-B; batch: EU-A, EU-B, US-C;
+batch → EU-B; destinations support: EU-A, EU-B; batch: EU-A, EU-B (both Europe-only, so failover starts
+at risk until the desk's Summaries: Europe + US adds batch: US-C);
 `revision` 1; all simulation modes `ok`.
 
 The monotonic trigger moves from `ignite_model` to `routing_config` (revision
@@ -294,7 +295,7 @@ config generator inlines `drasi/policy/placement.rego` and sets `stream` to
   `input.destinations`. Support may use EU-A and EU-B, never US-C (restricted
   data stays in the EU). Batch may use all three. Removing EU-B from support's
   destinations denies it.
-- **The talk's policy edit** is a data change to `data_residency_policy`.
+- **The talk's compliance change** (summaries allowed in the US) is a data change to `data_residency_policy`.
   Only that pair's decision is emitted. Demand and capacity edits emit nothing.
   A rule change is a managed in-place update: retained inputs are
   re-evaluated, and only changed decisions are emitted, with a new
@@ -348,7 +349,8 @@ capacity beat, Server restart):
 
 | Inputs | Plan | Resilience |
 |---|---|---|
-| Seed, all healthy | feasible, 0 moves | safe |
+| Seed, all healthy (both workloads Europe-only) | feasible, 0 moves | at_risk, first failure EU-A (no valid plan) |
+| Seed with batch also allowed on US-C | feasible, 0 moves | safe |
 | EU-A failed | support → EU-B, batch → US-C (2 moves) | at_risk, first failure EU-B |
 | EU-A failed, then EU-B removed from support's destinations | infeasible | at_risk |
 | Healthy, support on EU-B, batch on US-C, EU-A capacity 50 000 | feasible | at_risk, first failure EU-B (support) |

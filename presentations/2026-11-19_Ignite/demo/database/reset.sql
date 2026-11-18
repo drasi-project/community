@@ -27,10 +27,12 @@ SELECT fixture.workload, scenario.run_epoch, fixture.deployment, NULL,
     (extract(epoch FROM clock_timestamp())*1000)::bigint
 FROM (VALUES ('support', 'EU-A'), ('batch', 'EU-B')) AS fixture(workload, deployment)
 CROSS JOIN routing_config scenario;
+-- Both workloads start Europe-only. Losing either EU deployment then leaves no plan (failover at
+-- risk) until summaries are allowed on US-C as well (the desk's Summaries: Europe + US).
 INSERT INTO data_residency_policy(id, run_epoch, workload, deployment)
 SELECT fixture.workload || '/' || fixture.deployment, scenario.run_epoch, fixture.workload, fixture.deployment
 FROM (VALUES ('support', 'EU-A'), ('support', 'EU-B'),
-             ('batch', 'EU-A'), ('batch', 'EU-B'), ('batch', 'US-C')) AS fixture(workload, deployment)
+             ('batch', 'EU-A'), ('batch', 'EU-B')) AS fixture(workload, deployment)
 CROSS JOIN routing_config scenario;
 INSERT INTO deployment_health_reports
 SELECT fixture.id, scenario.run_epoch, 0, 0, 'unknown', 0

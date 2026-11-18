@@ -105,14 +105,24 @@ def configure(**changes):
     return api("/configuration", {"run_epoch": state["run_epoch"], "revision": state["revision"], **changes})
 
 
-def reset():
-    """Demo driver reset: new run, seed scenario, traffic stopped. Waits for Drasi to re-derive."""
+US = {"batch": ["EU-A", "EU-B", "US-C"]}
+
+
+def reset(us=True):
+    """Demo driver reset: new run, seed scenario, traffic stopped. Waits for Drasi to re-derive.
+
+    The seed has both workloads Europe-only, so failover starts at risk (Recommended action 3, add
+    capacity). With `us` (the default, which most gates assume) summaries are then also allowed
+    in the US, as the desk's Summaries: Europe + US does, and the run is safe (0)."""
     state = health()
     result = api("/reset", {k: state[k] for k in ["run_epoch", "revision"]})
     with DeskStream(["plan-results", "tile-action"]) as stream:
         stream.until("plan-results", lambda rows: rows and rows[0]["run_epoch"] == result["run_epoch"]
                      and rows[0]["state"] == "feasible" and rows[0]["moves"] == 0, 45)
-        stream.until("tile-action", lambda rows: rows and rows[0]["value"] == 0, 30)
+        stream.until("tile-action", lambda rows: rows and rows[0]["value"] == 3, 30)
+        if us:
+            configure(destinations=US)
+            stream.until("tile-action", lambda rows: rows and rows[0]["value"] == 0, 30)
     return result
 
 

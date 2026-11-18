@@ -1,9 +1,10 @@
-"""Incident cards in Mattermost (plan/contracts.md section 15), on the running demo.
+"""Incident cards in Mattermost (plan/contracts.md section 15), on the running demo, in the talk's order.
 
-Drasi's `incident-channel` reaction posts each card once: the failure, the overdue requests, the
-proposal with its Approve and Reject buttons, Out of date when the facts change, the outcome of an
-approval in the approved card's thread (applied, verified, or rejected by Drasi), failover at risk
-and failover restored. The approval goes through Mattermost exactly as a press of the card's
+Drasi's `incident-channel` reaction posts each card once. The seed has summaries Europe-only, so
+the run opens with failover at risk; allowing summaries in the US restores it. Then the failure,
+the overdue requests, the proposal with its Approve and Reject buttons, the outcome of the
+approval in that card's thread (applied, verified), and failover at risk and restored again at
+EU-A 50k and back at 100k. The approval goes through Mattermost exactly as a press of the card's
 Approve button (`POST /mattermost/approve-latest`, the desk's backup). Resets the scenario at the
 start and the end, which also clears the channel.
 """
@@ -19,7 +20,7 @@ def field(card, title):
 
 def main():
     checks = []
-    d.reset()
+    d.reset(us=False)
     epoch = d.health()["run_epoch"]
     cards = lambda: [c for c in d.incident_cards() if c["run_epoch"] == epoch]  # noqa: E731
     def until(predicate, what, timeout=45):
@@ -27,10 +28,18 @@ def main():
     def card(kind, n=1):
         return until(lambda cs: len([c for c in cs if c["card"] == kind]) >= n, f"{n} '{kind}' card(s)")
     try:
-        assert d.incident_cards() == [], "the reset clears the channel"
+        seed = card("at-risk")
+        assert [c["card"] for c in d.incident_cards()] == ["at-risk"], "the reset clears the channel; the seed posts at risk"
+        assert seed[0]["attachment"]["title"] == "Failover at risk: losing EU-A leaves no valid plan", seed[0]
+        d.configure(destinations=d.US)
+        restored = card("restored")[-1]
+        assert restored["attachment"]["title"] == "Failover restored", restored
+        checks.append("seed (summaries Europe-only): failover at risk, losing EU-A leaves no valid plan; "
+                      "Summaries: Europe + US: failover restored")
+
         d.api("/traffic", {"run_epoch": epoch, "running": True})
         time.sleep(12)
-        assert cards() == [], "a healthy service posts nothing"
+        assert [c["card"] for c in cards()] == ["at-risk", "restored"], "a healthy service posts nothing"
 
         d.control("fail", "EU-A")
         failed = [c for c in card("failed") if c["card"] == "failed"][0]
@@ -43,7 +52,7 @@ def main():
             "pending_post_id": f"{epoch}/{failed['incident_card_id']}"})
         assert replay["id"] == failed["id"], f"a replayed failure card is the same post: {replay['id']} != {failed['id']}"
         assert [c["card"] for c in cards()].count("failed") == 1, "the replay posted nothing new"
-        posted = card("overdue")
+        posted = [c for c in card("overdue") if c["card"] not in ("at-risk", "restored")]
         kinds = [c["card"] for c in posted]
         assert kinds[:3] == ["failed", "proposal", "overdue"], kinds
         failed, proposal, overdue = posted[:3]
@@ -59,56 +68,42 @@ def main():
         assert field(proposal, "Capacity") == "healthy: EU-B 100k, US-C 100k · needed: support 60k, summaries 80k"
         assert [a["id"] for a in proposal["attachment"]["actions"]] == ["approve", "decline"]
         assert overdue["attachment"]["title"] == "Support requests overdue" and field(overdue, "Deadline") == "15 s"
-        assert [c["card"] for c in posted].count("failed") == 1, f"one failure card: {[c['incident_card_id'] for c in posted]}"
         checks.append("EU-A fails: the failure card (after 3 s), then the proposal with Approve and Reject "
                       "(policy and capacity from Drasi's queries), then support overdue; the failure card once, "
                       "and a replayed delivery of it is the same post")
 
-        d.configure(destinations={"batch": ["EU-A", "EU-B"]})
-        superseded = card("superseded")[-1]
-        assert field(superseded, "Now") == "No valid plan", superseded
-        stale = d.api("/mattermost/approve-latest", {"run_epoch": epoch})
-        assert stale["post_id"] == proposal["id"], stale
-        rejected = until(lambda cs: any(c["card"] == "outcome" for c in cs), "the rejection")[-1]
-        assert rejected["root_id"] == proposal["id"], rejected
-        assert rejected["attachment"]["title"] == "Rejected by Drasi: nothing was changed", rejected
-        assert field(rejected, "Approved by") == "@oncall", rejected
-        checks.append("policy edit: Out of date (no valid plan); approving the stale card is rejected by "
-                      "Drasi, in that card's thread")
-
-        d.configure(destinations={"batch": ["EU-A", "EU-B", "US-C"]})
-        second = card("proposal", 2)
-        second = [c for c in second if c["card"] == "proposal"][-1]
         approved = d.api("/mattermost/approve-latest", {"run_epoch": epoch})
-        assert approved["post_id"] == second["id"], approved
-        verified = until(lambda cs: any(c["card"] == "outcome" and c["root_id"] == second["id"]
+        assert approved["post_id"] == proposal["id"], approved
+        verified = until(lambda cs: any(c["card"] == "outcome" and c["root_id"] == proposal["id"]
                                         and c["incident_card_id"].endswith("-verified") for c in cs),
                          "applied and verified in the thread", 60)
-        replies = [c for c in verified if c["root_id"] == second["id"]]
+        replies = [c for c in verified if c["root_id"] == proposal["id"]]
         assert [c["attachment"]["title"] for c in replies] == [
             "Applied: Move summaries to US-C and support to EU-B", "Verified: support has recovered"], replies
         assert field(replies[0], "Routes") == "support → EU-B · summaries → US-C", replies
         assert d.routes() == {"support": "EU-B", "batch": "US-C"}
-        checks.append("policy restored: a new proposal; Approve applies it (Applied, then Verified, in its "
-                      "thread) and posts no Out of date card")
+        checks.append("Approve applies the change: Applied, then Verified, in the proposal's thread")
 
         d.control("restore", "EU-A")
         time.sleep(5)
         d.configure(capacity={"EU-A": 50000})
-        risk = card("at-risk")[-1]
+        risk = [c for c in card("at-risk", 2) if c["card"] == "at-risk"][-1]
         assert risk["attachment"]["title"] == "Failover at risk: losing EU-B leaves support nowhere to run", risk
         d.configure(capacity={"EU-A": 100000})
-        restored = card("restored")[-1]
+        restored = [c for c in card("restored", 2) if c["card"] == "restored"][-1]
         assert restored["attachment"]["title"] == "Failover restored", restored
-        checks.append("EU-A at 50k: failover at risk (losing EU-B leaves support nowhere to run); back to "
+        checks.append("EU-A back at 50k: failover at risk (losing EU-B leaves support nowhere to run); back to "
                       "100k: failover restored")
 
         time.sleep(8)
         final = cards()
         ids = [c["incident_card_id"] for c in final]
         assert len(ids) == len(set(ids)), f"each card is posted once: {ids}"
-        assert [c["card"] for c in final if c["root_id"]] == ["outcome"] * 3
-        checks.append("every card posted once; only outcomes are thread replies")
+        kinds = [c["card"] for c in final]
+        assert (kinds.count("at-risk"), kinds.count("restored")) == (2, 2), kinds
+        assert [c["card"] for c in final if c["root_id"]] == ["outcome"] * 2
+        checks.append("every card posted once (at risk and restored twice each: the seed and EU-A at 50k); "
+                      "only outcomes are thread replies")
         path = d.save("incident-channel.json", {"checks": checks, "cards": final})
         print(json.dumps({"passed": checks, "evidence": str(path)}, indent=2))
     finally:

@@ -15,4 +15,5 @@ RETURN CASE WHEN r.state = 'unknown' THEN -1
             ELSE 'At risk: losing ' + r.first_failure + ' leaves '
                  + CASE WHEN r.reason CONTAINS 'support' THEN 'support'
                         WHEN r.reason CONTAINS 'batch' THEN 'summaries'
-                        ELSE 'a workload' END + ' nowhere to run' END AS text
+                        ELSE '' END
+                   + CASE WHEN r.reason CONTAINS 'support' OR r.reason CONTAINS 'batch' THEN ' nowhere to run' ELSE 'no valid plan' END END AS text

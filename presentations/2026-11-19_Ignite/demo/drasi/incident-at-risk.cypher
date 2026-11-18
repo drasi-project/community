@@ -7,7 +7,7 @@ WITH r, s, p,
      drasi.trueFor(r.state = 'at_risk' AND r.unhealthy_bins = 0, 3000) AS held,
      drasi.trueFor(r.state = 'at_risk' AND r.unhealthy_bins = 0, 63000) AS stale
 WITH r, s, p, held, stale, was[0] AS was_run, was[1] AS was_state
-WHERE held = true AND NOT (stale = true) AND was_run = r.run_epoch AND (was_state = 'safe' OR was_state = 'degraded')
+WHERE held = true AND NOT (stale = true) AND was_run = r.run_epoch AND (was_state = 'safe' OR was_state = 'degraded' OR was_state = 'unknown')
 WITH r, s, p, replace(r.reason, 'batch', 'summaries') AS reason,
      CASE WHEN r.reason CONTAINS 'support' THEN 'support' WHEN r.reason CONTAINS 'batch' THEN 'summaries' ELSE '' END AS workload
 RETURN 'at-risk-' + toString(p.solved_ms) AS id, s.run_epoch AS run_epoch, p.solved_ms AS at_ms, '' AS root_id,

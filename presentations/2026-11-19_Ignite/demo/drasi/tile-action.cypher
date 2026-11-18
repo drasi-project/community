@@ -12,6 +12,7 @@ RETURN CASE WHEN p.state = 'unknown' OR r.state = 'unknown' THEN -1
               THEN 'Add capacity: losing ' + r.first_failure + ' leaves '
                    + CASE WHEN r.reason CONTAINS 'support' THEN 'support'
                           WHEN r.reason CONTAINS 'batch' THEN 'summaries'
-                          ELSE 'a workload' END + ' nowhere to run'
+                          ELSE '' END
+                   + CASE WHEN r.reason CONTAINS 'support' OR r.reason CONTAINS 'batch' THEN ' nowhere to run' ELSE 'no valid plan' END
             WHEN r.state = 'at_risk' AND r.unhealthy_bins = 0 THEN 'Add capacity: no valid plan even now'
             ELSE 'None' END AS text
