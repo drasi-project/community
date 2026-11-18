@@ -15,7 +15,7 @@ def assignments(plan):
 
 def main():
     checks, evidence = [], {}
-    d.reset()
+    d.reset(us=False)
     stream = d.DeskStream(["plan-results", "tile-action", "tile-resilience", "tile-running"])
     policy, losses = d.Attachment("policy-results"), d.Attachment("loss-results")
     try:
@@ -24,6 +24,21 @@ def main():
                             and r[0]["state"] == "feasible" and r[0]["moves"] == 0)[0]
         assert assignments(plan) == {"support": "EU-A", "batch": "EU-B"}, plan
         policy.until(lambda rows: len(rows) == 6 and all(r["run_epoch"] == epoch for r in rows.values()))
+        states = {(r["subject"], r["target"]): r["state"] for r in policy.rows.values()}
+        assert states[("batch", "US-C")] == "denied", states
+        stream.until("tile-resilience", lambda r: r and r[0]["value"] == 0 and r[0]["lost"] == "EU-A")
+        stream.until("tile-action", lambda r: r and r[0]["value"] == 3)
+        d.metric_until("drasi_failover_readiness", lambda v: v == 0, lost="EU-A",
+                       text="At risk: losing EU-A leaves no valid plan")
+        d.metric_until("drasi_recommended_action", lambda v: v == 3, text="Add capacity: losing EU-A leaves no valid plan")
+        losses.until(lambda rows: rows.get("EU-A", {}).get("state") == "infeasible")
+        evidence["seed_at_risk"] = dict(losses.rows)
+        checks.append("seed (both workloads Europe-only): all healthy and no moves, but at risk: losing EU-A "
+                      "leaves no valid plan, from the what-if model alone, no fault injected")
+
+        d.configure(destinations=d.US)
+        policy.until(lambda rows: any(r["subject"] == "batch" and r["target"] == "US-C" and r["state"] == "allowed"
+                                      for r in rows.values()))
         states = {(r["subject"], r["target"]): r["state"] for r in policy.rows.values()}
         assert states == {("support", "EU-A"): "allowed", ("support", "EU-B"): "allowed",
                           ("support", "US-C"): "denied", ("batch", "EU-A"): "allowed",
@@ -36,8 +51,8 @@ def main():
         d.metric_until("drasi_failover_readiness", lambda v: v == 1, text="Survives losing any one deployment")
         d.metric_until("drasi_workload_running_tpm", lambda v: v == 60000, workload="support", deployment="EU-A")
         d.metric_until("drasi_workload_running_tpm", lambda v: v == 80000, workload="batch", deployment="EU-B")
-        checks.append("baseline: Rego decisions, the optimizer's plan (no moves) and resilience (safe) "
-                      "from the scenario tables; the Prometheus reaction serves the same answers")
+        checks.append("summaries also allowed in the US (a data change): Rego decisions, the optimizer's plan "
+                      "(no moves) and resilience (safe); the Prometheus reaction serves the same answers")
 
         d.control("fail")
         d.metric_until("drasi_deployment_health_status", lambda v: v == 2, deployment="EU-A")
@@ -72,19 +87,10 @@ def main():
         d.control("restore")
         stream.until("plan-results", lambda r: r and r[0]["state"] == "feasible" and r[0]["moves"] == 0)
         stream.until("tile-resilience", lambda r: r and r[0]["value"] == 1)
-        d.configure(capacity={"EU-A": 50000})
-        stream.until("tile-resilience", lambda r: r and r[0]["value"] == 0 and r[0]["lost"] == "EU-B")
-        stream.until("tile-action", lambda r: r and r[0]["value"] == 3)
-        d.metric_until("drasi_failover_readiness", lambda v: v == 0, lost="EU-B", workload="support")
-        losses.until(lambda rows: rows.get("EU-B", {}).get("state") == "infeasible")
-        evidence["at_risk"] = {"approval": d.approval(approval), "losses": dict(losses.rows)}
-        checks.append("after recovery with EU-A at 50k: all healthy, but 'not if EU-B fails' (at risk), "
-                      "from the what-if model alone, no fault injected")
-
-        d.configure(capacity={"EU-A": 100000})
-        stream.until("tile-resilience", lambda r: r and r[0]["value"] == 1)
-        stream.until("tile-action", lambda r: r and r[0]["value"] == 0)
-        checks.append("EU-A back to 100k restores 'safe if one fails'")
+        assert d.routes() == {"support": "EU-B", "batch": "US-C"}, "nothing moves back"
+        evidence["recovered"] = {"approval": d.approval(approval)}
+        checks.append("approved and applied, then EU-A restored: the plan keeps support on EU-B and summaries "
+                      "on US-C (no moves) and failover is safe again")
 
         d.control("pause-reports", "EU-B")
         d.metric_until("drasi_deployment_health_status", lambda v: v == -1, timeout=25, deployment="EU-B")

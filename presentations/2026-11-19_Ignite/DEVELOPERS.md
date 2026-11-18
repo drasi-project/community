@@ -235,8 +235,10 @@ optimizer are Drasi's own crates, tested in `drasi-core-next`
 (`cargo test -p drasi-computation-transformer-policy`,
 `-p drasi-computation-transformer-optimization`). `ignite-config`'s tests run
 the demo's result queries over the optimizer's output, and
-`tests/decision-integration.py` checks the talk's outcomes live (the failure
-plan, infeasible after the policy edit, at risk at EU-A 50k).
+`tests/decision-integration.py` checks the decisions live (at risk with the
+Europe-only seed, safe once summaries may run in the US, the failure plan,
+infeasible when support loses EU-B, and safe again with nothing moved back once
+EU-A is restored).
 
 | Command | Checks |
 |---|---|
