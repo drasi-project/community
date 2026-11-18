@@ -537,7 +537,13 @@ fn main() -> Result<()> {
             builder,
             &progress,
             ResourceRole::Checkpoint,
-            json!({"kind":"sourceProgress","component":ids[name]}),
+            json!({"kind":"sourceProgress","component":ids[name],"indexes":"indexes"}),
+        )?;
+        // Source progress inherits its query's index durability.
+        builder = builder.resource_dependency(
+            resource(&progress)?,
+            resource("indexes")?,
+            ResourceRole::IndexBackend,
         )?;
         builder = builder.resource_dependency(
             resource("pg-consumers")?,
