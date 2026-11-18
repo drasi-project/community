@@ -19,6 +19,13 @@ already exists in this branch.
 | [Metric contract](#9-metric-contract) | One metric per Grafana tile, `-1` or no series means Unknown | `plugins/prometheus/examples/ignite.json` |
 | [Reaction contract](#10-reaction-contract) | Drasi HTTP sinks call the gateway configuration API, Grafana annotations and Langfuse scores; idempotent on `x-drasi-delivery-id` and approval state, compare-and-set on revision | this file |
 | [Drasi API check](#11-drasi-api-check) | Every API the plugins need exists in this drasi-core checkout; no gap blocks workstreams 1–7 | this file |
+| [Mattermost](#13-mattermost) | Local Mattermost on `IGNITE_MATTERMOST_PORT` (19065), bootstrapped by `ops/mattermost.py`; team `ai-platform`, channel `incident-ai-support`, bot `drasi`, user `oncall`; secrets in `.env`, IDs in `.native/mattermost.json` | [incident-channel-plan.md](incident-channel-plan.md) |
+| [Approvals from Mattermost](#14-approvals-from-mattermost) | `POST /mattermost/actions` turns a card's button into the existing approval (`id` = `mm-{post_id}`); `POST /mattermost/approve-latest` presses the newest proposal's button for the desk | this file |
+| [Incident cards](#15-incident-cards) | Seven Drasi event queries → `incident-channel` HTTP reaction → Mattermost REST; outcomes reply in the approved card's thread | this file |
+| [Operations dashboard](#16-operations-dashboard) | One dashboard `ignite-workload`, rows AI Deployments and Decision Support, stable panel `key`s; Change status, Recommended action, Failover readiness | this file |
+| [Projected Mattermost view](#17-projected-mattermost-view) | Stage view `incident`, framed from the web app origin, signed in through `/mattermost/sign-in` | this file |
+| [Desk](#18-desk) | One backup button, `approve-change`, calls `approve-latest`; `select-plan` and `approve-plan` go | this file |
+| [Working rules](#19-working-rules-for-the-incident-channel-work) | File ownership for workstreams A–D; one rule for restarting the live stack; no resets without notice | this file |
 
 ## 1. Settings
 
@@ -389,6 +396,11 @@ name. Prometheus scrapes it every 2 s as job `drasi` at
 
 ## 9. Metric contract
 
+> **Superseded in part by [section 16](#16-operations-dashboard):** Recovery,
+> Action needed and Safe if one fails? become Change status, Recommended action
+> and Failover readiness, and the Recovery plan dashboard goes. The other rows
+> stand.
+
 All gauges, from `plugins/prometheus/examples/ignite.json`. **Unknown** is
 either value `-1` (Drasi answered "unknown") or no series. For counts and
 "nothing yet" states a missing series means the stated value only while
@@ -607,3 +619,391 @@ No gap blocks workstreams 1–7. To watch:
 | 5 | `observability/grafana`, `ops/observability-env.py` (service-account token) | `compose.yaml` except Grafana's environment |
 | 6 | `../presentation`, `ui/` | `ui/settings.mjs` |
 | 7 | `ops/config`, `drasi/`, `ops/native-build.sh`, root `Cargo.toml` (removing `plugins/capacity` and `plugins/decisions`) | — |
+
+---
+
+Sections 13–19: the incident channel and Decision Support
+([incident-channel-plan.md](incident-channel-plan.md)). Workstreams A
+(Mattermost platform), B (Drasi event queries and HTTP reaction), C (Grafana),
+D (desk and projector) build against these.
+
+## 13. Mattermost
+
+### Settings (`ports.env`, no secrets)
+
+| Setting | This copy | Original (`ports.default.env`) |
+|---|---|---|
+| `IGNITE_MATTERMOST_PORT` | 19065 | 18065 |
+
+Fixed names (not settings): team `ai-platform` (display "AI Platform"), channel
+`incident-ai-support` (display "incident-ai-support", public), bot `drasi`
+(display "Drasi"), user `oncall` (display "On-call engineer"; the presenter
+acts as this user), admin `admin` (bootstrap and maintenance only). The
+channel's URL is `http://localhost:{IGNITE_MATTERMOST_PORT}/ai-platform/channels/incident-ai-support`.
+
+Readers: `ops/settings.py` (`settings.port("MATTERMOST")`), Rust
+`ignite_settings::get().port("MATTERMOST")`, browser `settings.mattermost`
+(`http://localhost:19065`, `demo/ui/src/settings.ts`; A adds it).
+
+### Container (`compose.yaml` service `mattermost`, workstream A)
+
+- Image `docker.io/mattermost/mattermost-team-edition`, pinned by digest,
+  `127.0.0.1:${IGNITE_MATTERMOST_PORT}:8065`, volume `mattermost-data`.
+- Database `mattermost` in the existing `postgres` container
+  (`observability/postgres/02-mattermost.sql` for new volumes; the bootstrap
+  creates it on today's volume), user `ignite`, `sslmode=disable`.
+- Configuration by `MM_*` environment variables: site URL
+  `http://localhost:${IGNITE_MATTERMOST_PORT}`; incoming webhooks, bot accounts,
+  personal access tokens, post username and icon overrides on; open server off;
+  plugins off; telemetry, diagnostics and update checks off;
+  `AllowedUntrustedInternalConnections` = `host.containers.internal` (the
+  buttons call the AI service on the host); `FrameAncestors` = the web app's
+  origins (`http://localhost:${IGNITE_UI_PORT}`, `http://127.0.0.1:${IGNITE_UI_PORT}`
+  and the UI test port).
+- Grafana gets one new environment line, `MATTERMOST_ALERT_WEBHOOK_URL`
+  (section 16), with a placeholder until the bootstrap has made the webhook.
+
+### Bootstrap (`ops/mattermost.py bootstrap`)
+
+Run by `./ops/observability-stack.sh up` when it starts `mattermost`, and on its
+own. Idempotent: it finds by name and creates only what is missing; it never
+prints a secret. Steps: database → wait for `/api/v4/system/ping` → admin (first
+user) → team → channel → bot `drasi` and its token → user `oncall` and its
+token, both members of the team and channel → incoming webhook (channel
+`incident-ai-support`, display "Grafana alerts") → write `.env` and
+`.native/mattermost.json` → recreate Grafana if the webhook URL changed.
+
+`.env` keys (private, mode 600, created if missing; never printed or committed):
+
+| Key | Used by |
+|---|---|
+| `MATTERMOST_ADMIN_PASSWORD` | Bootstrap only |
+| `MATTERMOST_ADMIN_TOKEN` | AI service (reads the original card for an update; clears the channel on reset), tests |
+| `MATTERMOST_ONCALL_PASSWORD` | `/mattermost/sign-in` |
+| `MATTERMOST_ONCALL_TOKEN` | AI service (`approve-latest` presses the button as `oncall`), tests |
+| `IGNITE_MATTERMOST_BOT_TOKEN` | Drasi Server: `incident-channel` reaction `token` (`env:IGNITE_MATTERMOST_BOT_TOKEN`, exported by `native-runtime.py run`) |
+| `MATTERMOST_ALERT_WEBHOOK_URL` | Grafana's contact point: `http://mattermost:8065/hooks/<id>` (container network) |
+
+`.native/mattermost.json` (not secret, git-ignored), read by the config
+generator and the AI service:
+`{"team_id","channel_id","bot_user_id","oncall_user_id","team":"ai-platform","channel":"incident-ai-support"}`.
+`ops/native-runtime.py stamp` includes it, so a channel that was recreated
+(new volume) makes `run` ask for `ops/native-build.sh`.
+
+## 14. Approvals from Mattermost
+
+### Schema change (workstream A, `database/`)
+
+`ignite_approvals` gains nullable `requested_by` (`@oncall`), `post_id` (the
+Mattermost card that was approved) and `change` (the card's change text);
+`status` gains `declined` (a person pressed Reject). `POST /approvals` is
+unchanged and leaves the new columns null. Drasi's existing queries ignore
+`declined` (they filter on `pending`).
+
+### `POST /mattermost/actions` (AI service, `IGNITE_WORKLOAD_PORT`)
+
+Mattermost calls it from its container as
+`http://host.containers.internal:{IGNITE_WORKLOAD_PORT}/mattermost/actions`
+when a button is pressed. Request (Mattermost's integration request):
+
+```json
+{"user_id":"…","user_name":"oncall","channel_id":"…","channel_name":"incident-ai-support",
+ "team_id":"…","team_domain":"ai-platform","post_id":"<card post id>","trigger_id":"…",
+ "type":"","data_source":"",
+ "context":{"action":"approve","candidate_id":"…","basis":"…","revision":7,
+            "run_epoch":"…","change":"Move summaries to US-C and support to EU-B"}}
+```
+
+| `context.action` | Effect (one transaction) |
+|---|---|
+| `approve` | Exactly `POST /approvals` with `{"id":"mm-{post_id}","candidate_id","basis","revision"}` plus `requested_by` = `@{user_name}`, `post_id`, `change`. A repeated press is a no-op (same ID). Drasi then decides, as today: `approval-valid` → `gateway-reaction` applies, or `approval-stale` → rejected with Drasi's reason |
+| `decline` | Inserts approval `mm-{post_id}` with `status` `declined`, `decided_ms` now, `reason` "Rejected by @oncall", `latest` true. Nothing else happens |
+| context `run_epoch` ≠ current run | No row; only `ephemeral_text` "This card is from an earlier run of the demo." |
+
+Response `200`:
+
+```json
+{"update":{"props":{…the card's props, every action removed, and the field
+   {"title":"Decision","value":"Approved by @oncall at 10:42:07. Drasi checks it still matches its current plan before anything changes.","short":false}
+   (or "Rejected by @oncall at 10:42:07. Nothing will change.")…}},
+ "ephemeral_text":"Sent to the change-approval tool."}
+```
+
+The endpoint reads the card with `MATTERMOST_ADMIN_TOKEN`
+(`GET /api/v4/posts/{post_id}`) to rebuild its props; if that fails it answers
+with `ephemeral_text` only. Malformed context → `400`; database down → `503`.
+No authentication beyond the local bind, as for `POST /approvals`.
+
+### `POST /mattermost/approve-latest` (desk backup)
+
+Request `{"run_epoch"}`. Finds the newest post in the channel
+(`GET /api/v4/channels/{channel_id}/posts`, admin token) with
+`props.ignite_card` = `proposal`, `props.ignite_run_epoch` = `run_epoch` and an
+`approve` action still on it, then presses it as `oncall`
+(`POST /api/v4/posts/{post_id}/actions/approve`, oncall token). Mattermost then
+calls `/mattermost/actions` exactly as for a click.
+`200 {"post_id","approval":"mm-{post_id}"}`; `404 {"error":"No proposed change to approve in #incident-ai-support"}`;
+`502 {"error"}` if Mattermost does not answer.
+
+### `GET /mattermost/sign-in` (projector)
+
+Opened in the presenter's browser as `http://localhost:{IGNITE_WORKLOAD_PORT}/mattermost/sign-in`:
+signs `oncall` in server-side and answers `302` to the channel URL with
+Mattermost's session cookies (cookies are per host, not per port, so they apply
+to `localhost:{IGNITE_MATTERMOST_PORT}`). No password is shown. A confirms this
+works and records the result here; the fallback is signing in once by hand.
+
+### Reset
+
+`POST /reset` (the desk's Reset, a demo control) also deletes every post in
+`#incident-ai-support` (admin token), as it deletes Grafana's decision
+annotations. Best effort: a Mattermost outage doesn't fail the reset.
+
+## 15. Incident cards
+
+### Reaction `incident-channel` (workstream B, `ops/config`)
+
+`drasi.network/http-sink`, `baseUrl` `http://127.0.0.1:{IGNITE_MATTERMOST_PORT}`,
+`token` = `env:IGNITE_MATTERMOST_BOT_TOKEN`, `successStatusCodes: [201]`
+(Mattermost answers 201 to a new post), `failurePolicy: skip`, `maxRetries: 3`,
+`timeoutMs: 5000`, `unroutedChanges: ignore`. Every route is
+`added` → `POST /api/v4/posts`. The generator takes `channel_id` from
+`.native/mattermost.json` and the button URL from `IGNITE_WORKLOAD_PORT`.
+
+Body envelope (every card; the queries build every string, templates only use
+`{{json …}}`):
+
+```json
+{"channel_id":"<channel_id>","root_id":{{json after.root_id}},"message":"",
+ "props":{"ignite_card":"<card>","ignite_id":{{json after.id}},"ignite_run_epoch":{{json after.run_epoch}},
+  "attachments":[{"fallback":{{json after.title}},"color":"<colour>","title":{{json after.title}},
+    "text":{{json after.text}},"fields":[<fields>],"footer":"Drasi · <query>"<, "actions":[…]>}]}}
+```
+
+`root_id` is `""` except for outcomes. Fields are
+`{"title":"<title>","value":{{json after.<column>}},"short":true|false}`.
+Colours: red `#d44a3a`, orange `#f2a33a`, blue `#3d8bd9`, green `#2fa66a`,
+grey `#9aa4b0`. Workloads are written `support` and `summaries` (`batch` →
+`summaries`); capacities in thousands, e.g. `100k`.
+
+### The cards
+
+Every query keeps to the current run (`ignite_scenario` on `run_epoch`),
+returns `id`, `run_epoch`, `at_ms` and the columns below, and emits a row only
+within 60 s of its event (`NOT drasi.trueLater(true, at_ms + 60000)`), so a
+Server restart reposts nothing older. Texts with `{…}` are filled by the query;
+the examples are the talk's values.
+
+| # | Card (`ignite_card`) | Alias ← query | Trigger and debounce | Thread |
+|---|---|---|---|---|
+| 1 | `failed` | `failed` ← `incident-failed` | A deployment's latest report is `failed` for 3 s (`drasi.trueFor(…, 3000)`); one card per failure; `id` = `failed-{deployment}-{at_ms}` | top level |
+| 2 | `overdue` | `overdue` ← `incident-overdue` | Support's overdue count > 0 for 3 s; one card per episode (until it returns to 0) | top level |
+| 3 | `proposal` | `proposal` ← `incident-proposal` | `Plan` feasible with `moves > 0`, unchanged for 2 s; one card per `candidate_id` (`id` = `proposal-{candidate_id}`) | top level |
+| 4 | `superseded` | `superseded` ← `incident-superseded` | The proposal of card 3 is replaced (new `candidate_id`, or the plan is infeasible) for 2 s, and not because it was applied (no `applied`/`verified` approval for that candidate). Uses `drasi.previousDistinctValue` on the plan's `candidate_id` | top level |
+| 5 | `outcome` | `outcome` ← `incident-outcome` | An approval of the current run turns `applied`, `verified` or `rejected` (not `pending`, not `declined`: the card itself shows those); `id` = `{approval}-{status}` | `root_id` = the approval's `post_id` (`""` if null) |
+| 6 | `at-risk` | `at-risk` ← `incident-at-risk` | `Resilience` `at_risk` with `unhealthy_bins = 0` for 3 s (healthy but fragile) | top level |
+| 7 | `restored` | `restored` ← `incident-restored` | `Resilience` `safe` for 3 s after having been `at_risk` in this run | top level |
+
+Card contents (title, colour, text, fields; `—` = none):
+
+1. **failed**, red. Title `Deployment failed: {deployment}` ("Deployment failed: EU-A").
+   Text "{deployment} has reported Failed for 3 seconds. {runs}" where runs is
+   "Support runs there, so its requests are failing." / "Support and summaries
+   run there…" / "Nothing runs there now." Fields (short): Region `EU`;
+   Capacity `100k tokens/min`; Runs here `support` (or `nothing`).
+2. **overdue**, red. Title `Support requests overdue`. Text "{n} customer-support
+   requests are past their 15-second deadline. More follow until support can
+   run somewhere." Fields: Overdue when posted `3`; Deadline `15 s`; Dashboard
+   `[Operations › Support overdue](http://localhost:{IGNITE_GRAFANA_PORT}/d/ignite-workload)`
+   (the generator writes the port into the template; not a query column).
+3. **proposal**, orange. Title `Proposed change: {change}` ("Proposed change:
+   Move summaries to US-C and support to EU-B"; `change` = the plan's `reason`
+   up to " (", `batch` → `summaries`). Text "Drasi's plan for the current
+   facts: every workload on a healthy deployment its policy allows, within
+   capacity, with the fewest moves. Approve to apply it through the gateway's
+   configuration API." Fields: Why (short) `EU-A is down` (unhealthy deployments;
+   "Capacity changed" if none); Peak use after (short) `80%`; Policy (long)
+   `support: EU-A, EU-B (restricted data, EU only) · summaries: EU-A, EU-B, US-C`;
+   Capacity (long) `healthy: EU-B 100k, US-C 100k · needed: support 60k, summaries 80k`;
+   Based on (short) `revision {revision} · plan {first 8 of candidate_id}`.
+   Actions:
+   ```json
+   [{"id":"approve","name":"Approve","type":"button","style":"primary",
+     "integration":{"url":"http://host.containers.internal:{IGNITE_WORKLOAD_PORT}/mattermost/actions",
+       "context":{"action":"approve","candidate_id":{{json after.candidate_id}},"basis":{{json after.basis}},
+                  "revision":{{json after.revision}},"run_epoch":{{json after.run_epoch}},"change":{{json after.change}}}}},
+    {"id":"decline","name":"Reject","type":"button","style":"danger",
+     "integration":{"url":"…same…","context":{"action":"decline", …same keys…}}}]
+   ```
+   If Cypher can't build Policy or Capacity reliably, B may drop that field
+   (and notes it here); title, Why, Based on and the actions are fixed.
+4. **superseded**, grey. Title `Out of date: the facts changed`. Text "The
+   proposed change \"{previous change}\" no longer matches Drasi's plan, so
+   Drasi would reject an approval of it. {now}" where now is "Drasi's new
+   proposal follows." or "No change fits policy and capacity now: {plan reason}."
+   Fields: Was (long) `{previous change}`; Now (long) `{current change}` or
+   `No valid plan`.
+5. **outcome**, by status:
+   - `applied`, blue. Title `Applied: {change}`. Text "Drasi applied the
+     approved change through the gateway's configuration API. It calls it fixed
+     only when the backlog has cleared and new support requests are answered on
+     the new route." Fields: Approved by `{requested_by}` (or `desk`); Routes
+     `support → EU-B · summaries → US-C`.
+   - `verified`, green. Title `Verified: support has recovered`. Text "The
+     backlog from before the change has cleared and new support requests are
+     answered on the new route." Fields: Approved by; Change `{change}`.
+   - `rejected`, orange. Title `Rejected by Drasi: nothing was changed`. Text
+     "{reason}." (Drasi's reason from `approval-stale` or the gateway's
+     conflict). Fields: Approved by; Change `{change}`.
+6. **at-risk**, orange. Title `Failover at risk: losing {lost} leaves {workload} nowhere to run`
+   (`workload` from the resilience reason: `support`, `summaries`, or
+   "no valid plan" wording when neither is named). Text "Everything is healthy,
+   but if {lost} failed, {workload} would have nowhere allowed to run.
+   {resilience reason}." Fields: Would fail (short) `EU-B`; Affects (short) `support`.
+7. **restored**, green. Title `Failover restored`. Text "Losing any one
+   deployment now still leaves a valid plan for every workload." Fields: —.
+
+The approval itself (pressing Approve or Reject) is shown by the AI service
+updating the card in place (section 14), not by a Drasi post.
+`approval-events` (Grafana annotations) adds the text "Rejected by {requested_by}"
+for `declined`.
+
+Known limits: Mattermost assigns post IDs and the sink ignores responses, so
+Drasi can reply in a thread only where an approval recorded the card's post ID;
+a retried post whose response was lost, or a Server restart within 60 s of an
+event, can post a card twice.
+
+## 16. Operations dashboard
+
+### Panels (workstream C, `dashboards.py`)
+
+One dashboard, uid `ignite-workload`, title "AI service · Operations";
+`decisions.json` (Recovery plan, uid `ignite-decisions`) and its links are
+removed. Every panel has a `description` (the (i) icon) and a top-level
+`"key"`; the projector's highlight addresses `ignite-workload.<key>`. The panel
+header (title, (i) and menu) must stay visible and steady in kiosk view; C
+fixes the current flicker of the menu.
+
+| Key | Id | Type | Title | Description |
+|---|---|---|---|---|
+| `ai-deployments` | 100 | row | AI Deployments | — |
+| `model-calls` | 1 | stat | Model calls | Calls to the AI model per second, both workloads, over the last 30 seconds. |
+| `support-errors` | 2 | stat | Support errors | Share of customer-support model calls that failed in the last 30 seconds. |
+| `answer-time` | 3 | stat | Answer time p95 | 95th percentile time from a customer's question to its answer, over the last minute. The target is 15 seconds. |
+| `support-queue` | 4 | stat | Support queue | Customer-support requests waiting for an answer. One or two in flight is normal. |
+| `alerts-firing` | 10 | stat | Alerts firing | Grafana alert rules firing: model calls failing, and support requests overdue (an alert on Drasi's answer). Each also posts to #incident-ai-support. |
+| `model-calls-chart` | 5 | timeseries | Model calls by workload | Model calls per second, by workload and whether they succeeded. Failed calls are retried. |
+| `support-waiting` | 6 | timeseries | Support requests waiting | Support requests waiting for an answer, and how many are past their 15-second deadline according to Drasi. |
+| `decision-support` | 101 | row | Decision Support | — |
+| `support-overdue` | 7 | stat | Support overdue | Customer-support requests past their 15-second deadline, from a Drasi continuous query. A request becomes overdue as time passes, with no new event. |
+| `deployment-status` | 8 | stat | Deployment status | Each deployment's latest health report. Unknown means no report for 8 seconds: Drasi notices silence as time passes. |
+| `change-status` | 9 | stat | Change status | Where the current change is: awaiting approval, applying, applied and being verified, verified, or rejected because the facts changed. Verified means the backlog cleared and support is answered on the new route. |
+| `recommended-action` | 11 | stat | Recommended action | Drasi's proposed change for the current facts: it fits policy and capacity with the fewest moves. Approve it on its card in #incident-ai-support. |
+| `failover-readiness` | 15 | stat | Failover readiness | Drasi's what-if: if any one deployment failed, would every workload still have somewhere allowed to run? |
+
+Layout, colours and sizes are C's (18-row grid as today).
+
+### Metrics (contract § 9 rows that change)
+
+| Tile | Metric | Labels | Values (text, colour) | Missing while ready | Query (alias) |
+|---|---|---|---|---|---|
+| Change status | `ignite_drasi_change_status` | — | 0 No change in progress (grey), 1 Awaiting approval (orange), 2 Approved, applying (orange), 3 Applied, verifying (orange), 4 Verified (green), 5 Rejected (orange), -1 Unknown | 0 | `tile-change` (`change`) |
+| Recommended action | `ignite_drasi_recommended_action` (replaces `ignite_drasi_action_needed`) | `text` | 0 `None` (green), 1 the change, e.g. `Move summaries to US-C and support to EU-B` (orange), 2 `No change fits policy and capacity` (red), 3 `Add capacity: losing EU-B leaves support nowhere to run` (orange), -1 Unknown | — | `tile-action` (`action`) |
+| Failover readiness | `ignite_drasi_failover_readiness` (replaces `ignite_drasi_safe_if_one_fails`) | `text`, `lost`, `workload` | 1 `Survives losing any one deployment` (green), 0 `At risk: losing EU-B leaves support nowhere to run` (orange), 2 `Already degraded: EU-A down` (grey; Grafana writes the names from `ignite_drasi_deployment_status >= 1`, since the query knows only the count), -1 Unknown | — | `tile-resilience` (`resilience`) |
+
+Grafana shows the `text` label (legend `{{text}}`, text mode name) coloured by
+value. The SSE aliases `tile-action` and `tile-resilience` keep their `value`
+meanings (the desk reads them); the new columns are additive.
+
+**Change status** (`tile-change`, inputs `postgres` and `plan-results`), first
+match wins: plan `unknown` → -1; latest approval `applied` → 3; `pending` → 2;
+plan feasible with `moves > 0` → 1; latest approval `rejected` → 5; `verified`
+→ 4; otherwise 0 (`declined` falls through). If a single query can't express
+"no approval yet", it returns rows only when a latest approval exists and
+Grafana's missing-while-ready default becomes `1` when Recommended action is 1,
+else `0`.
+
+**Link to the proposal.** Recommended action has a panel link and a data link,
+"Open in #incident-ai-support", to
+`http://localhost:{IGNITE_MATTERMOST_PORT}/ai-platform/channels/incident-ai-support`
+(the newest proposal card is at the bottom; a permalink would need the post ID,
+which Drasi doesn't have).
+
+**Removed from Grafana:** Recovery, Running now, Proposed plan, the two policy
+grids, Capacity, Deployments, Last approval, Decision events. Their metrics may
+stay in the exporter (no consumer); their facts are on the cards.
+
+### Alerts to Mattermost
+
+Contact point `incident-channel`, type `slack`, `url`
+`${MATTERMOST_ALERT_WEBHOOK_URL}`, username `Grafana`, added beside the probe's
+webhook (both alert rules, firing and resolved). The alert text names the rule
+and links to the dashboard.
+
+## 17. Projected Mattermost view
+
+| | |
+|---|---|
+| Stage view id | `incident` |
+| Label (`viewLabel`) | `Mattermost · #incident-ai-support` |
+| URL | `${settings.mattermost}/ai-platform/channels/incident-ai-support` |
+| How | An iframe beside the Grafana iframe in `Audience.tsx`, kept loaded once shown, hidden with `visibility` like the dashboards; it ends at the caption line. Mattermost allows framing from the web app origin (`FrameAncestors`, section 13). D may narrow it (Mattermost switches to its single-channel layout below 768 px) and scale it up to read from the back of the room |
+| Signed in | The presenter opens `http://localhost:{IGNITE_WORKLOAD_PORT}/mattermost/sign-in` once in the browser that runs the projector (the desk links to it); the iframe shares its cookies |
+| Highlight | `incident` views have no panel keys |
+
+The `plan` view goes; beats that showed it show `ops` or `incident`.
+
+## 18. Desk
+
+| Action id | Label | Enabled | Press |
+|---|---|---|---|
+| `approve-change` | Approve the proposed change | The SSE `plan-results` row is feasible with `moves > 0`, or the beat expects a rejection (`expect: "rejected"`, the stale card) | `POST /mattermost/approve-latest {"run_epoch"}`: exactly what pressing Approve on the newest proposal card does |
+
+`select-plan` and `approve-plan` (and the desk's plan selection state) are
+removed. The outcome comes from Drasi as today (`tile-last-approval`, approval
+`mm-{post_id}`): applying, applied, verified, or rejected with Drasi's reason.
+The desk tells the presenter to press Approve on the projected card and keeps
+this button as the backup. Tests and the fixture server gain `approve-latest`.
+
+## 19. Working rules for the incident-channel work
+
+### File ownership
+
+| Workstream | Owns | Shared, targeted edits only |
+|---|---|---|
+| A. Mattermost platform | `compose.yaml` (`mattermost` service, Grafana's webhook variable, volume), `observability/postgres/02-mattermost.sql`, `ops/mattermost.py`, `ops/observability-stack.sh`, `ops/observability-env.py`, `ops/native-runtime.py`, `ops/workload.py`, `ports.env`, `ports.default.env`, `ui/settings.mjs`, `ui/src/settings.ts`, `database/`, `workloads/`, `tests/mattermost-*.py` | SETUP.md, DEVELOPERS.md, architecture diagram |
+| B. Drasi event queries and HTTP reaction | `drasi/incident-*.cypher`, `drasi/approval-*.cypher`, `drasi/recovery-*.cypher`, `ops/config/`, `ops/native-build.sh`, `tests/incident-*.py`, `tests/drasi_outputs.py`, `tests/decision-integration.py`, `tests/native-integration.py` | DRASI.md, DEVELOPERS.md |
+| C. Grafana | `observability/grafana/`, `drasi/tile-*.cypher`, `plugins/prometheus/examples/ignite.json`, sections 9 and 16 of this file, `tests/observability-*.py` | README.md, DRASI.md |
+| D. Desk and projector | `presentation/Presenter.tsx`, `notes.ts` sections `failure`, `who`, `recovery`, `resilience` and the action ids, `ui/tests/`, `ui/src/` except `settings.ts`, `PRESENTER.md` (generated), STORY.md | `Audience.tsx` (the `incident` iframe only), `scenes.ts` (`StageView`, `viewLabel`, `dashboards` only); the slides session owns the rest of both, `Explanation.tsx`, `slides.css` and the other `notes.ts` sections |
+
+New tile query names are fixed here (`tile-change`, alias `change`), so B wires
+them in `ops/config` while C writes them. Anyone who changes a contract section
+says so in their commit and to the delivery session. Commit only your own paths
+(`git add <paths>`, never `git add -A`); on `index.lock`, wait and retry.
+Docs: say what is implemented, not narration; remove completed items from
+`work-remaining.md`.
+
+### The live stack
+
+The user reviews the deck on the running stack (containers, Drasi Server on
+19421, AI service on 19500, `vite preview` on 19580). One rule:
+
+1. **Restart only with the documented commands, briefly.** Containers:
+   `./ops/observability-stack.sh up -d <service>` or `restart <service>`. Drasi
+   Server and the AI service: stop the process by PID, then start
+   `python3 ops/native-runtime.py run` / `python3 ops/workload.py run` with
+   `.env` loaded, detached, logging to `demo/.native/logs/server.log` /
+   `workload.log`; check the desk says READY afterwards. The web app: `npm run
+   build` (preview serves the new build; no restart).
+2. **Who restarts what:** A: `mattermost`, Grafana once (when the webhook
+   variable first appears), the AI service. B: Drasi Server (after
+   `ops/native-build.sh`). C: `grafana`. D: nothing (builds only). Before
+   restarting Drasi Server or the AI service, send the delivery session a
+   one-line notice.
+3. **Announce it in the commit message:** `Live stack: restarted <what>`.
+4. **No data resets.** No `/reset`, `workload.py reset`, `native-runtime.py
+   reset`, volume removal or `compose down`. Integration tests reset the
+   scenario: run them only after telling the delivery session and hearing back.
+5. **Keep the bundle stamped.** Rebuilding `ignite-workloads` or anything in
+   `.native/` changes the digests `run` checks: finish with `ops/native-build.sh`
+   (or `python3 ops/native-runtime.py stamp` after a single-crate build).
