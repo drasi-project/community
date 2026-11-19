@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Icon } from "./Icon";
 import "./visuals.css";
 import logo from "./assets/drasi-logo-colored-white.svg";
+import logoTight from "./assets/drasi-logo-colored-white-tight.svg";
 import mark from "./assets/drasi-logomark.svg";
 
 // The Drasi project's own artwork (community/images), on a few slides only.
@@ -124,18 +125,18 @@ const DeployBox = ({ name, region, detail, pending = false }: { name: string; re
 export function Visual({ id, active, qr }: { id: VisualId; active: boolean; qr: ReactNode }) {
   switch (id) {
     case "project": return <div className="content-slide v-slide vs-project">
-      <h1 className="v-logo-title"><img src={logo} alt="Drasi" /></h1><div className="body">
-      <p className="lead">An open-source data processing platform for change-driven systems</p>
+      <div className="v-hero"><h1><img src={logoTight} alt="Drasi" /></h1>
+        <p className="lead">An open-source data processing platform for change-driven systems</p></div>
       <div className="v-project">
         <div className="v-badge"><small>CNCF</small><b>Sandbox project</b><span>since January 2025</span></div>
         <ul className="v-tiles">
-          <li className="blue"><Icon name="code" size={56} /><b>Open source</b><span>Apache 2.0, on GitHub</span></li>
-          <li className="purple"><Icon name="bolt" size={56} /><b>Active development</b><span>New sources, reactions and form factors</span></li>
-          <li className="green"><Icon name="user" size={56} /><b>Growing community</b><span>Users and contributors</span></li>
+          <li className="blue"><Icon name="code" size={52} /><b>Open source</b><span>Apache 2.0, on GitHub</span></li>
+          <li className="purple"><Icon name="bolt" size={52} /><b>Active development</b><span>New sources, reactions and form factors</span></li>
+          <li className="green"><Icon name="user" size={52} /><b>Growing community</b><span>Users and contributors</span></li>
         </ul>
       </div>
       <ul className="v-social">{social.map(([icon, text]) => <li key={text}><Icon name={icon} size={36} />{text}</li>)}</ul>
-    </div></div>;
+    </div>;
     case "problem": return <Slide id={id} title="The problem">
       <p className="lead">Detecting meaningful change as it happens, and reacting to it, is harder than it should be</p>
       <div className="v-versus">

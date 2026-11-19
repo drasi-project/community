@@ -150,3 +150,17 @@
 .slide-deck .stage-frame .v-social .icon { color: var(--light-blue); }
 .slide-deck .stage-frame .v-langs-q { display: flex; justify-content: center; gap: 10px; margin-top: 12px; font-style: normal; }
 .slide-deck .stage-frame .v-langs-q i { padding: 6px 14px; background: #091F2C; color: var(--light-purple); font: 600 26px/1.1 var(--code); font-style: normal; }
+
+/* Project intro: the Drasi logo as the hero, the facts beside it, the links along the bottom */
+.slide-deck .stage-frame .vs-project .v-hero { position: absolute; left: 92px; top: 200px; width: 760px; }
+.slide-deck .stage-frame .vs-project .v-hero img { display: block; width: 740px; height: auto; }
+.slide-deck .stage-frame .vs-project .v-hero .lead { margin: 64px 0 0; font-size: 44px; line-height: 1.25; }
+.slide-deck .stage-frame .vs-project .v-project { position: absolute; left: 920px; top: 110px; width: 908px; display: grid; grid-template-columns: 1fr; gap: 24px; }
+.slide-deck .stage-frame .vs-project .v-badge { padding: 26px 34px; }
+.slide-deck .stage-frame .vs-project .v-badge small { font-size: 34px; }
+.slide-deck .stage-frame .vs-project .v-badge b { margin-top: 6px; font-size: 64px; }
+.slide-deck .stage-frame .vs-project .v-badge span { margin-top: 10px; font-size: 40px; }
+.slide-deck .stage-frame .vs-project .v-tiles li { padding: 18px 28px; }
+.slide-deck .stage-frame .vs-project .v-tiles b { font-size: 40px; }
+.slide-deck .stage-frame .vs-project .v-tiles span { font-size: 28px; }
+.slide-deck .stage-frame .vs-project .v-social { position: absolute; left: 92px; top: 862px; width: 1736px; margin: 0; }
