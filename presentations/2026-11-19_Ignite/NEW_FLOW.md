@@ -66,6 +66,6 @@ Finally, summarize what we have shown.
 
 Links to reference material.
 
-Survey QR code
+Survey QR code  
 
 
