@@ -163,7 +163,7 @@ proposal: approve the new one.
 
 | Time | Part | Projector shows | You |
 |---|---|---|---|
-| 0:00 | Intro | Walk-in, Who I am, Drasi, the project, Why Drasi? | Walk-in; who I am; the project; why Drasi? |
+| 0:00 | Intro | Walk-in, Who I am, Drasi, the project, Why Drasi?, Change-driven, with Drasi | Walk-in; who I am; the project; why Drasi? |
 | 2:00 | What Drasi is | Drasi keeps it simple · one source, Drasi keeps it simple · several sources, Drasi keeps it simple · many queries and reactions, Drasi keeps it simple · queries build on queries, Plugin ecosystem, Form factors | Sources, Continuous Queries, Reactions; the plugin ecosystem; form factors |
 | 5:30 | Observability and the scenario | Observability issues, What they want, The scenario | Observability: the issues, what organizations want, and the scenario |
 | 8:00 | Scene 1 · Status from telemetry and configuration | Grafana · Operations | Telemetry + configuration → queries → Prometheus reaction → Grafana |
@@ -186,7 +186,8 @@ Say it in your own words.
    - **Watch for:** Press Start demo traffic before you start talking, so the dashboard has several minutes of data by scene 1. Press it at least 5 minutes after any reset.
 2. **Who I am.** Good morning, my name is Allen Jones. I'm a member of the Azure Incubations team at Microsoft. TODO: one line on the talk's promise.
 3. **Drasi, the project.** For the last few years I've been working on an open-source project named Drasi. We started it in Azure Incubations and open-sourced it in October 2024. Since January 2025 Drasi has been a CNCF Sandbox project, and it's in active development with a growing community of users and contributors.
-4. **Why Drasi?** Drasi was started because, in our experience, detecting meaningful changes in data as they happen, and reacting to them, is more difficult than it should be. TODO: one concrete example of the polling-and-diffing pain.
+4. **Why Drasi?** Drasi was started because, in our experience, detecting meaningful changes in data as they happen, and reacting to them, is harder than it should be. There are two common approaches. Polling: query everything every few seconds, diff it with last time, and write code to react. It's simple, but slow to notice, wasteful, and it misses changes that happen in between. Or stream processing: consume an event stream and react to every event. That's powerful, and every event arrives, but working out what an event means for the current state, joining it with other sources, and noticing when something didn't happen, means building and running your own state: windows, joins, state stores, ordering and late events.
+5. **Change-driven, with Drasi.** Drasi takes a change-driven approach. You describe the result you want, as a query. Changes flow in from the systems you already have; Drasi keeps the result current as the data changes, and as time passes, across sources; and a reaction acts on just what changed: what was added, updated or removed. No polling loop, and no state store to build and run yourself.
 
 **If it breaks:** The slides don't depend on the demo. Carry on.
 

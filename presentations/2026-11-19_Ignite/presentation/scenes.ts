@@ -30,6 +30,7 @@ export const slides = [
   { id: "title", title: "Who I am" },
   { id: "project", title: "Drasi, the project" },
   { id: "problem", title: "Why Drasi?" },
+  { id: "change-driven", title: "Change-driven, with Drasi" },
   { id: "drasi-1", title: "Drasi keeps it simple · one source" },
   { id: "drasi-2", title: "Drasi keeps it simple · several sources" },
   { id: "drasi-3", title: "Drasi keeps it simple · many queries and reactions" },

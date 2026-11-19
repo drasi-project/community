@@ -9,7 +9,7 @@ import mark from "./assets/drasi-logomark.svg";
 export const DrasiMark = ({ size = 40 }: { size?: number }) => <img className="drasi-mark" src={mark} alt="" style={{ height: size }} />;
 
 // The new flow's slides (NEW_FLOW.md): diagrams rather than lists. Rough-to-medium polish.
-export const visualIds = ["project", "problem", "drasi-1", "drasi-2", "drasi-3", "drasi-4", "plugins", "forms", "issues", "wants", "scenario-map", "closing", "links"] as const;
+export const visualIds = ["project", "problem", "change-driven", "drasi-1", "drasi-2", "drasi-3", "drasi-4", "plugins", "forms", "issues", "wants", "scenario-map", "closing", "links"] as const;
 export type VisualId = typeof visualIds[number];
 export const isVisual = (id: string): id is VisualId => (visualIds as readonly string[]).includes(id);
 
@@ -104,6 +104,16 @@ function Loop() {
   </svg>;
 }
 
+// Stream processing: the state and logic you build between the stream and the reaction.
+function Stream() {
+  const steps = ["Consume the event stream", "Keep state: windows, joins, stores", "Handle order and late events", "Code to react"];
+  return <svg className="v-loop v-stream" viewBox="0 0 760 460" width="760" height="460" aria-hidden="true">
+    {[0, 1, 2].map(i => <path key={i} d={`M380,${94 + i * 116} L380,${130 + i * 116}`} markerEnd="url(#stream-head)" />)}
+    <defs><marker id="stream-head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" /></marker></defs>
+    {steps.map((t, i) => <g key={t}><rect x="40" y={14 + i * 116} width="680" height="80" rx="8" /><text x="380" y={66 + i * 116} textAnchor="middle">{t}</text></g>)}
+  </svg>;
+}
+
 // The tangle: an on-call engineer between many tools.
 const tools: [number, number, string][] = [[90, 70, "Metrics"], [400, 40, "Logs"], [720, 80, "Traces"], [840, 250, "Alerts"], [740, 500, "Dashboards"],
   [680, 640, "Tickets"], [360, 660, "Chat"], [90, 600, "CMDB"], [30, 400, "Deploy logs"], [40, 230, "Policy docs"], [600, 390, "Spreadsheets"], [300, 470, "Scripts"]];
@@ -140,14 +150,18 @@ export function Visual({ id, active, qr }: { id: VisualId; active: boolean; qr: 
     case "problem": return <Slide id={id} title="Why Drasi?">
       <p className="lead">Detecting meaningful change as it happens, and reacting to it, is harder than it should be</p>
       <div className="v-versus">
-        <section className="bad"><h2><Icon name="poll" size={40} />Usually</h2><Loop /><p>Late, wasteful, and rebuilt for every system</p></section>
-        <section className="good"><h2><Icon name="bolt" size={40} />Change-driven</h2>
-          <ol className="v-straight">
-            <li><b>Something changes</b><span>a row, a metric, an event</span></li>
-            <li><b>The answer updates</b><span>only what's affected</span></li>
-            <li><b>React, right away</b><span>even when something that should happen doesn't</span></li>
-          </ol></section>
+        <section className="bad"><h2><Icon name="poll" size={40} />Polling</h2><Loop /><p>Slow to notice, wasteful, and changes in between are missed</p></section>
+        <section className="bad"><h2><Icon name="otel" size={40} />Stream processing</h2><Stream /><p>Every event arrives; what it means for the current state is code you write and run</p></section>
       </div>
+    </Slide>;
+    case "change-driven": return <Slide id={id} title="Change-driven, with Drasi" withLogo>
+      <p className="lead">Describe the result you want; Drasi keeps it current</p>
+      <ol className="v-chain">
+        <li><Icon name="pg" size={64} /><b>Changes flow in</b><span>from the databases, telemetry and systems you already have</span></li>
+        <li className="drasi"><img className="v-chain-logo" src={logoTight} alt="Drasi" /><b>Drasi keeps the result current</b><span>as data changes, and as time passes, across sources</span></li>
+        <li><Icon name="bolt" size={64} /><b>The reaction acts on the change</b><span>only what changed: added, updated or removed</span></li>
+      </ol>
+      <p className="v-foot">No polling loop, and no state store to build and run yourself</p>
     </Slide>;
     case "drasi-4": return <Slide id={id} title="Drasi keeps it simple" withLogo>
       <p className="lead">Queries build on each other's results: a computation graph, kept current</p>

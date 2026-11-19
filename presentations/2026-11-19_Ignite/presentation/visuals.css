@@ -164,3 +164,15 @@
 .slide-deck .stage-frame .vs-project .v-tiles b { font-size: 40px; }
 .slide-deck .stage-frame .vs-project .v-tiles span { font-size: 28px; }
 .slide-deck .stage-frame .vs-project .v-social { position: absolute; left: 92px; top: 862px; width: 1736px; margin: 0; }
+
+/* Stream processing beside polling; then the change-driven chain */
+.slide-deck .stage-frame .v-stream path { fill: none; stroke: var(--light-red); stroke-width: 4; }
+.slide-deck .stage-frame .v-stream marker path { fill: var(--light-red); stroke: none; }
+.slide-deck .stage-frame .v-chain { list-style: none; margin: 64px 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 80px; }
+.slide-deck .stage-frame .v-chain li { position: relative; min-height: 470px; padding: 36px 34px; background: var(--green); color: var(--ink); display: flex; flex-direction: column; gap: 18px; }
+.slide-deck .stage-frame .v-chain li.drasi { background: #091F2C; color: var(--white); border: 6px solid var(--green); }
+.slide-deck .stage-frame .v-chain li:not(:last-child)::after { content: ""; position: absolute; right: -62px; top: 50%; transform: translateY(-50%); border: 24px solid transparent; border-left: 34px solid var(--green); border-right: 0; }
+.slide-deck .stage-frame .v-chain b { font: 600 48px/1.15 var(--display); }
+.slide-deck .stage-frame .v-chain span { font-size: 32px; line-height: 1.3; }
+.slide-deck .stage-frame .v-chain .drasi-mark { align-self: flex-start; }
+.slide-deck .stage-frame .v-chain-logo { height: 64px; align-self: flex-start; }
