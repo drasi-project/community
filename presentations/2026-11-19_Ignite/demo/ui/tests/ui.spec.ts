@@ -164,7 +164,7 @@ test("the configuration shown beside each panel is the real files', text, and ev
   const config = buildConfig({ overdueQuery: read("overdue-tasks.cypher"), healthQuery: read("deployment-health.cypher"),
     workloadsQuery: read("tile-workloads.cypher"), rego: read("policy/placement.rego"), optimization: JSON.parse(read("optimization/optimization.json")) });
   expect(config["deployment-health"].lines[0]).toBe(read("deployment-health.cypher").split("\n").find(line => line.startsWith("MATCH")));
-  expect(config["overdue-tasks"].lines.join("\n")).toContain("drasi.trueLater(true, t.deadline_ms)");
+  expect(config["overdue-tasks"].lines.join("\n")).toContain("drasi.trueLater(t.completed_ms IS NULL AND t.cancelled_ms IS NULL, t.deadline_ms)");
   expect(config["tile-workloads"].lines.join("\n")).toContain("(h:DeploymentHealth)");
   expect(config.policy.lines).toContain("allowed_destination if input.target.id in input.destinations");
   expect(config["what-if"].lines.join("\n")).toContain('"name": "loss"');
