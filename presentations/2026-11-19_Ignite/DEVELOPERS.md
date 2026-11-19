@@ -206,7 +206,7 @@ The Drasi logo is the project's own artwork (`images/` at the repository root), 
 `presentation/assets/` with the viewBox cropped to the artwork. Use it by one rule:
 
 - The full logo only where Drasi is introduced or summed up: the hero on the project intro, and
-  top right at one size (`.v-logo`) on Change-driven, What you saw and Learn more.
+  top right at one size (`.v-logo`) on Change-driven, What you saw and Learn more; large on Thank you.
 - The logomark (`DrasiMark`, one size: 48 px on slides, 28 px in the dashboard overlays) wherever
   Drasi is a box or node in a diagram: plugins, form factors, the change-driven chain, how-it-works cards.
 - No logo anywhere else.

@@ -170,7 +170,7 @@ proposal: approve the new one.
 | 9:30 | 20–22 | Scene 2 · The absence of change | Grafana · Operations | The absence of change: requests with no answer by their deadline (trueLater) |
 | 12:00 | 23–28 | Scene 3 · Compliance meets resilience | Grafana · Operations | Summaries Europe-only puts failover at risk; compliance allows the US and it's safe |
 | 15:00 | 29–33 | Scene 4 · Failure, proposal, approval | Grafana · Operations, Mattermost · #incident-ai-support | EU-A fails; Drasi's proposal is a card in Mattermost; approve; verified; restore |
-| 19:30 | 34–39 | Plugins, form factors and close | Plugin ecosystem, Run Drasi your way, What you saw, Learn more, Session survey | Plugins; run it your way; what we showed; links; the session survey, then questions |
+| 19:30 | 34–40 | What you saw, form factors, extensibility and close | What you saw, Run Drasi your way, Extensibility, Thank you, Learn more, Session survey | What you saw; form factors; extensibility; thank you; learn more; the session survey, then questions |
 | 22:00 | | Questions | Session survey | Take questions |
 
 ## The script
@@ -373,32 +373,33 @@ Say it in your own words.
 
 **If it breaks:** If nothing changes within 30 seconds, press Use recordings from here on. If Approve doesn't respond, press Approve the proposed change on the desk; never approve twice.
 
-### 8. Plugins, form factors and close (2½ minutes)
+### 8. What you saw, form factors, extensibility and close (2½ minutes)
 
-34. **Plugin ecosystem.**\
-   Everything you saw was configuration over plugins.\
+34. **What you saw.**\
+   So hopefully you can see from what I just showed you that Drasi has a valuable role to play in the domain of observability.\
+   We saw status worked out by joining telemetry and configuration into the dashboard.\
+   We saw what didn't happen: requests that got no answer, noticed at their deadline.\
+   We saw compliance and resilience together: one policy change, and readiness re-checked at once.\
+   And we saw a fix proposed within policy, approved in chat and verified.\
+   But please remember that Drasi is a domain-agnostic platform for building change-driven solutions in any domain.
+35. **Run Drasi your way.**\
+   With that in mind, I'll highlight that Drasi comes in multiple form factors suitable for different environments and purposes.\
+   Embed it as a library in Rust, Node.js, Python or .NET to build change-driven applications; run Drasi Server as a process or a container, configured in YAML, which is what this demo runs on; or deploy it on Kubernetes, where each part scales on its own.\
+   TODO: confirm availability of each at Ignite.
+36. **Extensibility.**\
+   And Drasi is highly extensible.\
    Sources, reactions and continuous models are all plugins, and there's a growing ecosystem of them: databases, streams and APIs, Kubernetes and live data feeds coming in; APIs, agents, messaging and databases going out.\
    And you can build your own: this demo adds one, the Prometheus reaction.\
    Continuous queries can be written in openCypher or GQL; this demo uses Cypher.
-35. **Run Drasi your way.**\
-   And you can run it your way.\
-   Embed it as a library in Rust, Node.js, Python or .NET to build change-driven applications; run Drasi Server as a process or a container, configured in YAML, which is what this demo runs on; or deploy it on Kubernetes, where each part scales on its own.\
-   TODO: confirm availability of each at Ignite.
-36. **What you saw.**\
-   So what did we see?\
-   Status worked out from telemetry and configuration together.\
-   Requests that got no answer, noticed at their deadline.\
-   A compliance change that made the service more resilient.\
-   And a fix, proposed within policy, approved in chat and verified.\
-   Each one is richer context from data that already existed in different places, and none of it needed an integration project: connect sources, configure continuous models, connect reactions.
-37. **Learn more.**\
-   To learn more, start at drasi.io; the code, and this demo, are on GitHub.
-38. **Session survey.**\
-   Thank you.\
-   Please scan the code and tell us how we did in the session survey.\
+37. **Thank you.**\
+   And with that, I thank you for your time.
+38. **Learn more.**\
+   Here is a list of ways you can learn more.
+39. **Session survey.**\
+   And please visit the session survey and provide feedback so we can improve future presentations.\
    Questions?
    - **Watch for:** The survey slide with its QR code stays up during questions.
-39. **Session survey.**\
+40. **Session survey.**\
    After questions, stop the demo traffic.\
    Leave the survey slide up.
    - **Press:** Stop demo traffic

@@ -46,12 +46,12 @@ test("the talk is 22 minutes and every beat says something and shows something",
     }
     expect(cue.ifBroken.trim()).not.toBe("");
   }
-  expect(slides.map(s => s.id)).toEqual(["walkin", "title", "project", "problem", "change-driven", "drasi-1", "drasi-2", "drasi-3", "issues", "wants", "wants-drasi", "scenario-map", "plugins", "forms", "closing", "links", "survey"]);
+  expect(slides.map(s => s.id)).toEqual(["walkin", "title", "project", "problem", "change-driven", "drasi-1", "drasi-2", "drasi-3", "issues", "wants", "wants-drasi", "scenario-map", "closing", "forms", "plugins", "thanks", "links", "survey"]);
   // The walk-in opens the talk, Drasi grows from one source to many, each scene opens its overlay on how it works, and the survey is last.
   const shown = scenes.flatMap(scene => notes[scene.id].beats.map(beat => beat.show));
   expect(shown[0]).toBe("walkin");
   expect(notes.drasi.beats.map(beat => beat.show)).toEqual(["drasi-1", "drasi-2", "drasi-3"]);
-  expect(notes.closing.beats.map(beat => beat.show).slice(0, 3)).toEqual(["plugins", "forms", "closing"]);
+  expect(notes.closing.beats.map(beat => beat.show).slice(0, 5)).toEqual(["closing", "forms", "plugins", "thanks", "links"]);
   for (const id of ["scene1", "scene2", "scene3", "scene4"] as const) expect(notes[id].beats.find(beat => beat.config)!.config![0], id).toMatch(/^how-/);
   expect(shown.at(-1)).toBe("survey");
 });

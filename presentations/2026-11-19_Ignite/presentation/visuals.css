@@ -140,7 +140,8 @@
 
 /* The Drasi logo (the project's own artwork, cropped to the artwork). One rule across the deck:
    - The full logo only where Drasi is introduced or summed up: the hero on the project intro, and
-     top right, level with the title, at one size (.v-logo) on Change-driven, What you saw and Learn more.
+     top right, level with the title, at one size (.v-logo) on Change-driven, What you saw and Learn more;
+     large, centred, on Thank you.
    - Everywhere else Drasi is a box or node in a diagram (plugins, form factors, the change-driven
      chain, how-it-works cards): the logomark (.drasi-mark) at one size, 48 px on slides; the
      dashboard overlays draw everything at overlay scale, so there it's 28 px.
@@ -291,3 +292,9 @@
 .slide-deck .stage-frame .v-site.pending-capacity { width: 440px; }
 .slide-deck .stage-frame .v-site-class { white-space: nowrap; }
 .slide-deck .stage-frame .v-site-class i { white-space: nowrap; }
+
+/* What you saw: the domain-agnostic point; Thank you */
+.slide-deck .stage-frame .v-agnostic { margin-top: auto; padding: 18px 26px; border-left: 10px solid var(--light-yellow); background: var(--panel); font: 600 38px/1.25 var(--display); color: var(--white); }
+.slide-deck .stage-frame .v-thanks { position: absolute; left: 92px; right: 92px; top: 0; height: 1002px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 56px; }
+.slide-deck .stage-frame .v-thanks img { width: 760px; }
+.slide-deck .stage-frame .v-thanks h1 { margin: 0; font: 600 120px/1 var(--display); color: var(--white); }

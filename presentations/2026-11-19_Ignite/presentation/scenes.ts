@@ -38,9 +38,10 @@ export const slides = [
   { id: "wants", title: "What organizations want" },
   { id: "wants-drasi", title: "What organizations want · with Drasi" },
   { id: "scenario-map", title: "The scenario" },
-  { id: "plugins", title: "Plugin ecosystem" },
-  { id: "forms", title: "Run Drasi your way" },
   { id: "closing", title: "What you saw" },
+  { id: "forms", title: "Run Drasi your way" },
+  { id: "plugins", title: "Extensibility" },
+  { id: "thanks", title: "Thank you" },
   { id: "links", title: "Learn more" },
   { id: "survey", title: "Session survey" },
 ] as const;
@@ -63,7 +64,7 @@ export const scenes = [
   { id: "scene2", title: "Scene 2 · The absence of change", start: 9.5, minutes: 2.5 },
   { id: "scene3", title: "Scene 3 · Compliance meets resilience", start: 12, minutes: 3 },
   { id: "scene4", title: "Scene 4 · Failure, proposal, approval", start: 15, minutes: 4.5 },
-  { id: "closing", title: "Plugins, form factors and close", start: 19.5, minutes: 2.5 },
+  { id: "closing", title: "What you saw, form factors, extensibility and close", start: 19.5, minutes: 2.5 },
 ] as const;
 export type SceneId = typeof scenes[number]["id"];
 export const timeLabel = (minutes: number) => `${Math.floor(minutes)}:${Math.round((minutes % 1) * 60).toString().padStart(2, "0")}`;

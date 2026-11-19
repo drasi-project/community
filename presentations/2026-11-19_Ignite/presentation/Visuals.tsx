@@ -14,7 +14,7 @@ import worldLand from "./assets/world-land.svg";
 export const DrasiMark = () => <img className="drasi-mark" src={mark} alt="" />;
 
 // The new flow's slides (NEW_FLOW.md): diagrams rather than lists. Rough-to-medium polish.
-export const visualIds = ["project", "problem", "change-driven", "drasi-1", "drasi-2", "drasi-3", "plugins", "forms", "issues", "wants", "wants-drasi", "scenario-map", "closing", "links"] as const;
+export const visualIds = ["project", "problem", "change-driven", "drasi-1", "drasi-2", "drasi-3", "plugins", "forms", "issues", "wants", "wants-drasi", "scenario-map", "closing", "thanks", "links"] as const;
 export type VisualId = typeof visualIds[number];
 export const isVisual = (id: string): id is VisualId => (visualIds as readonly string[]).includes(id);
 
@@ -201,7 +201,7 @@ export function Visual({ id, active, qr }: { id: VisualId; active: boolean; qr: 
         <Grow step={step} active={active} />
       </Slide>;
     }
-    case "plugins": return <Slide id={id} title="Everything is a plugin">
+    case "plugins": return <Slide id={id} title="Extensibility">
       <div className="v-hub">
         <div className="v-plug role-source">{pluginSources.map(([group, items]) => <div className="v-group" key={group}><h3>{group}</h3><ul>{items.map(t => <li key={t}>{t}</li>)}</ul></div>)}</div>
         <Arrow />
@@ -287,8 +287,11 @@ export function Visual({ id, active, qr }: { id: VisualId; active: boolean; qr: 
         <li><small>4</small><b>A fix people approve</b><span>Proposed, approved in chat, verified</span></li>
       </ol>
       <ol className="v-ribbon"><li className="role-source">Connect sources</li><li className="role-query">Configure continuous models</li><li className="role-reaction">Connect reactions</li></ol>
-      <p className="v-foot">Richer context, in the tools you already use. Apart from one Prometheus reaction plugin, this demo is configuration.</p>
+      <p className="v-agnostic">Drasi is domain-agnostic: build change-driven solutions in any domain.</p>
     </Slide>;
+    case "thanks": return <div className="content-slide v-slide vs-thanks">
+      <div className="v-thanks"><img src={logo} alt="Drasi" /><h1>Thank you</h1></div>
+    </div>;
     case "links": return <Slide id={id} title="Learn more" withLogo>
       <div className="v-links">
         <div className="v-qr">{qr}<b>drasi.io</b></div>
