@@ -12,7 +12,7 @@ import cncf from "./assets/cncf-white.svg";
 export const DrasiMark = () => <img className="drasi-mark" src={mark} alt="" />;
 
 // The new flow's slides (NEW_FLOW.md): diagrams rather than lists. Rough-to-medium polish.
-export const visualIds = ["project", "problem", "change-driven", "drasi-1", "drasi-2", "drasi-3", "plugins", "forms", "issues", "wants", "scenario-map", "closing", "links"] as const;
+export const visualIds = ["project", "problem", "change-driven", "drasi-1", "drasi-2", "drasi-3", "plugins", "forms", "issues", "wants", "wants-drasi", "scenario-map", "closing", "links"] as const;
 export type VisualId = typeof visualIds[number];
 export const isVisual = (id: string): id is VisualId => (visualIds as readonly string[]).includes(id);
 
@@ -90,7 +90,7 @@ const gnodes: GNode[] = [
   { id: "dh", x: 380, y: 420, w: 300, label: "Deployment health", tone: tones[1] },
   { id: "pol", x: 780, y: 110, w: 260, label: "Policy (Rego)", tone: modelTone, fresh: true },
   { id: "ws", x: 780, y: 530, w: 260, label: "Workload status", tone: tones[1], fresh: true },
-  { id: "plan", x: 1120, y: 300, w: 220, label: "Plan", tone: modelTone, fresh: true },
+  { id: "plan", x: 1080, y: 300, w: 300, label: "Plan (optimization)", tone: modelTone, fresh: true },
   { id: "chan", x: 1440, y: 110, w: 296, label: "Incident channel", tone: tones[2] },
   { id: "api", x: 1440, y: 300, w: 296, label: "Gateway API", tone: tones[2] },
   { id: "graf", x: 1440, y: 530, w: 296, label: "Grafana", tone: tones[2] },
@@ -100,7 +100,7 @@ const gedges: [string, string, boolean?][] = [["pg", "pin"], ["otel", "dh"], ["p
 function QueryGraph({ active }: { active: boolean }) {
   const at = (id: string) => gnodes.find(n => n.id === id)!;
   return <svg className={`v-grow${active ? " play" : ""}`} viewBox="0 0 1736 650" width="1736" height="650" role="img" aria-label="Continuous queries feeding other queries and models">
-    {[["Sources", 150, tones[0]], ["Continuous queries and models", 860, tones[1]], ["Reactions", 1588, tones[2]]].map(([h, x, fill]) =>
+    {[["Sources", 150, tones[0]], ["Continuous Queries and Models", 860, tones[1]], ["Reactions", 1588, tones[2]]].map(([h, x, fill]) =>
       <text key={h as string} x={x as number} y="40" textAnchor="middle" className="v-grow-head" style={{ fill: fill as string }}>{h}</text>)}
     <defs><marker id="graph-head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#D9D9D6" /></marker></defs>
     {gedges.map(([a, b, fresh]) => { const f = at(a), t = at(b);
@@ -196,8 +196,8 @@ export function Visual({ id, active, qr }: { id: VisualId; active: boolean; qr: 
         <div className="v-plug role-source">{pluginSources.map(([group, items]) => <div className="v-group" key={group}><h3>{group}</h3><ul>{items.map(t => <li key={t}>{t}</li>)}</ul></div>)}</div>
         <Arrow />
         <div className="v-core"><b><DrasiMark />Drasi</b>
-          <span className="role-query">Continuous queries<em className="v-langs-q"><i>openCypher</i><i>GQL</i></em></span>
-          <span className="role-model">Continuous models<em className="v-models">{["Policy", "Optimization", "View", "Arithmetic", "Geometry"].map(m => <i key={m}>{m}</i>)}</em></span></div>
+          <span className="role-query">Continuous Queries<em className="v-langs-q"><i>openCypher</i><i>GQL</i></em></span>
+          <span className="role-model">Continuous Models<em className="v-models">{["Policy", "Optimization", "View", "Arithmetic", "Geometry"].map(m => <i key={m}>{m}</i>)}</em></span></div>
         <Arrow />
         <div className="v-plug role-reaction">{pluginReactions.map(([group, items]) => <div className="v-group" key={group}><h3>{group}</h3><ul>{items.map(t => <li key={t}>{t}</li>)}</ul></div>)}</div>
       </div>
@@ -208,17 +208,16 @@ export function Visual({ id, active, qr }: { id: VisualId; active: boolean; qr: 
         <div className="v-col gray"><h2>In your app</h2>
           <div className="v-sketch"><div className="v-box app"><small>Your app</small><div className="v-box lib"><DrasiMark />Drasi library</div></div></div>
           <ul className="v-langs">{["Rust", "Node.js", "Python", ".NET"].map(l => <li key={l}>{l}</li>)}</ul>
-          <p>Embed it; react in your own code</p></div>
+          <p>Build change-driven applications</p></div>
         <div className="v-col gray"><h2>As a service</h2>
           <div className="v-sketch row"><div className="v-box src">Data</div><Arrow /><div className="v-box lib"><DrasiMark />Drasi Server</div><Arrow /><div className="v-box src">Tools</div></div>
-          <ul className="v-langs"><li>One container</li></ul>
-          <p>Configure it in YAML; this demo runs on it</p></div>
+          <ul className="v-langs"><li>Process</li><li>Container</li></ul>
+          <p>Configure it in YAML</p></div>
         <div className="v-col gray"><h2>On Kubernetes</h2>
-          <div className="v-sketch"><div className="v-box cluster"><small><DrasiMark /> Drasi on a cluster</small><div className="v-pods"><span className="role-source">Sources</span><span>Queries</span><span className="role-reaction">Reactions</span></div></div></div>
+          <div className="v-sketch"><div className="v-box cluster"><small><DrasiMark /> Drasi on a cluster</small><div className="v-pods"><span>Sources</span><span>Queries</span><span>Reactions</span></div></div></div>
           <ul className="v-langs"><li>drasi CLI</li><li>Resources</li></ul>
           <p>Each part scales on its own</p></div>
       </div>
-      <p className="v-foot todo">TODO: confirm which form factors are available at Ignite</p>
     </Slide>;
     case "issues": return <Slide id={id} title="Observability today">
       <div className="v-split"><Tangle />
@@ -230,11 +229,11 @@ export function Visual({ id, active, qr }: { id: VisualId; active: boolean; qr: 
           <li><b>Context lives elsewhere</b><span>policy, owners, business data</span></li>
         </ul></div>
     </Slide>;
-    case "wants": return <Slide id={id} title="What teams want">
+    case "wants": case "wants-drasi": return <Slide id={id} title="What organizations want">
       <div className="v-clear">
         <ul className="v-inputs">{["Telemetry", "Application data", "Policy", "Changes and approvals"].map(t => <li key={t}>{t}</li>)}</ul>
         <Arrow />
-        <div className="v-context"><b>Connected context</b><span>kept current as things change</span></div>
+        <div className={`v-context${id === "wants-drasi" ? " with-drasi" : ""}`}>{id === "wants-drasi" && <DrasiMark />}<b>Connected context</b><span>kept current as things change</span></div>
         <Arrow />
         <ul className="v-answers">{["Who's affected?", "What changed?", "What should we do?", "Did it work?"].map(t => <li key={t}><Icon name="check" size={36} />{t}</li>)}</ul>
       </div>
