@@ -22,7 +22,7 @@ function HowCard({ card }: { card: How }) {
   return <div className="how-card">
     <p className="how-title">How it works</p>
     <ol className="how-flow">
-      {columns.map(([key, label, tone]) => <li key={key} className={`how-col ${tone}`}><h3 className={key === "drasi" ? "drasi" : undefined}>{key === "drasi" && <DrasiMark size={26} />}{label}</h3><ul>{card[key].map(part)}</ul></li>)}
+      {columns.map(([key, label, tone]) => <li key={key} className={`how-col ${tone}`}><h3 className={key === "drasi" ? "drasi" : undefined}>{key === "drasi" && <DrasiMark />}{label}</h3><ul>{card[key].map(part)}</ul></li>)}
       <li className="how-col lands"><h3>Shows up as</h3><p>{card.lands}</p></li>
     </ol>
   </div>;

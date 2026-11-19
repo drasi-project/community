@@ -40,7 +40,6 @@ export function Explanation({ slide, active = false }: { slide: SlideId; active?
     <Logo />
     <div className="title-copy">
       <h1>Monitoring<br />without polling</h1>
-      <p>Answers that update the moment things change, beside the monitoring you already use</p>
     </div>
     <div className="title-speaker">
       {speaker.name && <p className="name">{speaker.name}</p>}

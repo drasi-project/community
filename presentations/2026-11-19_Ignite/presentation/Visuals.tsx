@@ -1,21 +1,22 @@
 import type { ReactNode } from "react";
 import { Icon } from "./Icon";
 import "./visuals.css";
-import logo from "./assets/drasi-logo-colored-white.svg";
-import logoTight from "./assets/drasi-logo-colored-white-tight.svg";
-import mark from "./assets/drasi-logomark.svg";
+import logo from "./assets/drasi-logo-colored-white-tight.svg";
+import mark from "./assets/drasi-logomark-tight.svg";
 
-// The Drasi project's own artwork (community/images), on a few slides only.
-export const DrasiMark = ({ size = 40 }: { size?: number }) => <img className="drasi-mark" src={mark} alt="" style={{ height: size }} />;
+// The Drasi project's own artwork (community/images), cropped to the artwork. The rule (visuals.css):
+// the full logo only where Drasi is introduced or summed up; the logomark, at one size, where Drasi
+// is a box or node in a diagram.
+export const DrasiMark = () => <img className="drasi-mark" src={mark} alt="" />;
 
 // The new flow's slides (NEW_FLOW.md): diagrams rather than lists. Rough-to-medium polish.
-export const visualIds = ["project", "problem", "change-driven", "drasi-1", "drasi-2", "drasi-3", "drasi-4", "plugins", "forms", "issues", "wants", "scenario-map", "closing", "links"] as const;
+export const visualIds = ["project", "problem", "change-driven", "drasi-1", "drasi-2", "drasi-3", "plugins", "forms", "issues", "wants", "scenario-map", "closing", "links"] as const;
 export type VisualId = typeof visualIds[number];
 export const isVisual = (id: string): id is VisualId => (visualIds as readonly string[]).includes(id);
 
 const nb = (text: string) => text.replace(/\b(EU|US)-([A-C])\b/g, "$1\u2011$2");
 const Slide = ({ id, title, children, withLogo = false }: { id: string; title: string; children: ReactNode; withLogo?: boolean }) =>
-  <div className={`content-slide v-slide vs-${id}`}><h1>{title}</h1>{withLogo && <img className="v-logo" src={logo} alt="Drasi" />}<div className="body">{children}</div></div>;
+  <div className={`content-slide v-slide vs-${id}`}><h1 className={title.length > 40 ? "long" : undefined}>{title}</h1>{withLogo && <img className="v-logo" src={logo} alt="Drasi" />}<div className="body">{children}</div></div>;
 // From drasi.io's navigation bar.
 const social: [string, string][] = [["globe", "drasi.io"], ["github", "github.com/drasi-project"], ["discord", "aka.ms/drasidiscord"],
   ["youtube", "@DrasiProject"], ["bluesky", "drasi-project.bsky.social"], ["x", "@drasi_project"]];
@@ -50,12 +51,12 @@ function Grow({ step, active }: { step: number; active: boolean }) {
     {edges.filter(([, , s]) => s <= step).map(([a, b, s]) => {
       const from = at(a), to = at(b);
       const x1 = colX[from.col] + colW[from.col], y1 = rowY(from.row) + nodeH / 2, x2 = colX[to.col], y2 = rowY(to.row) + nodeH / 2;
-      return <path key={a + b} className={s === step && step > 1 ? "new" : undefined} d={`M${x1},${y1} C${x1 + 120},${y1} ${x2 - 120},${y2} ${x2 - 10},${y2}`} markerEnd="url(#grow-head)" />;
+      return <path key={a + b} className={s === step && step > 2 ? "new" : undefined} d={`M${x1},${y1} C${x1 + 120},${y1} ${x2 - 120},${y2} ${x2 - 10},${y2}`} markerEnd="url(#grow-head)" />;
     })}
     <defs><marker id="grow-head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#D9D9D6" /></marker></defs>
     {shown.map(n => {
       const label = n.relabel && step >= n.relabel[0] ? n.relabel[1] : n.label;
-      const fresh = (n.step === step && step > 1) || (n.relabel?.[0] === step);
+      const fresh = n.step === step && step > 2;
       return <g key={n.id} className={fresh ? "new" : undefined}>
         <rect x={colX[n.col]} y={rowY(n.row)} width={colW[n.col]} height={nodeH} rx="10" fill={tones[n.col]} />
         <text x={colX[n.col] + colW[n.col] / 2} y={rowY(n.row) + nodeH / 2 + 12} textAnchor="middle" className="v-grow-label">{label}</text>
@@ -135,7 +136,7 @@ const DeployBox = ({ name, region, detail, pending = false }: { name: string; re
 export function Visual({ id, active, qr }: { id: VisualId; active: boolean; qr: ReactNode }) {
   switch (id) {
     case "project": return <div className="content-slide v-slide vs-project">
-      <div className="v-hero"><h1><img src={logoTight} alt="Drasi" /></h1>
+      <div className="v-hero"><h1><img src={logo} alt="Drasi" /></h1>
         <p className="lead">An open-source data processing platform for change-driven systems</p></div>
       <div className="v-project">
         <div className="v-badge"><small>CNCF</small><b>Sandbox project</b><span>since January 2025</span></div>
@@ -158,19 +159,19 @@ export function Visual({ id, active, qr }: { id: VisualId; active: boolean; qr: 
       <p className="lead">Describe the result you want; Drasi keeps it current</p>
       <ol className="v-chain">
         <li><Icon name="pg" size={64} /><b>Changes flow in</b><span>from the databases, telemetry and systems you already have</span></li>
-        <li className="drasi"><img className="v-chain-logo" src={logoTight} alt="Drasi" /><b>Drasi keeps the result current</b><span>as data changes, and as time passes, across sources</span></li>
+        <li className="drasi"><DrasiMark /><b>Drasi keeps the result current</b><span>as data changes, and as time passes, across sources</span></li>
         <li><Icon name="bolt" size={64} /><b>The reaction acts on the change</b><span>only what changed: added, updated or removed</span></li>
       </ol>
       <p className="v-foot">No polling loop, and no state store to build and run yourself</p>
     </Slide>;
-    case "drasi-4": return <Slide id={id} title="Drasi keeps it simple" withLogo>
+    case "drasi-3": return <Slide id={id} title="Simple concepts, powerful change-driven solutions">
       <p className="lead">Queries build on each other's results: a computation graph, kept current</p>
       <QueryGraph active={active} />
     </Slide>;
-    case "drasi-1": case "drasi-2": case "drasi-3": {
-      const step = Number(id.slice(-1));
-      return <Slide id={id} title="Drasi keeps it simple" withLogo>
-        <p className="lead">{["Every change flows in, the answer updates, and the reaction acts on it", "One query can join changes from several sources", "Many sources, queries and reactions; every answer kept current"][step - 1]}</p>
+    case "drasi-1": case "drasi-2": {
+      const step = Number(id.slice(-1)) + 1;
+      return <Slide id={id} title="Simple concepts, powerful change-driven solutions">
+        <p className="lead">{["", "Sources bring in every change; one query joins them; a reaction acts on the answer", "Many sources, queries and reactions; every answer kept current"][step - 1]}</p>
         <Grow step={step} active={active} />
       </Slide>;
     }
@@ -178,7 +179,7 @@ export function Visual({ id, active, qr }: { id: VisualId; active: boolean; qr: 
       <div className="v-hub">
         <ul className="v-plug blue">{["PostgreSQL", "MySQL", "SQL Server", "Cosmos DB", "Event Hubs", "Kubernetes", "OpenTelemetry", "Dataverse"].map(t => <li key={t}>{t}</li>)}<li className="more">+ build your own</li></ul>
         <Arrow />
-        <div className="v-core"><img className="v-core-logo" src={logo} alt="Drasi" /><span className="purple">Continuous queries<em className="v-langs-q"><i>openCypher</i><i>GQL</i></em></span><span className="green">Policy</span><span className="green">Optimization</span></div>
+        <div className="v-core"><b><DrasiMark />Drasi</b><span className="purple">Continuous queries<em className="v-langs-q"><i>openCypher</i><i>GQL</i></em></span><span className="green">Policy</span><span className="green">Optimization</span></div>
         <Arrow />
         <ul className="v-plug lime">{["HTTP", "SSE", "SignalR", "Event Grid", "Dapr pub/sub", "Storage queues", "Prometheus", "Gremlin"].map(t => <li key={t}>{t}</li>)}<li className="more">+ build your own</li></ul>
       </div>
@@ -195,7 +196,7 @@ export function Visual({ id, active, qr }: { id: VisualId; active: boolean; qr: 
           <ul className="v-langs"><li>One container</li></ul>
           <p>Configure it in YAML; this demo runs on it</p></section>
         <section className="green"><h2>On Kubernetes</h2>
-          <div className="v-sketch"><div className="v-box cluster"><small><DrasiMark size={30} /> Drasi on a cluster</small><div className="v-pods"><span>Sources</span><span>Queries</span><span>Reactions</span></div></div></div>
+          <div className="v-sketch"><div className="v-box cluster"><small><DrasiMark /> Drasi on a cluster</small><div className="v-pods"><span>Sources</span><span>Queries</span><span>Reactions</span></div></div></div>
           <ul className="v-langs"><li>drasi CLI</li><li>Resources</li></ul>
           <p>Each part scales on its own</p></section>
       </div>

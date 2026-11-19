@@ -196,11 +196,20 @@ only the one you changed, then reload the desk.
 | Grafana dashboards | `observability/grafana/dashboards.py` | Run it from `demo/`, then `./ops/observability-stack.sh restart grafana` (Grafana doesn't notice regenerated files through the Podman mount) |
 | Grafana alerts | `observability/grafana/provisioning/alerting/` | Reload Grafana (below). Both rules also post to #incident-ai-support (contact point `incident-channel`). The **Alerts firing** panel is Grafana's own alert list, showing rules labelled `component: workload`; give a new rule that label to list it |
 | The script, beats or timings | `presentation/notes.ts`, `scenes.ts` | `cd ui && npm run sync-presenter` (updates `PRESENTER.md`), then `npm run build` |
-| Slides | `presentation/Explanation.tsx`, `slides.css`; the configuration overlays: `ConfigSlides.tsx`, `codeSlides.ts` (they read `demo/drasi/` at build time) | `cd ui && npm run build` |
+| Slides | `presentation/Explanation.tsx`, `slides.css`; the new flow's diagram slides: `Visuals.tsx`, `visuals.css`; the configuration overlays: `ConfigSlides.tsx`, `codeSlides.ts` (they read `demo/drasi/` at build time), and their how-it-works cards: `howItWorks.ts` | `cd ui && npm run build` |
 | Desk or app behaviour | `presentation/Presenter.tsx`, `ui/src/` | `cd ui && npm run build`; update `PRESENTER.md` if a desk label changes |
 | Database schema | `database/workload.sql` | `python3 ops/native-runtime.py migrate` with Server and the AI service stopped |
 | The diagrams | `presentation/diagrams/*.svg` (template colours and Segoe UI, as the slides) | `node ui/scripts/render-diagrams.mjs` re-renders each PNG at 3840×2160 |
 | Template artwork, survey QR code, fonts | Not in the repository: `ops/template-assets.py` extracts them to `ui/public/template/` (git-ignored; see SETUP.md). `vite.config.ts` serves that folder at `/template/` as it is | Run the script again |
+
+The Drasi logo is the project's own artwork (`images/` at the repository root), copied to
+`presentation/assets/` with the viewBox cropped to the artwork. Use it by one rule:
+
+- The full logo only where Drasi is introduced or summed up: the hero on the project intro, and
+  top right at one size (`.v-logo`) on Change-driven, What you saw and Learn more.
+- The logomark (`DrasiMark`, one size: 48 px on slides, 28 px in the dashboard overlays) wherever
+  Drasi is a box or node in a diagram: plugins, form factors, the change-driven chain, how-it-works cards.
+- No logo anywhere else.
 
 Reload Grafana's alerting without restarting:
 

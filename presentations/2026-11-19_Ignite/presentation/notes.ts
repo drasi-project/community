@@ -29,15 +29,18 @@ export type Cue = { summary: string; beats: Beat[]; ifBroken: string; recording?
 
 export const notes: Record<SceneId, Cue> = {
   intro: {
-    summary: "Walk-in; who I am; the project; why Drasi?",
+    summary: "Walk-in; who I am; the project; what I'll show you; why Drasi?",
     beats: [
       { show: "walkin", do: ["start-traffic"],
         say: "Before the session: the walk-in slide stays up while people arrive. Press Next when you start talking; that starts the talk timer.",
         watch: "Press Start demo traffic before you start talking, so the dashboard has several minutes of data by scene 1. Press it at least 5 minutes after any reset." },
       { show: "title",
-        say: "Good morning, my name is Allen Jones. I'm a member of the Azure Incubations team at Microsoft. TODO: one line on the talk's promise." },
+        say: "Good morning, my name is Allen Jones. I'm a member of the Azure Incubations team at Microsoft." },
       { show: "project",
         say: "For the last few years I've been working on an open-source project named Drasi. We started it in Azure Incubations and open-sourced it in October 2024. Since January 2025 Drasi has been a CNCF Sandbox project, and it's in active development with a growing community of users and contributors." },
+      { show: "ops",
+        say: "Here's what I'm going to show you today. This is a live AI service and its monitoring: the kind of Grafana dashboard most teams already run. Alongside it, Drasi adds answers: answers that update the moment things change, beside the monitoring you already use. We'll come back to it in a few minutes and see how each one works.",
+        watch: "The live dashboard, charts moving; no highlight." },
       { show: "problem",
         say: "Drasi was started because, in our experience, detecting meaningful changes in data as they happen, and reacting to them, is harder than it should be. There are two common approaches. Polling: query everything every few seconds, diff it with last time, and write code to react. It's simple, but slow to notice, wasteful, and it misses changes that happen in between. Or stream processing: consume an event stream and react to every event. That's powerful, and every event arrives, but working out what an event means for the current state, joining it with other sources, and noticing when something didn't happen, means building and running your own state: windows, joins, state stores, ordering and late events." },
       { show: "change-driven",
@@ -49,12 +52,10 @@ export const notes: Record<SceneId, Cue> = {
     summary: "Sources, Continuous Queries, Reactions; the plugin ecosystem; form factors",
     beats: [
       { show: "drasi-1",
-        say: "Drasi is built around three simple, familiar concepts: Sources, Continuous Queries and Reactions. Start simple: a source brings in every change from a database; a continuous query describes what you care about, and Drasi keeps its answer current as the data changes; a reaction does something with each change to the answer." },
+        say: "Drasi is built around three simple, familiar concepts: Sources, Continuous Queries and Reactions. Sources bring in every change, here from a database, telemetry and Kubernetes. A continuous query describes what you care about across them, as one graph query, and Drasi does the joining and keeps its answer current as the data changes. A reaction does something with each change to the answer." },
       { show: "drasi-2",
-        say: "One query can join changes from several sources: here a database, telemetry and Kubernetes. You write it as one graph query; Drasi does the joining and keeps it current." },
-      { show: "drasi-3",
         say: "And it grows from there: many sources, many queries, many reactions, each answer kept current as the data changes. TODO: mention continuous models (policy, optimization) here or in scene 3?" },
-      { show: "drasi-4",
+      { show: "drasi-3",
         say: "And queries can build on each other's results, forming a computation graph. In this demo, the health checks feed a deployment-health query, which feeds the workload status and the plan; policy input feeds the policy model, which feeds the plan too; and the results fan out to several reactions. When one input changes, only what depends on it updates." },
       { show: "plugins",
         say: "Sources and reactions are all plugins, and there's a rich, growing ecosystem of them, plus tools to help you build new ones. Continuous queries can be written in openCypher or GQL; this demo uses Cypher. TODO: check the lists on the slide against drasi.io." },
