@@ -18,7 +18,7 @@ export const dashboards = { ops: grafana("ai-operations", true) } as const;
 export const incidentChannel = `${settings.mattermost}/ai-platform/channels/incident-ai-support`;
 
 // Shown on the title slide when set (bold name, then role, as in the Ignite template).
-export const speaker = { name: "Allen Jones", role: "" };
+export const speaker = { name: "Allen Jones", role: "Azure Incubations, Microsoft" }; // TODO: confirm role
 export const session = { event: "Microsoft Ignite 2026", code: "THR1029" };
 
 // The Ignite template's 16:9 slide, in pixels. Projected content stays above captionTop: the
@@ -27,20 +27,23 @@ export const frame = { width: 1920, height: 1080, captionTop: 1002 } as const;
 
 export const slides = [
   { id: "walkin", title: "Walk-in" },
-  { id: "title", title: "Title" },
-  // The scenario reveals its three sections one desk beat at a time.
-  // Observability today reveals its five challenges in three desk beats.
-  { id: "ecosystem", title: "Observability today · fragmented, noisy" },
-  { id: "ecosystem-2", title: "Observability today · symptoms, health" },
-  { id: "ecosystem-3", title: "Observability today · context elsewhere" },
-  { id: "answers", title: "What would help" },
-  { id: "drasi", title: "Drasi: change-driven computation" },
-  { id: "scenario", title: "A typical scenario" },
-  { id: "concepts", title: "The scenario · deployments" },
-  { id: "concepts-rules", title: "The scenario · rules" },
-  { id: "concepts-questions", title: "The scenario · three answers" },
-  { id: "setup", title: "Bringing it together when EU-A fails" },
-  { id: "closing", title: "Close" },
+  { id: "title", title: "Who I am" },
+  { id: "project", title: "Drasi, the project" },
+  { id: "problem", title: "The problem" },
+  { id: "drasi-1", title: "Drasi · one source" },
+  { id: "drasi-2", title: "Drasi · several sources" },
+  { id: "drasi-3", title: "Drasi · many queries and reactions" },
+  { id: "plugins", title: "Plugin ecosystem" },
+  { id: "forms", title: "Form factors" },
+  { id: "issues", title: "Observability issues" },
+  { id: "wants", title: "What they want" },
+  { id: "scenario-map", title: "The scenario" },
+  { id: "how-1", title: "How it works · scene 1" },
+  { id: "how-2", title: "How it works · scene 2" },
+  { id: "how-3", title: "How it works · scene 3" },
+  { id: "how-4", title: "How it works · scene 4" },
+  { id: "closing", title: "Summary" },
+  { id: "links", title: "Learn more" },
   { id: "survey", title: "Session survey" },
 ] as const;
 
@@ -55,15 +58,14 @@ export const viewLabel = (view: StageView) => view === "ops" ? "Grafana · Opera
 
 // The talk's parts. Timings are minutes from the start.
 export const scenes = [
-  { id: "title", title: "Title", start: 0, minutes: .5 },
-  { id: "drasi", title: "Observability and Drasi", start: .5, minutes: 1.5 },
-  { id: "concepts", title: "The scenario", start: 2, minutes: 1.5 },
-  { id: "normal", title: "Healthy service", start: 3.5, minutes: 2.5 },
-  { id: "failure", title: "Failure", start: 6, minutes: 3 },
-  { id: "who", title: "Who is affected", start: 9, minutes: 2.5 },
-  { id: "recovery", title: "Recovery", start: 11.5, minutes: 5.5 },
-  { id: "resilience", title: "Back to normal", start: 17, minutes: 3.5 },
-  { id: "closing", title: "Close", start: 20.5, minutes: 1.5 },
+  { id: "intro", title: "Intro", start: 0, minutes: 2 },
+  { id: "drasi", title: "What Drasi is", start: 2, minutes: 3.5 },
+  { id: "observability", title: "Observability and the scenario", start: 5.5, minutes: 2.5 },
+  { id: "scene1", title: "Scene 1 · Status from telemetry and configuration", start: 8, minutes: 2.5 },
+  { id: "scene2", title: "Scene 2 · The absence of change", start: 10.5, minutes: 2.5 },
+  { id: "scene3", title: "Scene 3 · Compliance meets resilience", start: 13, minutes: 3 },
+  { id: "scene4", title: "Scene 4 · Failure, proposal, approval", start: 16, minutes: 4.5 },
+  { id: "closing", title: "Summary and close", start: 20.5, minutes: 1.5 },
 ] as const;
 export type SceneId = typeof scenes[number]["id"];
 export const timeLabel = (minutes: number) => `${Math.floor(minutes)}:${Math.round((minutes % 1) * 60).toString().padStart(2, "0")}`;

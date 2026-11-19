@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import QRCode from "qrcode";
 import { products, session, speaker, type SlideId } from "./scenes";
 import "./slides.css";
+import { rough, type RoughId } from "./rough";
 
 // Keep deployment names such as EU-A, and the incident channel's name, on one line.
 const nb = (text: string) => text.replace(/\b(EU|US)-([A-C])\b/g, "$1\u2011$2")
@@ -22,9 +23,6 @@ function Artwork({ files, alt = "", className = "artwork", fallback = null }: { 
 
 // The Microsoft logo as the template places it (the template only has it as EMF).
 const Logo = () => <div className="ms-logo" role="img" aria-label="Microsoft"><span aria-hidden="true"><i /><i /><i /><i /></span><b aria-hidden="true">Microsoft</b></div>;
-
-// Colours of Drasi's parts, the same on the Drasi slide and the diagrams.
-const roles = [{ tone: "blue" }, { tone: "purple" }, { tone: "green" }, { tone: "lime" }] as const;
 
 function DrasiCode() {
   const [svg, setSvg] = useState("");
@@ -61,118 +59,20 @@ export function Explanation({ slide, active = false }: { slide: SlideId; active?
   </div>;
 
 
-  // The scenario's three sections appear one desk beat at a time; hidden ones keep their space.
-  if (slide.startsWith("concepts")) {
-    const step = slide === "concepts-questions" ? 3 : slide === "concepts-rules" ? 2 : 1;
-    const shown = (n: number) => step >= n ? undefined : "pending";
-    return <div className="content-slide concepts-slide">
-      <h1 className="long">The Scenario – Keep European Customer Support Running</h1>
+  // The rough slides for the new flow (rough.ts).
+  if (slide in rough) {
+    const r = rough[slide as RoughId];
+    return <div className="content-slide rough-slide">
+      <h1 className="long">{r.title}</h1>
       <div className="body">
-        <p className="lead">Two AI workloads share the same limited model capacity, split across three deployments.</p>
-        <ul className="deployments">
-          <li className="blue"><span>Customer support</span><b>Runs on {nb("EU-A")}</b><small>Europe</small><em>60k of 100k tokens/min</em></li>
-          <li className="purple"><span>Document summaries</span><b>Runs on {nb("EU-B")}</b><small>Europe</small><em>80k of 100k tokens/min</em></li>
-          <li className="gray"><span>Spare capacity</span><b>{nb("US-C")}</b><small>United States</small><em>0 of 100k tokens/min</em></li>
-        </ul>
-        <div className={`requirements ${shown(2) ?? ""}`} aria-hidden={step < 2}>
-          <section>
-            <h2>Data Compliance</h2>
-            <p><b className="blue">Customer support</b>: restricted data, <strong>Europe only</strong></p>
-            <p><b className="purple">Document summaries</b>: public data, <strong>Europe for now</strong></p>
-          </section>
-          <section>
-            <h2>Business requirements</h2>
-            <p>Customers get an answer within <strong>15 seconds</strong></p>
-            <p>Infrastructure changes require <strong>human approval</strong></p>
-          </section>
-        </div>
-        <div className={`callout questions ${shown(3) ?? ""}`} aria-hidden={step < 3}>
-          <p>When something goes wrong, the business needs three answers:</p>
-          <ol><li>Who is affected?</li><li>What's the fastest fix that stays within policy?</li><li>How do we know when it's resolved?</li></ol>
-        </div>
+        {r.lead && <p className="lead">{nb(r.lead)}</p>}
+        {r.bullets && <ul className="rough-bullets">{r.bullets.map(b => <li key={b} className={b.startsWith("TODO") ? "todo" : undefined}>{nb(b)}</li>)}</ul>}
+        {r.flow && <ol className="rough-flow" style={{ gridTemplateColumns: `repeat(${r.flow.length}, 1fr)` }}>{r.flow.map(col =>
+          <li key={col.label} className={col.tone}><b>{col.label}</b>{col.items.map(item => <span key={item}>{nb(item)}</span>)}</li>)}</ol>}
+        {r.note && <p className="slide-meta">{r.note}</p>}
       </div>
     </div>;
   }
-
-  // Observability today: five challenges, revealed one desk beat at a time (from plan/research/research_001.md).
-  if (slide.startsWith("ecosystem")) {
-    const step = slide === "ecosystem-3" ? 3 : slide === "ecosystem-2" ? 2 : 1;
-    const challenges = [
-      [1, "Fragmented", "Signals are spread across many tools; following one customer request means jumping between them"],
-      [1, "Noisy, yet late", "Lots of low-value alerts, yet important failures often reach teams from customers first"],
-      [2, "Symptoms, not answers", "Easy to see that something is wrong; hard to see who's affected, what changed and what to do"],
-      [2, "Healthy isn't the same as working", "Green components don't mean customers got what they needed, and AI services can look healthy while getting it wrong"],
-      [3, "Context lives elsewhere", "Owners, policy, deployments and business data sit outside the monitoring stack, so teams bridge the gap with scripts, polling jobs and people"],
-    ] as const;
-    return <div className="content-slide ecosystem-slide">
-      <h1 className="long">Observability today: plenty of data, not enough context</h1>
-      <div className="body">
-        <ul className="challenges">{challenges.map(([n, name, text]) =>
-          <li key={name} className={step >= n ? undefined : "pending"} aria-hidden={step < n}><b>{name}</b><span>{text}</span></li>)}</ul>
-      </div>
-    </div>;
-  }
-
-  if (slide === "answers") return <div className="content-slide answers-slide">
-    <h1>What would help</h1>
-    <div className="body">
-      <ul className="challenges answers">{([
-        ["Connected context", "Link telemetry to dependencies, changes, owners, policy and customer impact"],
-        ["Situations, not signals", "Alert on conditions that matter across systems, and know when they start, change or clear"],
-        ["Outcomes, including what didn't happen", "Track completed customer work and missed deadlines, not just component health"],
-        ["Evidence-backed action, with safeguards", "Recommend changes within policy, let people approve them, and check that they worked"],
-        ["In the tools teams already use", "Open standards like OpenTelemetry, and the dashboards and channels people already watch"],
-      ] as const).map(([name, text]) => <li key={name}><b>{name}</b><span>{text}</span></li>)}</ul>
-    </div>
-  </div>;
-
-  if (slide === "scenario") return <div className="section-slide">
-    <h1>Let's look at a typical scenario</h1>
-    <p>Two AI workloads, limited capacity, and the rules they must follow</p>
-  </div>;
-
-  // Bringing it together when EU-A fails: what Drasi joins, and the tools it works with.
-  if (slide === "setup") return <div className="content-slide setup-slide">
-    <h1>Bringing it together when {nb("EU-A")} fails</h1>
-    <div className="body">
-      <p className="lead">Drasi joins telemetry, application data and policy, and works with the tools the team already uses.</p>
-      <div className="together">
-        <div className="together-col">
-          <h2>Brings together</h2>
-          <div className="t-card blue"><b>Telemetry</b><span>Health probes as OpenTelemetry metrics, through the Collector</span></div>
-          <div className="t-card purple"><b>Application data</b><span>Requests, deployments, routes and capacity, from the database's change feed</span></div>
-          <div className="t-card green"><b>Policy and approvals</b><span>Data compliance rules, allowed destinations and change approvals</span></div>
-        </div>
-        <div className="together-arrow" aria-hidden="true">→</div>
-        <div className="together-drasi">
-          <b>Drasi</b>
-          <span>Sources</span><span>Continuous Models</span><span>Reactions</span>
-          <p>Answers kept current as the facts change, and as time passes</p>
-        </div>
-        <div className="together-arrow" aria-hidden="true">→</div>
-        <div className="together-col">
-          <h2>Works with</h2>
-          <div className="t-card lime"><b>Grafana</b><span>Decision Support tiles beside the existing dashboards and alerts</span></div>
-          <div className="t-card lime"><b>Messaging</b><span>Cards in the team's incident channel, in Mattermost</span></div>
-          <div className="t-card lime"><b>Change management</b><span>The change-approval tool and the gateway, where e.g. a ticketing system would sit</span></div>
-        </div>
-      </div>
-    </div>
-  </div>;
-
-  if (slide === "drasi") return <div className="content-slide drasi-slide">
-    <h1>Drasi – change-driven computation</h1>
-    <div className="body">
-      <p className="lead">Drasi is a change-driven computation platform. It keeps that richer context current as data changes in the systems you already have, and delivers the answers into the tools you already use, so there's no new application to watch.</p>
-      <ol className="drasi-parts">
-        <li className="part blue"><b>Sources</b></li>
-        <li className="part models"><b>Continuous Models</b>
-          <ul><li className="purple">Query</li><li className="green">Policy</li><li className="green">Optimization</li></ul></li>
-        <li className="part lime"><b>Reactions</b></li>
-      </ol>
-      <p className="slide-meta drasi-note">It complements your observability stack: it doesn't replace collection, storage or dashboards.</p>
-    </div>
-  </div>;
 
   return <div className="content-slide closing-slide">
     <h1>Richer context, without the integration project</h1>

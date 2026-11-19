@@ -239,3 +239,12 @@
 .slide-deck .stage-frame .replay-screen > p { position: absolute; left: 92px; right: 92px; top: 112px; font-size: 26px; color: var(--light-gray); }
 .slide-deck .stage-frame .replay-screen video { position: absolute; left: 92px; top: 170px; width: 1571px; height: 820px; object-fit: cover; object-position: top; background: #111217; }
 .slide-deck .stage-frame .replay-screen .replay-missing { top: 470px; font-size: 40px; color: var(--off-white); }
+
+/* Rough slides for the new flow (rough.ts): plain boxes, to be designed later */
+.slide-deck .stage-frame .rough-bullets { margin-top: 24px; padding-left: 44px; font-size: 40px; line-height: 1.5; color: var(--off-white); }
+.slide-deck .stage-frame .rough-bullets li.todo { color: var(--light-yellow); font-size: 30px; }
+.slide-deck .stage-frame .rough-flow { list-style: none; padding: 0; margin-top: 40px; display: grid; gap: 56px; }
+.slide-deck .stage-frame .rough-flow > li { position: relative; padding: 22px 24px; background: var(--panel); border-top: 8px solid var(--tone); display: flex; flex-direction: column; gap: 12px; }
+.slide-deck .stage-frame .rough-flow > li:not(:last-child)::after { content: "→"; position: absolute; right: -46px; top: 50%; font-size: 40px; color: var(--light-gray); }
+.slide-deck .stage-frame .rough-flow b { font: 600 32px/1.2 var(--display); color: var(--tone); }
+.slide-deck .stage-frame .rough-flow span { padding: 10px 14px; background: rgba(255, 255, 255, .08); font-size: 26px; line-height: 1.25; color: var(--off-white); }

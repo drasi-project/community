@@ -41,18 +41,16 @@ const lastApproval = () => drasi("drasi_last_approval_state");
 // What each beat waits for before its screenshot, keyed by "<part>/<beat>". Approving beats press
 // the desk's backup, which presses Approve on the newest proposal card, as a click on it would.
 const waits = {
-  "normal/0": async () => until("traffic history", async () => (await api("/health")).traffic?.running, 10).then(() => sleep(15000)),
-  "normal/9": () => until("safe after the US is allowed", async () => await failover() === 1, 30).then(() => sleep(6000)),
-  "failure/0": () => until("Recommended action: the change", async () => await action() === 1, 60),
-  "failure/2": () => until("errors and alert", async () => await drasi("drasi_requests_overdue", '{workload="support"}') > 0, 60).then(() => sleep(15000)),
-  "who/0": () => sleep(5000),
-  "who/1": () => sleep(3000),
-  "recovery/1": () => until("applied", async () => [2, 3].includes(await lastApproval()), 30).then(() => sleep(6000)),
-  "recovery/2": () => until("verified", async () => await drasi("drasi_change_status") === 4, 150).then(() => sleep(6000)),
-  "recovery/3": () => sleep(30000),
-  "resilience/0": () => until("safe again", async () => await failover() === 1, 60).then(() => sleep(6000)),
+  // TODO(new flow): rough waits for the new beat order; tune when the flow settles.
+  "scene1/0": async () => until("traffic history", async () => (await api("/health")).traffic?.running, 10).then(() => sleep(15000)),
+  "scene3/3": () => until("safe after the US is allowed", async () => await failover() === 1, 30).then(() => sleep(6000)),
+  "scene4/0": () => until("Recommended action: the change", async () => await action() === 1, 60).then(() => sleep(15000)),
+  "scene4/1": () => sleep(5000),
+  "scene4/2": () => until("applied", async () => [2, 3].includes(await lastApproval()), 30).then(() => sleep(6000)),
+  "scene4/3": () => until("verified", async () => await drasi("drasi_change_status") === 4, 150).then(() => sleep(6000)),
+  "scene4/4": () => until("safe again", async () => await failover() === 1, 60).then(() => sleep(6000)),
 };
-const recordings = { failure: ["failure/0", "failure/3"], recovery: ["recovery/1", "recovery/3"], resilience: ["resilience/0", "resilience/0"] };
+const recordings = { failure: ["scene4/0", "scene4/1"], recovery: ["scene4/2", "scene4/3"], resilience: ["scene4/4", "scene4/4"] };
 
 await fs.mkdir(output, { recursive: true });
 // The projector and recording pages run in background tabs: keep Chromium from throttling their
@@ -94,7 +92,7 @@ let index = 0, clip = null;
 for (;;) {
   const title = (await desk.locator(".now-head h1").innerText()).replace(/\s+\d.*$/, "");
   const part = (await desk.evaluate(key => JSON.parse(localStorage.getItem(key)), settings.IGNITE_STORAGE_KEY));
-  const sceneId = ["title", "drasi", "concepts", "normal", "failure", "who", "recovery", "resilience", "closing"][part.cue];
+  const sceneId = ["intro", "drasi", "observability", "scene1", "scene2", "scene3", "scene4", "closing"][part.cue];
   const key = `${sceneId}/${part.beat}`;
   if (index === 0) {
     // Sign the projector's browser in to Mattermost as oncall, as the presenter does before the talk.
