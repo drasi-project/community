@@ -147,13 +147,13 @@ test("a beat's highlight outlines its dashboard panels on the projector, above t
   await expect(projector.locator("iframe.stage-dashboard").first()).toBeVisible();
   await expect(projector.locator(".panel-highlight")).toHaveCount(0);
   await page.getByRole("button", { name: "Next ▶" }).click();
-  await expect(page.locator(".say")).toContainText("How do these two tiles");
+  await expect(page.locator(".say")).toContainText("How do these tiles");
   const outline = projector.locator(".panel-highlight .outline");
   await expect(outline).toHaveCount(notes.scene1.beats[1].highlight!.length);
   const box = await onSlide(projector, ".panel-highlight .outline");
   expect(box[0].bottom).toBeLessThanOrEqual(frame.captionTop);
   await page.getByRole("button", { name: "Next ▶" }).click();
-  await expect(page.locator(".say")).toContainText("Here's the first query");
+  await expect(page.locator(".say")).toContainText("Here's deployment-health");
   await expect(outline).toHaveCount(notes.scene1.beats[2].highlight!.length);
   for (let i = 0; i < 2; i++) await page.getByRole("button", { name: "◀ Back" }).click();
   await expect(projector.locator(".panel-highlight")).toHaveCount(0);
@@ -570,7 +570,7 @@ test("Next warns once when the beat's button hasn't been pressed", async ({ page
   await expect(page.getByRole("alert")).toContainText("You haven't pressed Fail EU-A yet");
   await expect(page.locator(".say")).toContainText("goes down");
   await page.getByRole("button", { name: "Next ▶" }).click();
-  await expect(page.locator(".say")).toContainText("doesn't live on a dashboard");
+  await expect(page.locator(".say")).toContainText("don't watch dashboards");
   expect(await mutations(request)).toEqual([]);
 });
 

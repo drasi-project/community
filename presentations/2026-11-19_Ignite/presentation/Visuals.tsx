@@ -164,11 +164,11 @@ export function Visual({ id, active, qr }: { id: VisualId; active: boolean; qr: 
   switch (id) {
     case "project": return <div className="content-slide v-slide vs-project">
       <div className="v-hero"><h1><img src={logo} alt="Drasi" /></h1>
-        <p className="lead">An open-source data processing platform for change-driven systems</p></div>
+        <p className="lead">An open source platform for building change-driven systems</p></div>
       <div className="v-project">
         <div className="v-badge"><img className="v-cncf" src={cncf} alt="Cloud Native Computing Foundation" /><div><b>Sandbox project</b><span>since January 2025</span></div></div>
         <ul className="v-tiles">
-          <li className="blue"><Icon name="code" size={52} /><b>Open source</b><span>Apache 2.0, on GitHub</span></li>
+          <li className="blue"><Icon name="code" size={52} /><b>Open sourced in October 2024</b><span>Apache 2.0, on GitHub</span></li>
           <li className="purple"><Icon name="bolt" size={52} /><b>Active development</b><span>New sources, reactions and form factors</span></li>
           <li className="green"><Icon name="user" size={52} /><b>Growing community</b><span>Users and contributors</span></li>
         </ul>
@@ -183,11 +183,11 @@ export function Visual({ id, active, qr }: { id: VisualId; active: boolean; qr: 
       </div>
     </Slide>;
     case "change-driven": return <Slide id={id} title="Change-driven computation with Drasi" withLogo>
-      <p className="lead">Describe the result you want; Drasi keeps it current</p>
+      <p className="lead">Describe the result you want; Drasi keeps it current and lets you react when the result changes</p>
       <ol className="v-chain">
         <li className="role-source"><Icon name="pg" size={64} /><b>Change feeds flow in</b><span>low-level changes from the databases, telemetry and systems you already have</span></li>
         <li className="drasi role-query"><DrasiMark /><b>Drasi keeps the result current</b><span>as data changes, and as time passes, across sources</span></li>
-        <li className="role-reaction"><Icon name="bolt" size={64} /><b>The reaction acts on the change</b><span>only what changed: added, updated or removed</span></li>
+        <li className="role-reaction"><Icon name="bolt" size={64} /><b>The reaction acts on the change</b><span>only what changed in the result: added, updated or deleted</span></li>
       </ol>
     </Slide>;
     case "drasi-3": return <Slide id={id} title="Simple concepts, powerful change-driven solutions">
@@ -197,7 +197,7 @@ export function Visual({ id, active, qr }: { id: VisualId; active: boolean; qr: 
     case "drasi-1": case "drasi-2": {
       const step = Number(id.slice(-1)) + 1;
       return <Slide id={id} title="Simple concepts, powerful change-driven solutions">
-        <p className="lead">{["", "Sources bring in low-level changes; one query joins them; a reaction acts on changes to the answer, not the sources", "Many sources, queries and reactions; every answer kept current"][step - 1]}</p>
+        <p className="lead">{["", "Sources bring in low-level changes; one query joins them; a reaction acts on changes to the result, not the sources", "Many sources, queries and reactions; every answer kept current"][step - 1]}</p>
         <Grow step={step} active={active} />
       </Slide>;
     }

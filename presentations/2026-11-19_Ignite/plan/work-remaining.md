@@ -14,8 +14,7 @@ Remove an item when it is done.
   - where to introduce continuous models (policy, optimization): on the "many
     queries and reactions" slide or in scene 3;
   - scene 2: a live trigger for Support overdue (for example a control that slows
-    support answers), or say it climbs in scene 4; and whether to keep the
-    optional Unknown-after-8-seconds beat;
+    support answers), or say it climbs in scene 4;
   - Run Drasi your way: confirm each form factor's availability at Ignite.
 - **Reset at least 5 minutes before the talk:** the Model calls chart shows the
   previous run for 5 minutes after a reset.

@@ -27,11 +27,11 @@ export const how: Record<HowId, How> = {
     edges: [["otel", "dh"], ["db", "ws"], ["dh", "ws"], ["dh", "prom"], ["ws", "prom"], ["prom", "grafana"]],
   },
   "how-overdue": {
-    nodes: [n("db", "source", 0, 0, "AI service database", "customer requests and answers"), n("otel", "source", 0, 1, "OpenTelemetry", "health checks, every second"),
-      c("q", "query", 1, 0, "Overdue requests", "overdue-tasks"), c("dh", "query", 1, 1, "Deployment health", "deployment-health"),
+    nodes: [n("db", "source", 0, 0, "AI service database", "customer requests and answers"),
+      c("q", "query", 1, 0, "Overdue requests", "overdue-tasks"),
       n("prom", "reaction", 2, 0, "Prometheus reaction", "a metric per answer"), n("chan", "reaction", 2, 1, "Incident channel", "when support falls behind"),
-      n("grafana", "lands", 3, 0, "Grafana", "Support overdue, Deployment status"), n("mm", "lands", 3, 1, "Mattermost", "a card")],
-    edges: [["db", "q"], ["otel", "dh"], ["q", "prom"], ["dh", "prom"], ["q", "chan"], ["prom", "grafana"], ["chan", "mm"]],
+      n("grafana", "lands", 3, 0, "Grafana", "Support overdue"), n("mm", "lands", 3, 1, "Mattermost", "a card")],
+    edges: [["db", "q"], ["q", "prom"], ["q", "chan"], ["prom", "grafana"], ["chan", "mm"]],
   },
   "how-readiness": {
     nodes: [n("db", "source", 0, 0, "AI service database", "residency policy, capacity, routes"), n("otel", "source", 0, 1, "OpenTelemetry", "health checks"),

@@ -43,7 +43,8 @@ const lastApproval = () => drasi("drasi_last_approval_state");
 const waits = {
   // TODO(new flow): rough waits for the new beat order; tune when the flow settles.
   "scene1/0": async () => until("traffic history", async () => (await api("/health")).traffic?.running, 10).then(() => sleep(15000)),
-  "scene3/3": () => until("safe after the US is allowed", async () => await failover() === 1, 30).then(() => sleep(6000)),
+  "scene1/2": () => sleep(3000),
+  "scene3/4": () => until("safe after the US is allowed", async () => await failover() === 1, 30).then(() => sleep(6000)),
   "scene4/0": () => until("Recommended action: the change", async () => await action() === 1, 60).then(() => sleep(15000)),
   "scene4/1": () => sleep(5000),
   "scene4/2": () => until("applied", async () => [2, 3].includes(await lastApproval()), 30).then(() => sleep(6000)),
