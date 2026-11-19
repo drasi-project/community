@@ -15,8 +15,8 @@ Addresses are this copy's defaults from `demo/ports.env` (see
 
 | Part | What it is | Address |
 |---|---|---|
-| Presenter desk and projector window | The desk you present from, and the window it drives on the projector (slides, dashboards, recordings) | http://localhost:19580/presenter, and `/present` (use `localhost`, not `127.0.0.1`: see [Troubleshooting](#troubleshooting)) |
-| Grafana | The two dashboards, shown inside the projector window | http://localhost:14000 |
+| Presenter desk and projector window | The desk you present from, and the window it drives on the projector (slides, the dashboard, the incident channel, recordings) | http://localhost:19580/presenter, and `/present` (use `localhost`, not `127.0.0.1`: see [Troubleshooting](#troubleshooting)) |
+| Grafana | The Operations dashboard (`ai-operations`), shown inside the projector window | http://localhost:14000 |
 | Langfuse | Traces of individual AI requests (not projected) | http://localhost:14001 |
 | Mattermost | The incident channel `#incident-ai-support`, shown inside the projector window: Grafana's alerts and Drasi's incident cards, with the Approve button | http://localhost:19065 |
 | Drasi Server | Runs the continuous queries, models and reactions | http://127.0.0.1:19421 |
@@ -53,7 +53,7 @@ with these folder names. The demo finds Drasi Core and Server as
 
 ```sh
 mkdir ignite-native && cd ignite-native
-git clone -b agentofreality-ignite-native-next https://github.com/drasi-project/community.git
+git clone -b agentofreality-ignite-new-flow https://github.com/drasi-project/community.git
 git clone -b agentofreality-ignite-native-next https://github.com/drasi-project/drasi-core.git drasi-core-next
 git clone -b agentofreality-ignite-native-next https://github.com/drasi-project/drasi-server.git drasi-server-next
 ```
@@ -256,9 +256,9 @@ python3 ops/workload.py reset
 This restores the starting state and cancels waiting requests. In the starting
 state only EU-A and EU-B are provisioned and both workloads are Europe-only, so
 Failover readiness reads "At risk: losing EU-A leaves no valid plan" and Drasi
-posts that card. **Provision US-C** adds US-C (it stays at risk: summaries can't
-run there yet); the talk's compliance beat (**Summaries: Europe + US**) then makes
-it safe. Reset removes US-C again. Reset also empties
+posts that card. Scene 3 opens with **Provision US-C**, which adds US-C (it stays
+at risk: summaries can't run there yet); its compliance beat (**Summaries: Europe +
+US**) then makes it safe. Reset removes US-C again. Reset also empties
 `#incident-ai-support` (the projector reloads the channel so deleted posts don't
 linger) and deletes the previous run's decision events from Grafana; other Grafana
 and Langfuse history is kept. Never reset in the middle of a talk.

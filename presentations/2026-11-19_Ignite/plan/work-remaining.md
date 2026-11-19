@@ -1,15 +1,26 @@
 # Work remaining
 
-Open items for the demo (`agentofreality-ignite-native-next`), most important first.
+Open items for the demo (community `agentofreality-ignite-new-flow`; drasi-core and
+drasi-server `agentofreality-ignite-native-next`), most important first.
 Remove an item when it is done.
 
 ## Before the talk
 
-- **Human rehearsal on Nov 18** on the presentation laptop, with only this stack
-  running (Podman's 7.45 GiB VM can't hold both stacks). Phase 8a recommends GO
-  for this version after that rehearsal.
+- **Human rehearsal of the new flow** on the presentation laptop, with only this
+  stack running (Podman's 7.45 GiB VM can't hold both stacks).
+- **Open script TODOs** (`presentation/notes.ts`, `scenes.ts`; they show on the desk
+  and in PRESENTER.md):
+  - confirm the speaker's role on the title slide;
+  - where to introduce continuous models (policy, optimization): on the "many
+    queries and reactions" slide or in scene 3;
+  - scene 2: a live trigger for Support overdue (for example a control that slows
+    support answers), or say it climbs in scene 4; and whether to keep the
+    optional Unknown-after-8-seconds beat;
+  - Run Drasi your way: confirm each form factor's availability at Ignite.
 - **Reset at least 5 minutes before the talk:** the Model calls chart shows the
   previous run for 5 minutes after a reset.
+- **Re-record the fallback recordings** (`node ui/scripts/walkthrough.mjs record`)
+  once the flow is final: the current ones show the earlier flow, not scenes 1–4.
 - **Not yet run:** `ops/release.py soak` (1 hour) and `ops/release.py stamp`.
 
 ## Known compromises
@@ -30,13 +41,12 @@ Remove an item when it is done.
 
 ## After the talk
 
-- **Merge.** The `agentofreality-ignite-native-next` branches of community,
-  drasi-core and drasi-server are pushed. Open pull requests for drasi-core's
+- **Merge.** Community's `agentofreality-ignite-new-flow` and the
+  `agentofreality-ignite-native-next` branches of drasi-core and drasi-server are
+  pushed. Open pull requests for drasi-core's
   commits beyond `agentofreality-parallel-computation-graph-recovery` (the HTTP
   sink's `unroutedChanges`, and the policy and optimization changes) and for the
   community branch.
-- **Re-record the fallback recordings** (`node ui/scripts/walkthrough.mjs record`)
-  once the flow is final: the current ones show the earlier flow.
 - **Drasi Server UI issues:** component details requested by ID; 14 px text in
   the expanded query view.
 - **Podman memory.** The Podman VM has 7.45 GiB; running both stacks at once ran

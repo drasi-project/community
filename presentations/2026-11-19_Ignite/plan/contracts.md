@@ -103,7 +103,7 @@ health reports, tasks or approvals.
 | `ai_workloads` | `id` PK (`support`, `batch`), `run_epoch`, `data_class` (`restricted`, `public`), `region_requirement` (`EU`, `any`), `model`, `demand_tpm` | reset, desk controls | yes |
 | `model_deployments` | `id` PK (`EU-A`, `EU-B`, `US-C`), `run_epoch`, `region`, `model`, `capacity_tpm` | reset (EU-A, EU-B), the desk's Provision US-C (`POST /control` `provision`), desk capacity controls | yes |
 | `workload_routes` | `workload` PK, `run_epoch`, `deployment`, `approval` (nullable), `applied_ms` | reset, `POST /routes/apply` only | yes |
-| `data_residency_policy` | `id` PK (`{workload}/{deployment}`), `run_epoch`, `workload`, `deployment` | reset, the desk's Summaries: Europe + US and Summaries: Europe only (the talk's compliance change) | yes |
+| `data_residency_policy` | `id` PK (`{workload}/{deployment}`), `run_epoch`, `workload`, `deployment` | reset, the desk's Summaries: Europe + US and Summaries: Europe only (scene 3's compliance change) | yes |
 | `change_approvals` | `id` PK, `run_epoch`, `candidate_id`, `basis`, `revision` (plan's scenario revision), `status` (`pending`, `applied`, `rejected`, `verified`), `reason`, `latest` (bool), `requested_ms`, `decided_ms`, `applied_revision`, `verified_ms` | approval tool (insert), gateway configuration API (status) | yes |
 | `gateway_deliveries` | `id` PK (`x-drasi-delivery-id`), `received_ms`, `result` | gateway configuration API | no |
 | `simulated_deployment_faults` | `deployment` PK, `mode` (`ok`, `failed`, `throttled`), `reporting` | demo controls; read only by the simulated deployments and health monitor | **no**: Drasi sees health only through reports |
@@ -297,7 +297,7 @@ config generator inlines `drasi/policy/placement.rego` and sets `stream` to
   `input.destinations`. Support may use EU-A and EU-B, never US-C (restricted
   data stays in the EU). Batch may use all three. Removing EU-B from support's
   destinations denies it.
-- **The talk's compliance change** (summaries allowed in the US) is a data change to `data_residency_policy`.
+- **Scene 3's compliance change** (summaries allowed in the US) is a data change to `data_residency_policy`.
   Only that pair's decision is emitted. Demand and capacity edits emit nothing.
   A rule change is a managed in-place update: retained inputs are
   re-evaluated, and only changed decisions are emitted, with a new
@@ -557,7 +557,7 @@ alias has loaded its snapshot; otherwise each answer shows Unknown.
 |---|---|
 | `overdue-tasks` | Support overdue and the oldest late request |
 | `plan-results` | The proposed plan, shown under Routes, and whether **Approve the proposed change** is enabled (`id` = `plan`, section 5 properties; `assignments` is JSON text) |
-| `tile-action`, `tile-recovery`, `tile-resilience`, `tile-running`, `tile-last-approval` | The four answers (the values Grafana shows), Running now, and the approval outcome with Drasi's `reason` |
+| `tile-action`, `tile-recovery`, `tile-resilience`, `tile-running`, `tile-last-approval` | Recommended action, the change's progress and Failover readiness (the values Grafana shows), Running now, and the approval outcome with Drasi's `reason` |
 
 Only the private diagnostics page (`/inspect`) still attaches to other queries
 through Server's `/server/…/queries/{name}/attach`.
@@ -1017,24 +1017,22 @@ labelled `component=workload`, without instances.
 | Signed in | The presenter opens `http://localhost:{IGNITE_WORKLOAD_PORT}/mattermost/sign-in` once in the browser that runs the projector (the desk links to it); the iframe shares its cookies |
 | Highlight | `incident` views have no panel keys |
 
-The `plan` view goes; beats that showed it show `ops` or `incident`.
-
 ## 18. Desk
 
 | Action id | Label | Enabled | Press |
 |---|---|---|---|
 | `approve-change` | Approve the proposed change | The SSE `plan-results` row is feasible with `moves > 0`, or the beat expects a rejection (`expect: "rejected"`) | `POST /mattermost/approve-latest {"run_epoch"}`: exactly what pressing Approve on the newest proposal card does |
 | `start-traffic`, `stop-traffic` | Start demo traffic, Stop demo traffic | Traffic stopped, running | `POST /traffic {"run_epoch", "running"}` |
-| `provision-us-c` | Provision US-C | US-C not provisioned | `POST /control {"run_epoch", "deployment": "US-C", "action": "provision"}` |
-| `summaries-anywhere`, `summaries-europe` | Summaries: Europe + US, Summaries: Europe only | US-C provisioned and not allowed for `batch`, allowed | `POST /configuration` with `destinations.batch` = `EU-A, EU-B, US-C` or `EU-A, EU-B` (the talk's compliance change uses Europe + US) |
+| `provision-us-c` | Provision US-C (scene 3's first beat) | US-C not provisioned | `POST /control {"run_epoch", "deployment": "US-C", "action": "provision"}` |
+| `summaries-anywhere`, `summaries-europe` | Summaries: Europe + US, Summaries: Europe only | US-C provisioned and not allowed for `batch`, allowed | `POST /configuration` with `destinations.batch` = `EU-A, EU-B, US-C` or `EU-A, EU-B` (scene 3's compliance change uses Europe + US) |
 | `fail-eu-a`, `restore-eu-a` | Fail EU-A, Restore EU-A | EU-A `ok`, not `ok` | `POST /control {"run_epoch", "deployment": "EU-A", "action": "fail" \| "restore"}` |
 | `eu-a-half`, `eu-a-full` | EU-A back at 50k, EU-A back to 100k | Always (All demo controls only; no beat uses them) | Restore EU-A if needed, then `POST /configuration` with `capacity.EU-A` 50 000 or 100 000 |
 
-`select-plan` and `approve-plan` (and the desk's plan selection state) are
-removed. The outcome comes from Drasi as today (`tile-last-approval`, approval
-`mm-{post_id}`): applying, applied, verified, or rejected with Drasi's reason.
-The desk tells the presenter to press Approve on the projected card and keeps
-this button as the backup. Tests and the fixture server gain `approve-latest`.
+The desk has no plan selection: the outcome comes from Drasi
+(`tile-last-approval`, approval `mm-{post_id}`): applying, applied, verified, or
+rejected with Drasi's reason. The desk tells the presenter to press Approve on
+the projected card and keeps this button as the backup; the tests and the
+fixture server use `approve-latest` too.
 
 ## 19. Working rules for the incident-channel work
 
@@ -1045,7 +1043,7 @@ this button as the backup. Tests and the fixture server gain `approve-latest`.
 | A. Mattermost platform | `compose.yaml` (`mattermost` service, Grafana's webhook variable, volume), `observability/mattermost/`, `ops/mattermost.py`, `ops/observability-stack.sh`, `ops/observability-env.py`, `ops/native-runtime.py`, `ops/workload.py`, `ports.env`, `ports.default.env`, `ui/settings.mjs`, `ui/src/settings.ts`, `database/`, `workloads/`, `tests/mattermost-*.py` | SETUP.md, DEVELOPERS.md, architecture diagram |
 | B. Drasi event queries and HTTP reaction | `drasi/incident-*.cypher`, `drasi/approval-*.cypher`, `drasi/recovery-*.cypher`, `ops/config/`, `ops/native-build.sh`, `tests/incident-*.py`, `tests/drasi_outputs.py`, `tests/decision-integration.py`, `tests/native-integration.py` | DRASI.md, DEVELOPERS.md |
 | C. Grafana | `observability/grafana/`, `drasi/tile-*.cypher`, `plugins/prometheus/examples/ignite.json`, sections 9 and 16 of this file, `tests/observability-*.py` | README.md, DRASI.md |
-| D. Desk and projector | `presentation/Presenter.tsx`, `notes.ts` sections `failure`, `who`, `recovery`, `resilience` and the action ids, `ui/tests/`, `ui/src/` except `settings.ts`, `PRESENTER.md` (generated), STORY.md | `Audience.tsx` (the `incident` iframe only), `scenes.ts` (`StageView`, `viewLabel`, `dashboards` only); the slides session owns the rest of both, `Explanation.tsx`, `slides.css` and the other `notes.ts` sections |
+| D. Desk and projector | `presentation/Presenter.tsx`, `notes.ts` sections `scene3` and `scene4` and the action ids, `ui/tests/`, `ui/src/` except `settings.ts`, `PRESENTER.md` (generated), STORY.md | `Audience.tsx` (the `incident` iframe only), `scenes.ts` (`StageView`, `viewLabel`, `dashboards` only); the slides session owns the rest of both, `Explanation.tsx`, `Visuals.tsx`, `howItWorks.ts`, `codeSlides.ts`, the CSS and the other `notes.ts` sections |
 
 New tile query names are fixed here (`tile-change`, alias `change`; `tile-workloads`, alias `workloads`), so B wires
 them in `ops/config` while C writes them. Anyone who changes a contract section

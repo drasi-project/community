@@ -27,30 +27,41 @@ and as time passes, and puts them in the tools the team already uses.
 
 ## The talk
 
-A few slides, in the Microsoft Ignite session template, frame about 17 minutes
-of live demo:
+Slides in the Microsoft Ignite session template frame about 12 minutes of live
+demo:
 
-1. **Title:** Monitoring without polling (after the Ignite walk-in slide).
-2. **Observability today, and Drasi:** plenty of data, not enough context
-   (fragmented, noisy yet late, symptoms not answers, healthy isn't working,
-   context lives elsewhere); what would help; then Drasi, a change-driven
-   computation platform that keeps that context current inside the tools teams
-   already use, in three parts: sources, continuous models (query, policy,
-   optimization) and reactions.
-3. **A typical scenario:** two AI workloads sharing limited AI capacity across
-   three deployments, the data-compliance rules and business requirements they
-   must follow, and three questions for when something goes wrong: who is
-   affected, what's the fastest fix within policy, and how do we know when it's
-   resolved? Then what Drasi brings together (telemetry, application data,
-   policy) and the tools it works with (Grafana, messaging, change management).
-4. **Live demo** in Grafana and the team's incident channel, with the Drasi
-   configuration behind each Decision Support panel and one late customer
-   request on the way.
-5. **Close:** richer context, without an integration project: Drasi brought
-   together data that already existed (the application's database, the
-   health-check telemetry, the policy and the approvals), and it's all
-   configuration apart from one small Prometheus reaction plugin; then the
-   Ignite session survey during questions.
+1. **Opening:** the walk-in slide, who I am, and Drasi, the project (a CNCF
+   Sandbox project). Then a first look at the live dashboard: the top row is the
+   basics teams already run (OpenTelemetry, Prometheus, Grafana); the bottom row
+   is context, answers and guidance, powered by Drasi.
+2. **What Drasi is:** why it exists (polling is slow and wasteful; stream
+   processing leaves you building state), change-driven computation, and its
+   simple concepts: sources, continuous queries and reactions, growing to many of
+   each, and queries building on queries in a computation graph (coming soon).
+3. **Observability and the scenario:** observability today (fragmented tools,
+   noisy yet late alerts, context elsewhere); what organizations want, and how
+   Drasi provides it; then the scenario, AI workload monitoring: two workloads on
+   EU-A and EU-B, US-C being provisioned in the US, data rules, a 15-second
+   answer promise and human approval for changes.
+4. **Live demo, four scenes,** in Grafana and the team's incident channel. Each
+   scene says what the team needs, shows it live, then shows how it works: a card
+   of the sources, queries or models and reactions involved, then the Drasi
+   configuration behind the panel.
+   - Scene 1, status from telemetry and configuration: Deployment status and
+     Workload status.
+   - Scene 2, the absence of change: support requests with no answer by their
+     deadline.
+   - Scene 3, compliance meets resilience: US-C is provisioned, but failover stays
+     at risk until compliance allows summaries in the US.
+   - Scene 4, failure, proposal, approval: EU-A fails, Drasi posts a proposed
+     change in Mattermost, it's approved on the card, verified, and EU-A is
+     restored.
+5. **Close:** what you saw (the four scenes; connect sources, configure
+   continuous models, connect reactions; and Drasi is domain-agnostic), run
+   Drasi your way (a library in Rust, Node.js, Python or .NET, Drasi Server, or
+   Kubernetes), extensibility (sources, reactions and models are plugins; this
+   demo adds one, the Prometheus reaction), thank you, learn more, and the Ignite
+   session survey during questions.
 
 The presenter drives everything from a private presenter desk; the projector
 follows. See [PRESENTER.md](PRESENTER.md).
@@ -126,30 +137,34 @@ its answers current. It has four kinds of component, all working in this demo:
 | **Continuous models** | Logic re-run whenever its inputs change. Here: **policy** (where each workload may run: Rego rules, given as configuration), **planner** (an optimizer that finds the best complete plan within policy and capacity) and **what-if** (if any one deployment failed, would every workload still fit?) | Yes: Drasi's standard policy and optimization components. The demo supplies the rules and the model as configuration |
 | **Reactions** | Deliver every change in an answer: as Prometheus metrics for Grafana; to the gateway's configuration API, applying an approved plan only if it still matches Drasi's current plan and otherwise rejecting it; as Grafana annotations and Langfuse scores; as incident cards in Mattermost; and to the presenter desk | Yes: the HTTP and SSE reactions. The Prometheus reaction was written for this demo |
 
-During the talk, the presenter says which of these components produced what
-the audience just saw, with the configuration behind each Decision Support panel
-shown beside it on the dashboard.
+In each scene, a how-it-works card over the dashboard shows which of these
+components produced what the audience just saw, and the configuration behind
+each Decision Support panel is shown above it.
 
 ## How the story unfolds on stage
 
-1. **Healthy service.** Real traffic flows. Support runs on EU-A, summaries on
-   EU-B. Grafana's AI Deployments row is ordinary monitoring; its Decision
-   Support row is Drasi's answers. Summaries start Europe-only, so Failover
-   readiness is at risk (losing EU-A would leave both workloads needing EU-B).
-   Compliance allows summaries in the US, Drasi re-runs the policy and the
-   what-if, and readiness turns to "Survives losing any one deployment".
-2. **Failure.** EU-A fails. Within seconds Drasi, reading EU-A's health-check
-   telemetry, shows it Failed and has a plan ready; errors and the queue rise and Grafana alerts. Support requests count as
-   overdue the moment each passes its 15-second deadline, with no new event.
-3. **Who is affected.** Drasi's failure and overdue cards in the incident channel,
-   then one of those customers' requests, attempt by attempt.
-4. **Recovery.** Support may not run on US-C, but summaries may. The planner's plan
-   moves summaries to US-C, freeing EU-B for support. The presenter approves the
-   plan on its card; **Verified** appears only once the queue is answered and support
-   requests succeed on the new route.
-5. **Back to normal.** EU-A comes back at full capacity. Every deployment is
-   Healthy and Failover readiness says "Survives losing any one deployment".
-   Nothing moves back: the approved routes still fit, so Drasi proposes nothing.
+1. **Scene 1: status.** Real traffic flows. Support runs on EU-A, summaries on
+   EU-B. Deployment status comes from the health-check telemetry; Workload status
+   joins it with the routes and policy in the database.
+2. **Scene 2: the absence of change.** A support request with no answer within 15
+   seconds produces no event. Drasi lists it the moment its deadline passes
+   (`drasi.trueLater`), and Support overdue counts the list.
+3. **Scene 3: compliance meets resilience.** Summaries start Europe-only, so
+   Failover readiness is at risk: losing EU-A would leave both workloads needing
+   EU-B. The presenter provisions US-C: one new database row, and it appears in
+   Deployment status within a second, with no dashboard change; still at risk,
+   because summaries may not run in the US. Compliance then allows the US, Drasi
+   re-runs the policy and the what-if, and readiness turns to "Survives losing
+   any one deployment".
+4. **Scene 4: failure, proposal, approval.** EU-A fails. Within seconds Drasi,
+   reading EU-A's health-check telemetry, shows it Failed and recommends a change;
+   errors and the queue rise, support requests go overdue, and Grafana alerts.
+   Support may not run on US-C, but summaries may, so the plan moves summaries to
+   US-C, freeing EU-B for support. Drasi posts it in #incident-ai-support with
+   Approve and Reject; the presenter approves it on the card, and **Verified**
+   appears only once the queue is answered and support requests succeed on the
+   new route. EU-A is then restored: every deployment Healthy, failover safe, and
+   nothing moves back.
 
 ## What is real and what is simulated
 

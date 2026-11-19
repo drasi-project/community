@@ -4,9 +4,10 @@ Everything you need to give this talk, without needing to know how the demo is
 built. To install and start the demo, see [SETUP.md](SETUP.md). For what the demo
 is about, see [README.md](README.md).
 
-**The talk in one line:** a few slides, then about 17 minutes of live demo in
-which an AI service fails, Drasi shows who is affected and works out a fix within
-the rules, you approve it, and Drasi confirms it worked.
+**The talk in one line:** slides on Drasi and observability, then about 12 minutes
+of live demo in four scenes: status from telemetry and configuration, the absence
+of change, compliance meeting resilience, and a failure for which Drasi proposes a
+fix within the rules, you approve it, and Drasi confirms it worked.
 
 - Session: THR1029, *Monitoring without polling*, 25 minutes
 - About 22 minutes of content and 3 minutes of questions
@@ -19,7 +20,7 @@ the rules, you approve it, and Drasi confirms it worked.
 4. [The presenter desk](#the-presenter-desk)
 5. [Run of show](#run-of-show) and [the script](#the-script)
 6. [Glossary](#glossary) and [questions to expect](#questions-to-expect)
-7. [Reading the dashboard](#reading-the-dashboard), [the incident channel](#the-incident-channel) and [the late request view](#the-late-request-view)
+7. [Reading the dashboard](#reading-the-dashboard), [the incident channel](#the-incident-channel) and [one late request](#one-late-request)
 8. [When something goes wrong](#when-something-goes-wrong)
 9. [After the talk](#after-the-talk)
 
@@ -28,8 +29,8 @@ the rules, you approve it, and Drasi confirms it worked.
 There are two windows:
 
 - **The projector window** is what the audience sees: slides, the Grafana
-  dashboard, the team's incident channel in Mattermost (#incident-ai-support) and
-  one late customer request. You click in it only on the incident channel, to
+  dashboard with the how-it-works cards and Drasi configuration over it, and the
+  team's incident channel in Mattermost (#incident-ai-support). You click in it only on the incident channel, to
   scroll to a card or press **Approve** on Drasi's proposal; the desk says when.
 - **The presenter desk** is on your laptop screen. It shows what to say, the one
   or two buttons for this moment, and what to watch for.
@@ -39,7 +40,7 @@ The talk is a sequence of **beats**. Press **Next** on the desk (or your clicker
 the next slide, a dashboard, or the incident channel. Your clicker works
 whichever window is in front.
 
-Some beats have buttons, such as **Summaries: Europe + US** or **Fail EU-A**. They
+Some beats have buttons, such as **Provision US-C** or **Fail EU-A**. They
 appear in the beat itself: press them when you reach the beat, while you say its
 words. Nothing in the demo changes unless you press a button; **Back** and
 **Next** never change the demo. If you forget a button, Next reminds you once.
@@ -97,7 +98,7 @@ once using only the recordings (see [When something goes wrong](#when-something-
    missing** (if it does, see [SETUP.md › Add the Ignite template artwork and
    fonts](SETUP.md#8-add-the-ignite-template-artwork-and-fonts)).
 7. Step through a few beats with your clicker to check it moves the projector,
-   then go back to the first beat (**Jump to a part** › 1. Title). The projector
+   then go back to the first beat (**Jump to a part** › 1. Intro). The projector
    then shows the Ignite walk-in slide until you start.
 
 **Before you start talking:** on the walk-in beat, press **Start demo traffic**
@@ -119,7 +120,7 @@ Top to bottom:
 
 | Part | What it's for |
 |---|---|
-| Header | **READY** or **NOT READY**, whether the projector window is connected, **Ignite template assets missing** if they are, and the talk timer. It starts at 00:00 when you press **Open projector window** (**Restart timer** resets it) and turns amber at 22 minutes; tick **Short on time** if you're past about 11:30 when Recovery starts |
+| Header | **READY** or **NOT READY**, whether the projector window is connected, **Ignite template assets missing** if they are, and the talk timer. It starts at 00:00 when you press **Open projector window** (**Restart timer** resets it) and turns amber at 22 minutes; tick **Short on time** if you're past about 15:30 when Scene 4 starts |
 | **The current beat** (left) | Part number and name, the beats in this part with their numbers (beats are numbered across the whole talk, as in the script below; the current one also shows beside **what the projector shows**), **◀ Back / Next ▶** and **what the projector shows** (always in the same place), the beat's buttons and their result, **Click on the projector** (what to press or scroll on the projected channel), what to say, what to watch for, a preview of the next beat, what to do if it breaks (with **Use recordings from here on**), and how to undo a wrong button |
 | **Drasi's answers** (right) | Support overdue, Recommended action and Failover readiness, as on the dashboard, and Recovery: Awaiting evidence or Verified after a change is applied |
 | **Live demo** (right) | Each deployment's health and capacity; whether traffic is running; where the summaries may run |
@@ -140,8 +141,9 @@ approving beats a second line follows Drasi's answer, whichever button was
 pressed: waiting for Approve, checking, **Done: Drasi checked it and the new
 routes are applied**, or **Rejected by Drasi** with its reason.
 
-**Short on time:** tick it to skip the beats marked optional (the late request
-view). Their notes disappear from the sequence.
+**Short on time:** tick it to skip the beats marked optional (scene 2's Unknown
+after 8 seconds, scene 3's optimization model, scene 4's Restore EU-A). Their notes
+disappear from the sequence.
 
 **The approval flow.** Drasi's planner works out a change and re-works it whenever
 anything changes; Drasi posts each new proposal as a card in #incident-ai-support
@@ -482,13 +484,15 @@ The newest post is at the bottom.
 | Failover at risk: losing EU-A leaves no valid plan | orange | Everything is healthy, but losing one deployment would leave no valid plan. Posted after every reset, while summaries are Europe-only |
 | Failover restored | green | Losing any one deployment again leaves a valid plan: after **Summaries: Europe + US** |
 
-## The late request view
+## One late request
 
-In **Who is affected**, the projector shows the oldest late support request from
-Drasi's list: the customer's question, each attempt to send it (for example
-"Sent to EU-A: failed (HTTP 503) × 12"), and the moment its 15-second deadline
-passed and Drasi added it to the overdue list. The beat is skipped automatically
-if nothing is late.
+No beat shows it, but if someone asks who is waiting, open **Show something on
+the projector** and press **Oldest late request** (there while support has late
+requests).
+The projector shows the oldest late support request from Drasi's list: the
+customer's question, each attempt to send it (for example "Sent to EU-A: failed
+(HTTP 503) × 12"), and the moment its 15-second deadline passed and Drasi added it
+to the overdue list. Press **Next** or go back to the beat to continue.
 
 The same request is a trace in Langfuse (its trace ID is at the bottom). If
 someone asks to see Langfuse, open it on your laptop from **Show something on the
@@ -503,14 +507,15 @@ on a route it verified.
 here on** (in **If it breaks**), or **Use recordings for the rest of the talk**
 when the header says NOT READY. The projector shows this part's recording,
 labelled **REPLAY · NOT LIVE**, and plays it silently: talk over it, and say it's
-a recording. Keep pressing **Next** as usual: each remaining live part shows its
-recording (failure, recovery, back to normal), and the slides
-still appear. The buttons are hidden. Stay in recording mode for the rest of the
+a recording. Keep pressing **Next** as usual: scene 4 shows its recordings (failure,
+recovery, back to normal); scenes 1–3 have none, so the projector keeps the live
+dashboard and its overlays, which you can describe; the slides still appear. The buttons are hidden. Stay in recording mode for the rest of the
 talk.
 
 **You pressed the wrong button.** Back and Next never undo anything. Use the
 opposite button in **All demo controls**: **Summaries: Europe only** undoes
-**Summaries: Europe + US**; to undo **Fail EU-A**, press **Restore EU-A**. If
+**Summaries: Europe + US**; to undo **Fail EU-A**, press **Restore EU-A**. **Provision US-C** has no undo during
+the talk (a reset removes US-C). If
 you're not sure what state the demo is in, switch to recordings.
 
 **You pressed Next before the beat's button.** The desk stops you once: "You
