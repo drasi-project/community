@@ -86,7 +86,7 @@ export const notes: Record<SceneId, Cue> = {
       { show: "ops",
         say: "Let's start simple. The team wants one view of each deployment's health and each workload's status, and that means joining telemetry with configuration data. This is their Grafana dashboard: the top row is ordinary monitoring, the bottom row is Drasi's answers.",
         watch: "Charts moving. If the desk says Traffic: stopped, press Start demo traffic in All demo controls." },
-      { show: "ops", highlight: ["ai-operations.deployment-status", "ai-operations.workload-status"], config: ["how-status"],
+      { show: "ops", highlight: ["ai-operations.deployment-status+workload-status"], config: ["how-status"],
         say: "How do these two tiles work? Two sources: the health checks, which arrive as ordinary OpenTelemetry metrics every second, and the AI service's own database, where it keeps its deployments, workloads, routes and policy. Two continuous queries join them, and a Prometheus reaction publishes each answer as a metric, so Grafana draws it. No polling job, and no glue code.",
         watch: "The how-it-works card above Deployment status and Workload status, with an arrow to each." },
       { show: "ops", highlight: ["ai-operations.deployment-status"], config: ["deployment-health"],
@@ -115,7 +115,7 @@ export const notes: Record<SceneId, Cue> = {
   scene3: {
     summary: "Summaries Europe-only puts failover at risk; compliance allows the US and it's safe",
     beats: [
-      { show: "ops", highlight: ["ai-operations.recommended-action", "ai-operations.failover-readiness"], config: ["how-readiness"],
+      { show: "ops", highlight: ["ai-operations.recommended-action+failover-readiness"], config: ["how-readiness"],
         say: "We've provisioned extra capacity in US-C, but while their classification is under review, compliance won't let document summaries be processed in the US. Failover readiness asks: if any one deployment failed, would every workload still have somewhere allowed to run? Right now, no, and Recommended action says add capacity. Behind it: the policy and the deployments from the database, health from OpenTelemetry, and two of Drasi's continuous models, a Rego policy and an optimization model, re-run whenever any of them changes.",
         watch: "Failover readiness: At risk: losing EU-A leaves no valid plan; Recommended action: Add capacity (both yellow); the how-it-works card above." },
       { show: "ops", highlight: ["ai-operations.recommended-action"], config: ["policy"],

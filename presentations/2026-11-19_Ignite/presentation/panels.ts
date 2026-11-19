@@ -14,7 +14,9 @@ export const panelKey = (panel: Panel) => panel.key
   ?? (panel.title ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
 // The panels a key names: the panel itself or, for a row, every panel up to the next row.
-function panelsFor(dashboard: Dashboard, key: string) {
+function panelsFor(dashboard: Dashboard, key: string): Panel[] {
+  // "a+b" is one outline around several panels.
+  if (key.includes("+")) { const parts = key.split("+").map(part => panelsFor(dashboard, part)); return parts.every(p => p.length) ? parts.flat() : []; }
   const at = dashboard.panels.findIndex(panel => panelKey(panel) === key);
   if (at < 0) return [];
   const panel = dashboard.panels[at];
@@ -23,7 +25,8 @@ function panelsFor(dashboard: Dashboard, key: string) {
   return dashboard.panels.slice(at + 1, end < 0 ? undefined : end);
 }
 
-// Highlight keys are "<dashboard uid>.<panel key>"; keys for other dashboards are ignored.
+// Highlight keys are "<dashboard uid>.<panel key>", or "<uid>.<key>+<key>" for one outline around
+// several panels; keys for other dashboards are ignored.
 export function panelRects(dashboard: Dashboard, keys: readonly string[], stage: { width: number; captionTop: number }, zoom: number): Rect[] {
   const inRows = dashboard.panels.some(panel => panel.type === "row");
   const left0 = padding + (inRows ? rowIndent : 0), top0 = padding + (inRows ? rowDrop : 0);

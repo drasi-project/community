@@ -153,10 +153,10 @@ function Tangle() {
   </svg>;
 }
 
-// Where the deployments sit on the map (Frankfurt, Dublin, Virginia), and the lines to them.
-const pins = { euA: [1376, 190], euB: [1227, 160], usC: [516, 306] } as const;
+// Where the deployments sit on the map (Ireland, Germany, the US east coast), and the lines to them.
+const pins = { euA: [1227, 160], euB: [1376, 190], usC: [516, 306] } as const;
 const mapLinks: [number, number, number, number][] = [
-  [1300, 210, pins.euA[0], pins.euA[1]], [1180, 120, pins.euB[0], pins.euB[1]], [560, 300, pins.usC[0], pins.usC[1]]];
+  [1300, 210, pins.euB[0], pins.euB[1]], [1180, 120, pins.euA[0], pins.euA[1]], [560, 300, pins.usC[0], pins.usC[1]]];
 const DeployBox = ({ name, region, detail, pending = false }: { name: string; region: string; detail: string; pending?: boolean }) =>
   <div className={`v-deploy${pending ? " pending-capacity" : ""}`}><b>{nb(name)}</b><span>{region} · 100k tokens/min</span><small>{detail}</small></div>;
 
@@ -258,13 +258,13 @@ export function Visual({ id, active, qr }: { id: VisualId; active: boolean; qr: 
           {Object.values(pins).map(([x, y], i) => <circle key={i} cx={x} cy={y} r="11" />)}
         </svg>
         <div className="v-site" style={{ left: 700, top: 0 }}>
-          <p className="v-site-head"><b>{nb("EU-B")}</b><span>Europe · Capacity: 100k tokens/min</span></p>
-          <p className="v-site-work"><small>Workload</small><b>Document summaries</b><span>Demand: 80k tokens/min</span></p>
-          <p className="v-site-class">Data classification: restricted <i>under review</i></p></div>
-        <div className="v-site" style={{ left: 1256, top: 210 }}>
           <p className="v-site-head"><b>{nb("EU-A")}</b><span>Europe · Capacity: 100k tokens/min</span></p>
           <p className="v-site-work"><small>Workload</small><b>Customer support</b><span>Demand: 60k tokens/min</span></p>
           <p className="v-site-class">Data classification: restricted</p></div>
+        <div className="v-site" style={{ left: 1256, top: 210 }}>
+          <p className="v-site-head"><b>{nb("EU-B")}</b><span>Europe · Capacity: 100k tokens/min</span></p>
+          <p className="v-site-work"><small>Workload</small><b>Document summaries</b><span>Demand: 80k tokens/min</span></p>
+          <p className="v-site-class">Data classification: restricted <i>under review</i></p></div>
         <div className="v-site pending-capacity" style={{ left: 560, top: 262 }}>
           <p className="v-site-head"><b>{nb("US-C")}</b><span>US · Capacity: 100k tokens/min</span></p>
           <p className="v-site-note">Extra capacity, just provisioned</p></div>

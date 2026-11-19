@@ -4,7 +4,10 @@
 // flow: what the panel brings together, grouped by where it comes from (as the generated graph wires
 // it, demo/.native/server.json), and what feeds the code shown.
 export type Flow = { inputs: { from: string; items: string }[]; into: string };
-export type ConfigPanel = { tab: string; lines: string[]; hot: string[]; flow: Flow };
+export type ConfigPanel = { tab: string; lines: string[]; hot: string[]; flow: Flow; component: string };
+// The Drasi component each card shows, by its real id (the same id labels its node in the how-it-works graph).
+export const componentOf: Record<ConfigId, string> = { "overdue-tasks": "overdue-tasks", "deployment-health": "deployment-health",
+  "tile-workloads": "tile-workloads", policy: "policy", optimization: "plan", "what-if": "plan" };
 const db = (items: string) => ({ from: "AI service database", items });
 const otel = { from: "OpenTelemetry", items: "health checks" };
 const placements = { from: "Drasi policy model", items: "allowed placements" };
@@ -40,7 +43,7 @@ export function buildConfig({ overdueQuery, healthQuery, workloadsQuery, rego, o
   const part = (name: "variables" | "constraints" | "objectives") =>
     [`"${name}": [`, ...model[name].map((item, i, all) => `  ${entry(item)}${i < all.length - 1 ? "," : " ],"}`)];
   const regoLines = withoutComments(rego, "#").filter(line => !/^(package|import) /.test(line));
-  const panels: Record<ConfigId, Omit<ConfigPanel, "flow">> = {
+  const panels: Record<ConfigId, Omit<ConfigPanel, "flow" | "component">> = {
     "overdue-tasks": { tab: "Continuous query · overdue-tasks", hot: ["drasi.trueLater"],
       lines: withoutComments(overdueQuery, "//") },
     "deployment-health": { tab: "Continuous query · deployment-health, from the OpenTelemetry source", hot: ["CASE toInteger(m.value)", "+ 8000"],
@@ -58,5 +61,5 @@ export function buildConfig({ overdueQuery, healthQuery, workloadsQuery, rego, o
         `  ${entry(model.sets.find(set => set.name === "healthy")!, false)}, … ],`,
         '"scenarios": [', ...model.scenarios.map(item => `  ${entry(item)} ],`)] },
   };
-  return Object.fromEntries(configIds.map(id => [id, { ...panels[id], flow: flows[id] }])) as Record<ConfigId, ConfigPanel>;
+  return Object.fromEntries(configIds.map(id => [id, { ...panels[id], flow: flows[id], component: componentOf[id] }])) as Record<ConfigId, ConfigPanel>;
 }

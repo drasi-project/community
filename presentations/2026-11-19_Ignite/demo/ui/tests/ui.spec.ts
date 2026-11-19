@@ -6,8 +6,8 @@ import { scenes, slides, allSlides, dashboards, incidentChannel, frame } from ".
 import { notes, beatNumber } from "../../../presentation/notes";
 import { presenterScript } from "../../../presentation/script";
 import { replayClips } from "../../../presentation/replay";
-import { buildConfig, configIds } from "../../../presentation/codeSlides";
-import { howIds, isHow } from "../../../presentation/howItWorks";
+import { buildConfig, configIds, componentOf } from "../../../presentation/codeSlides";
+import { how, howIds, isHow, isLabel } from "../../../presentation/howItWorks";
 import { unknownKeys, type Dashboard } from "../../../presentation/panels";
 import fs from "node:fs";
 
@@ -82,7 +82,7 @@ test("each Decision Support beat shows its configuration above the highlighted p
   await stubGrafana(page);
   await page.setViewportSize({ width: 1920, height: 1080 });
   for (const beat of Object.values(notes).flatMap(cue => cue.beats).filter(beat => beat.config && beat.show === "ops")) {
-    await page.goto(`/present?view=ops&preview=1&highlight=${beat.highlight!.join(",")}&config=${beat.config!.join(",")}`);
+    await page.goto(`/present?view=ops&preview=1&highlight=${encodeURIComponent(beat.highlight!.join(","))}&config=${beat.config!.join(",")}`);
     await expect(page.locator(".config-overlay > *")).toHaveCount(beat.config!.length);
     const [overlay] = await onSlide(page, ".config-overlay");
     const outlines = await onSlide(page, ".panel-highlight .outline");
@@ -113,6 +113,22 @@ test("each Decision Support beat shows its configuration above the highlighted p
     else { expect(tipY).toBeLessThan(panel.top + 6 + 1); expect(tipY).toBeGreaterThan(panel.top - 30); }
     await page.screenshot({ path: `evidence/config-${beat.config!.join("-")}.png` });
   }
+});
+
+test("each scene's how-it-works graph names its Drasi components by the same ids as its code cards", () => {
+  for (const cue of Object.values(notes)) {
+    const ids = cue.beats.flatMap(beat => beat.config ?? []);
+    const graphs = ids.filter(isHow).map(id => how[id]).filter(card => !isLabel(card));
+    if (!graphs.length) continue;
+    const named = new Set(graphs.flatMap(graph => "nodes" in graph ? graph.nodes.map(node => node.component).filter(Boolean) : []));
+    // Every code card in the scene is a node in its graph, and every Drasi node is labelled by its component id.
+    for (const id of ids.filter(id => !isHow(id))) expect(named, `${cue.summary}: ${id}`).toContain(componentOf[id as keyof typeof componentOf]);
+    for (const graph of graphs) if ("nodes" in graph) for (const node of graph.nodes.filter(node => node.role === "query" || node.role === "model"))
+      expect(node.component, node.label).toBeTruthy();
+  }
+  // And each code card's tab names the same component.
+  const config = buildConfig({ overdueQuery: "", healthQuery: "", workloadsQuery: "", rego: "", optimization: { variables: [], constraints: [], objectives: [], scenarios: [], sets: [{ name: "healthy" }], atomicScenarios: [] } });
+  for (const id of configIds) expect(config[id].tab, id).toContain(componentOf[id]);
 });
 
 test("the live demo switches between Grafana and the incident channel only a few times", () => {

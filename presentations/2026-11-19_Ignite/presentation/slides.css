@@ -292,3 +292,4 @@
 .slide-deck .stage-frame .how-node .how-label { font: 600 22px var(--text); fill: #091F2C; }
 .slide-deck .stage-frame .how-node .how-detail { font: 400 15px var(--text); fill: #091F2C; }
 .slide-deck .stage-frame .label-powered { display: flex; align-items: center; gap: 8px; margin: 10px 0 0; font: 600 20px/1 var(--text); color: #2A446F; }
+.slide-deck .stage-frame .how-node .how-component { font: 600 16px var(--code); }

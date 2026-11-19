@@ -34,8 +34,9 @@ function FlowGraph({ flow }: { flow: Flow }) {
       return <path key={a + b} d={`M${x1},${y1} C${x1 + bend},${y1} ${x2 - bend},${y2} ${x2},${y2}`} markerEnd="url(#how-head)" />; })}
     {flow.nodes.map(node => <g key={node.id} className={`how-node role-${node.role}`}>
       <rect x={colX[node.col]} y={y(node.row)} width={nodeW} height={nodeH} rx="8" />
-      <text className="how-label" x={colX[node.col] + 14} y={y(node.row) + (node.detail ? 27 : 39)}>{node.label}</text>
-      {node.detail && <text className="how-detail" x={colX[node.col] + 14} y={y(node.row) + 51}>{node.detail}</text>}
+      <text className="how-label" x={colX[node.col] + 14} y={y(node.row) + (node.detail || node.component ? 27 : 39)}>{node.label}</text>
+      {node.component ? <text className="how-detail how-component" x={colX[node.col] + 14} y={y(node.row) + 51}>{node.component}</text>
+        : node.detail && <text className="how-detail" x={colX[node.col] + 14} y={y(node.row) + 51}>{node.detail}</text>}
     </g>)}
   </svg>;
 }
