@@ -176,7 +176,7 @@ Configuration:
 
 The HTTP reactions post only additions (and updates, for approval annotations):
 `unroutedChanges: ignore` drops other changes. That HTTP sink option is a
-local commit on `drasi-core-next`, not yet upstream. Every request carries `x-drasi-delivery-id`; the gateway
+commit on drasi-core's `agentofreality-ignite-native-next` branch, proposed upstream in drasi-core PR #1031. Every request carries `x-drasi-delivery-id`; the gateway
 configuration API is idempotent on it and on the approval's status, and applies
 routes only if the scenario revision still equals the plan's.
 

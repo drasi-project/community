@@ -5,12 +5,12 @@ from pathlib import Path
 DEMO = Path(__file__).resolve().parents[1]
 ROOT = DEMO.parents[3]
 # This branch builds against the next-version checkouts beside it
-# (plan/drasi-core-next-migration.md); ops/native-build.sh uses the same names.
-CORE = ROOT / os.environ.get("IGNITE_DRASI_CORE", "drasi-core-next")
-SERVER = ROOT / os.environ.get("IGNITE_DRASI_SERVER", "drasi-server-next")
+# (plan/drasi-core-migration.md); ops/native-build.sh uses the same names.
+CORE = ROOT / os.environ.get("IGNITE_DRASI_CORE", "drasi-core")
+SERVER = ROOT / os.environ.get("IGNITE_DRASI_SERVER", "drasi-server")
 COMMUNITY = DEMO.parents[2]
 # The one Cargo build folder of this copy (demo/.cargo/config.toml, ops/native-build.sh).
-TARGET = Path(os.environ.get("CARGO_TARGET_DIR") or ROOT / ".cargo-target-next")
+TARGET = Path(os.environ.get("CARGO_TARGET_DIR") or ROOT / ".cargo-target")
 
 
 def load(path=None):

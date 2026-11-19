@@ -35,7 +35,7 @@ Remove an item when it is done.
   duplicated on a retry or restart.
 - **Restarting a single query** isn't supported (queries fed by other queries get
   only their changes); restart the whole of Drasi Server.
-- **The HTTP sink option `unroutedChanges`** exists only on `drasi-core-next`
+- **The HTTP sink option `unroutedChanges`** exists only on drasi-core's `agentofreality-ignite-native-next` branch (PR #1031)
   (`0e0e3ed4`), not yet upstream.
 
 ## After the talk

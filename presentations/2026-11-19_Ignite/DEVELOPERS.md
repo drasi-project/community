@@ -229,7 +229,7 @@ Panel titles and values are referenced by `presentation/notes.ts` (and so
 Run from `demo/` with `.env` loaded (`set -a; . ./.env; set +a`).
 
 **Quick checks** (no running demo needed). Build and test one crate at a time;
-builds go to the shared `.cargo-target-next` beside the checkouts
+builds go to the shared `.cargo-target` beside the checkouts
 (`demo/.cargo/config.toml`, at most 4 jobs). Never use `--workspace` in
 drasi-core or drasi-server.
 
@@ -242,7 +242,7 @@ drasi-core or drasi-server.
 
 The Prometheus reaction keeps its logic in plain modules with host-free tests
 (the text format) and has one SDK-level test of its factory. The policy and the
-optimizer are Drasi's own crates, tested in `drasi-core-next`
+optimizer are Drasi's own crates, tested in `drasi-core`
 (`cargo test -p drasi-computation-transformer-policy`,
 `-p drasi-computation-transformer-optimization`). `ignite-config`'s tests run
 the demo's result queries over the optimizer's output, and
@@ -307,13 +307,13 @@ Evidence from every run, including failures, is kept under `.native/evidence/`.
 ## Dependencies on Drasi Core and Server
 
 The demo builds against sibling checkouts of Drasi Core and Server, not
-published packages: `drasi-core-next` and `drasi-server-next` beside this
+published packages: `drasi-core` and `drasi-server` beside this
 repository, both on branch `agentofreality-ignite-native-next`. They are the
 merged drasi-core (PR 1030) and the Server adapted to it, on
 `agentofreality-parallel-computation-graph-recovery`. `ops/settings.py` and
 `ops/native-build.sh` name them (`IGNITE_DRASI_CORE`, `IGNITE_DRASI_SERVER`,
-defaults `drasi-core-next` and `drasi-server-next`), and the demo's Rust crates
-reference `../drasi-core-next` by path. Server and every plugin must come from
+defaults `drasi-core` and `drasi-server`), and the demo's Rust crates
+reference `../drasi-core` by path. Server and every plugin must come from
 the same drasi-core build: the plugin services interface (version 2) requires an
 exact match, so `native-build.sh` builds them together.
 
@@ -326,7 +326,7 @@ these commits beyond their upstream branch:
 | `0e0e3ed4` | drasi-core: HTTP sink | `unroutedChanges: ignore`: a change whose operation has no template route completes without a request. The HTTP reactions route only additions (and updates, for approval annotations); without it every other change would be posted to `{baseUrl}/changes/{alias}`, which the receivers don't have, and the gateway reaction would stall |
 | `b282af95`, `6b663dd0`, `26267f08`, `9afd6aa6` | drasi-core: `drasi.standard/optimization` | Preconditions, solution summaries and identities (`signature`, `solutionSignature`), the scenario roll-up, placement candidates separate from policy decisions, start from upstream snapshots, and `atomicScenarios` |
 | `a79f7e27`, `854886c3`, `8d0dcce9` | drasi-core: `drasi.standard/policy` and the plugin SDK | Volatile transformers start from their upstream outputs' snapshots, and the policy emits the decisions for that snapshot at startup |
-| `a4eed95` | drasi-server | Builds against `../drasi-core-next` |
+| `a4eed95` | drasi-server | Builds against `../drasi-core` |
 
 ## Known issues
 

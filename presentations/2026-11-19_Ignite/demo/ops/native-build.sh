@@ -3,12 +3,12 @@ set -euo pipefail
 DEMO="$(cd "$(dirname "$0")/.." && pwd)"
 ROOT="$(cd "$DEMO/../../../.." && pwd)"
 # The next-version checkouts beside this one (ops/settings.py uses the same names).
-SERVER="$ROOT/${IGNITE_DRASI_SERVER:-drasi-server-next}"
-CORE="$ROOT/${IGNITE_DRASI_CORE:-drasi-core-next}"
+SERVER="$ROOT/${IGNITE_DRASI_SERVER:-drasi-server}"
+CORE="$ROOT/${IGNITE_DRASI_CORE:-drasi-core}"
 # At most 4 parallel jobs; one shared build folder for the copy (see demo/.cargo/config.toml).
 export CARGO_BUILD_JOBS="$(( ${CARGO_BUILD_JOBS:-4} > 4 ? 4 : ${CARGO_BUILD_JOBS:-4} ))"
 export CARGO_PROFILE_DEV_DEBUG=0
-export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$ROOT/.cargo-target-next}"
+export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$ROOT/.cargo-target}"
 export JQ_LIB_DIR="${JQ_LIB_DIR:-/opt/homebrew/lib}"
 mkdir -p "$DEMO/.native/plugins"
 # Install as a new file: macOS kills a process that loads a library overwritten

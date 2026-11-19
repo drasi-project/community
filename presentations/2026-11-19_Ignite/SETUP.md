@@ -49,18 +49,18 @@ podman machine start
 
 Put the three repositories side by side in one folder, on these branches and
 with these folder names. The demo finds Drasi Core and Server as
-`drasi-core-next` and `drasi-server-next` beside the community repository:
+`drasi-core` and `drasi-server` beside the community repository:
 
 ```sh
 mkdir ignite-native && cd ignite-native
 git clone -b agentofreality-ignite-new-flow https://github.com/drasi-project/community.git
-git clone -b agentofreality-ignite-native-next https://github.com/drasi-project/drasi-core.git drasi-core-next
-git clone -b agentofreality-ignite-native-next https://github.com/drasi-project/drasi-server.git drasi-server-next
+git clone -b agentofreality-ignite-native-next https://github.com/drasi-project/drasi-core.git drasi-core
+git clone -b agentofreality-ignite-native-next https://github.com/drasi-project/drasi-server.git drasi-server
 ```
 
 The drasi-core and drasi-server branches carry changes the demo needs (see
 [DEVELOPERS.md](DEVELOPERS.md#dependencies-on-drasi-core-and-server)). Builds
-go to `.cargo-target-next` in this top folder.
+go to `.cargo-target` in this top folder.
 
 All remaining commands run from the demo folder:
 
@@ -109,7 +109,7 @@ release archive the first time; that needs a network connection.
 ### 5. Build Drasi Server, the plugins and the AI service
 
 ```sh
-npm --prefix ../../../../drasi-server-next/ui ci
+npm --prefix ../../../../drasi-server/ui ci
 set -a; . ./.env; set +a
 ./ops/native-build.sh
 ```
