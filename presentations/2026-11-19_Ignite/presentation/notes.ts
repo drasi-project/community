@@ -8,7 +8,8 @@ import type { HowId } from "./howItWorks";
 
 // Buttons the desk shows next to a beat. Each changes the live demo.
 export type ActionId = "start-traffic" | "stop-traffic" | "fail-eu-a" | "approve-change"
-  | "summaries-europe" | "summaries-anywhere" | "eu-a-half" | "eu-a-full" | "restore-eu-a";
+  | "summaries-europe" | "summaries-anywhere" | "eu-a-half" | "eu-a-full" | "restore-eu-a"
+  | "provision-us-c";
 
 export type Beat = {
   show: StageView;     // what the projector shows during this beat (Next switches it)
@@ -76,7 +77,7 @@ export const notes: Record<SceneId, Cue> = {
       { show: "wants-drasi",
         say: "We believe Drasi can provide much of this: it keeps that connected context current as data changes in the systems you already have, and delivers the answers into the tools you already use. Let me show you a few examples." },
       { show: "scenario-map",
-        say: "The scenario: monitoring two AI workloads. Customer support needs 60k tokens a minute and runs on EU-A; document summaries need 80k and run on EU-B. Each deployment has 100k of capacity, and US-C in the US is extra capacity that's just been provisioned. Support handles restricted data, which stays in Europe. Summaries' classification is under review, so until that clears, compliance keeps them in Europe too. Customers expect an answer within 15 seconds, and workload deployment changes need human approval. And the team already has its tools: OpenTelemetry, Prometheus and Grafana, Langfuse for traces, Mattermost for incidents, and PostgreSQL for the service's own data. In a real environment there'd also be ticketing, on-call paging, a service catalog and CI/CD; Drasi connects to those the same way. I won't walk through it as if I'm running the process; for each step I'll say what needs doing, show it, then show how it works." },
+        say: "The scenario: monitoring two AI workloads. Customer support needs 60k tokens a minute and runs on EU-A; document summaries need 80k and run on EU-B. Each deployment has 100k of capacity, and US-C in the US is extra capacity being provisioned. Support handles restricted data, which stays in Europe. Summaries' classification is under review, so until that clears, compliance keeps them in Europe too. Customers expect an answer within 15 seconds, and workload deployment changes need human approval. And the team already has its tools: OpenTelemetry, Prometheus and Grafana, Langfuse for traces, Mattermost for incidents, and PostgreSQL for the service's own data. In a real environment there'd also be ticketing, on-call paging, a service catalog and CI/CD; Drasi connects to those the same way. I won't walk through it as if I'm running the process; for each step I'll say what needs doing, show it, then show how it works." },
     ],
     ifBroken: "Carry on; the slides don't depend on the demo.",
   },
@@ -91,7 +92,7 @@ export const notes: Record<SceneId, Cue> = {
         watch: "The how-it-works card above Deployment status and Workload status, with an arrow to each." },
       { show: "ops", highlight: ["ai-operations.deployment-status"], config: ["deployment-health"],
         say: "Here's the first query: the latest health check per deployment, from the OpenTelemetry source. 2 means failed.",
-        watch: "Deployment status: EU-A, EU-B, US-C Healthy; the deployment-health query above it." },
+        watch: "Deployment status: EU-A, EU-B Healthy (US-C is added in scene 3); the deployment-health query above it." },
       { show: "ops", highlight: ["ai-operations.workload-status"], config: ["tile-workloads"],
         say: "And the second joins that health with configuration: where each workload runs, and whether policy allows it there. So it says whether each workload is served somewhere healthy that it's allowed to run.",
         watch: "Workload status: Support · EU-A and Summaries · EU-B Healthy; the tile-workloads query above it." },
@@ -115,8 +116,11 @@ export const notes: Record<SceneId, Cue> = {
   scene3: {
     summary: "Summaries Europe-only puts failover at risk; compliance allows the US and it's safe",
     beats: [
+      { show: "ops", do: ["provision-us-c"], highlight: ["ai-operations.deployment-status"],
+        say: "We've provisioned extra capacity: US-C, in the US. Watch it appear on the dashboard: one new row, and no dashboard change. But failover is still at risk: compliance won't let summaries run in the US yet.",
+        watch: "TODO (live texts from the port agent): Deployment status gains US-C Healthy; Failover readiness stays At risk." },
       { show: "ops", highlight: ["ai-operations.recommended-action+failover-readiness"], config: ["how-readiness"],
-        say: "We've provisioned extra capacity in US-C, but while their classification is under review, compliance won't let document summaries be processed in the US. Failover readiness asks: if any one deployment failed, would every workload still have somewhere allowed to run? Right now, no, and Recommended action says add capacity. Behind it: the policy and the deployments from the database, health from OpenTelemetry, and two of Drasi's continuous models, a Rego policy and an optimization model, re-run whenever any of them changes.",
+        say: "While summaries' classification is under review, compliance won't let them be processed in the US. Failover readiness asks: if any one deployment failed, would every workload still have somewhere allowed to run? Right now, no, and Recommended action says add capacity. Behind it: the policy and the deployments from the database, health from OpenTelemetry, and two of Drasi's continuous models, a Rego policy and an optimization model, re-run whenever any of them changes.",
         watch: "Failover readiness: At risk: losing EU-A leaves no valid plan; Recommended action: Add capacity (both yellow); the how-it-works card above." },
       { show: "ops", highlight: ["ai-operations.recommended-action"], config: ["policy"],
         say: "The policy, as Rego: a workload may only use the deployments it's allowed, and restricted data stays in its region. The allowed destinations are data, rows in the database.",
@@ -214,4 +218,5 @@ export const actionLabels: Record<ActionId, string> = {
   "approve-change": "Approve the proposed change",
   "summaries-europe": "Summaries: Europe only", "summaries-anywhere": "Summaries: Europe + US",
   "eu-a-half": "EU-A back at 50k", "eu-a-full": "EU-A back to 100k", "restore-eu-a": "Restore EU-A",
+  "provision-us-c": "Provision US-C",
 };

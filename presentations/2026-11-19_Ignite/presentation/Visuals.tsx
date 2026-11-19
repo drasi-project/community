@@ -267,7 +267,7 @@ export function Visual({ id, active, qr }: { id: VisualId; active: boolean; qr: 
           <p className="v-site-class">Data classification: restricted <i>under review</i></p></div>
         <div className="v-site pending-capacity" style={{ left: 560, top: 262 }}>
           <p className="v-site-head"><b>{nb("US-C")}</b><span>US · Capacity: 100k tokens/min</span></p>
-          <p className="v-site-note">Extra capacity, just provisioned</p></div>
+          <p className="v-site-note">Extra capacity, being provisioned</p></div>
       </div>
       <div className="v-rules">
         <span className="rule"><Icon name="model" size={32} />Restricted data stays in Europe</span>
