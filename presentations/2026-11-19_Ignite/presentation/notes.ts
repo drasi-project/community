@@ -118,7 +118,7 @@ export const notes: Record<SceneId, Cue> = {
     beats: [
       { show: "ops", do: ["provision-us-c"], highlight: ["ai-operations.deployment-status"],
         say: "We've provisioned extra capacity: US-C, in the US. Watch it appear on the dashboard: one new row, and no dashboard change. But failover is still at risk: compliance won't let summaries run in the US yet.",
-        watch: "TODO (live texts from the port agent): Deployment status gains US-C Healthy; Failover readiness stays At risk." },
+        watch: "Within a second: a US-C Healthy row in Deployment status. Failover readiness and Recommended action unchanged: …losing EU-A leaves no valid plan. No channel card." },
       { show: "ops", highlight: ["ai-operations.recommended-action+failover-readiness"], config: ["how-readiness"],
         say: "While summaries' classification is under review, compliance won't let them be processed in the US. Failover readiness asks: if any one deployment failed, would every workload still have somewhere allowed to run? Right now, no, and Recommended action says add capacity. Behind it: the policy and the deployments from the database, health from OpenTelemetry, and two of Drasi's continuous models, a Rego policy and an optimization model, re-run whenever any of them changes.",
         watch: "Failover readiness: At risk: losing EU-A leaves no valid plan; Recommended action: Add capacity (both yellow); the how-it-works card above." },

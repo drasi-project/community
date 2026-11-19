@@ -316,7 +316,7 @@ Say it in your own words.
    Watch it appear on the dashboard: one new row, and no dashboard change.\
    But failover is still at risk: compliance won't let summaries run in the US yet.
    - **Press:** Provision US-C
-   - **Watch for:** TODO (live texts from the port agent): Deployment status gains US-C Healthy; Failover readiness stays At risk.
+   - **Watch for:** Within a second: a US-C Healthy row in Deployment status. Failover readiness and Recommended action unchanged: …losing EU-A leaves no valid plan. No channel card.
 24. **Grafana · Operations.**\
    While summaries' classification is under review, compliance won't let them be processed in the US.\
    Failover readiness asks: if any one deployment failed, would every workload still have somewhere allowed to run?\
