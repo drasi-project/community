@@ -192,7 +192,7 @@
 .slide-deck .stage-frame .v-plug .v-group ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
 .slide-deck .stage-frame .v-plug .v-group li { padding: 6px 12px; background: var(--tone); color: var(--ink); text-align: left; font: 600 24px/1.2 var(--text); }
 .slide-deck .stage-frame .v-models { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 12px; font-style: normal; }
-.slide-deck .stage-frame .v-models i { padding: 4px 10px; background: #091F2C; color: var(--green); font: 600 22px/1.1 var(--text); font-style: normal; }
+.slide-deck .stage-frame .v-models i { padding: 4px 10px; background: #091F2C; color: var(--c-model); font: 600 22px/1.1 var(--text); font-style: normal; }
 /* The CNCF logo beside the Sandbox badge */
 .slide-deck .stage-frame .vs-project .v-badge { flex-direction: row; align-items: center; gap: 34px; justify-content: flex-start; background: #091F2C; color: var(--white); border: 4px solid var(--light-blue); }
 .slide-deck .stage-frame .vs-project .v-badge > div { display: flex; flex-direction: column; }

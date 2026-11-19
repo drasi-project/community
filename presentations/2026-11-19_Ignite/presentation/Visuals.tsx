@@ -201,9 +201,8 @@ export function Visual({ id, active, qr }: { id: VisualId; active: boolean; qr: 
         <Arrow />
         <div className="v-plug role-reaction">{pluginReactions.map(([group, items]) => <div className="v-group" key={group}><h3>{group}</h3><ul>{items.map(t => <li key={t}>{t}</li>)}</ul></div>)}</div>
       </div>
-      <p className="v-foot">Plus bootstrappers that load each source's starting data, indexes (RocksDB, Garnet), and state and secret stores; and SDKs to build your own. This demo adds a Prometheus reaction, written as a Drasi plugin.</p>
     </Slide>;
-    case "forms": return <Slide id={id} title="Use it the way that fits">
+    case "forms": return <Slide id={id} title="Run Drasi your way">
       <div className="v-forms">
         <div className="v-col gray"><h2>In your app</h2>
           <div className="v-sketch"><div className="v-box app"><small>Your app</small><div className="v-box lib"><DrasiMark />Drasi library</div></div></div>

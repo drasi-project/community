@@ -14,7 +14,7 @@
   --light-blue: #8DC8E8; --light-purple: #C5B4E3; --green: #8DE971; --light-green: #D4EC8E; --light-gray: #D9D9D6;
   --light-yellow: #FFE399; --light-red: #FFB3BB;
   /* Drasi's parts, one colour each everywhere: slides, diagrams and the dashboard and channel overlays */
-  --c-source: var(--light-blue); --c-query: var(--light-purple); --c-model: var(--green); --c-reaction: var(--light-green);
+  --c-source: #8DC8E8; --c-query: #C5B4E3; --c-model: #9F86D6; --c-reaction: #8DE971;
   --panel: rgba(9, 31, 44, .6);
   --text: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
   --display: "Segoe Sans Display", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;

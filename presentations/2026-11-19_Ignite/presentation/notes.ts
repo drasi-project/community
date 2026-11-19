@@ -55,7 +55,7 @@ export const notes: Record<SceneId, Cue> = {
     ifBroken: "The slides don't depend on the demo. Carry on.",
   },
   drasi: {
-    summary: "Sources, Continuous Queries, Reactions; the plugin ecosystem; form factors",
+    summary: "Sources, Continuous Queries, Reactions, and queries building on queries",
     beats: [
       { show: "drasi-1",
         say: "Drasi is built around three simple, familiar concepts: Sources, Continuous Queries and Reactions. Sources bring in every change, here from a database, telemetry and Kubernetes. A continuous query describes what you care about across them, as one graph query, and Drasi does the joining and keeps its answer current as the data changes. A reaction does something with each change to the answer." },
@@ -63,10 +63,6 @@ export const notes: Record<SceneId, Cue> = {
         say: "And it grows from there: many sources, many queries, many reactions, each answer kept current as the data changes. TODO: mention continuous models (policy, optimization) here or in scene 3?" },
       { show: "drasi-3",
         say: "And queries can build on each other's results, forming a computation graph. In this demo, the health checks feed a deployment-health query, which feeds the workload status and the plan; policy input feeds the policy model, which feeds the plan too; and the results fan out to several reactions. When one input changes, only what depends on it updates." },
-      { show: "plugins",
-        say: "Sources, reactions and continuous models are all plugins, and there's a rich, growing ecosystem of them: databases, streams and APIs, Kubernetes and live data feeds on one side; APIs, agents, messaging and databases on the other; plus SDKs to build your own. This demo adds one, a Prometheus reaction. Continuous queries can be written in openCypher or GQL; this demo uses Cypher." },
-      { show: "forms",
-        say: "Because we want Drasi to be as accessible as possible, it comes in several form factors: as a library in Rust, Node.js, Python and .NET, embedded in your own process; as a standalone server, which is what this demo runs on; and on Kubernetes. TODO: confirm availability of each at Ignite." },
     ],
     ifBroken: "Carry on; the slides don't depend on the demo.",
   },
@@ -161,8 +157,12 @@ export const notes: Record<SceneId, Cue> = {
     ifBroken: "If nothing changes within 30 seconds, press Use recordings from here on. If Approve doesn't respond, press Approve the proposed change on the desk; never approve twice.",
   },
   closing: {
-    summary: "What we showed; links; the session survey, then questions",
+    summary: "Plugins; run it your way; what we showed; links; the session survey, then questions",
     beats: [
+      { show: "plugins",
+        say: "Everything you saw was configuration over plugins. Sources, reactions and continuous models are all plugins, and there's a growing ecosystem of them: databases, streams and APIs, Kubernetes and live data feeds coming in; APIs, agents, messaging and databases going out. And you can build your own: this demo adds one, the Prometheus reaction. Continuous queries can be written in openCypher or GQL; this demo uses Cypher." },
+      { show: "forms",
+        say: "And you can run it your way. Embed it as a library in Rust, Node.js, Python or .NET to build change-driven applications; run Drasi Server as a process or a container, configured in YAML, which is what this demo runs on; or deploy it on Kubernetes, where each part scales on its own. TODO: confirm availability of each at Ignite." },
       { show: "closing", say: "So what did we see? Status worked out from telemetry and configuration together. Requests that got no answer, noticed at their deadline. A compliance change that made the service more resilient. And a fix, proposed within policy, approved in chat and verified. Each one is richer context from data that already existed in different places, and none of it needed an integration project: connect sources, configure continuous models, connect reactions." },
       { show: "links", say: "To learn more, start at drasi.io; the code, and this demo, are on GitHub." },
       { show: "survey", say: "Thank you. Please scan the code and tell us how we did in the session survey. Questions?",

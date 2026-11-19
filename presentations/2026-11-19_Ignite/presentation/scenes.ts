@@ -34,12 +34,12 @@ export const slides = [
   { id: "drasi-1", title: "Simple concepts · one query, several sources" },
   { id: "drasi-2", title: "Simple concepts · many queries and reactions" },
   { id: "drasi-3", title: "Simple concepts · queries build on queries" },
-  { id: "plugins", title: "Plugin ecosystem" },
-  { id: "forms", title: "Form factors" },
   { id: "issues", title: "Observability issues" },
   { id: "wants", title: "What organizations want" },
   { id: "wants-drasi", title: "What organizations want · with Drasi" },
   { id: "scenario-map", title: "The scenario" },
+  { id: "plugins", title: "Plugin ecosystem" },
+  { id: "forms", title: "Run Drasi your way" },
   { id: "closing", title: "What you saw" },
   { id: "links", title: "Learn more" },
   { id: "survey", title: "Session survey" },
@@ -57,13 +57,13 @@ export const viewLabel = (view: StageView) => view === "ops" ? "Grafana · Opera
 // The talk's parts. Timings are minutes from the start.
 export const scenes = [
   { id: "intro", title: "Intro", start: 0, minutes: 2 },
-  { id: "drasi", title: "What Drasi is", start: 2, minutes: 3.5 },
-  { id: "observability", title: "Observability and the scenario", start: 5.5, minutes: 2.5 },
-  { id: "scene1", title: "Scene 1 · Status from telemetry and configuration", start: 8, minutes: 2.5 },
-  { id: "scene2", title: "Scene 2 · The absence of change", start: 10.5, minutes: 2.5 },
-  { id: "scene3", title: "Scene 3 · Compliance meets resilience", start: 13, minutes: 3 },
-  { id: "scene4", title: "Scene 4 · Failure, proposal, approval", start: 16, minutes: 4.5 },
-  { id: "closing", title: "Summary and close", start: 20.5, minutes: 1.5 },
+  { id: "drasi", title: "What Drasi is", start: 2, minutes: 2.5 },
+  { id: "observability", title: "Observability and the scenario", start: 4.5, minutes: 2.5 },
+  { id: "scene1", title: "Scene 1 · Status from telemetry and configuration", start: 7, minutes: 2.5 },
+  { id: "scene2", title: "Scene 2 · The absence of change", start: 9.5, minutes: 2.5 },
+  { id: "scene3", title: "Scene 3 · Compliance meets resilience", start: 12, minutes: 3 },
+  { id: "scene4", title: "Scene 4 · Failure, proposal, approval", start: 15, minutes: 4.5 },
+  { id: "closing", title: "Plugins, form factors and close", start: 19.5, minutes: 2.5 },
 ] as const;
 export type SceneId = typeof scenes[number]["id"];
 export const timeLabel = (minutes: number) => `${Math.floor(minutes)}:${Math.round((minutes % 1) * 60).toString().padStart(2, "0")}`;
