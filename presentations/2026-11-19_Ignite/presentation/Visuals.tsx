@@ -134,15 +134,13 @@ function Stream() {
 // The tangle: an on-call engineer between the tools an enterprise typically runs, grouped.
 const toolGroups: { name: string; x: number; y: number; w: number; items: string[] }[] = [
   { name: "Telemetry", x: 0, y: 0, w: 450, items: ["Metrics", "Logs", "Traces", "Profiles", "APM", "RUM and synthetics"] },
-  { name: "Response", x: 530, y: 0, w: 450, items: ["Alerts and on-call", "Incidents", "ITSM tickets", "ChatOps", "Runbooks"] },
-  { name: "Change", x: 0, y: 440, w: 300, items: ["CI/CD and deploys", "Feature flags", "CMDB and catalog"] },
-  { name: "AI and security", x: 320, y: 520, w: 320, items: ["LLM observability", "SIEM", "Vulnerabilities"] },
-  { name: "Business and risk", x: 660, y: 440, w: 320, items: ["Business KPIs", "Cost (FinOps)", "Policy and compliance"] },
+  { name: "Response", x: 530, y: 0, w: 450, items: ["Dashboards", "Alerts and on-call", "SLOs", "Incidents and tickets", "Runbooks"] },
+  { name: "Context", x: 200, y: 480, w: 580, items: ["Deployments and changes", "Service catalog / CMDB", "Business outcomes", "AI / LLM observability", "Telemetry cost"] },
 ];
 function Tangle() {
   const person = { x: 490, y: 340 };
-  const centre = (g: typeof toolGroups[number]) => ({ x: g.x + g.w / 2, y: g.y + 90 });
-  const cross: [number, number][] = [[0, 2], [0, 4], [1, 3], [1, 2], [2, 4], [3, 0], [4, 1]];
+  const centre = (g: typeof toolGroups[number]) => ({ x: g.x + g.w / 2, y: g.y + 80 });
+  const cross: [number, number][] = [[0, 1], [0, 2], [1, 2]];
   return <div className="v-tangle" aria-hidden="true">
     <svg viewBox="0 0 980 720" width="980" height="720">
       {cross.map(([a, b]) => { const p = centre(toolGroups[a]), q = centre(toolGroups[b]); return <line key={`${a}-${b}`} className="thin" x1={p.x} y1={p.y} x2={q.x} y2={q.y} />; })}

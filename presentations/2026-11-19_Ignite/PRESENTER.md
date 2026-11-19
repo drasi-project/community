@@ -245,8 +245,9 @@ Say it in your own words.
 12. **Observability issues.**\
    Drasi is a general-purpose technology for building change-driven systems in any domain.\
    But few domains show the need and value better than observability, so today I'll show you some examples of how Drasi works in an observability use case.\
-   Some common issues organizations report: too much data, too many tools, lots of noise, and dashboards that show symptoms, not answers, because the context lives somewhere else.\
-   A typical team juggles telemetry, alerting and incident tools, deployment and change records, security tools, and now AI observability too, and the on-call engineer is the one joining them up.
+   A typical team has telemetry in one set of tools, dashboards, alerts and incidents in another, and the context, deployments, the service catalog, business outcomes, in yet more.\
+   Organizations report the same issues: the tools are fragmented; alerts are noisy, yet important failures still arrive late; the context lives somewhere else, so you see symptoms, not answers; telemetry costs keep growing; healthy components don't mean customers got what they needed; and AI services can look healthy while getting it wrong.\
+   The on-call engineer is the one joining it all up.
 13. **What organizations want.**\
    What organizations want is more context, joined across systems; the signal raised above the noise; outcomes, including what didn't happen; action backed by evidence, with safeguards; all in the tools they already use.
 14. **What organizations want · with Drasi.**\
