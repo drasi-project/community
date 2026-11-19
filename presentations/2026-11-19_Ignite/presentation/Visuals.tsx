@@ -3,6 +3,8 @@ import { Icon } from "./Icon";
 import "./visuals.css";
 import logo from "./assets/drasi-logo-colored-white-tight.svg";
 import mark from "./assets/drasi-logomark-tight.svg";
+// The CNCF logo, unmodified, from github.com/cncf/artwork (other/cncf/horizontal/white/cncf-white.svg).
+import cncf from "./assets/cncf-white.svg";
 
 // The Drasi project's own artwork (community/images), cropped to the artwork. The rule (visuals.css):
 // the full logo only where Drasi is introduced or summed up; the logomark, at one size, where Drasi
@@ -17,6 +19,20 @@ export const isVisual = (id: string): id is VisualId => (visualIds as readonly s
 const nb = (text: string) => text.replace(/\b(EU|US)-([A-C])\b/g, "$1\u2011$2");
 const Slide = ({ id, title, children, withLogo = false }: { id: string; title: string; children: ReactNode; withLogo?: boolean }) =>
   <div className={`content-slide v-slide vs-${id}`}><h1 className={title.length > 40 ? "long" : undefined}>{title}</h1>{withLogo && <img className="v-logo" src={logo} alt="Drasi" />}<div className="body">{children}</div></div>;
+// Plugins in drasi-core's components folder, grouped.
+const pluginSources: [string, string[]][] = [
+  ["Databases", ["PostgreSQL", "MySQL", "SQL Server", "Oracle", "SQLite", "Neo4j", "Dataverse"]],
+  ["Streams and APIs", ["Kafka", "HTTP", "gRPC", "WebSocket", "OpenTelemetry", "Redis Streams"]],
+  ["Platforms", ["Kubernetes", "Your app, in-process"]],
+  ["Live feeds", ["Cloudflare Radar", "GTFS-RT", "HERE Traffic", "Open511", "RIS Live", "Hyperliquid", "Sui DeepBook"]],
+];
+const pluginReactions: [string, string[]][] = [
+  ["APIs and agents", ["HTTP", "gRPC", "SSE", "MCP", "A2A"]],
+  ["Messaging", ["Event Grid", "AWS SQS", "RabbitMQ", "Azure Storage", "Redis Streams"]],
+  ["Databases", ["Stored procedures: PostgreSQL, MySQL, SQL Server"]],
+  ["Observe and build", ["Dashboard", "Loki", "Log", "Profiler", "File", "Your app, in-process"]],
+];
+
 // From drasi.io's navigation bar.
 const social: [string, string][] = [["globe", "drasi.io"], ["github", "github.com/drasi-project"], ["discord", "aka.ms/drasidiscord"],
   ["youtube", "@DrasiProject"], ["bluesky", "drasi-project.bsky.social"], ["x", "@drasi_project"]];
@@ -139,7 +155,7 @@ export function Visual({ id, active, qr }: { id: VisualId; active: boolean; qr: 
       <div className="v-hero"><h1><img src={logo} alt="Drasi" /></h1>
         <p className="lead">An open-source data processing platform for change-driven systems</p></div>
       <div className="v-project">
-        <div className="v-badge"><small>CNCF</small><b>Sandbox project</b><span>since January 2025</span></div>
+        <div className="v-badge"><img className="v-cncf" src={cncf} alt="Cloud Native Computing Foundation" /><div><b>Sandbox project</b><span>since January 2025</span></div></div>
         <ul className="v-tiles">
           <li className="blue"><Icon name="code" size={52} /><b>Open source</b><span>Apache 2.0, on GitHub</span></li>
           <li className="purple"><Icon name="bolt" size={52} /><b>Active development</b><span>New sources, reactions and form factors</span></li>
@@ -148,14 +164,14 @@ export function Visual({ id, active, qr }: { id: VisualId; active: boolean; qr: 
       </div>
       <ul className="v-social">{social.map(([icon, text]) => <li key={text}><Icon name={icon} size={36} />{text}</li>)}</ul>
     </div>;
-    case "problem": return <Slide id={id} title="Why Drasi?">
+    case "problem": return <Slide id={id} title="Why Drasi exists">
       <p className="lead">Detecting meaningful change as it happens, and reacting to it, is harder than it should be</p>
       <div className="v-versus">
-        <section className="bad"><h2><Icon name="poll" size={40} />Polling</h2><Loop /><p>Slow to notice, wasteful, and changes in between are missed</p></section>
-        <section className="bad"><h2><Icon name="otel" size={40} />Stream processing</h2><Stream /><p>Every event arrives; what it means for the current state is code you write and run</p></section>
+        <div className="v-col bad"><h2><Icon name="poll" size={40} />Polling</h2><Loop /><p>Slow to notice, wasteful, and changes in between are missed</p></div>
+        <div className="v-col bad"><h2><Icon name="otel" size={40} />Stream processing</h2><Stream /><p>Every event arrives; what it means for the current state is code you write and run</p></div>
       </div>
     </Slide>;
-    case "change-driven": return <Slide id={id} title="Change-driven, with Drasi" withLogo>
+    case "change-driven": return <Slide id={id} title="Change-driven computation with Drasi" withLogo>
       <p className="lead">Describe the result you want; Drasi keeps it current</p>
       <ol className="v-chain">
         <li><Icon name="pg" size={64} /><b>Changes flow in</b><span>from the databases, telemetry and systems you already have</span></li>
@@ -177,28 +193,30 @@ export function Visual({ id, active, qr }: { id: VisualId; active: boolean; qr: 
     }
     case "plugins": return <Slide id={id} title="Everything is a plugin">
       <div className="v-hub">
-        <ul className="v-plug blue">{["PostgreSQL", "MySQL", "SQL Server", "Cosmos DB", "Event Hubs", "Kubernetes", "OpenTelemetry", "Dataverse"].map(t => <li key={t}>{t}</li>)}<li className="more">+ build your own</li></ul>
+        <div className="v-plug blue">{pluginSources.map(([group, items]) => <div className="v-group" key={group}><h3>{group}</h3><ul>{items.map(t => <li key={t}>{t}</li>)}</ul></div>)}</div>
         <Arrow />
-        <div className="v-core"><b><DrasiMark />Drasi</b><span className="purple">Continuous queries<em className="v-langs-q"><i>openCypher</i><i>GQL</i></em></span><span className="green">Policy</span><span className="green">Optimization</span></div>
+        <div className="v-core"><b><DrasiMark />Drasi</b>
+          <span className="purple">Continuous queries<em className="v-langs-q"><i>openCypher</i><i>GQL</i></em></span>
+          <span className="green">Continuous models<em className="v-models">{["Policy", "Optimization", "View", "Arithmetic", "Geometry"].map(m => <i key={m}>{m}</i>)}</em></span></div>
         <Arrow />
-        <ul className="v-plug lime">{["HTTP", "SSE", "SignalR", "Event Grid", "Dapr pub/sub", "Storage queues", "Prometheus", "Gremlin"].map(t => <li key={t}>{t}</li>)}<li className="more">+ build your own</li></ul>
+        <div className="v-plug lime">{pluginReactions.map(([group, items]) => <div className="v-group" key={group}><h3>{group}</h3><ul>{items.map(t => <li key={t}>{t}</li>)}</ul></div>)}</div>
       </div>
-      <p className="v-foot todo">TODO: check the plugin lists against drasi.io</p>
+      <p className="v-foot">Plus bootstrappers that load each source's starting data, indexes (RocksDB, Garnet), and state and secret stores; and SDKs to build your own. This demo adds a Prometheus reaction, written as a Drasi plugin.</p>
     </Slide>;
     case "forms": return <Slide id={id} title="Use it the way that fits">
       <div className="v-forms">
-        <section className="blue"><h2>In your app</h2>
+        <div className="v-col blue"><h2>In your app</h2>
           <div className="v-sketch"><div className="v-box app"><small>Your app</small><div className="v-box lib"><DrasiMark />Drasi library</div></div></div>
           <ul className="v-langs">{["Rust", "Node.js", "Python", ".NET"].map(l => <li key={l}>{l}</li>)}</ul>
-          <p>Embed it; react in your own code</p></section>
-        <section className="purple"><h2>As a service</h2>
+          <p>Embed it; react in your own code</p></div>
+        <div className="v-col purple"><h2>As a service</h2>
           <div className="v-sketch row"><div className="v-box src">Data</div><Arrow /><div className="v-box lib"><DrasiMark />Drasi Server</div><Arrow /><div className="v-box src">Tools</div></div>
           <ul className="v-langs"><li>One container</li></ul>
-          <p>Configure it in YAML; this demo runs on it</p></section>
-        <section className="green"><h2>On Kubernetes</h2>
+          <p>Configure it in YAML; this demo runs on it</p></div>
+        <div className="v-col green"><h2>On Kubernetes</h2>
           <div className="v-sketch"><div className="v-box cluster"><small><DrasiMark /> Drasi on a cluster</small><div className="v-pods"><span>Sources</span><span>Queries</span><span>Reactions</span></div></div></div>
           <ul className="v-langs"><li>drasi CLI</li><li>Resources</li></ul>
-          <p>Each part scales on its own</p></section>
+          <p>Each part scales on its own</p></div>
       </div>
       <p className="v-foot todo">TODO: confirm which form factors are available at Ignite</p>
     </Slide>;

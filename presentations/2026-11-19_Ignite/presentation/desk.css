@@ -96,3 +96,7 @@ button.quiet { background: transparent; border-color: var(--border); color: #aab
 .answers .bad { color: #ff8a8a; }
 .wrong-press { margin: 0; font-size: 13px; color: #aab6c4; line-height: 1.4; }
 .wrong-press b { color: #c3ceda; }
+
+/* One sentence per line in the script */
+.say .sentence { display: block; }
+.say .sentence + .sentence { margin-top: 4px; }

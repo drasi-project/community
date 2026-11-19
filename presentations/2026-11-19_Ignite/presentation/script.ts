@@ -1,5 +1,5 @@
 import { scenes, timeLabel, duration, viewLabel } from "./scenes";
-import { notes, actionLabels, glossary, questions, beatNumber } from "./notes";
+import { notes, actionLabels, glossary, questions, beatNumber, sentences } from "./notes";
 
 // PRESENTER.md's run of show, script, glossary and questions, generated from notes.ts.
 export function presenterScript() {
@@ -14,7 +14,8 @@ export function presenterScript() {
     const beats = cue.beats.map((beat, b) => {
       const n = beatNumber(index, b) - 1;
       const label = `${viewLabel(beat.show)}${beat.optional ? " (optional)" : ""}`;
-      const lines = [`${n + 1}. **${label}${/[.?!]$/.test(label) ? "" : "."}** ${beat.say}`];
+      // One sentence per line: a backslash at the end of a line is a Markdown line break.
+      const lines = [`${n + 1}. **${label}${/[.?!]$/.test(label) ? "" : "."}**\\\n   ${sentences(beat.say).join("\\\n   ")}`];
       if (beat.click) lines.push(`   - **Click on the projector:** ${beat.click}${beat.expect === "rejected" ? " (it's meant to be rejected)" : ""}. ${beat.do?.includes("approve-change") ? ` Backup on the desk: ${actionLabels["approve-change"]} (it presses the same button)` : ""}`);
       else if (beat.do) lines.push(`   - **Press:** ${beat.do.map(id => actionLabels[id]).join(", then ")}${beat.expect === "rejected" ? " (it's meant to be rejected)" : ""}`);
       if (beat.watch) lines.push(`   - **Watch for:** ${beat.watch}`);

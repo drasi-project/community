@@ -29,7 +29,7 @@ export type Cue = { summary: string; beats: Beat[]; ifBroken: string; recording?
 
 export const notes: Record<SceneId, Cue> = {
   intro: {
-    summary: "Walk-in; who I am; the project; what I'll show you; why Drasi?",
+    summary: "Walk-in; who I am; the project; what I'll show you; why Drasi exists",
     beats: [
       { show: "walkin", do: ["start-traffic"],
         say: "Before the session: the walk-in slide stays up while people arrive. Opening the projector window starts the talk timer at 00:00 (Restart timer in the header resets it). Press Next when you start talking.",
@@ -58,7 +58,7 @@ export const notes: Record<SceneId, Cue> = {
       { show: "drasi-3",
         say: "And queries can build on each other's results, forming a computation graph. In this demo, the health checks feed a deployment-health query, which feeds the workload status and the plan; policy input feeds the policy model, which feeds the plan too; and the results fan out to several reactions. When one input changes, only what depends on it updates." },
       { show: "plugins",
-        say: "Sources and reactions are all plugins, and there's a rich, growing ecosystem of them, plus tools to help you build new ones. Continuous queries can be written in openCypher or GQL; this demo uses Cypher. TODO: check the lists on the slide against drasi.io." },
+        say: "Sources, reactions and continuous models are all plugins, and there's a rich, growing ecosystem of them: databases, streams and APIs, Kubernetes and live data feeds on one side; APIs, agents, messaging and databases on the other; plus SDKs to build your own. This demo adds one, a Prometheus reaction. Continuous queries can be written in openCypher or GQL; this demo uses Cypher." },
       { show: "forms",
         say: "Because we want Drasi to be as accessible as possible, it comes in several form factors: as a library in Rust, Node.js, Python and .NET, embedded in your own process; as a standalone server, which is what this demo runs on; and on Kubernetes. TODO: confirm availability of each at Ignite." },
     ],
@@ -169,6 +169,9 @@ export const notes: Record<SceneId, Cue> = {
 // and in PRESENTER.md, never on the projector. Renumbers itself when beats change.
 export const beatNumber = (cue: number, beat: number) =>
   scenes.slice(0, cue).reduce((n, scene) => n + notes[scene.id].beats.length, 0) + beat + 1;
+
+// A beat's script split into sentences, so the desk and PRESENTER.md start each on its own line.
+export const sentences = (text: string) => text.split(/(?<=[.?!])\s+(?=["“(A-Z0-9])/);
 
 export const glossary: readonly [string, string][] = [
   ["Deployment", "One place the AI model runs: EU-A, EU-B (Europe) or US-C (United States)"],

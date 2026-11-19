@@ -1,5 +1,5 @@
 /* The new flow's slides (Visuals.tsx). Template colours only; text 26 px and up. */
-.slide-deck .stage-frame .v-slide { --ink: #091F2C; }
+.slide-deck .stage-frame .v-slide { --ink: #091F2C; --red: #F4364C; }
 .slide-deck .stage-frame .v-slide .lead { margin-bottom: 36px; }
 .slide-deck .stage-frame .v-slide .todo { color: var(--light-yellow); }
 .slide-deck .stage-frame .v-foot { margin-top: auto; font-size: 30px; color: var(--light-gray); }
@@ -20,14 +20,14 @@
 
 /* The problem: the polling loop versus change-driven */
 .slide-deck .stage-frame .v-versus { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; flex: 1; }
-.slide-deck .stage-frame .v-versus section { padding: 24px 32px; background: var(--panel); border-top: 10px solid var(--tone); display: flex; flex-direction: column; }
-.slide-deck .stage-frame .v-versus .bad { --tone: var(--light-red); }
+.slide-deck .stage-frame .v-versus .v-col { padding: 24px 32px; background: var(--panel); border-top: 10px solid var(--tone); display: flex; flex-direction: column; }
+.slide-deck .stage-frame .v-versus .bad { --tone: var(--red); background: rgba(9, 31, 44, .85); }
 .slide-deck .stage-frame .v-versus .good { --tone: var(--green); }
 .slide-deck .stage-frame .v-versus h2 { display: flex; gap: 16px; align-items: center; margin: 0 0 8px; font: 600 44px/1.2 var(--display); color: var(--tone); }
-.slide-deck .stage-frame .v-versus section > p { margin-top: auto; font: 600 32px/1.3 var(--display); color: var(--light-red); }
+.slide-deck .stage-frame .v-versus .v-col > p { margin-top: auto; font: 600 32px/1.3 var(--display); color: var(--red); }
 .slide-deck .stage-frame .v-loop { width: 100%; height: 470px; }
-.slide-deck .stage-frame .v-loop circle { fill: none; stroke: var(--light-red); stroke-width: 5; stroke-dasharray: 18 14; }
-.slide-deck .stage-frame .v-loop rect { fill: #091F2C; stroke: var(--light-red); stroke-width: 3; }
+.slide-deck .stage-frame .v-loop circle { fill: none; stroke: var(--red); stroke-width: 5; stroke-dasharray: 18 14; }
+.slide-deck .stage-frame .v-loop rect { fill: #091F2C; stroke: var(--red); stroke-width: 3; }
 .slide-deck .stage-frame .v-loop text { fill: var(--white); font: 600 32px var(--text); }
 .slide-deck .stage-frame .v-loop .v-loop-centre { fill: var(--light-gray); font: 400 34px var(--text); }
 .slide-deck .stage-frame .v-straight { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 40px; }
@@ -45,7 +45,7 @@
 @keyframes v-grow-in { from { opacity: 0; transform: translateX(-24px); } to { opacity: 1; transform: none; } }
 
 /* Plugins: sources and reactions round Drasi */
-.slide-deck .stage-frame .v-hub { flex: 1; display: grid; grid-template-columns: 1fr 70px 460px 70px 1fr; align-items: center; gap: 20px; }
+.slide-deck .stage-frame .v-hub { flex: 1; display: grid; grid-template-columns: 1fr 50px 400px 50px 1fr; align-items: center; gap: 14px; }
 .slide-deck .stage-frame .v-plug { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .slide-deck .stage-frame .v-plug li { padding: 22px 12px; background: var(--tone); color: var(--ink); text-align: center; font: 600 30px/1.15 var(--text); }
 .slide-deck .stage-frame .v-plug li.more { grid-column: span 2; background: none; border: 3px dashed var(--tone); color: var(--tone); }
@@ -55,7 +55,7 @@
 
 /* Form factors: three app architecture sketches */
 .slide-deck .stage-frame .v-forms { display: grid; grid-template-columns: repeat(3, 1fr); gap: 48px; }
-.slide-deck .stage-frame .v-forms section { padding: 24px 28px 28px; background: var(--panel); border-top: 10px solid var(--tone); display: flex; flex-direction: column; }
+.slide-deck .stage-frame .v-forms .v-col { padding: 24px 28px 28px; background: var(--panel); border-top: 10px solid var(--tone); display: flex; flex-direction: column; }
 .slide-deck .stage-frame .v-forms h2 { margin: 0 0 24px; font: 600 48px/1.2 var(--display); color: var(--tone); }
 .slide-deck .stage-frame .v-forms p { margin-top: 24px; font-size: 32px; line-height: 1.3; color: var(--off-white); }
 .slide-deck .stage-frame .v-sketch { height: 340px; display: flex; align-items: center; justify-content: center; gap: 12px; }
@@ -172,8 +172,8 @@
 .slide-deck .stage-frame .vs-project .v-social { position: absolute; left: 92px; top: 862px; width: 1736px; margin: 0; }
 
 /* Stream processing beside polling; then the change-driven chain */
-.slide-deck .stage-frame .v-stream path { fill: none; stroke: var(--light-red); stroke-width: 4; }
-.slide-deck .stage-frame .v-stream marker path { fill: var(--light-red); stroke: none; }
+.slide-deck .stage-frame .v-stream path { fill: none; stroke: var(--red); stroke-width: 4; }
+.slide-deck .stage-frame .v-stream marker path { fill: var(--red); stroke: none; }
 .slide-deck .stage-frame .v-chain { list-style: none; margin: 64px 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 80px; }
 .slide-deck .stage-frame .v-chain li { position: relative; min-height: 470px; padding: 36px 34px; background: var(--green); color: var(--ink); display: flex; flex-direction: column; gap: 18px; }
 .slide-deck .stage-frame .v-chain li.drasi { background: #091F2C; color: var(--white); border: 6px solid var(--green); }
@@ -181,3 +181,17 @@
 .slide-deck .stage-frame .v-chain b { font: 600 48px/1.15 var(--display); }
 .slide-deck .stage-frame .v-chain span { font-size: 32px; line-height: 1.3; }
 .slide-deck .stage-frame .v-chain .drasi-mark { align-self: flex-start; }
+
+/* Plugins, grouped (drasi-core's components) */
+.slide-deck .stage-frame .v-plug { display: grid; grid-template-columns: 1fr; gap: 16px; align-content: center; }
+.slide-deck .stage-frame .v-plug .v-group h3 { margin: 0 0 6px; font: 600 22px/1.2 var(--display); letter-spacing: .06em; text-transform: uppercase; color: var(--tone); }
+.slide-deck .stage-frame .v-plug .v-group ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.slide-deck .stage-frame .v-plug .v-group li { padding: 6px 12px; background: var(--tone); color: var(--ink); text-align: left; font: 600 24px/1.2 var(--text); }
+.slide-deck .stage-frame .v-models { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 12px; font-style: normal; }
+.slide-deck .stage-frame .v-models i { padding: 4px 10px; background: #091F2C; color: var(--green); font: 600 22px/1.1 var(--text); font-style: normal; }
+/* The CNCF logo beside the Sandbox badge */
+.slide-deck .stage-frame .vs-project .v-badge { flex-direction: row; align-items: center; gap: 34px; justify-content: flex-start; background: #091F2C; color: var(--white); border: 4px solid var(--light-blue); }
+.slide-deck .stage-frame .vs-project .v-badge > div { display: flex; flex-direction: column; }
+.slide-deck .stage-frame .vs-project .v-badge b { margin-top: 0; font-size: 56px; }
+.slide-deck .stage-frame .vs-project .v-badge span { color: var(--light-blue); }
+.slide-deck .stage-frame .v-cncf { width: 360px; height: auto; flex: none; }

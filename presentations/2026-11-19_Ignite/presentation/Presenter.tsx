@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { settings } from "../demo/ui/src/settings";
 import { scenes, slides, products, incidentChannel, duration, viewLabel, type StageView } from "./scenes";
 import "./desk.css";
-import { notes, actionLabels, glossary, questions, beatNumber, type ActionId, type Beat } from "./notes";
+import { notes, actionLabels, glossary, questions, beatNumber, sentences, type ActionId, type Beat } from "./notes";
 import { replayClips } from "./replay";
 import { post, readPlan, tileValue, errorText, rowSchema, type Health, type Row } from "../demo/ui/src/contracts";
 import { ProductLink, Json } from "../demo/ui/src/views";
@@ -300,7 +300,7 @@ export default function Presenter({ live, now, control }: { live: Live; now: num
         </div>}
         {beat.click && !stage.fallback && <p className="click"><b>Click on the projector</b> {beat.click}. The audience sees it.
           {beat.do?.includes("approve-change") && <> The desk's <i>{actionLabels["approve-change"]}</i> is the backup: it presses the same button.</>}</p>}
-        <p className="say">{beat.say}</p>
+        <p className="say">{sentences(beat.say).map((sentence, i) => <span key={i} className="sentence">{sentence}</span>)}</p>
         {beat.watch && <p className="watch"><b>Watch for</b> {beat.watch}</p>}
         {nextItem && <p className="up-next">Next: #{beatNumber(nextItem.c, nextItem.b)} <b>{viewLabel(notes[scenes[nextItem.c].id].beats[nextItem.b].show)}</b> · {notes[scenes[nextItem.c].id].beats[nextItem.b].say.slice(0, 90)}…</p>}
         <p className="if-broken"><b>If it breaks</b> {notes[cue.id].ifBroken}
