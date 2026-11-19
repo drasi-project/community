@@ -156,7 +156,7 @@ function Tangle() {
 // Where the deployments sit on the map (Frankfurt, Dublin, Virginia), and the lines to them.
 const pins = { euA: [1376, 190], euB: [1227, 160], usC: [516, 306] } as const;
 const mapLinks: [number, number, number, number][] = [
-  [1340, 236, pins.euA[0], pins.euA[1]], [1180, 120, pins.euB[0], pins.euB[1]], [560, 290, pins.usC[0], pins.usC[1]]];
+  [1300, 210, pins.euA[0], pins.euA[1]], [1180, 120, pins.euB[0], pins.euB[1]], [560, 300, pins.usC[0], pins.usC[1]]];
 const DeployBox = ({ name, region, detail, pending = false }: { name: string; region: string; detail: string; pending?: boolean }) =>
   <div className={`v-deploy${pending ? " pending-capacity" : ""}`}><b>{nb(name)}</b><span>{region} · 100k tokens/min</span><small>{detail}</small></div>;
 
@@ -250,26 +250,28 @@ export function Visual({ id, active, qr }: { id: VisualId; active: boolean; qr: 
         <li>Situations, not signals</li><li>Outcomes, including what didn't happen</li><li>Action backed by evidence, with approval</li><li>In the tools they already use</li>
       </ul>
     </Slide>;
-    case "scenario-map": return <Slide id={id} title="The scenario: an AI service">
+    case "scenario-map": return <Slide id={id} title="The scenario: AI workload monitoring">
       <div className="v-map">
         <img className="v-map-land" src={worldLand} alt="" />
         <svg className="v-map-lines" viewBox="0 0 1736 460" width="1736" height="460" aria-hidden="true">
           {mapLinks.map(([x1, y1, x2, y2], i) => <path key={i} d={`M${x1},${y1} L${x2},${y2}`} />)}
           {Object.values(pins).map(([x, y], i) => <circle key={i} cx={x} cy={y} r="11" />)}
         </svg>
-        <div className="v-site" style={{ left: 760, top: 0 }}>
-          <p className="v-site-head"><b>{nb("EU-B")}</b><span>Europe · 100k tokens/min</span></p>
-          <p className="v-site-work"><small>Workload</small><b>Document summaries</b><span>Public data · 80k</span></p></div>
-        <div className="v-site" style={{ left: 1296, top: 236 }}>
-          <p className="v-site-head"><b>{nb("EU-A")}</b><span>Europe · 100k tokens/min</span></p>
-          <p className="v-site-work"><small>Workload</small><b>Customer support</b><span>Restricted data · answer in 15 s · 60k</span></p></div>
-        <div className="v-site pending-capacity" style={{ left: 560, top: 250 }}>
-          <p className="v-site-head"><b>{nb("US-C")}</b><span>US · 100k tokens/min</span></p>
+        <div className="v-site" style={{ left: 700, top: 0 }}>
+          <p className="v-site-head"><b>{nb("EU-B")}</b><span>Europe · Capacity: 100k tokens/min</span></p>
+          <p className="v-site-work"><small>Workload</small><b>Document summaries</b><span>Demand: 80k tokens/min</span></p>
+          <p className="v-site-class">Data classification: restricted <i>under review</i></p></div>
+        <div className="v-site" style={{ left: 1256, top: 210 }}>
+          <p className="v-site-head"><b>{nb("EU-A")}</b><span>Europe · Capacity: 100k tokens/min</span></p>
+          <p className="v-site-work"><small>Workload</small><b>Customer support</b><span>Demand: 60k tokens/min</span></p>
+          <p className="v-site-class">Data classification: restricted</p></div>
+        <div className="v-site pending-capacity" style={{ left: 560, top: 262 }}>
+          <p className="v-site-head"><b>{nb("US-C")}</b><span>US · Capacity: 100k tokens/min</span></p>
           <p className="v-site-note">Extra capacity, just provisioned</p></div>
       </div>
       <div className="v-rules">
         <span className="rule"><Icon name="model" size={32} />Restricted data stays in Europe</span>
-        <span className="rule"><Icon name="model" size={32} />Summaries: Europe, for now</span>
+        <span className="rule"><Icon name="clock" size={32} />Customers get an answer within 15 seconds</span>
         <span className="rule"><Icon name="user" size={32} />Workload deployment changes need human approval</span>
       </div>
       <div className="v-stack">

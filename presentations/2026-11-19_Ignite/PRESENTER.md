@@ -254,10 +254,12 @@ Say it in your own words.
    We believe Drasi can provide much of this: it keeps that connected context current as data changes in the systems you already have, and delivers the answers into the tools you already use.\
    Let me show you a few examples.
 15. **The scenario.**\
-   The scenario: an AI service with two workloads, customer support, which handles restricted data and must answer within 15 seconds, and document summaries, which use public data.\
-   They run on deployments of the same AI model: EU-A and EU-B in Europe, and US-C in the US, extra capacity that's just been provisioned.\
-   There's policy: restricted data stays in Europe, and for now summaries stay in Europe too.\
-   Workload deployment changes need human approval.\
+   The scenario: monitoring two AI workloads.\
+   Customer support needs 60k tokens a minute and runs on EU-A; document summaries need 80k and run on EU-B.\
+   Each deployment has 100k of capacity, and US-C in the US is extra capacity that's just been provisioned.\
+   Support handles restricted data, which stays in Europe.\
+   Summaries' classification is under review, so until that clears, compliance keeps them in Europe too.\
+   Customers expect an answer within 15 seconds, and workload deployment changes need human approval.\
    And the team already has its tools: OpenTelemetry, Prometheus and Grafana, Langfuse for traces, Mattermost for incidents, and PostgreSQL for the service's own data.\
    In a real environment there'd also be ticketing, on-call paging, a service catalog and CI/CD; Drasi connects to those the same way.\
    I won't walk through it as if I'm running the process; for each step I'll say what needs doing, show it, then show how it works.
@@ -310,7 +312,7 @@ Say it in your own words.
 ### 6. Scene 3 · Compliance meets resilience (3 minutes)
 
 23. **Grafana · Operations.**\
-   We've provisioned extra capacity in US-C, but compliance won't let document summaries be processed in the US.\
+   We've provisioned extra capacity in US-C, but while their classification is under review, compliance won't let document summaries be processed in the US.\
    Failover readiness asks: if any one deployment failed, would every workload still have somewhere allowed to run?\
    Right now, no, and Recommended action says add capacity.\
    Behind it: the policy and the deployments from the database, health from OpenTelemetry, and two of Drasi's continuous models, a Rego policy and an optimization model, re-run whenever any of them changes.
@@ -326,7 +328,7 @@ Say it in your own words.
 26. **Grafana · Operations (optional).**\
    The optimization model itself: one yes-or-no choice per workload and allowed deployment, every workload placed once, each healthy deployment within capacity, fewest moves first.
 27. **Grafana · Operations.**\
-   Now compliance agrees summaries can run in the US: they use public data.\
+   Now the review clears: compliance agrees summaries can run in the US.\
    That's one row in the policy data.\
    Drasi re-runs the policy and the what-if at once: summaries could fail over to US-C, so we'd survive losing any one deployment, and the capacity warning goes away.
    - **Press:** Summaries: Europe + US
