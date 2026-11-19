@@ -11,7 +11,8 @@ export function presenterScript() {
   const cues = scenes.map((scene, index) => {
     const cue = notes[scene.id];
     const beats = cue.beats.map((beat, n) => {
-      const lines = [`${n + 1}. **${viewLabel(beat.show)}${beat.optional ? " (optional)" : ""}.** ${beat.say}`];
+      const label = `${viewLabel(beat.show)}${beat.optional ? " (optional)" : ""}`;
+      const lines = [`${n + 1}. **${label}${/[.?!]$/.test(label) ? "" : "."}** ${beat.say}`];
       if (beat.click) lines.push(`   - **Click on the projector:** ${beat.click}${beat.expect === "rejected" ? " (it's meant to be rejected)" : ""}. ${beat.do?.includes("approve-change") ? ` Backup on the desk: ${actionLabels["approve-change"]} (it presses the same button)` : ""}`);
       else if (beat.do) lines.push(`   - **Press:** ${beat.do.map(id => actionLabels[id]).join(", then ")}${beat.expect === "rejected" ? " (it's meant to be rejected)" : ""}`);
       if (beat.watch) lines.push(`   - **Watch for:** ${beat.watch}`);

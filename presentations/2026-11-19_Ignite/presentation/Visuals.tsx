@@ -149,13 +149,13 @@ export function Visual({ id, active, qr }: { id: VisualId; active: boolean; qr: 
           </ol></section>
       </div>
     </Slide>;
-    case "drasi-4": return <Slide id={id} title="Sources, Continuous Queries, Reactions" withLogo>
+    case "drasi-4": return <Slide id={id} title="Drasi keeps it simple" withLogo>
       <p className="lead">Queries build on each other's results: a computation graph, kept current</p>
       <QueryGraph active={active} />
     </Slide>;
     case "drasi-1": case "drasi-2": case "drasi-3": {
       const step = Number(id.slice(-1));
-      return <Slide id={id} title="Sources, Continuous Queries, Reactions" withLogo>
+      return <Slide id={id} title="Drasi keeps it simple" withLogo>
         <p className="lead">{["Every change flows in, the answer updates, and the reaction acts on it", "One query can join changes from several sources", "Many sources, queries and reactions; every answer kept current"][step - 1]}</p>
         <Grow step={step} active={active} />
       </Slide>;
