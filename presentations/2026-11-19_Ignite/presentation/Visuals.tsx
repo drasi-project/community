@@ -5,8 +5,8 @@ import logo from "./assets/drasi-logo-colored-white-tight.svg";
 import mark from "./assets/drasi-logomark-tight.svg";
 // The CNCF logo, unmodified, from github.com/cncf/artwork (other/cncf/horizontal/white/cncf-white.svg).
 import cncf from "./assets/cncf-white.svg";
-// A dot map generated from Natural Earth's 1:110m land polygons (public domain, naturalearthdata.com).
-import worldDots from "./assets/world-dots.svg";
+// Land outlines from Natural Earth's 1:110m land polygons (public domain, naturalearthdata.com).
+import worldLand from "./assets/world-land.svg";
 
 // The Drasi project's own artwork (community/images), cropped to the artwork. The rule (visuals.css):
 // the full logo only where Drasi is introduced or summed up; the logomark, at one size, where Drasi
@@ -69,9 +69,9 @@ function Grow({ step, active }: { step: number; active: boolean }) {
     {edges.filter(([, , s]) => s <= step).map(([a, b, s]) => {
       const from = at(a), to = at(b);
       const x1 = colX[from.col] + colW[from.col], y1 = rowY(from.row) + nodeH / 2, x2 = colX[to.col], y2 = rowY(to.row) + nodeH / 2;
-      return <path key={a + b} className={s === step && step > 2 ? "new" : undefined} d={`M${x1},${y1} C${x1 + 120},${y1} ${x2 - 120},${y2} ${x2 - 2},${y2}`} markerEnd="url(#grow-head)" />;
+      return <path key={a + b} className={s === step && step > 2 ? "new" : undefined} d={`M${x1},${y1} C${x1 + 110},${y1} ${x2 - 140},${y2} ${x2 - 30},${y2} L${x2 - 2},${y2}`} markerEnd={`url(#grow-head-${step})`} />;
     })}
-    <defs><marker id="grow-head" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="18" markerHeight="18" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#D9D9D6" /></marker></defs>
+    <defs><marker id={`grow-head-${step}`} viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="18" markerHeight="18" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#D9D9D6" /></marker></defs>
     {shown.map(n => {
       const label = n.relabel && step >= n.relabel[0] ? n.relabel[1] : n.label;
       const fresh = n.step === step && step > 2;
@@ -92,7 +92,7 @@ const gnodes: GNode[] = [
   { id: "dh", x: 380, y: 420, w: 300, label: "Deployment health", tone: tones[1] },
   { id: "pol", x: 780, y: 110, w: 260, label: "Policy (Rego)", tone: modelTone, fresh: true },
   { id: "ws", x: 780, y: 530, w: 260, label: "Workload status", tone: tones[1], fresh: true },
-  { id: "plan", x: 1080, y: 300, w: 300, label: "Plan (optimization)", tone: modelTone, fresh: true },
+  { id: "plan", x: 1030, y: 300, w: 290, label: "Plan (optimization)", tone: modelTone, fresh: true },
   { id: "chan", x: 1440, y: 110, w: 296, label: "Incident channel", tone: tones[2] },
   { id: "api", x: 1440, y: 300, w: 296, label: "Gateway API", tone: tones[2] },
   { id: "graf", x: 1440, y: 530, w: 296, label: "Grafana", tone: tones[2] },
@@ -107,7 +107,7 @@ function QueryGraph({ active }: { active: boolean }) {
     <defs><marker id="graph-head" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="18" markerHeight="18" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#D9D9D6" /></marker></defs>
     {gedges.map(([a, b, fresh]) => { const f = at(a), t = at(b);
       const x1 = f.x + f.w, y1 = f.y + nodeH / 2, x2 = t.x, y2 = t.y + nodeH / 2, bend = Math.min(90, (x2 - x1) / 2);
-      return <path key={a + b} className={fresh ? "new" : undefined} d={`M${x1},${y1} C${x1 + bend},${y1} ${x2 - bend},${y2} ${x2 - 2},${y2}`} markerEnd="url(#graph-head)" />; })}
+      return <path key={a + b} className={fresh ? "new" : undefined} d={`M${x1},${y1} C${x1 + bend},${y1} ${x2 - 26 - bend},${y2} ${x2 - 26},${y2} L${x2 - 2},${y2}`} markerEnd="url(#graph-head)" />; })}
     {gnodes.map(n => <g key={n.id} className={n.fresh ? "new" : undefined}>
       <rect x={n.x} y={n.y} width={n.w} height={nodeH} rx="10" style={{ fill: n.tone }} />
       <text x={n.x + n.w / 2} y={n.y + nodeH / 2 + 12} textAnchor="middle" className="v-grow-label">{n.label}</text></g>)}
@@ -133,32 +133,30 @@ function Stream() {
   </svg>;
 }
 
-// The tangle: an on-call engineer between the tools an enterprise typically runs, grouped.
-const toolGroups: { name: string; x: number; y: number; w: number; items: string[] }[] = [
-  { name: "Telemetry", x: 0, y: 0, w: 450, items: ["Metrics", "Logs", "Traces", "Profiles", "APM", "RUM and synthetics"] },
-  { name: "Response", x: 530, y: 0, w: 450, items: ["Dashboards", "Alerts and on-call", "SLOs", "Incidents and tickets", "Runbooks"] },
-  { name: "Context", x: 200, y: 480, w: 580, items: ["Deployments and changes", "Service catalog / CMDB", "Business outcomes", "AI / LLM observability", "Telemetry cost"] },
-];
+// The tangle: an on-call engineer between many tools, scattered on purpose.
+const tools: [number, number, string][] = [
+  [20, 10, "Metrics"], [300, 0, "Logs"], [560, 20, "Traces"], [790, 70, "Profiles"],
+  [0, 150, "Dashboards"], [690, 190, "APM"], [40, 300, "Alerts and on-call"], [700, 300, "RUM and synthetics"],
+  [10, 430, "SLOs"], [620, 420, "Incidents and tickets"], [160, 520, "Runbooks"], [520, 540, "Deployments and changes"],
+  [0, 640, "Service catalog / CMDB"], [430, 660, "Business outcomes"], [680, 620, "AI / LLM observability"], [260, 130, "Telemetry cost"]];
+const boxW = (t: string) => t.length * 15 + 34;
 function Tangle() {
-  const person = { x: 490, y: 340 };
-  const centre = (g: typeof toolGroups[number]) => ({ x: g.x + g.w / 2, y: g.y + 80 });
-  const cross: [number, number][] = [[0, 1], [0, 2], [1, 2]];
-  return <div className="v-tangle" aria-hidden="true">
-    <svg viewBox="0 0 980 720" width="980" height="720">
-      {cross.map(([a, b]) => { const p = centre(toolGroups[a]), q = centre(toolGroups[b]); return <line key={`${a}-${b}`} className="thin" x1={p.x} y1={p.y} x2={q.x} y2={q.y} />; })}
-      {toolGroups.map(g => { const c = centre(g); return <line key={g.name} x1={person.x} y1={person.y} x2={c.x} y2={c.y} />; })}
-    </svg>
-    {toolGroups.map(g => <div key={g.name} className="v-tools-group" style={{ left: g.x, top: g.y, width: g.w }}>
-      <h3>{g.name}</h3><ul>{g.items.map(t => <li key={t}>{t}</li>)}</ul></div>)}
-    <div className="who" style={{ left: person.x - 58, top: person.y - 58 }}>?</div>
-  </div>;
+  const person = { x: 470, y: 340 };
+  const mid = ([x, y, t]: [number, number, string]) => ({ x: x + boxW(t) / 2, y: y + 23 });
+  const cross: [number, number][] = [[0, 9], [1, 12], [2, 10], [3, 8], [4, 14], [5, 13], [6, 11], [7, 4], [15, 14], [10, 3], [12, 2], [8, 5]];
+  return <svg className="v-tangle" viewBox="0 0 980 720" width="980" height="720" aria-hidden="true">
+    {cross.map(([a, b]) => { const p = mid(tools[a]), q = mid(tools[b]); return <line key={`${a}-${b}`} className="thin" x1={p.x} y1={p.y} x2={q.x} y2={q.y} />; })}
+    {tools.map(tool => { const m = mid(tool); return <line key={tool[2]} x1={person.x} y1={person.y} x2={m.x} y2={m.y} />; })}
+    {tools.map(([x, y, t]) => <g key={t}><rect x={x} y={y} width={boxW(t)} height="46" rx="6" /><text x={x + 17} y={y + 32}>{t}</text></g>)}
+    <circle className="who" cx={person.x} cy={person.y} r="58" />
+    <text className="who-q" x={person.x} y={person.y + 22} textAnchor="middle">?</text>
+  </svg>;
 }
 
 // Where the deployments sit on the map (Frankfurt, Dublin, Virginia), and the lines to them.
 const pins = { euA: [1376, 190], euB: [1227, 160], usC: [516, 306] } as const;
-const mapLinks: [number, number, number, number, string][] = [
-  [1420, 250, pins.euA[0], pins.euA[1], "card"], [1180, 112, pins.euB[0], pins.euB[1], "card"], [560, 330, pins.usC[0], pins.usC[1], "card"],
-  [980, 40, pins.euA[0], pins.euA[1], "route"], [980, 132, pins.euB[0], pins.euB[1], "route"]];
+const mapLinks: [number, number, number, number][] = [
+  [1340, 236, pins.euA[0], pins.euA[1]], [1180, 120, pins.euB[0], pins.euB[1]], [560, 290, pins.usC[0], pins.usC[1]]];
 const DeployBox = ({ name, region, detail, pending = false }: { name: string; region: string; detail: string; pending?: boolean }) =>
   <div className={`v-deploy${pending ? " pending-capacity" : ""}`}><b>{nb(name)}</b><span>{region} · 100k tokens/min</span><small>{detail}</small></div>;
 
@@ -244,7 +242,7 @@ export function Visual({ id, active, qr }: { id: VisualId; active: boolean; qr: 
       <div className="v-clear">
         <ul className="v-inputs">{["Telemetry", "Application data", "Policy", "Changes and approvals"].map(t => <li key={t}>{t}</li>)}</ul>
         <Arrow />
-        <div className={`v-context${id === "wants-drasi" ? " with-drasi" : ""}`}>{id === "wants-drasi" && <DrasiMark />}<b>{id === "wants-drasi" ? "Change-driven context" : "Context"}</b><span>connected and updated as things change</span></div>
+        <div className={`v-context${id === "wants-drasi" ? " with-drasi" : ""}`}><span className="v-context-mark"><DrasiMark /></span><b>{id === "wants-drasi" ? "Change-driven context" : "Context"}</b><span>connected and updated as things change</span></div>
         <Arrow />
         <ul className="v-answers">{["Who's affected?", "What changed?", "What should we do?", "Did it work?"].map(t => <li key={t}><Icon name="check" size={36} />{t}</li>)}</ul>
       </div>
@@ -254,18 +252,20 @@ export function Visual({ id, active, qr }: { id: VisualId; active: boolean; qr: 
     </Slide>;
     case "scenario-map": return <Slide id={id} title="The scenario: an AI service">
       <div className="v-map">
-        <img className="v-map-dots" src={worldDots} alt="" />
+        <img className="v-map-land" src={worldLand} alt="" />
         <svg className="v-map-lines" viewBox="0 0 1736 460" width="1736" height="460" aria-hidden="true">
-          {mapLinks.map(([x1, y1, x2, y2, kind], i) => <path key={i} className={kind} d={`M${x1},${y1} L${x2},${y2}`} />)}
+          {mapLinks.map(([x1, y1, x2, y2], i) => <path key={i} d={`M${x1},${y1} L${x2},${y2}`} />)}
           {Object.values(pins).map(([x, y], i) => <circle key={i} cx={x} cy={y} r="11" />)}
         </svg>
-        <span className="v-map-region" style={{ left: 1200, top: 300 }}>Europe</span>
-        <span className="v-map-region" style={{ left: 200, top: 230 }}>United States</span>
-        <div className="v-work" style={{ left: 560, top: 0 }}><b>Customer support</b><span>Restricted data · answer in 15 s · 60k</span></div>
-        <div className="v-work" style={{ left: 560, top: 92 }}><b>Document summaries</b><span>Public data · 80k</span></div>
-        <div className="v-deploy" style={{ left: 1420, top: 220 }}><b>{nb("EU-A")}</b><span>100k tokens/min</span><small>serves support</small></div>
-        <div className="v-deploy" style={{ left: 1040, top: 0 }}><b>{nb("EU-B")}</b><span>100k tokens/min</span><small>serves summaries</small></div>
-        <div className="v-deploy pending-capacity" style={{ left: 560, top: 290 }}><b>{nb("US-C")}</b><span>100k tokens/min</span><small>extra capacity, just provisioned</small></div>
+        <div className="v-site" style={{ left: 760, top: 0 }}>
+          <p className="v-site-head"><b>{nb("EU-B")}</b><span>Europe · 100k tokens/min</span></p>
+          <p className="v-site-work"><small>Workload</small><b>Document summaries</b><span>Public data · 80k</span></p></div>
+        <div className="v-site" style={{ left: 1296, top: 236 }}>
+          <p className="v-site-head"><b>{nb("EU-A")}</b><span>Europe · 100k tokens/min</span></p>
+          <p className="v-site-work"><small>Workload</small><b>Customer support</b><span>Restricted data · answer in 15 s · 60k</span></p></div>
+        <div className="v-site pending-capacity" style={{ left: 560, top: 250 }}>
+          <p className="v-site-head"><b>{nb("US-C")}</b><span>US · 100k tokens/min</span></p>
+          <p className="v-site-note">Extra capacity, just provisioned</p></div>
       </div>
       <div className="v-rules">
         <span className="rule"><Icon name="model" size={32} />Restricted data stays in Europe</span>
@@ -274,7 +274,7 @@ export function Visual({ id, active, qr }: { id: VisualId; active: boolean; qr: 
       </div>
       <div className="v-stack">
         <ul className="v-tools">{[["otel", "OpenTelemetry"], ["prometheus", "Prometheus"], ["prometheus", "Grafana"], ["query", "Langfuse"], ["mattermost", "Mattermost"], ["pg", "PostgreSQL"]].map(([i, t]) => <li key={t}><Icon name={i} size={34} />{t}</li>)}</ul>
-        <ul className="v-tools ghosts"><li className="label">Also there, not in the demo</li>{["Ticketing / ITSM", "On-call paging", "Service catalog / CMDB", "CI/CD and deployments"].map(t => <li key={t} className="ghost">{t}</li>)}</ul>
+        <ul className="v-tools ghosts">{["Ticketing / ITSM", "On-call paging", "Service catalog / CMDB", "CI/CD and deployments"].map(t => <li key={t} className="ghost">{t}</li>)}</ul>
       </div>
     </Slide>;
     case "closing": return <Slide id={id} title="What you saw" withLogo>
@@ -293,7 +293,7 @@ export function Visual({ id, active, qr }: { id: VisualId; active: boolean; qr: 
         <ul className="v-tiles links">
           <li className="blue"><Icon name="query" size={48} /><b>Docs and getting started</b><span>drasi.io</span></li>
           <li className="purple"><Icon name="code" size={48} /><b>Code</b><span>github.com/drasi-project</span></li>
-          <li className="green"><Icon name="app" size={48} /><b>This demo</b><span className="todo">TODO: link</span></li>
+          <li className="green"><Icon name="app" size={48} /><b>This demo</b><span>github.com/drasi-project/community, presentations/2026-11-19_Ignite</span></li>
           <li className="lime"><Icon name="discord" size={48} /><b>Community</b><span>Discord: aka.ms/drasidiscord · YouTube: @DrasiProject</span></li>
         </ul>
       </div>
