@@ -33,6 +33,7 @@ export const slides = [
   { id: "drasi-1", title: "Drasi · one source" },
   { id: "drasi-2", title: "Drasi · several sources" },
   { id: "drasi-3", title: "Drasi · many queries and reactions" },
+  { id: "drasi-4", title: "Drasi · queries build on queries" },
   { id: "plugins", title: "Plugin ecosystem" },
   { id: "forms", title: "Form factors" },
   { id: "issues", title: "Observability issues" },

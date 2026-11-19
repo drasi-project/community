@@ -46,11 +46,11 @@ test("the talk is 22 minutes and every beat says something and shows something",
     }
     expect(cue.ifBroken.trim()).not.toBe("");
   }
-  expect(slides.map(s => s.id)).toEqual(["walkin", "title", "project", "problem", "drasi-1", "drasi-2", "drasi-3", "plugins", "forms", "issues", "wants", "scenario-map", "closing", "links", "survey"]);
+  expect(slides.map(s => s.id)).toEqual(["walkin", "title", "project", "problem", "drasi-1", "drasi-2", "drasi-3", "drasi-4", "plugins", "forms", "issues", "wants", "scenario-map", "closing", "links", "survey"]);
   // The walk-in opens the talk, Drasi grows from one source to many, each scene opens its overlay on how it works, and the survey is last.
   const shown = scenes.flatMap(scene => notes[scene.id].beats.map(beat => beat.show));
   expect(shown[0]).toBe("walkin");
-  expect(notes.drasi.beats.map(beat => beat.show)).toEqual(["drasi-1", "drasi-2", "drasi-3", "plugins", "forms"]);
+  expect(notes.drasi.beats.map(beat => beat.show)).toEqual(["drasi-1", "drasi-2", "drasi-3", "drasi-4", "plugins", "forms"]);
   for (const id of ["scene1", "scene2", "scene3", "scene4"] as const) expect(notes[id].beats.find(beat => beat.config)!.config![0], id).toMatch(/^how-/);
   expect(shown.at(-1)).toBe("survey");
 });
@@ -169,7 +169,7 @@ test("Next on the desk moves through beats and changes what the projector shows"
   await expect(projector.locator(".title-slide")).toBeVisible();
   await page.getByRole("button", { name: "Next ▶" }).click();
   await expect(projector.locator('[data-slide="project"]')).toBeVisible();
-  for (let i = 0; i < 10; i++) await page.getByRole("button", { name: "Next ▶" }).click();
+  for (let i = 0; i < 11; i++) await page.getByRole("button", { name: "Next ▶" }).click();
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Scene 1");
   await expect(projector.locator("iframe.stage-dashboard").first()).toBeVisible();
   await expect(projector.locator("iframe.stage-dashboard").first()).toHaveAttribute("src", dashboards.ops);

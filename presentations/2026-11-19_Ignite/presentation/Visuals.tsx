@@ -1,15 +1,23 @@
 import type { ReactNode } from "react";
 import { Icon } from "./Icon";
 import "./visuals.css";
+import logo from "./assets/drasi-logo-colored-white.svg";
+import mark from "./assets/drasi-logomark.svg";
+
+// The Drasi project's own artwork (community/images), on a few slides only.
+export const DrasiMark = ({ size = 40 }: { size?: number }) => <img className="drasi-mark" src={mark} alt="" style={{ height: size }} />;
 
 // The new flow's slides (NEW_FLOW.md): diagrams rather than lists. Rough-to-medium polish.
-export const visualIds = ["project", "problem", "drasi-1", "drasi-2", "drasi-3", "plugins", "forms", "issues", "wants", "scenario-map", "closing", "links"] as const;
+export const visualIds = ["project", "problem", "drasi-1", "drasi-2", "drasi-3", "drasi-4", "plugins", "forms", "issues", "wants", "scenario-map", "closing", "links"] as const;
 export type VisualId = typeof visualIds[number];
 export const isVisual = (id: string): id is VisualId => (visualIds as readonly string[]).includes(id);
 
 const nb = (text: string) => text.replace(/\b(EU|US)-([A-C])\b/g, "$1\u2011$2");
-const Slide = ({ id, title, children }: { id: string; title: string; children: ReactNode }) =>
-  <div className={`content-slide v-slide vs-${id}`}><h1>{title}</h1><div className="body">{children}</div></div>;
+const Slide = ({ id, title, children, withLogo = false }: { id: string; title: string; children: ReactNode; withLogo?: boolean }) =>
+  <div className={`content-slide v-slide vs-${id}`}><h1>{title}</h1>{withLogo && <img className="v-logo" src={logo} alt="Drasi" />}<div className="body">{children}</div></div>;
+// From drasi.io's navigation bar.
+const social: [string, string][] = [["globe", "drasi.io"], ["github", "github.com/drasi-project"], ["discord", "aka.ms/drasidiscord"],
+  ["youtube", "@DrasiProject"], ["bluesky", "drasi-project.bsky.social"], ["x", "@drasi_project"]];
 const Arrow = () => <span className="v-arrow" aria-hidden="true" />;
 
 // Sources → Continuous Queries → Reactions, growing over three slides.
@@ -55,6 +63,37 @@ function Grow({ step, active }: { step: number; active: boolean }) {
   </svg>;
 }
 
+// Step 4: queries build on each other's results, as in this demo (simplified).
+type GNode = { id: string; x: number; y: number; w: number; label: string; tone: string; fresh?: boolean };
+const gnodes: GNode[] = [
+  { id: "pg", x: 0, y: 110, w: 300, label: "PostgreSQL", tone: tones[0] },
+  { id: "otel", x: 0, y: 420, w: 300, label: "OpenTelemetry", tone: tones[0] },
+  { id: "pin", x: 380, y: 110, w: 300, label: "Policy input", tone: tones[1] },
+  { id: "dh", x: 380, y: 420, w: 300, label: "Deployment health", tone: tones[1] },
+  { id: "pol", x: 780, y: 110, w: 260, label: "Policy (Rego)", tone: "#8DE971", fresh: true },
+  { id: "ws", x: 780, y: 530, w: 260, label: "Workload status", tone: tones[1], fresh: true },
+  { id: "plan", x: 1120, y: 300, w: 220, label: "Plan", tone: "#8DE971", fresh: true },
+  { id: "chan", x: 1440, y: 110, w: 296, label: "Incident channel", tone: tones[2] },
+  { id: "api", x: 1440, y: 300, w: 296, label: "Gateway API", tone: tones[2] },
+  { id: "graf", x: 1440, y: 530, w: 296, label: "Grafana", tone: tones[2] },
+];
+const gedges: [string, string, boolean?][] = [["pg", "pin"], ["otel", "dh"], ["pin", "pol", true], ["pol", "plan", true], ["dh", "plan", true], ["dh", "ws", true],
+  ["ws", "graf"], ["plan", "graf"], ["plan", "chan"], ["plan", "api"]];
+function QueryGraph({ active }: { active: boolean }) {
+  const at = (id: string) => gnodes.find(n => n.id === id)!;
+  return <svg className={`v-grow${active ? " play" : ""}`} viewBox="0 0 1736 650" width="1736" height="650" role="img" aria-label="Continuous queries feeding other queries and models">
+    {[["Sources", 150, tones[0]], ["Continuous queries and models", 860, tones[1]], ["Reactions", 1588, tones[2]]].map(([h, x, fill]) =>
+      <text key={h as string} x={x as number} y="40" textAnchor="middle" className="v-grow-head" fill={fill as string}>{h}</text>)}
+    <defs><marker id="graph-head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#D9D9D6" /></marker></defs>
+    {gedges.map(([a, b, fresh]) => { const f = at(a), t = at(b);
+      const x1 = f.x + f.w, y1 = f.y + nodeH / 2, x2 = t.x, y2 = t.y + nodeH / 2, bend = Math.min(90, (x2 - x1) / 2);
+      return <path key={a + b} className={fresh ? "new" : undefined} d={`M${x1},${y1} C${x1 + bend},${y1} ${x2 - bend},${y2} ${x2 - 10},${y2}`} markerEnd="url(#graph-head)" />; })}
+    {gnodes.map(n => <g key={n.id} className={n.fresh ? "new" : undefined}>
+      <rect x={n.x} y={n.y} width={n.w} height={nodeH} rx="10" fill={n.tone} />
+      <text x={n.x + n.w / 2} y={n.y + nodeH / 2 + 12} textAnchor="middle" className="v-grow-label">{n.label}</text></g>)}
+  </svg>;
+}
+
 // The usual polling loop: four boxes round a circle.
 function Loop() {
   const steps: [number, number, string][] = [[380, 50, "Poll every few seconds"], [575, 230, "Query everything"], [380, 410, "Diff with last time"], [185, 230, "Code to react"]];
@@ -84,18 +123,19 @@ const DeployBox = ({ name, region, detail, pending = false }: { name: string; re
 
 export function Visual({ id, active, qr }: { id: VisualId; active: boolean; qr: ReactNode }) {
   switch (id) {
-    case "project": return <Slide id={id} title="Drasi">
+    case "project": return <div className="content-slide v-slide vs-project">
+      <h1 className="v-logo-title"><img src={logo} alt="Drasi" /></h1><div className="body">
       <p className="lead">An open-source data processing platform for change-driven systems</p>
       <div className="v-project">
-        <div className="v-badge"><small>CNCF</small><b>Sandbox project</b><span className="todo">since XXX</span></div>
+        <div className="v-badge"><small>CNCF</small><b>Sandbox project</b><span>since January 2025</span></div>
         <ul className="v-tiles">
           <li className="blue"><Icon name="code" size={56} /><b>Open source</b><span>Apache 2.0, on GitHub</span></li>
           <li className="purple"><Icon name="bolt" size={56} /><b>Active development</b><span>New sources, reactions and form factors</span></li>
           <li className="green"><Icon name="user" size={56} /><b>Growing community</b><span>Users and contributors</span></li>
         </ul>
       </div>
-      <p className="v-foot">drasi.io · github.com/drasi-project</p>
-    </Slide>;
+      <ul className="v-social">{social.map(([icon, text]) => <li key={text}><Icon name={icon} size={36} />{text}</li>)}</ul>
+    </div></div>;
     case "problem": return <Slide id={id} title="The problem">
       <p className="lead">Detecting meaningful change as it happens, and reacting to it, is harder than it should be</p>
       <div className="v-versus">
@@ -108,10 +148,14 @@ export function Visual({ id, active, qr }: { id: VisualId; active: boolean; qr: 
           </ol></section>
       </div>
     </Slide>;
+    case "drasi-4": return <Slide id={id} title="Sources, Continuous Queries, Reactions" withLogo>
+      <p className="lead">Queries build on each other's results: a computation graph, kept current</p>
+      <QueryGraph active={active} />
+    </Slide>;
     case "drasi-1": case "drasi-2": case "drasi-3": {
       const step = Number(id.slice(-1));
-      return <Slide id={id} title="Sources, Continuous Queries, Reactions">
-        <p className="lead">{["Start simple: one source, one query, one reaction", "One query can join changes from several sources", "Many sources, queries and reactions; every answer kept current"][step - 1]}</p>
+      return <Slide id={id} title="Sources, Continuous Queries, Reactions" withLogo>
+        <p className="lead">{["Every change flows in, the answer updates, and the reaction acts on it", "One query can join changes from several sources", "Many sources, queries and reactions; every answer kept current"][step - 1]}</p>
         <Grow step={step} active={active} />
       </Slide>;
     }
@@ -119,7 +163,7 @@ export function Visual({ id, active, qr }: { id: VisualId; active: boolean; qr: 
       <div className="v-hub">
         <ul className="v-plug blue">{["PostgreSQL", "MySQL", "SQL Server", "Cosmos DB", "Event Hubs", "Kubernetes", "OpenTelemetry", "Dataverse"].map(t => <li key={t}>{t}</li>)}<li className="more">+ build your own</li></ul>
         <Arrow />
-        <div className="v-core"><b>Drasi</b><span className="purple">Continuous queries</span><span className="green">Policy</span><span className="green">Optimization</span></div>
+        <div className="v-core"><img className="v-core-logo" src={logo} alt="Drasi" /><span className="purple">Continuous queries<em className="v-langs-q"><i>openCypher</i><i>GQL</i></em></span><span className="green">Policy</span><span className="green">Optimization</span></div>
         <Arrow />
         <ul className="v-plug lime">{["HTTP", "SSE", "SignalR", "Event Grid", "Dapr pub/sub", "Storage queues", "Prometheus", "Gremlin"].map(t => <li key={t}>{t}</li>)}<li className="more">+ build your own</li></ul>
       </div>
@@ -128,15 +172,15 @@ export function Visual({ id, active, qr }: { id: VisualId; active: boolean; qr: 
     case "forms": return <Slide id={id} title="Use it the way that fits">
       <div className="v-forms">
         <section className="blue"><h2>In your app</h2>
-          <div className="v-sketch"><div className="v-box app"><small>Your app</small><div className="v-box lib">Drasi library</div></div></div>
+          <div className="v-sketch"><div className="v-box app"><small>Your app</small><div className="v-box lib"><DrasiMark />Drasi library</div></div></div>
           <ul className="v-langs">{["Rust", "Node.js", "Python", ".NET"].map(l => <li key={l}>{l}</li>)}</ul>
           <p>Embed it; react in your own code</p></section>
         <section className="purple"><h2>As a service</h2>
-          <div className="v-sketch row"><div className="v-box src">Data</div><Arrow /><div className="v-box lib">Drasi Server</div><Arrow /><div className="v-box src">Tools</div></div>
+          <div className="v-sketch row"><div className="v-box src">Data</div><Arrow /><div className="v-box lib"><DrasiMark />Drasi Server</div><Arrow /><div className="v-box src">Tools</div></div>
           <ul className="v-langs"><li>One container</li></ul>
           <p>Configure it in YAML; this demo runs on it</p></section>
         <section className="green"><h2>On Kubernetes</h2>
-          <div className="v-sketch"><div className="v-box cluster"><small>Cluster</small><div className="v-pods"><span>Sources</span><span>Queries</span><span>Reactions</span></div></div></div>
+          <div className="v-sketch"><div className="v-box cluster"><small><DrasiMark size={30} /> Drasi on a cluster</small><div className="v-pods"><span>Sources</span><span>Queries</span><span>Reactions</span></div></div></div>
           <ul className="v-langs"><li>drasi CLI</li><li>Resources</li></ul>
           <p>Each part scales on its own</p></section>
       </div>
@@ -181,7 +225,7 @@ export function Visual({ id, active, qr }: { id: VisualId; active: boolean; qr: 
       </div>
       <ul className="v-tools">{[["otel", "OpenTelemetry"], ["prometheus", "Prometheus"], ["prometheus", "Grafana"], ["query", "Langfuse"], ["mattermost", "Mattermost"]].map(([i, t]) => <li key={t}><Icon name={i} size={32} />{t}</li>)}</ul>
     </Slide>;
-    case "closing": return <Slide id={id} title="What you saw">
+    case "closing": return <Slide id={id} title="What you saw" withLogo>
       <ol className="v-scenes">
         <li className="blue"><small>1</small><b>Status from telemetry + configuration</b><span>OpenTelemetry and the app's own data, joined</span></li>
         <li className="purple"><small>2</small><b>What didn't happen</b><span>Requests with no answer, at their deadline</span></li>
@@ -191,14 +235,14 @@ export function Visual({ id, active, qr }: { id: VisualId; active: boolean; qr: 
       <ol className="v-ribbon"><li className="blue">Connect sources</li><li className="purple">Configure continuous models</li><li className="lime">Connect reactions</li></ol>
       <p className="v-foot">Richer context, in the tools you already use. Apart from one Prometheus reaction plugin, this demo is configuration.</p>
     </Slide>;
-    case "links": return <Slide id={id} title="Learn more">
+    case "links": return <Slide id={id} title="Learn more" withLogo>
       <div className="v-links">
         <div className="v-qr">{qr}<b>drasi.io</b></div>
         <ul className="v-tiles links">
           <li className="blue"><Icon name="query" size={48} /><b>Docs and getting started</b><span>drasi.io</span></li>
           <li className="purple"><Icon name="code" size={48} /><b>Code</b><span>github.com/drasi-project</span></li>
           <li className="green"><Icon name="app" size={48} /><b>This demo</b><span className="todo">TODO: link</span></li>
-          <li className="lime"><Icon name="user" size={48} /><b>Community</b><span className="todo">TODO: Discord, community calls</span></li>
+          <li className="lime"><Icon name="discord" size={48} /><b>Community</b><span>Discord: aka.ms/drasidiscord · YouTube: @DrasiProject</span></li>
         </ul>
       </div>
     </Slide>;

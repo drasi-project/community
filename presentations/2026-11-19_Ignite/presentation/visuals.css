@@ -136,3 +136,17 @@
 .slide-deck .stage-frame .v-tiles.links span { font-size: 32px; }
 .slide-deck .stage-frame .v-plug { align-self: center; }
 .slide-deck .stage-frame .v-clear { flex: 1; }
+
+/* The Drasi logo (the project's own artwork) */
+.slide-deck .stage-frame .v-logo { position: absolute; right: 92px; top: 56px; height: 104px; }
+.slide-deck .stage-frame .v-logo-title img { height: 150px; margin-top: -36px; }
+.slide-deck .stage-frame .v-core-logo { justify-self: center; height: 120px; margin-bottom: 4px; }
+.slide-deck .stage-frame .drasi-mark { display: inline-block; vertical-align: middle; }
+.slide-deck .stage-frame .v-box.lib { display: flex; align-items: center; justify-content: center; gap: 14px; background: #091F2C; color: var(--white); border: 3px solid var(--tone); }
+.slide-deck .stage-frame .v-box.cluster small { display: flex; align-items: center; gap: 10px; }
+.slide-deck .stage-frame .how-col h3.drasi { display: flex; align-items: center; gap: 8px; background: #091F2C; color: var(--white); }
+.slide-deck .stage-frame .v-social { list-style: none; margin: auto 0 0; padding: 20px 0 0; border-top: 2px solid rgba(217, 217, 214, .35); display: grid; grid-template-columns: repeat(3, auto); justify-content: space-between; gap: 14px 30px; }
+.slide-deck .stage-frame .v-social li { display: flex; align-items: center; gap: 10px; font: 600 28px/1.2 var(--text); color: var(--off-white); }
+.slide-deck .stage-frame .v-social .icon { color: var(--light-blue); }
+.slide-deck .stage-frame .v-langs-q { display: flex; justify-content: center; gap: 10px; margin-top: 12px; font-style: normal; }
+.slide-deck .stage-frame .v-langs-q i { padding: 6px 14px; background: #091F2C; color: var(--light-purple); font: 600 26px/1.1 var(--code); font-style: normal; }

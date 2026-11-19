@@ -164,7 +164,7 @@ proposal: approve the new one.
 | Time | Part | Projector shows | You |
 |---|---|---|---|
 | 0:00 | Intro | Walk-in, Who I am, Drasi, the project, The problem | Walk-in; who I am; the project; the problem Drasi solves |
-| 2:00 | What Drasi is | Drasi · one source, Drasi · several sources, Drasi · many queries and reactions, Plugin ecosystem, Form factors | Sources, Continuous Queries, Reactions; the plugin ecosystem; form factors |
+| 2:00 | What Drasi is | Drasi · one source, Drasi · several sources, Drasi · many queries and reactions, Drasi · queries build on queries, Plugin ecosystem, Form factors | Sources, Continuous Queries, Reactions; the plugin ecosystem; form factors |
 | 5:30 | Observability and the scenario | Observability issues, What they want, The scenario | Observability: the issues, what organizations want, and the scenario |
 | 8:00 | Scene 1 · Status from telemetry and configuration | Grafana · Operations | Telemetry + configuration → queries → Prometheus reaction → Grafana |
 | 10:30 | Scene 2 · The absence of change | Grafana · Operations | The absence of change: requests with no answer by their deadline (trueLater) |
@@ -185,7 +185,7 @@ Say it in your own words.
    - **Press:** Start demo traffic
    - **Watch for:** Press Start demo traffic before you start talking, so the dashboard has several minutes of data by scene 1. Press it at least 5 minutes after any reset.
 2. **Who I am.** Good morning, my name is Allen Jones. I'm a member of the Azure Incubations team at Microsoft. TODO: one line on the talk's promise.
-3. **Drasi, the project.** For the last few years I've been working on an open-source project named Drasi. Since XXX (TODO: date) Drasi has been a CNCF Sandbox project, and it's in active development with a growing community of users and contributors.
+3. **Drasi, the project.** For the last few years I've been working on an open-source project named Drasi. We started it in Azure Incubations and open-sourced it in October 2024. Since January 2025 Drasi has been a CNCF Sandbox project, and it's in active development with a growing community of users and contributors.
 4. **The problem.** Drasi was started because, in our experience, detecting meaningful changes in data as they happen, and reacting to them, is more difficult than it should be. TODO: one concrete example of the polling-and-diffing pain.
 
 **If it breaks:** The slides don't depend on the demo. Carry on.
@@ -195,8 +195,9 @@ Say it in your own words.
 1. **Drasi · one source.** Drasi is built around three simple, familiar concepts: Sources, Continuous Queries and Reactions. Start simple: a source brings in every change from a database; a continuous query describes what you care about, and Drasi keeps its answer current as the data changes; a reaction does something with each change to the answer.
 2. **Drasi · several sources.** One query can join changes from several sources: here a database, telemetry and Kubernetes. You write it as one graph query; Drasi does the joining and keeps it current.
 3. **Drasi · many queries and reactions.** And it grows from there: many sources, many queries, many reactions, each answer kept current as the data changes. TODO: mention continuous models (policy, optimization) here or in scene 3?
-4. **Plugin ecosystem.** Sources and reactions are all plugins, and there's a rich, growing ecosystem of them, plus tools to help you build new ones. TODO: check the lists on the slide against drasi.io.
-5. **Form factors.** Because we want Drasi to be as accessible as possible, it comes in several form factors: as a library in Rust, Node.js, Python and .NET, embedded in your own process; as a standalone server, which is what this demo runs on; and on Kubernetes. TODO: confirm availability of each at Ignite.
+4. **Drasi · queries build on queries.** And queries can build on each other's results, forming a computation graph. In this demo, the health checks feed a deployment-health query, which feeds the workload status and the plan; policy input feeds the policy model, which feeds the plan too; and the results fan out to several reactions. When one input changes, only what depends on it updates.
+5. **Plugin ecosystem.** Sources and reactions are all plugins, and there's a rich, growing ecosystem of them, plus tools to help you build new ones. Continuous queries can be written in openCypher or GQL; this demo uses Cypher. TODO: check the lists on the slide against drasi.io.
+6. **Form factors.** Because we want Drasi to be as accessible as possible, it comes in several form factors: as a library in Rust, Node.js, Python and .NET, embedded in your own process; as a standalone server, which is what this demo runs on; and on Kubernetes. TODO: confirm availability of each at Ignite.
 
 **If it breaks:** Carry on; the slides don't depend on the demo.
 
