@@ -1,4 +1,4 @@
-import type { SceneId, StageView } from "./scenes";
+import { scenes, type SceneId, type StageView } from "./scenes";
 import type { ConfigId } from "./codeSlides";
 import type { HowId } from "./howItWorks";
 
@@ -32,7 +32,7 @@ export const notes: Record<SceneId, Cue> = {
     summary: "Walk-in; who I am; the project; what I'll show you; why Drasi?",
     beats: [
       { show: "walkin", do: ["start-traffic"],
-        say: "Before the session: the walk-in slide stays up while people arrive. Press Next when you start talking; that starts the talk timer.",
+        say: "Before the session: the walk-in slide stays up while people arrive. Opening the projector window starts the talk timer at 00:00 (Restart timer in the header resets it). Press Next when you start talking.",
         watch: "Press Start demo traffic before you start talking, so the dashboard has several minutes of data by scene 1. Press it at least 5 minutes after any reset." },
       { show: "title",
         say: "Good morning, my name is Allen Jones. I'm a member of the Azure Incubations team at Microsoft." },
@@ -164,6 +164,11 @@ export const notes: Record<SceneId, Cue> = {
     ifBroken: "Summarize in words. Never project the desk.",
   },
 };
+
+// Every beat's number across the whole talk (1, 2, 3, …), for referring to beats; shown on the desk
+// and in PRESENTER.md, never on the projector. Renumbers itself when beats change.
+export const beatNumber = (cue: number, beat: number) =>
+  scenes.slice(0, cue).reduce((n, scene) => n + notes[scene.id].beats.length, 0) + beat + 1;
 
 export const glossary: readonly [string, string][] = [
   ["Deployment", "One place the AI model runs: EU-A, EU-B (Europe) or US-C (United States)"],

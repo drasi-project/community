@@ -3,7 +3,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { applyFrame, applyChanges } from "../src/live";
 import { healthSchema, readPlan } from "../src/contracts";
 import { scenes, slides, allSlides, dashboards, incidentChannel, frame } from "../../../presentation/scenes";
-import { notes } from "../../../presentation/notes";
+import { notes, beatNumber } from "../../../presentation/notes";
 import { presenterScript } from "../../../presentation/script";
 import { replayClips } from "../../../presentation/replay";
 import { buildConfig, configIds } from "../../../presentation/codeSlides";
@@ -568,11 +568,25 @@ test("recording mode shows each live part's recording as the presenter presses N
   expect(await mutations(request)).toEqual([]);
 });
 
-test("the first Next starts the talk timer", async ({ page }) => {
+test("Open projector window starts the talk timer; Next doesn't", async ({ page }) => {
   await desk(page, "scene4", 1);
   await expect(page.locator(".clock strong")).toHaveText("00:00");
   await page.getByRole("button", { name: "Next ▶" }).click();
+  await page.waitForTimeout(1500);
+  await expect(page.locator(".clock strong")).toHaveText("00:00");
+  const popup = page.waitForEvent("popup");
+  await page.getByRole("button", { name: "Open projector window" }).click();
+  await (await popup).close();
   await expect(page.locator(".clock strong")).not.toHaveText("00:00", { timeout: 5000 });
+});
+
+test("beats are numbered across the whole talk, on the desk and in PRESENTER.md", async ({ page }) => {
+  const total = scenes.reduce((n, scene) => n + notes[scene.id].beats.length, 0);
+  expect(beatNumber(scenes.length - 1, notes[scenes.at(-1)!.id].beats.length - 1)).toBe(total);
+  await desk(page, "scene1", 0);
+  await expect(page.locator(".beat-number")).toHaveText(`#${beatNumber(3, 0)}`);
+  const doc = fs.readFileSync(new URL("../../../PRESENTER.md", import.meta.url), "utf8");
+  expect(doc).toContain(`\n${beatNumber(3, 0)}. **Grafana · Operations.**`);
 });
 
 test("with no desk open, the clicker still steps through the slides", async ({ page }) => {

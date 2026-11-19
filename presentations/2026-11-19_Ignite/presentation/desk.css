@@ -19,9 +19,11 @@ button.quiet { background: transparent; border-color: var(--border); color: #aab
 .now-head h1 { margin: 0; font-size: 22px; }
 .now-head h1 small { font-size: 14px; font-weight: 400; color: #aab6c4; margin-left: 6px; }
 .beat-dots { list-style: none; display: flex; gap: 6px; margin: 0; padding: 0; }
-.beat-dots li { width: 10px; height: 10px; border-radius: 50%; border: 1px solid #aab6c4; }
-.beat-dots li.past { background: #aab6c4; }
-.beat-dots li.current { background: var(--accent); border-color: var(--accent); }
+/* Each beat's number across the talk, so beats are easy to refer to */
+.beat-dots li { min-width: 22px; height: 20px; padding: 0 3px; border-radius: 10px; border: 1px solid #aab6c4; font-size: 11px; line-height: 18px; text-align: center; color: #aab6c4; }
+.beat-dots li.past { background: #aab6c4; color: #0d1117; }
+.beat-dots li.current { background: var(--accent); border-color: var(--accent); color: #0d1117; font-weight: 700; }
+.beat-number { margin-right: 6px; padding: 1px 7px; border-radius: 6px; background: var(--accent); color: #0d1117; font-weight: 700; }
 .short { margin-left: auto; font-size: 13px; color: #c3ceda; }
 .projector-line { margin: 0; color: #aab6c4; font-size: 14px; }
 .projector-line b { color: #fff; }

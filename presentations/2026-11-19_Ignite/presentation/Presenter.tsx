@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { settings } from "../demo/ui/src/settings";
 import { scenes, slides, products, incidentChannel, duration, viewLabel, type StageView } from "./scenes";
 import "./desk.css";
-import { notes, actionLabels, glossary, questions, type ActionId, type Beat } from "./notes";
+import { notes, actionLabels, glossary, questions, beatNumber, type ActionId, type Beat } from "./notes";
 import { replayClips } from "./replay";
 import { post, readPlan, tileValue, errorText, rowSchema, type Health, type Row } from "../demo/ui/src/contracts";
 import { ProductLink, Json } from "../demo/ui/src/views";
@@ -22,7 +22,7 @@ const modeLabel: Record<string, string> = { ok: "Healthy", failed: "Failed", thr
 
 const timerKey = `${settings.storageKey}-timer`;
 const startTimer = () => sessionStorage.setItem(timerKey, String(Date.now()));
-// The talk timer starts by itself on the first Next.
+// The talk timer starts at 00:00 when the projector window is opened (or with Restart timer).
 function Clock({ now }: { now: number }) {
   const value = Number(sessionStorage.getItem(timerKey) ?? NaN);
   const started = Number.isFinite(value) ? value : null;
@@ -154,7 +154,6 @@ export default function Presenter({ live, now, control }: { live: Live; now: num
     const missing = direction === 1 && fromCue === stage.cue && fromBeat === stage.beat && !stage.fallback
       ? (beat.do ?? []).filter(id => !isDone(id)) : [];
     if (missing.length && nudged !== here) { setNudged(here); return; }
-    if (direction === 1 && !sessionStorage.getItem(timerKey)) startTimer();
     const all = scenes.flatMap((_, c) => beatsOf(c).map(({ index }) => ({ c, b: index })));
     const at = all.findIndex(item => item.c === fromCue && item.b === fromBeat);
     const next = all[at + direction] ?? (at < 0 ? all[0] : null);
@@ -178,6 +177,7 @@ export default function Presenter({ live, now, control }: { live: Live; now: num
   function openProjector() {
     projector = window.open(`/present?view=${stage.view}`, "ignite-projector", "popup,width=1280,height=720");
     setConnected(!!projector);
+    startTimer();
   }
   const show = (view: StageView) => control.show(view);
 
@@ -279,13 +279,13 @@ export default function Presenter({ live, now, control }: { live: Live; now: num
       <section className="now" aria-label="Now">
         <div className="now-head">
           <h1>{stage.cue + 1}. {cue.title} <small>{duration(cue.minutes)}</small></h1>
-          <ol className="beat-dots" aria-label="Beats">{visible.map((item, i) => <li key={item.index} className={item.index === stage.beat ? "current" : i < position ? "past" : ""} />)}</ol>
+          <ol className="beat-dots" aria-label="Beats">{visible.map((item, i) => <li key={item.index} className={item.index === stage.beat ? "current" : i < position ? "past" : ""}>{beatNumber(stage.cue, item.index)}</li>)}</ol>
           <label className="short"><input type="checkbox" checked={stage.short} onChange={event => control.update({ short: event.target.checked })} /> Short on time</label>
         </div>
         <div className="now-nav">
           <button className="big" onClick={() => step(-1)}>◀ Back</button>
           <button className="big primary" onClick={() => step(1)} disabled={!nextItem}>Next ▶</button>
-          <p className="projector-line">Projector: <b>{viewLabel(stage.view)}</b>{beat.optional && <span className="optional"> · optional</span>}</p>
+          <p className="projector-line"><span className="beat-number" title="Beat number, across the whole talk">#{beatNumber(stage.cue, stage.beat)}</span> Projector: <b>{viewLabel(stage.view)}</b>{beat.optional && <span className="optional"> · optional</span>}</p>
         </div>
         {nudged === `${stage.cue}/${stage.beat}` && <p className="result error" role="alert">{beat.click ? `Drasi hasn't answered an approval yet. Click ${beat.click}, or use ${actionLabels["approve-change"]} on the desk` : `You haven't pressed ${(beat.do ?? []).filter(id => !isDone(id)).map(id => actionLabels[id]).join(" or ")} yet. Press it`}, or press Next again to move on without it.</p>}
         {stage.fallback && <p className="result expected">Recording mode: the projector shows recordings for the live parts. Say they're recordings; keep pressing Next.</p>}
@@ -302,7 +302,7 @@ export default function Presenter({ live, now, control }: { live: Live; now: num
           {beat.do?.includes("approve-change") && <> The desk's <i>{actionLabels["approve-change"]}</i> is the backup: it presses the same button.</>}</p>}
         <p className="say">{beat.say}</p>
         {beat.watch && <p className="watch"><b>Watch for</b> {beat.watch}</p>}
-        {nextItem && <p className="up-next">Next: <b>{viewLabel(notes[scenes[nextItem.c].id].beats[nextItem.b].show)}</b> · {notes[scenes[nextItem.c].id].beats[nextItem.b].say.slice(0, 90)}…</p>}
+        {nextItem && <p className="up-next">Next: #{beatNumber(nextItem.c, nextItem.b)} <b>{viewLabel(notes[scenes[nextItem.c].id].beats[nextItem.b].show)}</b> · {notes[scenes[nextItem.c].id].beats[nextItem.b].say.slice(0, 90)}…</p>}
         <p className="if-broken"><b>If it breaks</b> {notes[cue.id].ifBroken}
           {!stage.fallback && <button onClick={() => control.update({ fallback: true, replay: beat.recording ?? recording ?? null })}>Use recordings from here on</button>}</p>
         <p className="wrong-press"><b>Pressed the wrong button?</b> Back and Next never change the demo. Undo with the opposite button in <i>All demo controls</i>: Summaries: Europe + US undoes Europe only; Restore EU-A undoes Fail EU-A.</p>
@@ -335,7 +335,7 @@ export default function Presenter({ live, now, control }: { live: Live; now: num
 
     <div className="desk-more">
       <details><summary>Jump to a part</summary>
-        <div className="jump">{scenes.map((scene, c) => <button key={scene.id} className={c === stage.cue ? "current" : ""} onClick={() => goTo(c, beatsOf(c)[0].index)}>{c + 1}. {scene.title}</button>)}</div>
+        <div className="jump">{scenes.map((scene, c) => <button key={scene.id} className={c === stage.cue ? "current" : ""} onClick={() => goTo(c, beatsOf(c)[0].index)}>{c + 1}. {scene.title} <small>#{beatNumber(c, 0)}–{beatNumber(c, notes[scene.id].beats.length - 1)}</small></button>)}</div>
       </details>
       <details><summary>All demo controls</summary>
         <div className="controls">
