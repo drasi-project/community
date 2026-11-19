@@ -29,7 +29,7 @@ export const slides = [
   { id: "walkin", title: "Walk-in" },
   { id: "title", title: "Who I am" },
   { id: "project", title: "Drasi, the project" },
-  { id: "problem", title: "The problem" },
+  { id: "problem", title: "Why Drasi?" },
   { id: "drasi-1", title: "Drasi · one source" },
   { id: "drasi-2", title: "Drasi · several sources" },
   { id: "drasi-3", title: "Drasi · many queries and reactions" },

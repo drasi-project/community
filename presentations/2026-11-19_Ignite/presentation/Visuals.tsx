@@ -137,7 +137,7 @@ export function Visual({ id, active, qr }: { id: VisualId; active: boolean; qr: 
       </div>
       <ul className="v-social">{social.map(([icon, text]) => <li key={text}><Icon name={icon} size={36} />{text}</li>)}</ul>
     </div>;
-    case "problem": return <Slide id={id} title="The problem">
+    case "problem": return <Slide id={id} title="Why Drasi?">
       <p className="lead">Detecting meaningful change as it happens, and reacting to it, is harder than it should be</p>
       <div className="v-versus">
         <section className="bad"><h2><Icon name="poll" size={40} />Usually</h2><Loop /><p>Late, wasteful, and rebuilt for every system</p></section>

@@ -29,7 +29,7 @@ export type Cue = { summary: string; beats: Beat[]; ifBroken: string; recording?
 
 export const notes: Record<SceneId, Cue> = {
   intro: {
-    summary: "Walk-in; who I am; the project; the problem Drasi solves",
+    summary: "Walk-in; who I am; the project; why Drasi?",
     beats: [
       { show: "walkin", do: ["start-traffic"],
         say: "Before the session: the walk-in slide stays up while people arrive. Press Next when you start talking; that starts the talk timer.",

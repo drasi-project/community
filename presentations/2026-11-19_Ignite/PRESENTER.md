@@ -163,7 +163,7 @@ proposal: approve the new one.
 
 | Time | Part | Projector shows | You |
 |---|---|---|---|
-| 0:00 | Intro | Walk-in, Who I am, Drasi, the project, The problem | Walk-in; who I am; the project; the problem Drasi solves |
+| 0:00 | Intro | Walk-in, Who I am, Drasi, the project, Why Drasi? | Walk-in; who I am; the project; why Drasi? |
 | 2:00 | What Drasi is | Drasi · one source, Drasi · several sources, Drasi · many queries and reactions, Drasi · queries build on queries, Plugin ecosystem, Form factors | Sources, Continuous Queries, Reactions; the plugin ecosystem; form factors |
 | 5:30 | Observability and the scenario | Observability issues, What they want, The scenario | Observability: the issues, what organizations want, and the scenario |
 | 8:00 | Scene 1 · Status from telemetry and configuration | Grafana · Operations | Telemetry + configuration → queries → Prometheus reaction → Grafana |
@@ -186,7 +186,7 @@ Say it in your own words.
    - **Watch for:** Press Start demo traffic before you start talking, so the dashboard has several minutes of data by scene 1. Press it at least 5 minutes after any reset.
 2. **Who I am.** Good morning, my name is Allen Jones. I'm a member of the Azure Incubations team at Microsoft. TODO: one line on the talk's promise.
 3. **Drasi, the project.** For the last few years I've been working on an open-source project named Drasi. We started it in Azure Incubations and open-sourced it in October 2024. Since January 2025 Drasi has been a CNCF Sandbox project, and it's in active development with a growing community of users and contributors.
-4. **The problem.** Drasi was started because, in our experience, detecting meaningful changes in data as they happen, and reacting to them, is more difficult than it should be. TODO: one concrete example of the polling-and-diffing pain.
+4. **Why Drasi?.** Drasi was started because, in our experience, detecting meaningful changes in data as they happen, and reacting to them, is more difficult than it should be. TODO: one concrete example of the polling-and-diffing pain.
 
 **If it breaks:** The slides don't depend on the demo. Carry on.
 
