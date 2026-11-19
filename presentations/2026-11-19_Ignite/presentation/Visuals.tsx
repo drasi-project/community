@@ -185,7 +185,7 @@ export function Visual({ id, active, qr }: { id: VisualId; active: boolean; qr: 
     case "change-driven": return <Slide id={id} title="Change-driven computation with Drasi" withLogo>
       <p className="lead">Describe the result you want; Drasi keeps it current</p>
       <ol className="v-chain">
-        <li className="role-source"><Icon name="pg" size={64} /><b>Changes flow in</b><span>from the databases, telemetry and systems you already have</span></li>
+        <li className="role-source"><Icon name="pg" size={64} /><b>Change feeds flow in</b><span>low-level changes from the databases, telemetry and systems you already have</span></li>
         <li className="drasi role-query"><DrasiMark /><b>Drasi keeps the result current</b><span>as data changes, and as time passes, across sources</span></li>
         <li className="role-reaction"><Icon name="bolt" size={64} /><b>The reaction acts on the change</b><span>only what changed: added, updated or removed</span></li>
       </ol>
@@ -197,7 +197,7 @@ export function Visual({ id, active, qr }: { id: VisualId; active: boolean; qr: 
     case "drasi-1": case "drasi-2": {
       const step = Number(id.slice(-1)) + 1;
       return <Slide id={id} title="Simple concepts, powerful change-driven solutions">
-        <p className="lead">{["", "Sources bring in every change; one query joins them; a reaction acts on the answer", "Many sources, queries and reactions; every answer kept current"][step - 1]}</p>
+        <p className="lead">{["", "Sources bring in low-level changes; one query joins them; a reaction acts on changes to the answer, not the sources", "Many sources, queries and reactions; every answer kept current"][step - 1]}</p>
         <Grow step={step} active={active} />
       </Slide>;
     }

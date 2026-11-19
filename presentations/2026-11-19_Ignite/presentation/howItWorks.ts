@@ -49,7 +49,6 @@ export const how: Record<HowId, How> = {
   },
   "label-standard": { label: "The basics",
     chips: [{ icon: "otel", label: "OpenTelemetry" }, { icon: "prometheus", label: "Prometheus" }, { icon: "prometheus", label: "Grafana" }],
-    text: "It tells you something is wrong" },
-  "label-drasi": { label: "Context, answers, guidance", drasi: true,
-    text: "Who's affected, what to do about it, and whether you'd survive the next failure" },
+    text: "Prometheus collects OpenTelemetry data; Grafana shows it" },
+  "label-drasi": { label: "Richer context, answers, guidance", drasi: true },
 };

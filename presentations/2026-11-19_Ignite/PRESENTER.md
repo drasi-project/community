@@ -195,30 +195,30 @@ Say it in your own words.
 3. **Drasi, the project.**\
    For the last few years I've been working on an open-source project named Drasi.\
    We started it in Azure Incubations and open-sourced it in October 2024.\
-   Since January 2025 Drasi has been a CNCF Sandbox project, and it's in active development with a growing community of users and contributors.
+   In January 2025, Drasi became a CNCF Sandbox project, and it's currently in active development with a growing community of users and contributors.
 4. **Grafana · Operations.**\
-   Here's what I'm going to show you today.\
-   This is a live AI service and its monitoring: a Grafana dashboard like the ones most teams already run.
+   Drasi is a general-purpose technology for building change-driven systems in any domain.\
+   But few domains show the need for Drasi better than observability, so today I'll show you some examples of how Drasi works in an observability use case.\
+   My presentation will focus around this Grafana dashboard showing some operational data for an organization that is running on my laptop.
    - **Watch for:** The live dashboard, charts moving; no highlight.
 5. **Grafana · Operations.**\
-   The top row is what most teams already have: OpenTelemetry, Prometheus and Grafana.\
-   It tells you something is wrong.
+   The top section represents the kind of data organizations often have and is driven by Prometheus collecting OpenTelemetry data and making it available through Grafana.
    - **Watch for:** The top row outlined, labelled The basics.
 6. **Grafana · Operations.**\
-   The bottom row is context, answers and guidance, powered by Drasi: who's affected, what to do about it, and whether you'd survive the next failure.\
+   The bottom row provides examples of richer context, answers and guidance, powered by Drasi.\
    Answers that update the moment things change, beside the monitoring you already use.\
    In a few minutes I'm going to break this service on purpose.\
    Watch which row notices first.
-   - **Watch for:** The Decision Support row outlined, labelled Context, answers, guidance · Powered by Drasi.
+   - **Watch for:** The Decision Support row outlined, labelled Richer context, answers, guidance · Powered by Drasi.
 7. **Why Drasi exists.**\
    Drasi was started because, in our experience, detecting meaningful changes in data as they happen, and reacting to them, is harder than it should be.\
-   There are two common approaches.\
+   There are two common approaches people use to detect change.\
    Polling: query everything every few seconds, diff it with last time, and write code to react.\
    It's simple, but slow to notice, wasteful, and it misses changes that happen in between.\
    Or stream processing: consume an event stream and react to every event.\
    That's powerful, and every event arrives, but working out what an event means for the current state, joining it with other sources, and noticing when something didn't happen, means building and running your own state: windows, joins, state stores, ordering and late events.
 8. **Change-driven computation with Drasi.**\
-   Drasi takes a change-driven approach.\
+   Drasi observes low level change feeds.\
    You describe the result you want, as a query.\
    Changes flow in from the systems you already have; Drasi keeps the result current as the data changes, and as time passes, across sources; and a reaction acts on just what changed: what was added, updated or removed.\
    No polling loop, and no state store to build and run yourself.
@@ -229,9 +229,9 @@ Say it in your own words.
 
 9. **Simple concepts · one query, several sources.**\
    Drasi is built around three simple, familiar concepts: Sources, Continuous Queries and Reactions.\
-   Sources bring in every change, here from a database, telemetry and Kubernetes.\
+   Sources bring in low level changes from data sources, here from a database, telemetry and Kubernetes.\
    A continuous query describes what you care about across them, as one graph query, and Drasi does the joining and keeps its answer current as the data changes.\
-   A reaction does something with each change to the answer.
+   A reaction does something with each change to the answer - not the sources.
 10. **Simple concepts · many queries and reactions.**\
    And it grows from there: many sources, many queries, many reactions, each answer kept current as the data changes.\
    TODO: mention continuous models (policy, optimization) here or in scene 3?
@@ -245,18 +245,16 @@ Say it in your own words.
 ### 3. Observability and the scenario (2½ minutes)
 
 12. **Observability issues.**\
-   Drasi is a general-purpose technology for building change-driven systems in any domain.\
-   But few domains show the need and value better than observability, so today I'll show you some examples of how Drasi works in an observability use case.\
-   A typical team has telemetry in one set of tools, dashboards, alerts and incidents in another, and the context, deployments, the service catalog, business outcomes, in yet more.\
-   Organizations report the same issues: the tools are fragmented; alerts are noisy, yet important failures still arrive late; the context lives somewhere else, so you see symptoms, not answers; telemetry costs keep growing; healthy components don't mean customers got what they needed; and AI services can look healthy while getting it wrong.\
-   The on-call engineer is the one joining it all up.
+   Coming back to observability...\
+   Every organization understands, or is learning, the importance of observability.\
+   But many organizations report the same issues: the tools are fragmented; alerts are noisy, yet important failures still arrive late; the context lives somewhere else, so you see symptoms, not answers; telemetry costs keep growing; healthy components don't mean customers got what they needed; and AI services can look healthy while getting it wrong.\
+   Despite all the investment, customers are still often the one reporting an issue, and the on-call engineer is the one connecting all the dots.
 13. **What organizations want.**\
-   What organizations want is more context, joined across systems; the signal raised above the noise; outcomes, including what didn't happen; action backed by evidence, with safeguards; all in the tools they already use.
+   What organizations ideally want is more context, joined across systems; the signal raised above the noise; outcomes, including what didn't happen; action backed by evidence, with safeguards; all in the tools they already use.
 14. **What organizations want · with Drasi.**\
-   We believe Drasi can provide much of this: it keeps that connected context current as data changes in the systems you already have, and delivers the answers into the tools you already use.\
-   Let me show you a few examples.
+   We believe Drasi has a role to play here.
 15. **The scenario.**\
-   The scenario: monitoring two AI workloads.\
+   So imagine an organization that has 2 important AI workloads.\
    Customer support needs 60k tokens a minute and runs on EU-A; document summaries need 80k and run on EU-B.\
    Each deployment has 100k of capacity, and US-C in the US is extra capacity being provisioned.\
    Support handles restricted data, which stays in Europe.\
@@ -271,8 +269,9 @@ Say it in your own words.
 ### 4. Scene 1 · Status from telemetry and configuration (2½ minutes)
 
 16. **Grafana · Operations.**\
-   Let's start simple.\
-   The team wants one view of each deployment's health and each workload's status, and that means joining telemetry with configuration data.\
+   Let's go back to our dashboard and start with something simple.\
+   You can see the dashboard is live because there is locally simulated call data showing in the dashboard.\
+   The organization wants one view of each deployment's health and each workload's status, and that means joining telemetry with configuration data.\
    This is their Grafana dashboard: the top row is ordinary monitoring, the bottom row is Drasi's answers.
    - **Watch for:** Charts moving. If the desk says Traffic: stopped, press Start demo traffic in All demo controls.
 17. **Grafana · Operations.**\
