@@ -40,7 +40,7 @@ export const notes: Record<SceneId, Cue> = {
       { show: "project",
         say: "For the last few years I've been working on an open-source project named Drasi. We started it in Azure Incubations and open-sourced it in October 2024. In January 2025, Drasi became a CNCF Sandbox project, and it's currently in active development with a growing community of users and contributors." },
       { show: "ops",
-        say: "Drasi is a general-purpose technology for building change-driven systems in any domain. But few domains show the need for Drasi better than observability, so today I'll show you some examples of how Drasi works in an observability use case. My presentation will focus around this Grafana dashboard showing some operational data for an organization that is running on my laptop.",
+        say: "Drasi is a general-purpose technology for building change-driven systems in any domain. But few domains show the need for Drasi better than the observability domain, so today I'll show you some examples of how Drasi works in an observability use case. My presentation will focus around this Grafana dashboard showing some operational data for an organization that is running on my laptop.",
         watch: "The live dashboard, charts moving; no highlight." },
       { show: "ops", highlight: ["ai-operations.ai-deployments"], config: ["label-standard"],
         say: "The top section represents the kind of data organizations often have and is driven by Prometheus collecting OpenTelemetry data and making it available through Grafana.",

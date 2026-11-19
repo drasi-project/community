@@ -198,7 +198,7 @@ Say it in your own words.
    In January 2025, Drasi became a CNCF Sandbox project, and it's currently in active development with a growing community of users and contributors.
 4. **Grafana · Operations.**\
    Drasi is a general-purpose technology for building change-driven systems in any domain.\
-   But few domains show the need for Drasi better than observability, so today I'll show you some examples of how Drasi works in an observability use case.\
+   But few domains show the need for Drasi better than the observability domain, so today I'll show you some examples of how Drasi works in an observability use case.\
    My presentation will focus around this Grafana dashboard showing some operational data for an organization that is running on my laptop.
    - **Watch for:** The live dashboard, charts moving; no highlight.
 5. **Grafana · Operations.**\
