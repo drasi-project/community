@@ -50,7 +50,7 @@ def main():
     else:
         raise RuntimeError("usage: workload.py run|status|approve CANDIDATE_ID BASIS REVISION"
                            "|configure < '{\"capacity\":{\"EU-A\":50000},\"destinations\":{\"batch\":[\"EU-A\",\"EU-B\"]}}'"
-                           "|client support|batch [count]|control EU-A|EU-B|US-C fail|throttle|pause-reports|resume-reports|restore|reset")
+                           "|client support|batch [count]|control EU-A|EU-B|US-C fail|throttle|pause-reports|resume-reports|restore|provision|reset")
 
 
 if __name__=="__main__":

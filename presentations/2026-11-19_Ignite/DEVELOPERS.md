@@ -95,7 +95,7 @@ All paths are under `demo/` unless noted.
 | `plugins/prometheus/examples/ignite.json` | The Prometheus reaction's metric mapping in this graph |
 | `drasi/*.cypher` | The 47 continuous queries; `incident-*` build the incident cards |
 | `ops/config/` | Generates Drasi Server's configuration (`.native/server.json`): every source, query, model, reaction and connection |
-| `database/` | PostgreSQL schema (`schema.sql`, `workload.sql`), scenario seed (`reset.sql`: both workloads Europe-only, so failover starts at risk) and the in-place rename from earlier table names (`rename.sql`) |
+| `database/` | PostgreSQL schema (`schema.sql`, `workload.sql`), scenario seed (`reset.sql`: EU-A and EU-B only, both workloads Europe-only, so failover starts at risk) and the in-place rename from earlier table names (`rename.sql`) |
 | `observability/` | Container configuration: Collector, Prometheus, Grafana dashboards, alerts and data source, and an integration test probe |
 | `observability/grafana/dashboards.py` | Generates the audience dashboard, `ai-operations` (AI Deployments and Decision Support rows); `fixture.py` serves sample `/metrics` for each tile state |
 | `ui/` | The web app (Vite, React, Reveal.js) and its tests and scripts |
@@ -245,7 +245,7 @@ optimizer are Drasi's own crates, tested in `drasi-core-next`
 `-p drasi-computation-transformer-optimization`). `ignite-config`'s tests run
 the demo's result queries over the optimizer's output, and
 `tests/decision-integration.py` checks the decisions live (at risk with the
-Europe-only seed, safe once summaries may run in the US, the failure plan,
+Europe-only seed, still at risk once US-C is provisioned, safe once summaries may run in the US, the failure plan,
 infeasible when support loses EU-B, and safe again with nothing moved back once
 EU-A is restored).
 
@@ -258,9 +258,9 @@ EU-A is restored).
 
 **Against the running demo:** these read every answer from Drasi's outputs
 (`tests/drasi_outputs.py`: the desk stream, the Prometheus reaction and Server's
-query results), never from the AI service. Their `reset()` resets the scenario and then allows
-summaries in the US, as the desk's **Summaries: Europe + US** does, so they start
-safe; `reset(us=False)` leaves the seed, with failover at risk.
+query results), never from the AI service. Their `reset()` resets the scenario, provisions US-C
+and allows summaries in the US, as the desk's **Provision US-C** and **Summaries: Europe + US**
+do, so they start safe; `reset(us=False)` leaves the seed (EU-A and EU-B only), with failover at risk.
 
 | Command | Checks | Changes data? |
 |---|---|---|
@@ -268,9 +268,9 @@ safe; `reset(us=False)` leaves the seed, with failover at risk.
 | `python3 tests/workload-integration.py` | The application and simulated deployments as Drasi sees them: deployment status, overdue requests and their history | Yes |
 | `python3 tests/workload-telemetry.py` | The application's metrics and Langfuse traces, Drasi's overdue metric, and Grafana's alerts on both | Yes |
 | `python3 tests/decision-integration.py` | Policy, plan and what-if | Yes |
-| `python3 tests/health-telemetry-integration.py` | Health from telemetry: probes through the Collector reach Drasi; Failed and the planner's move, Unknown after 8 s of silence, recovery; `deployment_health_reports` not written. Applies with `IGNITE_HEALTH_SOURCE=otel` | Yes; resets at the start and the end |
+| `python3 tests/health-telemetry-integration.py` | Health from telemetry: US-C's probes reach Drasi before it is provisioned but no deployment row shows it until Provision US-C; probes through the Collector reach Drasi; Failed and the planner's move, Unknown after 8 s of silence, recovery; `deployment_health_reports` not written. Applies with `IGNITE_HEALTH_SOURCE=otel` | Yes; resets at the start and the end |
 | `python3 tests/mattermost-actions.py` | Mattermost's card buttons reach the approval tool (approve, reject, an earlier run's card), the desk's backup press, the projector sign-in | Yes: adds approvals Drasi rejects (made-up plans); deletes its cards |
-| `python3 tests/incident-channel-integration.py` | Drasi's incident cards in #incident-ai-support in the talk's order: the seed's at risk, restored once summaries may run in the US, failure, proposal, overdue, approve → Applied → Verified in the card's thread, then Restore EU-A posts nothing and moves nothing back; each posted once | Yes; resets at the start and the end (clears the channel) |
+| `python3 tests/incident-channel-integration.py` | Drasi's incident cards in #incident-ai-support in the talk's order: the seed's at risk, no card for Provision US-C, restored once summaries may run in the US, failure, proposal, overdue, approve → Applied → Verified in the card's thread, then Restore EU-A posts nothing and moves nothing back; each posted once | Yes; resets at the start and the end (clears the channel) |
 | `python3 tests/recovery-integration.py` | Approval checked by Drasi, routes changed by its gateway reaction, stale rejection, verified recovery, annotations and scores | Yes |
 | `node ui/scripts/walkthrough.mjs capture <folder>` | The whole talk through the desk, beat by beat, as a presenter would; saves the projector and the desk at every beat (about 12 minutes) | Yes; resets at the start and the end |
 | `node ui/scripts/walkthrough.mjs record` | The same, and re-records the three fallback recordings (failure, recovery, back to normal) at 1920×1080 (16:9) | Yes; resets at the start and the end |

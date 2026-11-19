@@ -76,7 +76,8 @@ deployments, two in Europe and one in the United States (EU-A, EU-B, US-C):
 | Customer support | Restricted | Europe only | EU-A (needs 60k tokens/min) |
 | Document summaries | Public | Europe at the start; anywhere once compliance allows the US (during the talk) | EU-B (needs 80k tokens/min) |
 
-EU-A, EU-B and US-C each have a capacity of 100k tokens/min. US-C starts idle.
+EU-A, EU-B and US-C each have a capacity of 100k tokens/min. The demo starts with
+only EU-A and EU-B; US-C is provisioned during the talk and then sits idle.
 
 ## What the familiar tools do
 

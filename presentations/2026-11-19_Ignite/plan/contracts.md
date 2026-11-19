@@ -101,7 +101,7 @@ health reports, tasks or approvals.
 |---|---|---|---|
 | `routing_config` | `singleton` PK, `run_epoch`, `revision` | reset, every scenario change | yes |
 | `ai_workloads` | `id` PK (`support`, `batch`), `run_epoch`, `data_class` (`restricted`, `public`), `region_requirement` (`EU`, `any`), `model`, `demand_tpm` | reset, desk controls | yes |
-| `model_deployments` | `id` PK (`EU-A`, `EU-B`, `US-C`), `run_epoch`, `region`, `model`, `capacity_tpm` | reset, desk controls | yes |
+| `model_deployments` | `id` PK (`EU-A`, `EU-B`, `US-C`), `run_epoch`, `region`, `model`, `capacity_tpm` | reset (EU-A, EU-B), the desk's Provision US-C (`POST /control` `provision`), desk capacity controls | yes |
 | `workload_routes` | `workload` PK, `run_epoch`, `deployment`, `approval` (nullable), `applied_ms` | reset, `POST /routes/apply` only | yes |
 | `data_residency_policy` | `id` PK (`{workload}/{deployment}`), `run_epoch`, `workload`, `deployment` | reset, the desk's Summaries: Europe + US and Summaries: Europe only (the talk's compliance change) | yes |
 | `change_approvals` | `id` PK, `run_epoch`, `candidate_id`, `basis`, `revision` (plan's scenario revision), `status` (`pending`, `applied`, `rejected`, `verified`), `reason`, `latest` (bool), `requested_ms`, `decided_ms`, `applied_revision`, `verified_ms` | approval tool (insert), gateway configuration API (status) | yes |
@@ -116,10 +116,12 @@ Removed: `ignite_model` (payload), `ignite_endpoints`, `ignite_commands`,
 
 Seed (`reset.sql`): workloads `support` (restricted, EU, `support-model`,
 60 000) and `batch` (public, any, `support-model`, 80 000); deployments EU-A
-and EU-B (EU) and US-C (US), all `support-model`, 100 000; routes support → EU-A,
+and EU-B (EU), `support-model`, 100 000; US-C is not provisioned (the desk's
+Provision US-C adds it: US, `support-model`, 100 000, revision +1); routes support → EU-A,
 batch → EU-B; destinations support: EU-A, EU-B; batch: EU-A, EU-B (both Europe-only, so failover starts
-at risk until the desk's Summaries: Europe + US adds batch: US-C);
-`revision` 1; all simulation modes `ok`.
+at risk until US-C is provisioned and the desk's Summaries: Europe + US adds batch: US-C);
+`revision` 1; all simulation modes `ok`. The AI service simulates and probes all three
+deployments throughout; its scenario, destinations and approvals accept only provisioned ones.
 
 The monotonic trigger moves from `ignite_model` to `routing_config` (revision
 +1 per change). `latest` is set on the inserted approval and cleared on the
@@ -349,8 +351,9 @@ capacity beat, Server restart):
 
 | Inputs | Plan | Resilience |
 |---|---|---|
-| Seed, all healthy (both workloads Europe-only) | feasible, 0 moves | at_risk, first failure EU-A (no valid plan) |
-| Seed with batch also allowed on US-C | feasible, 0 moves | safe |
+| Seed, all healthy (EU-A and EU-B only, both workloads Europe-only) | feasible, 0 moves | at_risk, first failure EU-A (no valid plan) |
+| US-C provisioned, batch still Europe-only | feasible, 0 moves | at_risk, first failure EU-A (no valid plan) |
+| US-C provisioned and batch also allowed on it | feasible, 0 moves | safe |
 | EU-A failed | support → EU-B, batch → US-C (2 moves) | at_risk, first failure EU-B |
 | EU-A failed, then EU-B removed from support's destinations | infeasible | at_risk |
 | Healthy, support on EU-B, batch on US-C, EU-A capacity 50 000 | feasible | at_risk, first failure EU-B (support) |
@@ -527,8 +530,8 @@ Agreed between workstreams 1 and 6; the desk and its test fixture
 | API | Request | Response |
 |---|---|---|
 | `GET /health` | | `{run_epoch, revision, pending, task_target_seconds, report_expiry_seconds, traffic: {running, submitted, ends_ms, error, interval_seconds}, deployments: [{id, region, model, capacity_tpm, mode, reporting}], workloads: [{id, data_class, region_requirement, model, demand_tpm, deployment}], destinations: {workload: [deployment]}}`. `mode`/`reporting` are the simulation (`simulated_deployment_faults`); `deployment` is the current route. No Drasi answers and no readiness of Drasi |
-| `POST /control` | `{run_epoch, deployment, action}`, action `fail`, `throttle`, `restore`, `pause-reports`, `resume-reports` | `200 {run_epoch, revision}`; simulation only, the revision is unchanged |
-| `POST /configuration` | `{run_epoch, revision, capacity?: {deployment: tpm}, destinations?: {workload: [deployment]}}` | `200 {run_epoch, revision}` (unchanged revision when nothing changed); `409 {"error"}` when `run_epoch`/`revision` are stale. The desk's "EU-A to 50k/100k" buttons send `POST /control` `restore` for EU-A first when it isn't healthy and reporting |
+| `POST /control` | `{run_epoch, deployment, action}`, action `fail`, `throttle`, `restore`, `pause-reports`, `resume-reports`, `provision` | `200 {run_epoch, revision}`; simulation only, the revision is unchanged, except `provision`: inserts the unprovisioned deployment into `model_deployments` (its region, 100 000, `ok`) and raises the revision; `409` when it already exists |
+| `POST /configuration` | `{run_epoch, revision, capacity?: {deployment: tpm}, destinations?: {workload: [deployment]}}` | `200 {run_epoch, revision}` (unchanged revision when nothing changed); `409 {"error"}` when `run_epoch`/`revision` are stale; `400` when it names a deployment that isn't provisioned. The desk's "EU-A to 50k/100k" buttons send `POST /control` `restore` for EU-A first when it isn't healthy and reporting |
 | `POST /approvals` | `{id, candidate_id, basis, revision}`; the desk always sends its own UUID `id` and the `Plan`'s `candidate_id`, `basis` and `revision` | `200 {id}` (above) |
 | `POST /reset`, `POST /traffic`, `POST /tasks`, `GET /tasks/{id}` | unchanged | unchanged |
 
@@ -1022,7 +1025,8 @@ The `plan` view goes; beats that showed it show `ops` or `incident`.
 |---|---|---|---|
 | `approve-change` | Approve the proposed change | The SSE `plan-results` row is feasible with `moves > 0`, or the beat expects a rejection (`expect: "rejected"`) | `POST /mattermost/approve-latest {"run_epoch"}`: exactly what pressing Approve on the newest proposal card does |
 | `start-traffic`, `stop-traffic` | Start demo traffic, Stop demo traffic | Traffic stopped, running | `POST /traffic {"run_epoch", "running"}` |
-| `summaries-anywhere`, `summaries-europe` | Summaries: Europe + US, Summaries: Europe only | US-C not allowed for `batch`, allowed | `POST /configuration` with `destinations.batch` = `EU-A, EU-B, US-C` or `EU-A, EU-B` (the talk's compliance change uses Europe + US) |
+| `provision-us-c` | Provision US-C | US-C not provisioned | `POST /control {"run_epoch", "deployment": "US-C", "action": "provision"}` |
+| `summaries-anywhere`, `summaries-europe` | Summaries: Europe + US, Summaries: Europe only | US-C provisioned and not allowed for `batch`, allowed | `POST /configuration` with `destinations.batch` = `EU-A, EU-B, US-C` or `EU-A, EU-B` (the talk's compliance change uses Europe + US) |
 | `fail-eu-a`, `restore-eu-a` | Fail EU-A, Restore EU-A | EU-A `ok`, not `ok` | `POST /control {"run_epoch", "deployment": "EU-A", "action": "fail" \| "restore"}` |
 | `eu-a-half`, `eu-a-full` | EU-A back at 50k, EU-A back to 100k | Always (All demo controls only; no beat uses them) | Restore EU-A if needed, then `POST /configuration` with `capacity.EU-A` 50 000 or 100 000 |
 

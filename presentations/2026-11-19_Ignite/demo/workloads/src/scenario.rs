@@ -8,6 +8,8 @@ use serde_json::{json, Value};
 use std::collections::{BTreeMap, BTreeSet};
 use tokio_postgres::GenericClient;
 
+/// The deployments the AI service simulates. The scenario holds those provisioned
+/// (`model_deployments`): any subset; the demo starts without US-C.
 pub const DEPLOYMENTS: [&str; 3] = ["EU-A", "EU-B", "US-C"];
 pub const WORKLOADS: [&str; 2] = ["support", "batch"];
 
@@ -110,7 +112,7 @@ pub async fn load(client: &impl GenericClient) -> Result<Scenario> {
         })
         .collect::<Vec<_>>();
     anyhow::ensure!(
-        workloads.len() == WORKLOADS.len() && deployments.len() == DEPLOYMENTS.len(),
+        workloads.len() == WORKLOADS.len() && !deployments.is_empty(),
         "scenario incomplete; run ops/native-runtime.py reset"
     );
     let mut destinations: BTreeMap<String, Vec<String>> = WORKLOADS
@@ -197,6 +199,9 @@ pub async fn control(Payload(input): Payload<Control>) -> Api {
         )
         .await?
         .ok_or_else(|| Error::bad_request("unknown deployment"))?;
+    if input.action == "provision" {
+        return provision(tx, &epoch, &input.deployment).await;
+    }
     let (mut mode, mut reporting): (String, bool) = (row.get(0), row.get(1));
     apply_control(&mut mode, &mut reporting, &input.action).map_err(Error::bad)?;
     tx.execute(
@@ -204,6 +209,34 @@ pub async fn control(Payload(input): Payload<Control>) -> Api {
         &[&mode, &reporting, &input.deployment],
     )
     .await?;
+    tx.commit().await?;
+    Ok(Json(json!({"run_epoch": epoch, "revision": revision})))
+}
+
+/// Adds a known but unprovisioned deployment to the scenario: healthy, 100k tokens per minute,
+/// in its region. It is scenario state, so the revision rises.
+async fn provision(tx: tokio_postgres::Transaction<'_>, epoch: &str, id: &str) -> Api {
+    let region = match id {
+        "US-C" => "US",
+        "EU-A" | "EU-B" => "EU",
+        _ => return Err(Error::bad_request("unknown deployment")),
+    };
+    let inserted = tx
+        .execute(
+            "INSERT INTO model_deployments(id, run_epoch, region, model, capacity_tpm)
+             VALUES($1, $2, $3, 'support-model', 100000) ON CONFLICT(id) DO NOTHING",
+            &[&id, &epoch, &region],
+        )
+        .await?;
+    if inserted == 0 {
+        return Err(Error::conflict("deployment already provisioned"));
+    }
+    tx.execute(
+        "UPDATE simulated_deployment_faults SET mode='ok', reporting=true WHERE deployment=$1",
+        &[&id],
+    )
+    .await?;
+    let revision = bump(&tx).await?;
     tx.commit().await?;
     Ok(Json(json!({"run_epoch": epoch, "revision": revision})))
 }
@@ -221,9 +254,10 @@ pub struct Configuration {
 
 /// Checks a desk configuration change against the known workloads and deployments. This is
 /// input validation of a demo control, not policy: any destination set is accepted.
-pub fn validate_configuration(input: &Configuration) -> Result<()> {
+pub fn validate_configuration(input: &Configuration, provisioned: &[String]) -> Result<()> {
+    let known = |id: &str| provisioned.iter().any(|d| d == id);
     for (id, tpm) in &input.capacity {
-        anyhow::ensure!(DEPLOYMENTS.contains(&id.as_str()), "unknown deployment {id}");
+        anyhow::ensure!(known(id), "unknown deployment {id}");
         anyhow::ensure!(
             (0..=1_000_000_000).contains(tpm),
             "capacity must be between 0 and 1000000000 tokens per minute"
@@ -235,8 +269,8 @@ pub fn validate_configuration(input: &Configuration) -> Result<()> {
             "unknown workload {workload}"
         );
         anyhow::ensure!(
-            list.iter().all(|d| DEPLOYMENTS.contains(&d.as_str())),
-            "unknown destination for {workload}"
+            list.iter().all(|d| known(d)),
+            "{workload} names a deployment that isn't provisioned"
         );
         anyhow::ensure!(
             list.iter().collect::<BTreeSet<_>>().len() == list.len(),
@@ -247,7 +281,6 @@ pub fn validate_configuration(input: &Configuration) -> Result<()> {
 }
 
 pub async fn configuration(Payload(input): Payload<Configuration>) -> Api {
-    validate_configuration(&input).map_err(Error::bad)?;
     let mut client = db().await?;
     let tx = client.transaction().await?;
     tx.batch_execute("SELECT pg_advisory_xact_lock(190619)")
@@ -256,6 +289,13 @@ pub async fn configuration(Payload(input): Payload<Configuration>) -> Api {
     if epoch != input.run_epoch || revision != input.revision {
         return Err(Error::conflict("stale configuration basis"));
     }
+    let provisioned: Vec<String> = tx
+        .query("SELECT id FROM model_deployments WHERE run_epoch=$1", &[&epoch])
+        .await?
+        .iter()
+        .map(|r| r.get(0))
+        .collect();
+    validate_configuration(&input, &provisioned).map_err(Error::bad)?;
     let mut changed = 0;
     for (id, tpm) in &input.capacity {
         changed += tx
@@ -413,7 +453,8 @@ mod tests {
             v.as_object_mut()
                 .unwrap()
                 .extend(extra.as_object().unwrap().clone());
-            validate_configuration(&configuration(v))
+            let provisioned = ["EU-A", "EU-B", "US-C"].map(String::from);
+            validate_configuration(&configuration(v), &provisioned)
         };
         assert!(ok(json!({"capacity":{"EU-A":50000}})).is_ok());
         assert!(ok(json!({"destinations":{"batch":["EU-A","EU-B"]}})).is_ok());
@@ -424,6 +465,9 @@ mod tests {
         assert!(ok(json!({"capacity":{"EU-A":-1}})).is_err());
         assert!(ok(json!({"destinations":{"batch":["EU-A","EU-A"]}})).is_err());
         assert!(ok(json!({"destinations":{"other":["EU-A"]}})).is_err());
+        let europe = ["EU-A", "EU-B"].map(String::from);
+        let us = configuration(json!({"run_epoch":"e","revision":1,"destinations":{"batch":["EU-A","US-C"]}}));
+        assert!(validate_configuration(&us, &europe).is_err(), "US-C not provisioned");
         assert!(serde_json::from_value::<Configuration>(
             json!({"run_epoch":"e","revision":1,"routes":{"support":"EU-B"}})
         )

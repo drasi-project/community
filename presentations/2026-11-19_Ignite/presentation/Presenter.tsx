@@ -207,6 +207,8 @@ export default function Presenter({ live, now, control }: { live: Live; now: num
     void run(action, [...restoring, { path: "/configuration", body: { run_epoch: health.run_epoch, revision: health.revision, ...change } }]);
   };
   const euA = health?.deployments.find(d => d.id === "EU-A");
+  // US-C exists only once provisioned (the seed is Europe-only).
+  const usC = health?.deployments.find(d => d.id === "US-C");
   const batch = health?.destinations.batch ?? [];
   const actions: Record<ActionId, { enabled: boolean; press: () => void; danger?: boolean; done?: boolean }> = {
     "start-traffic": { enabled: !health?.traffic?.running, done: !!health?.traffic?.running,
@@ -215,6 +217,8 @@ export default function Presenter({ live, now, control }: { live: Live; now: num
       press: () => health && void run("stop-traffic", [{ path: "/traffic", body: { run_epoch: health.run_epoch, running: false } }]) },
     "restore-eu-a": { enabled: !!euA && euA.mode !== "ok",
       press: () => health && void run("restore-eu-a", [{ path: "/control", body: { run_epoch: health.run_epoch, deployment: "EU-A", action: "restore" } }]) },
+    "provision-us-c": { enabled: !!health && !usC,
+      press: () => health && void run("provision-us-c", [{ path: "/control", body: { run_epoch: health.run_epoch, deployment: "US-C", action: "provision" } }]) },
     "fail-eu-a": { enabled: euA?.mode === "ok", danger: true,
       press: () => health && void run("fail-eu-a", [{ path: "/control", body: { run_epoch: health.run_epoch, deployment: "EU-A", action: "fail" } }]) },
     // The backup for Approve on the projected card: it presses that same button (contracts.md §18).
@@ -222,7 +226,7 @@ export default function Presenter({ live, now, control }: { live: Live; now: num
       press: () => health && void run("approve-change", [{ path: "/mattermost/approve-latest", body: { run_epoch: health.run_epoch } }]) },
     "summaries-europe": { enabled: batch.includes("US-C"),
       press: () => configure("summaries-europe", { destinations: { batch: ["EU-A", "EU-B"] } }) },
-    "summaries-anywhere": { enabled: !!health && !batch.includes("US-C"),
+    "summaries-anywhere": { enabled: !!usC && !batch.includes("US-C"),
       press: () => configure("summaries-anywhere", { destinations: { batch: ["EU-A", "EU-B", "US-C"] } }) },
     "eu-a-half": { enabled: true, press: () => configure("eu-a-half", { capacity: { "EU-A": 50000 } }, "EU-A") },
     "eu-a-full": { enabled: true, press: () => configure("eu-a-full", { capacity: { "EU-A": 100000 } }, "EU-A") },
@@ -231,6 +235,7 @@ export default function Presenter({ live, now, control }: { live: Live; now: num
     switch (id) {
       case "start-traffic": return !!health?.traffic?.running;
       case "stop-traffic": return !health?.traffic?.running;
+      case "provision-us-c": return !!usC;
       case "fail-eu-a": return euA?.mode === "failed";
       // Done once Drasi has answered this beat's approval (rejected, if that's the point of the beat).
       case "approve-change": {
@@ -339,7 +344,7 @@ export default function Presenter({ live, now, control }: { live: Live; now: num
       </details>
       <details><summary>All demo controls</summary>
         <div className="controls">
-          <div>{(["start-traffic", "stop-traffic", "fail-eu-a", "approve-change", "summaries-europe", "summaries-anywhere", "restore-eu-a", "eu-a-half", "eu-a-full"] as const).map(id => <span key={id}>{actionButton(id)}</span>)}</div>
+          <div>{(["start-traffic", "stop-traffic", "provision-us-c", "summaries-europe", "summaries-anywhere", "fail-eu-a", "approve-change", "restore-eu-a", "eu-a-half", "eu-a-full"] as const).map(id => <span key={id}>{actionButton(id)}</span>)}</div>
           {result(Object.keys(actions))}
           <div><button disabled={!canAct} onClick={() => health && void run("submit", [{ path: "/tasks", body: { id: `${health.run_epoch}-support-${crypto.randomUUID()}`, run_epoch: health.run_epoch, workload: "support", content: pick(SUPPORT_QUESTIONS) } }])}>Submit one support request</button>
             <button disabled={!canAct} onClick={() => health && void run("submit", [{ path: "/tasks", body: { id: `${health.run_epoch}-batch-${crypto.randomUUID()}`, run_epoch: health.run_epoch, workload: "batch", content: pick(SUMMARY_REQUESTS) } }])}>Submit one summary request</button>

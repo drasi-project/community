@@ -1,7 +1,8 @@
 """Incident cards in Mattermost (plan/contracts.md section 15), on the running demo, in the talk's order.
 
-Drasi's `incident-channel` reaction posts each card once. The seed has summaries Europe-only, so
-the run opens with failover at risk; allowing summaries in the US restores it. Then the failure,
+Drasi's `incident-channel` reaction posts each card once. The seed provisions only EU-A and EU-B,
+with summaries Europe-only, so the run opens with failover at risk. Provisioning US-C changes no
+card (summaries still can't run there); allowing summaries in the US restores it. Then the failure,
 the overdue requests, the proposal with its Approve and Reject buttons, the outcome of the
 approval in that card's thread (applied, verified); restoring EU-A then posts nothing (degraded to
 safe is not news), and the routes stay where the plan put them. The approval goes through Mattermost exactly as a press of the card's
@@ -31,11 +32,18 @@ def main():
         seed = card("at-risk")
         assert [c["card"] for c in d.incident_cards()] == ["at-risk"], "the reset clears the channel; the seed posts at risk"
         assert seed[0]["attachment"]["title"] == "Failover at risk: losing EU-A leaves no valid plan", seed[0]
+        assert d.metric("drasi_deployment_health_status", deployment="US-C") is None, "US-C not provisioned yet"
+        d.provision()
+        d.metric_until("drasi_deployment_health_status", lambda v: v == 0, 20, deployment="US-C")
+        d.metric_until("drasi_failover_readiness", lambda v: v == 0, 20, lost="EU-A")
+        time.sleep(5)
+        assert [c["card"] for c in cards()] == ["at-risk"], "provisioning US-C alone changes no card"
         d.configure(destinations=d.US)
         restored = card("restored")[-1]
         assert restored["attachment"]["title"] == "Failover restored", restored
-        checks.append("seed (summaries Europe-only): failover at risk, losing EU-A leaves no valid plan; "
-                      "Summaries: Europe + US: failover restored")
+        checks.append("seed (EU-A and EU-B, summaries Europe-only): failover at risk, losing EU-A leaves no valid "
+                      "plan; Provision US-C: US-C Healthy, still at risk, no card; Summaries: Europe + US: "
+                      "failover restored")
 
         d.api("/traffic", {"run_epoch": epoch, "running": True})
         time.sleep(12)

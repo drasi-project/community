@@ -58,14 +58,26 @@ async fn stand_in_apis_follow_the_contract() {
     assert_eq!(s.route("batch").unwrap(), "EU-B");
     assert_eq!(s.destinations["support"], ["EU-A", "EU-B"]);
     assert!(s.deployments.iter().all(|d| d.mode == "ok" && d.capacity_tpm == 100_000));
+    let ids: Vec<_> = s.deployments.iter().map(|d| d.id.as_str()).collect();
+    assert_eq!(ids, ["EU-A", "EU-B"], "the seed provisions Europe only");
+
+    // US-C: not a destination until provisioned; provisioning raises the revision once.
+    let early = json!({"run_epoch":epoch,"revision":1,"destinations":{"batch":["EU-A","EU-B","US-C"]}});
+    assert_eq!(status(scenario::configuration(body(early)).await), StatusCode::BAD_REQUEST);
+    let provision = json!({"run_epoch":epoch,"deployment":"US-C","action":"provision"});
+    assert_eq!(ok(scenario::control(body(provision.clone())).await).await["revision"], 2);
+    assert_eq!(status(scenario::control(body(provision)).await), StatusCode::CONFLICT);
+    let s = scenario::load(&db().await.unwrap()).await.unwrap();
+    let us = s.deployment("US-C").unwrap();
+    assert_eq!((us.region.as_str(), us.capacity_tpm, us.mode.as_str()), ("US", 100_000, "ok"));
     let tag = crate::identity();
     let (a1, a2) = (format!("{tag}-1"), format!("{tag}-2"));
 
     // Approval tool: records, never validates; a repeated ID is a no-op; one latest.
-    let request = json!({"id":a1,"candidate_id":"c1","basis":"b1","revision":1});
+    let request = json!({"id":a1,"candidate_id":"c1","basis":"b1","revision":2});
     assert_eq!(ok(external::approve(body(request.clone())).await).await["id"], a1);
     assert_eq!(ok(external::approve(body(request)).await).await["id"], a1);
-    ok(external::approve(body(json!({"id":a2,"candidate_id":"c2","basis":"b2","revision":1}))).await).await;
+    ok(external::approve(body(json!({"id":a2,"candidate_id":"c2","basis":"b2","revision":2}))).await).await;
     assert_eq!(approval(&a1).await["latest"], false);
     assert_eq!(approval(&a2).await["latest"], true);
     assert_eq!(approval(&a2).await["status"], "pending");
@@ -75,33 +87,33 @@ async fn stand_in_apis_follow_the_contract() {
         json!({"approval":approval,"candidate_id":candidate,"basis":basis,"expected_revision":expected,
                "assignments":{"support":"EU-B","batch":"US-C"}})
     };
-    let first = ok(external::apply(delivery(&format!("{tag}/d1")), body(apply(&a1, "c1", "b1", 1))).await).await;
-    assert_eq!(first, json!({"result":"applied","revision":2}));
-    let replay = ok(external::apply(delivery(&format!("{tag}/d1")), body(apply(&a1, "c1", "b1", 1))).await).await;
+    let first = ok(external::apply(delivery(&format!("{tag}/d1")), body(apply(&a1, "c1", "b1", 2))).await).await;
+    assert_eq!(first, json!({"result":"applied","revision":3}));
+    let replay = ok(external::apply(delivery(&format!("{tag}/d1")), body(apply(&a1, "c1", "b1", 2))).await).await;
     assert_eq!(replay, first);
-    let again = ok(external::apply(delivery(&format!("{tag}/d2")), body(apply(&a1, "c1", "b1", 1))).await).await;
+    let again = ok(external::apply(delivery(&format!("{tag}/d2")), body(apply(&a1, "c1", "b1", 2))).await).await;
     assert_eq!(again["result"], "duplicate");
     let s = scenario::load(&db().await.unwrap()).await.unwrap();
-    assert_eq!((s.revision, s.route("support").unwrap(), s.route("batch").unwrap()), (2, "EU-B", "US-C"));
+    assert_eq!((s.revision, s.route("support").unwrap(), s.route("batch").unwrap()), (3, "EU-B", "US-C"));
     let applied = approval(&a1).await;
-    assert_eq!((applied["status"].as_str(), applied["applied_revision"].as_i64()), (Some("applied"), Some(2)));
+    assert_eq!((applied["status"].as_str(), applied["applied_revision"].as_i64()), (Some("applied"), Some(3)));
     let route_approval: Option<String> = db().await.unwrap()
         .query_one("SELECT approval FROM workload_routes WHERE workload='support'", &[]).await.unwrap().get(0);
     assert_eq!(route_approval.as_deref(), Some(a1.as_str()));
 
-    let conflict = ok(external::apply(delivery(&format!("{tag}/d3")), body(apply(&a2, "c2", "b2", 1))).await).await;
+    let conflict = ok(external::apply(delivery(&format!("{tag}/d3")), body(apply(&a2, "c2", "b2", 2))).await).await;
     assert_eq!(conflict["result"], "conflict");
     let rejected = approval(&a2).await;
     assert_eq!(rejected["status"], "rejected");
-    assert_eq!(rejected["reason"], "Scenario changed since the plan (revision 2, plan revision 1)");
+    assert_eq!(rejected["reason"], "Scenario changed since the plan (revision 3, plan revision 2)");
 
     // Permanent failures are 4xx; nothing changes.
-    assert_eq!(status(external::apply(HeaderMap::new(), body(apply(&a1, "c1", "b1", 2))).await), StatusCode::BAD_REQUEST);
-    assert_eq!(status(external::apply(delivery(&format!("{tag}/d4")), body(apply("missing", "c", "b", 2))).await), StatusCode::NOT_FOUND);
+    assert_eq!(status(external::apply(HeaderMap::new(), body(apply(&a1, "c1", "b1", 3))).await), StatusCode::BAD_REQUEST);
+    assert_eq!(status(external::apply(delivery(&format!("{tag}/d4")), body(apply("missing", "c", "b", 3))).await), StatusCode::NOT_FOUND);
     let a3 = format!("{tag}-3");
-    ok(external::approve(body(json!({"id":a3,"candidate_id":"c3","basis":"b3","revision":2}))).await).await;
-    assert_eq!(status(external::apply(delivery(&format!("{tag}/d5")), body(apply(&a3, "other", "b3", 2))).await), StatusCode::BAD_REQUEST);
-    let partial = json!({"approval":a3,"candidate_id":"c3","basis":"b3","expected_revision":2,"assignments":{"support":"EU-A"}});
+    ok(external::approve(body(json!({"id":a3,"candidate_id":"c3","basis":"b3","revision":3}))).await).await;
+    assert_eq!(status(external::apply(delivery(&format!("{tag}/d5")), body(apply(&a3, "other", "b3", 3))).await), StatusCode::BAD_REQUEST);
+    let partial = json!({"approval":a3,"candidate_id":"c3","basis":"b3","expected_revision":3,"assignments":{"support":"EU-A"}});
     assert_eq!(status(external::apply(delivery(&format!("{tag}/d6")), body(partial)).await), StatusCode::BAD_REQUEST);
     assert_eq!(approval(&a3).await["status"], "pending");
 
@@ -118,14 +130,14 @@ async fn stand_in_apis_follow_the_contract() {
     assert_eq!(status(external::verified(path("missing"), body(json!({"verified_ms":1}))).await), StatusCode::NOT_FOUND);
 
     // Desk controls: configuration raises the revision once per change; simulation never does.
-    let stale = json!({"run_epoch":epoch,"revision":1,"capacity":{"EU-A":50000}});
+    let stale = json!({"run_epoch":epoch,"revision":2,"capacity":{"EU-A":50000}});
     assert_eq!(status(scenario::configuration(body(stale)).await), StatusCode::CONFLICT);
-    let edit = json!({"run_epoch":epoch,"revision":2,"capacity":{"EU-A":50000},"destinations":{"batch":["EU-A","EU-B"]}});
-    assert_eq!(ok(scenario::configuration(body(edit)).await).await["revision"], 3);
-    let same = json!({"run_epoch":epoch,"revision":3,"capacity":{"EU-A":50000},"destinations":{"batch":["EU-B","EU-A"]}});
-    assert_eq!(ok(scenario::configuration(body(same)).await).await["revision"], 3);
+    let edit = json!({"run_epoch":epoch,"revision":3,"capacity":{"EU-A":50000},"destinations":{"batch":["EU-A","EU-B"]}});
+    assert_eq!(ok(scenario::configuration(body(edit)).await).await["revision"], 4);
+    let same = json!({"run_epoch":epoch,"revision":4,"capacity":{"EU-A":50000},"destinations":{"batch":["EU-B","EU-A"]}});
+    assert_eq!(ok(scenario::configuration(body(same)).await).await["revision"], 4);
     let control = json!({"run_epoch":epoch,"deployment":"EU-A","action":"fail"});
-    assert_eq!(ok(scenario::control(body(control)).await).await["revision"], 3);
+    assert_eq!(ok(scenario::control(body(control)).await).await["revision"], 4);
     let s = scenario::load(&db().await.unwrap()).await.unwrap();
     assert_eq!(s.destinations["batch"], ["EU-A", "EU-B"]);
     assert_eq!(s.deployment("EU-A").unwrap().capacity_tpm, 50_000);
@@ -135,9 +147,11 @@ async fn stand_in_apis_follow_the_contract() {
 
     // A new run: revision 1, seed restored, old approvals cannot be applied.
     let a5 = format!("{tag}-5");
-    ok(external::approve(body(json!({"id":a5,"candidate_id":"c5","basis":"b5","revision":3}))).await).await;
+    ok(external::approve(body(json!({"id":a5,"candidate_id":"c5","basis":"b5","revision":4}))).await).await;
     let (new_epoch, revision) = reset().await;
     assert!(new_epoch != epoch && revision == 1);
+    let s = scenario::load(&db().await.unwrap()).await.unwrap();
+    assert!(s.deployment("US-C").is_err(), "reset removes the provisioned US-C");
     let a4 = format!("{tag}-4");
     ok(external::approve(body(json!({"id":a4,"candidate_id":"c4","basis":"b4","revision":1}))).await).await;
     assert_eq!(approval(&a4).await["latest"], true);

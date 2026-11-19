@@ -23,9 +23,9 @@ def main():
         plan = stream.until("plan-results", lambda r: r and r[0]["run_epoch"] == epoch
                             and r[0]["state"] == "feasible" and r[0]["moves"] == 0)[0]
         assert assignments(plan) == {"support": "EU-A", "batch": "EU-B"}, plan
-        policy.until(lambda rows: len(rows) == 6 and all(r["run_epoch"] == epoch for r in rows.values()))
+        policy.until(lambda rows: len(rows) == 4 and all(r["run_epoch"] == epoch for r in rows.values()))
         states = {(r["subject"], r["target"]): r["state"] for r in policy.rows.values()}
-        assert states[("batch", "US-C")] == "denied", states
+        assert all(target != "US-C" for _, target in states) and set(states.values()) == {"allowed"}, states
         stream.until("tile-resilience", lambda r: r and r[0]["value"] == 0 and r[0]["lost"] == "EU-A")
         stream.until("tile-action", lambda r: r and r[0]["value"] == 3)
         d.metric_until("drasi_failover_readiness", lambda v: v == 0, lost="EU-A",
@@ -33,8 +33,18 @@ def main():
         d.metric_until("drasi_recommended_action", lambda v: v == 3, text="Add capacity: losing EU-A leaves no valid plan")
         losses.until(lambda rows: rows.get("EU-A", {}).get("state") == "infeasible")
         evidence["seed_at_risk"] = dict(losses.rows)
-        checks.append("seed (both workloads Europe-only): all healthy and no moves, but at risk: losing EU-A "
-                      "leaves no valid plan, from the what-if model alone, no fault injected")
+        checks.append("seed (EU-A and EU-B, both workloads Europe-only): all healthy and no moves, but at risk: "
+                      "losing EU-A leaves no valid plan, from the what-if model alone, no fault injected")
+
+        d.provision()
+        policy.until(lambda rows: len(rows) == 6)
+        states = {(r["subject"], r["target"]): r["state"] for r in policy.rows.values()}
+        assert states[("support", "US-C")] == states[("batch", "US-C")] == "denied", states
+        d.metric_until("drasi_deployment_health_status", lambda v: v == 0, deployment="US-C")
+        losses.until(lambda rows: "US-C" in rows and rows.get("EU-A", {}).get("state") == "infeasible")
+        d.metric_until("drasi_recommended_action", lambda v: v == 3, text="Add capacity: losing EU-A leaves no valid plan")
+        checks.append("US-C provisioned (a new model_deployments row): Drasi adds it to policy, the plan and the "
+                      "what-ifs; Rego denies both workloads there, so failover stays at risk")
 
         d.configure(destinations=d.US)
         policy.until(lambda rows: any(r["subject"] == "batch" and r["target"] == "US-C" and r["state"] == "allowed"

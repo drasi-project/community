@@ -254,9 +254,11 @@ python3 ops/workload.py reset
 ```
 
 This restores the starting state and cancels waiting requests. In the starting
-state both workloads are Europe-only, so Failover readiness reads "At risk: losing
-EU-A leaves no valid plan" and Drasi posts that card; the talk's compliance beat
-(**Summaries: Europe + US**) makes it safe. Reset also empties
+state only EU-A and EU-B are provisioned and both workloads are Europe-only, so
+Failover readiness reads "At risk: losing EU-A leaves no valid plan" and Drasi
+posts that card. **Provision US-C** adds US-C (it stays at risk: summaries can't
+run there yet); the talk's compliance beat (**Summaries: Europe + US**) then makes
+it safe. Reset removes US-C again. Reset also empties
 `#incident-ai-support` (the projector reloads the channel so deleted posts don't
 linger) and deletes the previous run's decision events from Grafana; other Grafana
 and Langfuse history is kept. Never reset in the middle of a talk.

@@ -24,10 +24,21 @@ def main():
         return 0
     checks, evidence = [], {}
     collector = f"http://127.0.0.1:{d.settings.port('OTLP')}/v1/metrics"
-    d.reset()
+    d.reset(us=False)
     health = d.Attachment("deployment-health")
     try:
         epoch = d.health()["run_epoch"]
+        # US-C is simulated and probed before it is provisioned, but only model_deployments rows
+        # reach the deployment queries: Drasi shows it the moment its row exists.
+        health.until(lambda rows: rows.get("US-C", {}).get("run_epoch") == epoch and rows["US-C"]["status"] == "ok")
+        d.metric_until(STATUS, lambda v: v == 0, deployment="EU-B")
+        assert d.metric(STATUS, deployment="US-C") is None, "an unprovisioned US-C must not reach the dashboard"
+        started = time.monotonic()
+        d.provision()
+        d.metric_until(STATUS, lambda v: v == 0, timeout=10, deployment="US-C")
+        evidence["provision_s"] = round(time.monotonic() - started, 1)
+        checks.append(f"US-C probed before provisioning but not shown; provisioned: Healthy in {evidence['provision_s']} s")
+        d.configure(destinations=d.US)
         rows = health.until(lambda rows: all(rows.get(dep, {}).get("run_epoch") == epoch
                                              and rows[dep]["status"] == "ok" for dep in ("EU-A", "EU-B", "US-C")))
         for deployment in ("EU-A", "EU-B", "US-C"):

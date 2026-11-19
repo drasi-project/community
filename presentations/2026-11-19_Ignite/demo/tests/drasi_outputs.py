@@ -108,12 +108,18 @@ def configure(**changes):
 US = {"batch": ["EU-A", "EU-B", "US-C"]}
 
 
+def provision(deployment="US-C"):
+    """The desk's Provision US-C: adds the deployment to model_deployments (US, 100k, healthy)."""
+    return control("provision", deployment)
+
+
 def reset(us=True):
     """Demo driver reset: new run, seed scenario, traffic stopped. Waits for Drasi to re-derive.
 
-    The seed has both workloads Europe-only, so failover starts at risk (Recommended action 3, add
-    capacity). With `us` (the default, which most gates assume) summaries are then also allowed
-    in the US, as the desk's Summaries: Europe + US does, and the run is safe (0)."""
+    The seed provisions only EU-A and EU-B and has both workloads Europe-only, so failover starts
+    at risk (Recommended action 3, add capacity). With `us` (the default, which most gates assume)
+    US-C is then provisioned and summaries are also allowed there, as the desk's Provision US-C and
+    Summaries: Europe + US do, and the run is safe (0) with all three deployments."""
     state = health()
     result = api("/reset", {k: state[k] for k in ["run_epoch", "revision"]})
     with DeskStream(["plan-results", "tile-action"]) as stream:
@@ -121,6 +127,7 @@ def reset(us=True):
                      and rows[0]["state"] == "feasible" and rows[0]["moves"] == 0, 45)
         stream.until("tile-action", lambda rows: rows and rows[0]["value"] == 3, 30)
         if us:
+            provision()
             configure(destinations=US)
             stream.until("tile-action", lambda rows: rows and rows[0]["value"] == 0, 30)
     return result

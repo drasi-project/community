@@ -20,15 +20,17 @@ FROM (VALUES
 CROSS JOIN routing_config scenario;
 INSERT INTO model_deployments(id, run_epoch, region, model, capacity_tpm)
 SELECT fixture.id, scenario.run_epoch, fixture.region, 'support-model', 100000
-FROM (VALUES ('EU-A', 'EU'), ('EU-B', 'EU'), ('US-C', 'US')) AS fixture(id, region)
+FROM (VALUES ('EU-A', 'EU'), ('EU-B', 'EU')) AS fixture(id, region)
 CROSS JOIN routing_config scenario;
 INSERT INTO workload_routes(workload, run_epoch, deployment, approval, applied_ms)
 SELECT fixture.workload, scenario.run_epoch, fixture.deployment, NULL,
     (extract(epoch FROM clock_timestamp())*1000)::bigint
 FROM (VALUES ('support', 'EU-A'), ('batch', 'EU-B')) AS fixture(workload, deployment)
 CROSS JOIN routing_config scenario;
--- Both workloads start Europe-only. Losing either EU deployment then leaves no plan (failover at
--- risk) until summaries are allowed on US-C as well (the desk's Summaries: Europe + US).
+-- Only EU-A and EU-B are provisioned; the desk's Provision US-C adds US-C (the AI service still
+-- simulates it, and its health monitor probes it throughout). Both workloads start Europe-only, so
+-- losing either EU deployment leaves no plan (failover at risk) until US-C is provisioned and
+-- summaries are allowed there as well (the desk's Summaries: Europe + US).
 INSERT INTO data_residency_policy(id, run_epoch, workload, deployment)
 SELECT fixture.workload || '/' || fixture.deployment, scenario.run_epoch, fixture.workload, fixture.deployment
 FROM (VALUES ('support', 'EU-A'), ('support', 'EU-B'),
