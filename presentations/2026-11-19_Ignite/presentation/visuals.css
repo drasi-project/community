@@ -72,7 +72,7 @@
 .slide-deck .stage-frame .v-langs li { padding: 8px 14px; border: 2px solid var(--tone); color: var(--tone); font: 600 28px/1.2 var(--text); }
 
 /* Observability today: the tangle */
-.slide-deck .stage-frame .v-split { display: grid; grid-template-columns: 980px 1fr; gap: 56px; align-items: center; height: 100%; }
+.slide-deck .stage-frame .v-split { display: grid; grid-template-columns: 980px 1fr; gap: 48px; align-items: start; height: 100%; }
 .slide-deck .stage-frame .v-tangle { width: 980px; height: 720px; }
 .slide-deck .stage-frame .v-tangle line { stroke: var(--light-red); stroke-width: 3; opacity: .7; }
 .slide-deck .stage-frame .v-tangle line.thin { stroke: var(--light-gray); stroke-width: 2; opacity: .35; }
@@ -213,3 +213,41 @@
 /* What organizations want, with Drasi */
 .slide-deck .stage-frame .v-context.with-drasi { background: #091F2C; color: var(--white); border: 6px solid var(--c-query); }
 .slide-deck .stage-frame .v-context.with-drasi .drasi-mark { display: block; margin: 0 auto 16px; height: 72px; }
+
+/* Coming soon */
+.slide-deck .stage-frame .v-soon { display: inline-block; margin-left: 16px; padding: 4px 14px; vertical-align: middle; background: var(--light-yellow); color: #091F2C; font: 600 26px/1.2 var(--display); text-transform: uppercase; letter-spacing: .05em; }
+/* Observability today: groups of tools around the engineer */
+.slide-deck .stage-frame .v-tangle { position: relative; width: 980px; height: 720px; }
+.slide-deck .stage-frame .v-tangle svg { position: absolute; inset: 0; }
+.slide-deck .stage-frame .v-tools-group { position: absolute; padding: 10px 14px 14px; background: rgba(9, 31, 44, .92); border: 2px solid var(--light-gray); }
+.slide-deck .stage-frame .v-tools-group h3 { margin: 0 0 8px; font: 600 22px/1.2 var(--display); letter-spacing: .06em; text-transform: uppercase; color: var(--light-gray); }
+.slide-deck .stage-frame .v-tools-group ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.slide-deck .stage-frame .v-tools-group li { padding: 4px 10px; border: 1px solid rgba(217, 217, 214, .5); font: 600 24px/1.2 var(--text); color: var(--white); }
+.slide-deck .stage-frame .v-tangle .who { position: absolute; width: 116px; height: 116px; border-radius: 50%; background: var(--red); color: #091F2C; display: grid; place-items: center; font: 700 64px/1 var(--display); }
+/* The scenario: neutral palette, clear of Drasi's role colours and the cost coral */
+.slide-deck .stage-frame .vs-scenario-map .v-work { background: #E1D3C7; }
+.slide-deck .stage-frame .vs-scenario-map .v-down { border-top-color: #E1D3C7; }
+.slide-deck .stage-frame .vs-scenario-map .v-region { border-color: #B9DCD2; }
+.slide-deck .stage-frame .vs-scenario-map .v-region > small { color: #B9DCD2; }
+.slide-deck .stage-frame .vs-scenario-map .v-deploy { background: #B9DCD2; }
+.slide-deck .stage-frame .vs-scenario-map .v-deploy.pending-capacity { background: none; border-color: #B9DCD2; color: var(--white); }
+.slide-deck .stage-frame .vs-scenario-map .v-rules .rule { border-left-color: var(--light-yellow); }
+.slide-deck .stage-frame .vs-scenario-map .v-rules .icon { color: var(--light-yellow); }
+.slide-deck .stage-frame .vs-scenario-map .v-deploy { padding: 14px 22px; }
+.slide-deck .stage-frame .vs-scenario-map .v-deploy b { font-size: 48px; }
+.slide-deck .stage-frame .vs-scenario-map .v-region { gap: 24px; padding-top: 44px; }
+.slide-deck .stage-frame .v-stack { margin-top: auto; display: grid; grid-template-columns: 300px 1fr; row-gap: 12px; align-items: center; }
+.slide-deck .stage-frame .v-stack p { margin: 0; font: 600 26px/1.2 var(--display); color: var(--white); }
+.slide-deck .stage-frame .v-stack p.other { color: var(--light-gray); font-weight: 400; }
+.slide-deck .stage-frame .v-stack .v-tools { margin: 0; gap: 14px; }
+.slide-deck .stage-frame .v-stack .v-tools li { padding: 16px 10px; border: 3px solid var(--white); font-size: 30px; background: rgba(9, 31, 44, .85); }
+.slide-deck .stage-frame .v-others { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 10px; }
+.slide-deck .stage-frame .v-others li { padding: 4px 12px; border: 1px dashed rgba(217, 217, 214, .55); font: 400 24px/1.2 var(--text); color: #B8B8B4; }
+.slide-deck .stage-frame .v-stack .v-tools { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); min-width: 0; }
+.slide-deck .stage-frame .v-stack .v-tools li { min-width: 0; padding: 14px 6px; gap: 8px; font-size: 27px; }
+.slide-deck .stage-frame .v-stack > * { min-width: 0; }
+.slide-deck .stage-frame .vs-scenario-map .v-work.empty { background: none; }
+.slide-deck .stage-frame .v-stack { grid-template-columns: 230px 1fr; }
+.slide-deck .stage-frame .v-tools-group h3 { font-size: 24px; }
+.slide-deck .stage-frame .v-tools-group li { font-size: 27px; padding: 5px 12px; }
+.slide-deck .stage-frame .v-tools-group ul { gap: 8px; }

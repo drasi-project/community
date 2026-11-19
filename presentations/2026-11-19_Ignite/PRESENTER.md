@@ -201,13 +201,13 @@ Say it in your own words.
 5. **Grafana · Operations.**\
    The top row is what most teams already have: OpenTelemetry, Prometheus and Grafana.\
    It tells you something is wrong.
-   - **Watch for:** The top row outlined, labelled What most teams have.
+   - **Watch for:** The top row outlined, labelled The basics.
 6. **Grafana · Operations.**\
-   The bottom row is Drasi: who's affected, what to do about it, and whether you'd survive the next failure.\
+   The bottom row is context, answers and guidance, powered by Drasi: who's affected, what to do about it, and whether you'd survive the next failure.\
    Answers that update the moment things change, beside the monitoring you already use.\
    In a few minutes I'm going to break this service on purpose.\
    Watch which row notices first.
-   - **Watch for:** The Decision Support row outlined, labelled Added by Drasi.
+   - **Watch for:** The Decision Support row outlined, labelled Context, answers, guidance · Powered by Drasi.
 7. **Why Drasi exists.**\
    Drasi was started because, in our experience, detecting meaningful changes in data as they happen, and reacting to them, is harder than it should be.\
    There are two common approaches.\
@@ -234,7 +234,7 @@ Say it in your own words.
    And it grows from there: many sources, many queries, many reactions, each answer kept current as the data changes.\
    TODO: mention continuous models (policy, optimization) here or in scene 3?
 11. **Simple concepts · queries build on queries.**\
-   And queries can build on each other's results, forming a computation graph.\
+   And, coming soon, queries and models can build on each other's results, forming a computation graph.\
    In this demo, the health checks feed a deployment-health query, which feeds the workload status and the plan; policy input feeds the policy model, which feeds the plan too; and the results fan out to several reactions.\
    When one input changes, only what depends on it updates.
 
@@ -245,7 +245,8 @@ Say it in your own words.
 12. **Observability issues.**\
    Drasi is a general-purpose technology for building change-driven systems in any domain.\
    But few domains show the need and value better than observability, so today I'll show you some examples of how Drasi works in an observability use case.\
-   Some common issues organizations report: too much data, too many tools, lots of noise, and dashboards that show symptoms, not answers, because the context lives somewhere else.
+   Some common issues organizations report: too much data, too many tools, lots of noise, and dashboards that show symptoms, not answers, because the context lives somewhere else.\
+   A typical team juggles telemetry, alerting and incident tools, deployment and change records, security tools, and now AI observability too, and the on-call engineer is the one joining them up.
 13. **What organizations want.**\
    What organizations want is more context, joined across systems; the signal raised above the noise; outcomes, including what didn't happen; action backed by evidence, with safeguards; all in the tools they already use.
 14. **What organizations want · with Drasi.**\
@@ -255,8 +256,9 @@ Say it in your own words.
    The scenario: an AI service with two workloads, customer support, which handles restricted data and must answer within 15 seconds, and document summaries, which use public data.\
    They run on deployments of the same AI model: EU-A and EU-B in Europe, and US-C in the US, extra capacity that's just been provisioned.\
    There's policy: restricted data stays in Europe, and for now summaries stay in Europe too.\
-   Changes need a person's approval.\
-   And the team already has its tools: OpenTelemetry, Prometheus and Grafana, Langfuse for traces, and Mattermost for incidents.\
+   Workload deployment changes need human approval.\
+   And the team already has its tools: OpenTelemetry, Prometheus and Grafana, Langfuse for traces, Mattermost for incidents, and PostgreSQL for the service's own data.\
+   Your stack might be Datadog, Splunk or ServiceNow instead; the idea is the same.\
    I won't walk through it as if I'm running the process; for each step I'll say what needs doing, show it, then show how it works.
 
 **If it breaks:** Carry on; the slides don't depend on the demo.

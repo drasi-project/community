@@ -67,9 +67,9 @@ function Grow({ step, active }: { step: number; active: boolean }) {
     {edges.filter(([, , s]) => s <= step).map(([a, b, s]) => {
       const from = at(a), to = at(b);
       const x1 = colX[from.col] + colW[from.col], y1 = rowY(from.row) + nodeH / 2, x2 = colX[to.col], y2 = rowY(to.row) + nodeH / 2;
-      return <path key={a + b} className={s === step && step > 2 ? "new" : undefined} d={`M${x1},${y1} C${x1 + 120},${y1} ${x2 - 120},${y2} ${x2 - 10},${y2}`} markerEnd="url(#grow-head)" />;
+      return <path key={a + b} className={s === step && step > 2 ? "new" : undefined} d={`M${x1},${y1} C${x1 + 120},${y1} ${x2 - 120},${y2} ${x2 - 2},${y2}`} markerEnd="url(#grow-head)" />;
     })}
-    <defs><marker id="grow-head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#D9D9D6" /></marker></defs>
+    <defs><marker id="grow-head" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="18" markerHeight="18" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#D9D9D6" /></marker></defs>
     {shown.map(n => {
       const label = n.relabel && step >= n.relabel[0] ? n.relabel[1] : n.label;
       const fresh = n.step === step && step > 2;
@@ -102,10 +102,10 @@ function QueryGraph({ active }: { active: boolean }) {
   return <svg className={`v-grow${active ? " play" : ""}`} viewBox="0 0 1736 650" width="1736" height="650" role="img" aria-label="Continuous queries feeding other queries and models">
     {[["Sources", 150, tones[0]], ["Continuous Queries and Models", 860, tones[1]], ["Reactions", 1588, tones[2]]].map(([h, x, fill]) =>
       <text key={h as string} x={x as number} y="40" textAnchor="middle" className="v-grow-head" style={{ fill: fill as string }}>{h}</text>)}
-    <defs><marker id="graph-head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#D9D9D6" /></marker></defs>
+    <defs><marker id="graph-head" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="18" markerHeight="18" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#D9D9D6" /></marker></defs>
     {gedges.map(([a, b, fresh]) => { const f = at(a), t = at(b);
       const x1 = f.x + f.w, y1 = f.y + nodeH / 2, x2 = t.x, y2 = t.y + nodeH / 2, bend = Math.min(90, (x2 - x1) / 2);
-      return <path key={a + b} className={fresh ? "new" : undefined} d={`M${x1},${y1} C${x1 + bend},${y1} ${x2 - bend},${y2} ${x2 - 10},${y2}`} markerEnd="url(#graph-head)" />; })}
+      return <path key={a + b} className={fresh ? "new" : undefined} d={`M${x1},${y1} C${x1 + bend},${y1} ${x2 - bend},${y2} ${x2 - 2},${y2}`} markerEnd="url(#graph-head)" />; })}
     {gnodes.map(n => <g key={n.id} className={n.fresh ? "new" : undefined}>
       <rect x={n.x} y={n.y} width={n.w} height={nodeH} rx="10" style={{ fill: n.tone }} />
       <text x={n.x + n.w / 2} y={n.y + nodeH / 2 + 12} textAnchor="middle" className="v-grow-label">{n.label}</text></g>)}
@@ -131,19 +131,27 @@ function Stream() {
   </svg>;
 }
 
-// The tangle: an on-call engineer between many tools.
-const tools: [number, number, string][] = [[90, 70, "Metrics"], [400, 40, "Logs"], [720, 80, "Traces"], [840, 250, "Alerts"], [740, 500, "Dashboards"],
-  [680, 640, "Tickets"], [360, 660, "Chat"], [90, 600, "CMDB"], [30, 400, "Deploy logs"], [40, 230, "Policy docs"], [600, 390, "Spreadsheets"], [300, 470, "Scripts"]];
+// The tangle: an on-call engineer between the tools an enterprise typically runs, grouped.
+const toolGroups: { name: string; x: number; y: number; w: number; items: string[] }[] = [
+  { name: "Telemetry", x: 0, y: 0, w: 450, items: ["Metrics", "Logs", "Traces", "Profiles", "APM", "RUM and synthetics"] },
+  { name: "Response", x: 530, y: 0, w: 450, items: ["Alerts and on-call", "Incidents", "ITSM tickets", "ChatOps", "Runbooks"] },
+  { name: "Change", x: 0, y: 440, w: 300, items: ["CI/CD and deploys", "Feature flags", "CMDB and catalog"] },
+  { name: "AI and security", x: 320, y: 520, w: 320, items: ["LLM observability", "SIEM", "Vulnerabilities"] },
+  { name: "Business and risk", x: 660, y: 440, w: 320, items: ["Business KPIs", "Cost (FinOps)", "Policy and compliance"] },
+];
 function Tangle() {
-  const person: [number, number] = [470, 300];
-  const cross: [number, number][] = [[0, 6], [1, 7], [2, 8], [3, 9], [4, 0], [5, 1], [10, 2], [11, 3], [6, 10], [8, 4]];
-  return <svg className="v-tangle" viewBox="0 0 980 720" width="980" height="720" aria-hidden="true">
-    {cross.map(([a, b]) => <line key={`${a}-${b}`} className="thin" x1={tools[a][0] + 60} y1={tools[a][1] + 22} x2={tools[b][0] + 60} y2={tools[b][1] + 22} />)}
-    {tools.map(([x, y]) => <line key={`${x}-${y}`} x1={person[0]} y1={person[1]} x2={x + 60} y2={y + 22} />)}
-    {tools.map(([x, y, t]) => <g key={t}><rect x={x} y={y} width={t.length * 15 + 34} height="46" rx="6" /><text x={x + 17} y={y + 32}>{t}</text></g>)}
-    <circle className="who" cx={person[0]} cy={person[1]} r="58" />
-    <text className="who-q" x={person[0]} y={person[1] + 22} textAnchor="middle">?</text>
-  </svg>;
+  const person = { x: 490, y: 340 };
+  const centre = (g: typeof toolGroups[number]) => ({ x: g.x + g.w / 2, y: g.y + 90 });
+  const cross: [number, number][] = [[0, 2], [0, 4], [1, 3], [1, 2], [2, 4], [3, 0], [4, 1]];
+  return <div className="v-tangle" aria-hidden="true">
+    <svg viewBox="0 0 980 720" width="980" height="720">
+      {cross.map(([a, b]) => { const p = centre(toolGroups[a]), q = centre(toolGroups[b]); return <line key={`${a}-${b}`} className="thin" x1={p.x} y1={p.y} x2={q.x} y2={q.y} />; })}
+      {toolGroups.map(g => { const c = centre(g); return <line key={g.name} x1={person.x} y1={person.y} x2={c.x} y2={c.y} />; })}
+    </svg>
+    {toolGroups.map(g => <div key={g.name} className="v-tools-group" style={{ left: g.x, top: g.y, width: g.w }}>
+      <h3>{g.name}</h3><ul>{g.items.map(t => <li key={t}>{t}</li>)}</ul></div>)}
+    <div className="who" style={{ left: person.x - 58, top: person.y - 58 }}>?</div>
+  </div>;
 }
 
 const DeployBox = ({ name, region, detail, pending = false }: { name: string; region: string; detail: string; pending?: boolean }) =>
@@ -178,10 +186,9 @@ export function Visual({ id, active, qr }: { id: VisualId; active: boolean; qr: 
         <li className="drasi role-query"><DrasiMark /><b>Drasi keeps the result current</b><span>as data changes, and as time passes, across sources</span></li>
         <li className="role-reaction"><Icon name="bolt" size={64} /><b>The reaction acts on the change</b><span>only what changed: added, updated or removed</span></li>
       </ol>
-      <p className="v-foot">No polling loop, and no state store to build and run yourself</p>
     </Slide>;
     case "drasi-3": return <Slide id={id} title="Simple concepts, powerful change-driven solutions">
-      <p className="lead">Queries build on each other's results: a computation graph, kept current</p>
+      <p className="lead">Queries and models build on each other's results: a computation graph <span className="v-soon">Coming soon</span></p>
       <QueryGraph active={active} />
     </Slide>;
     case "drasi-1": case "drasi-2": {
@@ -232,7 +239,7 @@ export function Visual({ id, active, qr }: { id: VisualId; active: boolean; qr: 
       <div className="v-clear">
         <ul className="v-inputs">{["Telemetry", "Application data", "Policy", "Changes and approvals"].map(t => <li key={t}>{t}</li>)}</ul>
         <Arrow />
-        <div className={`v-context${id === "wants-drasi" ? " with-drasi" : ""}`}>{id === "wants-drasi" && <DrasiMark />}<b>Connected context</b><span>kept current as things change</span></div>
+        <div className={`v-context${id === "wants-drasi" ? " with-drasi" : ""}`}>{id === "wants-drasi" && <DrasiMark />}<b>{id === "wants-drasi" ? "Change-driven context" : "Context"}</b><span>connected and updated as things change</span></div>
         <Arrow />
         <ul className="v-answers">{["Who's affected?", "What changed?", "What should we do?", "Did it work?"].map(t => <li key={t}><Icon name="check" size={36} />{t}</li>)}</ul>
       </div>
@@ -242,8 +249,8 @@ export function Visual({ id, active, qr }: { id: VisualId; active: boolean; qr: 
     </Slide>;
     case "scenario-map": return <Slide id={id} title="The scenario: an AI service">
       <div className="v-scenario">
-        <div className="v-work purple"><b>Customer support</b><span>Restricted data · answer in 15 s · 60k</span></div>
-        <div className="v-work purple"><b>Document summaries</b><span>Public data · 80k</span></div>
+        <div className="v-work"><b>Customer support</b><span>Restricted data · answer in 15 s · 60k</span></div>
+        <div className="v-work"><b>Document summaries</b><span>Public data · 80k</span></div>
         <div className="v-work empty" />
         <span className="v-down" /><span className="v-down" /><span />
         <div className="v-region eu"><small>Europe</small>
@@ -253,9 +260,14 @@ export function Visual({ id, active, qr }: { id: VisualId; active: boolean; qr: 
       <div className="v-rules">
         <span className="rule"><Icon name="model" size={32} />Restricted data stays in Europe</span>
         <span className="rule"><Icon name="model" size={32} />Summaries: Europe, for now</span>
-        <span className="rule"><Icon name="user" size={32} />Changes need approval</span>
+        <span className="rule"><Icon name="user" size={32} />Workload deployment changes need human approval</span>
       </div>
-      <ul className="v-tools">{[["otel", "OpenTelemetry"], ["prometheus", "Prometheus"], ["prometheus", "Grafana"], ["query", "Langfuse"], ["mattermost", "Mattermost"]].map(([i, t]) => <li key={t}><Icon name={i} size={32} />{t}</li>)}</ul>
+      <div className="v-stack">
+        <p>In this demo</p>
+        <ul className="v-tools">{[["otel", "OpenTelemetry"], ["prometheus", "Prometheus"], ["prometheus", "Grafana"], ["query", "Langfuse"], ["mattermost", "Mattermost"], ["pg", "PostgreSQL"]].map(([i, t]) => <li key={t}><Icon name={i} size={40} />{t}</li>)}</ul>
+        <p className="other">Also common, not used here</p>
+        <ul className="v-others">{["Datadog", "Dynatrace", "Splunk", "New Relic", "Elastic", "Azure Monitor", "ServiceNow", "PagerDuty", "Slack", "Teams", "Jira"].map(t => <li key={t}>{t}</li>)}</ul>
+      </div>
     </Slide>;
     case "closing": return <Slide id={id} title="What you saw" withLogo>
       <ol className="v-scenes">

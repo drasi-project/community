@@ -281,3 +281,14 @@
 .slide-deck .stage-frame .label-chips li { position: relative; display: flex; align-items: center; gap: 10px; font: 600 28px/1.2 var(--text); }
 .slide-deck .stage-frame .label-chips li:not(:last-child)::after { content: "→"; position: absolute; right: -32px; color: #2A446F; }
 .slide-deck .stage-frame .label-text { margin: 10px 0 0; font-size: 28px; line-height: 1.3; color: #091F2C; }
+
+/* How it works, as a graph */
+.slide-deck .stage-frame .how-graph { display: block; overflow: visible; }
+.slide-deck .stage-frame .how-graph .how-head { font: 600 17px var(--display); letter-spacing: .02em; text-transform: uppercase; fill: #2A446F; }
+.slide-deck .stage-frame .how-graph path { fill: none; stroke: #2A446F; stroke-width: 3; }
+.slide-deck .stage-frame .how-graph marker path { fill: #2A446F; stroke: none; }
+.slide-deck .stage-frame .how-node rect { fill: var(--tone); }
+.slide-deck .stage-frame .how-node.role-lands rect { fill: var(--light-yellow); }
+.slide-deck .stage-frame .how-node .how-label { font: 600 22px var(--text); fill: #091F2C; }
+.slide-deck .stage-frame .how-node .how-detail { font: 400 15px var(--text); fill: #091F2C; }
+.slide-deck .stage-frame .label-powered { display: flex; align-items: center; gap: 8px; margin: 10px 0 0; font: 600 20px/1 var(--text); color: #2A446F; }

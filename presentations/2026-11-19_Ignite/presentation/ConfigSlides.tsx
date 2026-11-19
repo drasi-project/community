@@ -6,7 +6,7 @@ import rego from "../demo/drasi/policy/placement.rego?raw";
 import optimization from "../demo/drasi/optimization/optimization.json";
 import { buildConfig, type ConfigId } from "./codeSlides";
 import type { Rect } from "./panels";
-import { how, isHow, isLabel, type How, type Part } from "./howItWorks";
+import { how, isHow, isLabel, type How, type Flow } from "./howItWorks";
 import { Icon } from "./Icon";
 import { DrasiMark } from "./Visuals";
 
@@ -16,21 +16,38 @@ export const configPanels = buildConfig({ overdueQuery, healthQuery, workloadsQu
 // its centre as the margins allow), with a short arrow down to it. Its inputs, grouped by where
 // they come from, feed the query or model's real code.
 const margin = 92, gap = 56, top = 20;
-const columns = [["sources", "Sources", "role-source"], ["drasi", "Drasi", "role-query"], ["reactions", "Reactions", "role-reaction"]] as const;
+// The flow as a small graph, in Drasi's role colours (the same as the slides).
+const colX = [0, 350, 700, 1050], nodeW = 310, nodeH = 64, rowH = 84, headH = 34;
+const heads = ["Sources", "Continuous Queries and Models", "Reactions", "Shows up in"];
+function FlowGraph({ flow }: { flow: Flow }) {
+  const rows = Math.max(...flow.nodes.map(node => node.row)) + 1;
+  const height = headH + rows * rowH - (rowH - nodeH);
+  const at = (id: string) => flow.nodes.find(node => node.id === id)!;
+  const y = (row: number) => headH + row * rowH;
+  return <svg className="how-graph" viewBox={`0 0 ${colX[3] + nodeW} ${height}`} width={colX[3] + nodeW} height={height} role="img" aria-label="How it works">
+    <defs><marker id="how-head" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" orient="auto"><path d="M0,0 L10,5 L0,10 z" /></marker></defs>
+    {heads.map((h, i) => <text key={h} className="how-head" x={colX[i]} y="22">{h}</text>)}
+    {flow.edges.map(([a, b]) => { const f = at(a), t = at(b);
+      if (f.col === t.col) { const x = colX[f.col] + nodeW / 2;
+        return <path key={a + b} d={`M${x},${y(f.row) + nodeH} L${x},${y(t.row) - 1}`} markerEnd="url(#how-head)" />; }
+      const x1 = colX[f.col] + nodeW, y1 = y(f.row) + nodeH / 2, x2 = colX[t.col] - 1, y2 = y(t.row) + nodeH / 2, bend = (x2 - x1) / 2;
+      return <path key={a + b} d={`M${x1},${y1} C${x1 + bend},${y1} ${x2 - bend},${y2} ${x2},${y2}`} markerEnd="url(#how-head)" />; })}
+    {flow.nodes.map(node => <g key={node.id} className={`how-node role-${node.role}`}>
+      <rect x={colX[node.col]} y={y(node.row)} width={nodeW} height={nodeH} rx="8" />
+      <text className="how-label" x={colX[node.col] + 14} y={y(node.row) + (node.detail ? 27 : 39)}>{node.label}</text>
+      {node.detail && <text className="how-detail" x={colX[node.col] + 14} y={y(node.row) + 51}>{node.detail}</text>}
+    </g>)}
+  </svg>;
+}
+
 function HowCard({ card }: { card: How }) {
   if (isLabel(card)) return <div className={`how-card how-label${card.drasi ? " drasi" : ""}`}>
-    <p className="how-title">{card.drasi && <DrasiMark />}{card.label}</p>
-    {card.chips && <ol className="label-chips">{card.chips.map(c => <li key={c.label}><Icon name={c.kind} />{c.label}</li>)}</ol>}
+    <p className="how-title">{card.label}</p>
+    {card.chips && <ol className="label-chips">{card.chips.map(c => <li key={c.label}><Icon name={c.icon} />{c.label}</li>)}</ol>}
     {card.text && <p className="label-text">{card.text}</p>}
+    {card.drasi && <p className="label-powered"><DrasiMark />Powered by Drasi</p>}
   </div>;
-  const part = (p: Part) => <li key={p.label} className={`part ${p.kind}`}><Icon name={p.kind} /><b>{p.label}</b>{p.detail && <small>{p.detail}</small>}</li>;
-  return <div className="how-card">
-    <p className="how-title">How it works</p>
-    <ol className="how-flow">
-      {columns.map(([key, label, tone]) => <li key={key} className={`how-col ${tone}`}><h3 className={key === "drasi" ? "drasi" : undefined}>{key === "drasi" && <DrasiMark />}{label}</h3><ul>{card[key].map(part)}</ul></li>)}
-      <li className="how-col lands"><h3>Shows up as</h3><p>{card.lands}</p></li>
-    </ol>
-  </div>;
+  return <div className="how-card"><p className="how-title">How it works</p><FlowGraph flow={card} /></div>;
 }
 
 // With targets, the card sits above them with an arrow to each; with none (over the channel) it's pinned top right.

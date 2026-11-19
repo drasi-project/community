@@ -1,9 +1,11 @@
-// "How it works" cards: the components a scene connects, shown over the dashboard (or the channel)
-// just above the panel they produce, before the query, policy or optimization behind it.
-export type Part = { kind: "pg" | "otel" | "query" | "clock" | "model" | "prometheus" | "mattermost" | "api"; label: string; detail?: string };
-export type Flow = { sources: Part[]; drasi: Part[]; reactions: Part[]; lands: string };
+// "How it works" cards: the components a scene connects, as a small graph (sources → continuous
+// queries and models → reactions → where the answer shows up), shown over the dashboard (or the
+// channel) next to the panels they produce, before the query, policy or optimization behind them.
+export type Role = "source" | "query" | "model" | "reaction" | "lands";
+export type Node = { id: string; role: Role; col: 0 | 1 | 2 | 3; row: number; label: string; detail?: string };
+export type Flow = { nodes: Node[]; edges: [string, string][] };
 // A label for a whole dashboard row (the "what I'll show you" beats).
-export type Label = { label: string; chips?: Part[]; text?: string; drasi?: true };
+export type Label = { label: string; chips?: { icon: string; label: string }[]; text?: string; drasi?: true };
 export type How = Flow | Label;
 export const isLabel = (card: How): card is Label => "label" in card;
 
@@ -11,43 +13,40 @@ export const howIds = ["how-status", "how-overdue", "how-readiness", "how-propos
 export type HowId = typeof howIds[number];
 export const isHow = (id: string): id is HowId => (howIds as readonly string[]).includes(id);
 
-const db = (detail: string): Part => ({ kind: "pg", label: "AI service database", detail });
-const health: Part = { kind: "otel", label: "OpenTelemetry", detail: "health checks, every second" };
-const grafana: Part = { kind: "prometheus", label: "Prometheus reaction", detail: "a metric per answer → Grafana" };
-const channel = (detail: string): Part => ({ kind: "mattermost", label: "Incident channel", detail });
+const n = (id: string, role: Role, col: Node["col"], row: number, label: string, detail?: string): Node => ({ id, role, col, row, label, detail });
 
 export const how: Record<HowId, How> = {
   "how-status": {
-    sources: [db("deployments, workloads, routes, policy"), health],
-    drasi: [{ kind: "query", label: "Deployment health", detail: "latest check per deployment" },
-      { kind: "query", label: "Workload status", detail: "where each runs: allowed? healthy?" }],
-    reactions: [grafana],
-    lands: "Deployment status, Workload status",
+    nodes: [n("otel", "source", 0, 0, "OpenTelemetry", "health checks, every second"), n("db", "source", 0, 1, "AI service database", "workloads, routes, policy"),
+      n("dh", "query", 1, 0, "Deployment health", "latest check per deployment"), n("ws", "query", 1, 1, "Workload status", "allowed? healthy?"),
+      n("prom", "reaction", 2, 0, "Prometheus reaction", "a metric per answer"),
+      n("grafana", "lands", 3, 0, "Grafana", "Deployment status, Workload status")],
+    edges: [["otel", "dh"], ["db", "ws"], ["dh", "ws"], ["dh", "prom"], ["ws", "prom"], ["prom", "grafana"]],
   },
   "how-overdue": {
-    sources: [db("customer requests and answers")],
-    drasi: [{ kind: "query", label: "Overdue requests", detail: "every request not yet answered" },
-      { kind: "clock", label: "trueLater", detail: "re-checks a request at its deadline" }],
-    reactions: [grafana, channel("a card when support falls behind")],
-    lands: "Support overdue",
+    nodes: [n("db", "source", 0, 0, "AI service database", "customer requests and answers"),
+      n("q", "query", 1, 0, "Overdue requests", "re-checked at each deadline (trueLater)"),
+      n("prom", "reaction", 2, 0, "Prometheus reaction", "a metric per answer"), n("chan", "reaction", 2, 1, "Incident channel", "when support falls behind"),
+      n("grafana", "lands", 3, 0, "Grafana", "Support overdue"), n("mm", "lands", 3, 1, "Mattermost", "a card")],
+    edges: [["db", "q"], ["q", "prom"], ["q", "chan"], ["prom", "grafana"], ["chan", "mm"]],
   },
   "how-readiness": {
-    sources: [db("data residency policy, deployments, capacity, routes"), health],
-    drasi: [{ kind: "model", label: "Policy (Rego)", detail: "where each workload may run" },
-      { kind: "model", label: "Optimization", detail: "the best plan, and a what-if for losing each deployment" }],
-    reactions: [grafana, channel("at risk and restored cards")],
-    lands: "Failover readiness, Recommended action",
+    nodes: [n("db", "source", 0, 0, "AI service database", "residency policy, capacity, routes"), n("otel", "source", 0, 1, "OpenTelemetry", "health checks"),
+      n("pol", "model", 1, 0, "Policy (Rego)", "where each workload may run"), n("plan", "model", 1, 1, "Plan (optimization)", "plan, and a what-if per deployment"),
+      n("prom", "reaction", 2, 0, "Prometheus reaction", "a metric per answer"), n("chan", "reaction", 2, 1, "Incident channel", "at risk and restored"),
+      n("grafana", "lands", 3, 0, "Grafana", "Failover readiness, Recommended action"), n("mm", "lands", 3, 1, "Mattermost", "cards")],
+    edges: [["db", "pol"], ["db", "plan"], ["otel", "plan"], ["pol", "plan"], ["plan", "prom"], ["plan", "chan"], ["prom", "grafana"], ["chan", "mm"]],
   },
   "how-proposal": {
-    sources: [health, db("policy, capacity, routes, approvals")],
-    drasi: [{ kind: "model", label: "Policy + optimization", detail: "fewest moves within policy" },
-      { kind: "query", label: "Verify", detail: "backlog cleared on the new route" }],
-    reactions: [channel("the proposal card, with Approve"), { kind: "api", label: "Gateway configuration API", detail: "applies the approved routes" }],
-    lands: "This card, and its thread",
+    nodes: [n("otel", "source", 0, 0, "OpenTelemetry", "health checks"), n("db", "source", 0, 1, "AI service database", "policy, capacity, approvals"),
+      n("plan", "model", 1, 0, "Policy + Plan", "fewest moves within policy"), n("verify", "query", 1, 1, "Verify", "backlog cleared on the new route"),
+      n("chan", "reaction", 2, 0, "Incident channel", "proposal, with Approve"), n("api", "reaction", 2, 1, "Gateway configuration API", "applies approved routes"),
+      n("card", "lands", 3, 0, "This card", "and its thread")],
+    edges: [["otel", "plan"], ["db", "plan"], ["db", "verify"], ["plan", "chan"], ["plan", "api"], ["verify", "chan"], ["chan", "card"]],
   },
-  "label-standard": { label: "What most teams have",
-    chips: [{ kind: "otel", label: "OpenTelemetry" }, { kind: "prometheus", label: "Prometheus" }, { kind: "prometheus", label: "Grafana" }],
+  "label-standard": { label: "The basics",
+    chips: [{ icon: "otel", label: "OpenTelemetry" }, { icon: "prometheus", label: "Prometheus" }, { icon: "prometheus", label: "Grafana" }],
     text: "It tells you something is wrong" },
-  "label-drasi": { label: "Added by Drasi", drasi: true,
+  "label-drasi": { label: "Context, answers, guidance", drasi: true,
     text: "Who's affected, what to do about it, and whether you'd survive the next failure" },
 };
