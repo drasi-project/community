@@ -67,7 +67,7 @@
 .slide-deck .stage-frame .v-box.app .lib { margin: auto 30px; }
 .slide-deck .stage-frame .v-sketch.row .v-arrow { border-width: 14px; border-left-width: 22px; }
 .slide-deck .stage-frame .v-pods { flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; align-items: center; }
-.slide-deck .stage-frame .v-pods span { padding: 30px 4px; background: var(--tone); color: var(--ink); font-size: 26px; font-weight: 600; border-radius: 50%; aspect-ratio: 1; display: grid; place-items: center; }
+.slide-deck .stage-frame .v-pods span { padding: 30px 4px; background: var(--c-query); color: var(--ink); font-size: 26px; font-weight: 600; border-radius: 50%; aspect-ratio: 1; display: grid; place-items: center; }
 .slide-deck .stage-frame .v-langs { list-style: none; margin: 20px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
 .slide-deck .stage-frame .v-langs li { padding: 8px 14px; border: 2px solid var(--tone); color: var(--tone); font: 600 28px/1.2 var(--text); }
 
@@ -143,14 +143,18 @@
    - Everywhere else Drasi is a box or node in a diagram (plugins, form factors, the change-driven
      chain, how-it-works cards): the logomark (.drasi-mark) at one size, 48 px on slides; the
      dashboard overlays draw everything at overlay scale, so there it's 28 px.
-   - No logo on other slides. */
+   - No logo on other slides.
+   Colours: Sources, Continuous Queries, Continuous Models (policy, optimization) and Reactions each
+   have one colour everywhere (--c-source, --c-query, --c-model, --c-reaction in slides.css, applied
+   with .role-*): the grow slides, plugins, form factors, the change-driven chain, the how-it-works
+   cards and the code cards' inputs. Don't reuse them for anything else in those diagrams. */
 .slide-deck .stage-frame .v-logo { position: absolute; right: 92px; top: 84px; height: 64px; }
 .slide-deck .stage-frame .drasi-mark { display: inline-block; vertical-align: middle; height: 48px; width: auto; }
 .slide-deck .stage-frame .config-overlay .drasi-mark { height: 28px; }
 .slide-deck .stage-frame .v-core b { display: flex; align-items: center; justify-content: center; gap: 16px; }
-.slide-deck .stage-frame .v-box.lib { display: flex; align-items: center; justify-content: center; gap: 14px; background: #091F2C; color: var(--white); border: 3px solid var(--tone); }
+.slide-deck .stage-frame .v-box.lib { display: flex; align-items: center; justify-content: center; gap: 14px; background: #091F2C; color: var(--white); border: 3px solid var(--c-query); }
 .slide-deck .stage-frame .v-box.cluster small { display: flex; align-items: center; gap: 10px; }
-.slide-deck .stage-frame .how-col h3.drasi { display: flex; align-items: center; gap: 8px; background: #091F2C; color: var(--white); }
+.slide-deck .stage-frame .how-col h3.drasi { display: flex; align-items: center; gap: 8px; }
 .slide-deck .stage-frame .v-social { list-style: none; margin: auto 0 0; padding: 20px 0 0; border-top: 2px solid rgba(217, 217, 214, .35); display: grid; grid-template-columns: repeat(3, auto); justify-content: space-between; gap: 14px 30px; }
 .slide-deck .stage-frame .v-social li { display: flex; align-items: center; gap: 10px; font: 600 28px/1.2 var(--text); color: var(--off-white); }
 .slide-deck .stage-frame .v-social .icon { color: var(--light-blue); }
@@ -195,3 +199,10 @@
 .slide-deck .stage-frame .vs-project .v-badge b { margin-top: 0; font-size: 56px; }
 .slide-deck .stage-frame .vs-project .v-badge span { color: var(--light-blue); }
 .slide-deck .stage-frame .v-cncf { width: 360px; height: auto; flex: none; }
+.slide-deck .stage-frame .v-pods span.role-source { background: var(--c-source); }
+.slide-deck .stage-frame .v-pods span.role-reaction { background: var(--c-reaction); }
+.slide-deck .stage-frame .v-chain li { background: var(--tone); }
+.slide-deck .stage-frame .v-chain li.drasi { border-color: var(--c-query); }
+.slide-deck .stage-frame .v-chain li:not(:last-child)::after { border-left-color: var(--light-gray); }
+.slide-deck .stage-frame .v-scenes li { --tone: var(--light-yellow); }
+.slide-deck .stage-frame .v-forms .v-col.gray h2 { color: var(--white); }

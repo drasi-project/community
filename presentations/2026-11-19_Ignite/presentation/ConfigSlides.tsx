@@ -6,7 +6,7 @@ import rego from "../demo/drasi/policy/placement.rego?raw";
 import optimization from "../demo/drasi/optimization/optimization.json";
 import { buildConfig, type ConfigId } from "./codeSlides";
 import type { Rect } from "./panels";
-import { how, isHow, type How, type Part } from "./howItWorks";
+import { how, isHow, isLabel, type How, type Part } from "./howItWorks";
 import { Icon } from "./Icon";
 import { DrasiMark } from "./Visuals";
 
@@ -16,8 +16,13 @@ export const configPanels = buildConfig({ overdueQuery, healthQuery, workloadsQu
 // its centre as the margins allow), with a short arrow down to it. Its inputs, grouped by where
 // they come from, feed the query or model's real code.
 const margin = 92, gap = 56, top = 20;
-const columns = [["sources", "Sources", "blue"], ["drasi", "Drasi", "purple"], ["reactions", "Reactions", "lime"]] as const;
+const columns = [["sources", "Sources", "role-source"], ["drasi", "Drasi", "role-query"], ["reactions", "Reactions", "role-reaction"]] as const;
 function HowCard({ card }: { card: How }) {
+  if (isLabel(card)) return <div className={`how-card how-label${card.drasi ? " drasi" : ""}`}>
+    <p className="how-title">{card.drasi && <DrasiMark />}{card.label}</p>
+    {card.chips && <ol className="label-chips">{card.chips.map(c => <li key={c.label}><Icon name={c.kind} />{c.label}</li>)}</ol>}
+    {card.text && <p className="label-text">{card.text}</p>}
+  </div>;
   const part = (p: Part) => <li key={p.label} className={`part ${p.kind}`}><Icon name={p.kind} /><b>{p.label}</b>{p.detail && <small>{p.detail}</small>}</li>;
   return <div className="how-card">
     <p className="how-title">How it works</p>
@@ -45,13 +50,18 @@ export function ConfigOverlay({ ids, targets, pinned = false }: { ids: readonly 
   if (pinned || !target) return <div ref={card} className="config-overlay pinned">{cards.map((c, i) => <HowCard key={i} card={c} />)}</div>;
   const centre = target.x + target.width / 2;
   const left = size ? Math.max(margin, Math.min(1920 - margin - size.width, centre - size.width / 2)) : margin;
-  const cardTop = size ? Math.max(top, target.y - gap - size.height) : top;
+  // Above the panels if it fits, otherwise just below them (a whole top row).
+  const lowest = Math.max(...targets.map(t => t.y + t.height));
+  const below = !!size && target.y - gap - size.height < top;
+  const cardTop = !size ? top : below ? lowest + gap : target.y - gap - size.height;
   const bottom = size ? cardTop + size.height : 0;
+  const start = below ? cardTop : bottom;
   // A panel stacked under another highlighted one gets no arrow of its own (it would cross the upper one).
   const pointed = targets.filter(t => !targets.some(u => u.y < t.y && u.x < t.x + t.width && t.x < u.x + u.width));
   const tips = pointed.map(t => { const c = t.x + t.width / 2;
     return Math.max(t.x + 40, Math.min(t.x + t.width - 40, size ? Math.max(left + 60, Math.min(left + size.width - 60, c)) : c)); });
-  const tipX = tips[0], tipY = target.y - 12;
+  const tipFor = (t: Rect) => below ? t.y + t.height + 12 : t.y - 12;
+  const tipX = tips[0], tipY = pointed.length ? tipFor(pointed[0]) : 0;
   return <>
     <div ref={card} className="config-overlay" style={{ left, top: cardTop, visibility: size ? "visible" : "hidden" }}>{cards.map((c, i) => <HowCard key={i} card={c} />)}{panels.map(panel =>
       <div key={panel.tab} className="code-panel">
@@ -64,10 +74,10 @@ export function ConfigOverlay({ ids, targets, pinned = false }: { ids: readonly 
           <span key={i} className={panel.hot.some(text => line.includes(text)) ? "hot" : undefined}><i aria-hidden="true" />{line}{"\n"}</span>)}</pre>
       </div>)}</div>
     {size && <svg className="config-arrow" width="1920" height="1002" viewBox="0 0 1920 1002" aria-hidden="true"
-      data-start={`${tipX},${bottom}`} data-tip={`${tipX},${tipY}`}>
+      data-start={`${tipX},${start}`} data-tip={`${tipX},${tipY}`}>
       <defs><marker id="config-arrowhead" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto">
         <path d="M0,0 L10,5 L0,10 z" /></marker></defs>
-      {pointed.map((t, i) => <path key={t.key} d={`M${tips[i]},${bottom} L${tips[i]},${t.y - 12}`} markerEnd="url(#config-arrowhead)" />)}
+      {pointed.map((t, i) => <path key={t.key} d={`M${tips[i]},${start} L${tips[i]},${tipFor(t)}`} markerEnd="url(#config-arrowhead)" />)}
     </svg>}
   </>;
 }

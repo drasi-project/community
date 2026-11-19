@@ -1,9 +1,13 @@
 // "How it works" cards: the components a scene connects, shown over the dashboard (or the channel)
 // just above the panel they produce, before the query, policy or optimization behind it.
 export type Part = { kind: "pg" | "otel" | "query" | "clock" | "model" | "prometheus" | "mattermost" | "api"; label: string; detail?: string };
-export type How = { sources: Part[]; drasi: Part[]; reactions: Part[]; lands: string };
+export type Flow = { sources: Part[]; drasi: Part[]; reactions: Part[]; lands: string };
+// A label for a whole dashboard row (the "what I'll show you" beats).
+export type Label = { label: string; chips?: Part[]; text?: string; drasi?: true };
+export type How = Flow | Label;
+export const isLabel = (card: How): card is Label => "label" in card;
 
-export const howIds = ["how-status", "how-overdue", "how-readiness", "how-proposal"] as const;
+export const howIds = ["how-status", "how-overdue", "how-readiness", "how-proposal", "label-standard", "label-drasi"] as const;
 export type HowId = typeof howIds[number];
 export const isHow = (id: string): id is HowId => (howIds as readonly string[]).includes(id);
 
@@ -41,4 +45,9 @@ export const how: Record<HowId, How> = {
     reactions: [channel("the proposal card, with Approve"), { kind: "api", label: "Gateway configuration API", detail: "applies the approved routes" }],
     lands: "This card, and its thread",
   },
+  "label-standard": { label: "What most teams have",
+    chips: [{ kind: "otel", label: "OpenTelemetry" }, { kind: "prometheus", label: "Prometheus" }, { kind: "prometheus", label: "Grafana" }],
+    text: "It tells you something is wrong" },
+  "label-drasi": { label: "Added by Drasi", drasi: true,
+    text: "Who's affected, what to do about it, and whether you'd survive the next failure" },
 };

@@ -86,26 +86,30 @@ test("each Decision Support beat shows its configuration above the highlighted p
     const [overlay] = await onSlide(page, ".config-overlay");
     const outlines = await onSlide(page, ".panel-highlight .outline");
     expect(outlines.length).toBe(beat.highlight!.length);
-    for (const outline of outlines) expect(overlay.bottom, beat.config!.join()).toBeLessThan(outline.top);
+    // Above the panels, or just below them when there's no room above (a whole top row).
+    const below = overlay.top > outlines[0].top;
+    for (const outline of outlines) if (below) expect(overlay.top, beat.config!.join()).toBeGreaterThan(outline.bottom);
+    else expect(overlay.bottom, beat.config!.join()).toBeLessThan(outline.top);
     expect(overlay.left).toBeGreaterThanOrEqual(92 - 1);
     expect(overlay.right).toBeLessThanOrEqual(frame.width - 92 + 1);
-    // The arrow leaves the card and its tip lands just above the highlighted panel, within its width.
+    expect(overlay.bottom).toBeLessThanOrEqual(frame.captionTop);
+    // The arrow leaves the card and its tip lands just beside the highlighted panel, within its width.
     const arrow = page.locator(".config-arrow");
     const [startX, startY] = (await arrow.getAttribute("data-start"))!.split(",").map(Number);
     const [tipX, tipY] = (await arrow.getAttribute("data-tip"))!.split(",").map(Number);
-    expect(Math.abs(startY - overlay.bottom)).toBeLessThanOrEqual(2); // offsetHeight is whole pixels
+    expect(Math.abs(startY - (below ? overlay.top : overlay.bottom))).toBeLessThanOrEqual(2); // offsetHeight is whole pixels
     expect(startX).toBeGreaterThanOrEqual(overlay.left);
     expect(startX).toBeLessThanOrEqual(overlay.right);
     expect(overlay.top).toBeGreaterThanOrEqual(0);
     const panel = outlines[0];
-    // The card sits just above its own panel, overlapping it horizontally, with a short arrow.
+    // The card sits next to its own panel, overlapping it horizontally, with a short arrow.
     expect(overlay.left, beat.config!.join()).toBeLessThan(panel.right);
     expect(overlay.right).toBeGreaterThan(panel.left);
-    expect(panel.top - overlay.bottom).toBeLessThan(80);
+    expect(below ? overlay.top - panel.bottom : panel.top - overlay.bottom).toBeLessThan(80);
     expect(tipX).toBeGreaterThan(panel.left);
     expect(tipX).toBeLessThan(panel.right);
-    expect(tipY).toBeLessThan(panel.top + 6 + 1);
-    expect(tipY).toBeGreaterThan(panel.top - 30);
+    if (below) { expect(tipY).toBeGreaterThan(panel.bottom - 6 - 1); expect(tipY).toBeLessThan(panel.bottom + 30); }
+    else { expect(tipY).toBeLessThan(panel.top + 6 + 1); expect(tipY).toBeGreaterThan(panel.top - 30); }
     await page.screenshot({ path: `evidence/config-${beat.config!.join("-")}.png` });
   }
 });
@@ -169,7 +173,7 @@ test("Next on the desk moves through beats and changes what the projector shows"
   await expect(projector.locator(".title-slide")).toBeVisible();
   await page.getByRole("button", { name: "Next ▶" }).click();
   await expect(projector.locator('[data-slide="project"]')).toBeVisible();
-  for (let i = 0; i < 12; i++) await page.getByRole("button", { name: "Next ▶" }).click();
+  for (let i = 0; i < 14; i++) await page.getByRole("button", { name: "Next ▶" }).click();
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Scene 1");
   await expect(projector.locator("iframe.stage-dashboard").first()).toBeVisible();
   await expect(projector.locator("iframe.stage-dashboard").first()).toHaveAttribute("src", dashboards.ops);

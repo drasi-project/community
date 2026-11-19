@@ -57,13 +57,13 @@ const nodes: Node[] = [
 const edges: [string, string, number][] = [["pg", "q1", 1], ["q1", "r1", 1], ["otel", "q1", 2], ["k8s", "q1", 2],
   ["otel", "q2", 3], ["k8s", "q2", 3], ["pg", "q3", 3], ["hub", "q4", 3], ["pg", "q4", 3], ["q2", "r2", 3], ["q1", "r2", 3], ["q3", "r3", 3], ["q4", "r4", 3], ["q3", "r1", 3]];
 const colX = [0, 640, 1336], colW = [400, 456, 400], rowY = (row: number) => 96 + row * 150, nodeH = 104;
-const tones = ["#8DC8E8", "#C5B4E3", "#D4EC8E"];
+const tones = ["var(--c-source)", "var(--c-query)", "var(--c-reaction)"], modelTone = "var(--c-model)";
 function Grow({ step, active }: { step: number; active: boolean }) {
   const at = (id: string) => nodes.find(n => n.id === id)!;
   const shown = nodes.filter(n => n.step <= step);
   return <svg className={`v-grow${active ? " play" : ""}`} viewBox="0 0 1736 650" width="1736" height="650" role="img" aria-label="Sources, continuous queries and reactions">
     {["Sources", "Continuous Queries", "Reactions"].map((h, i) =>
-      <text key={h} x={colX[i] + colW[i] / 2} y="40" textAnchor="middle" className="v-grow-head" fill={tones[i]}>{h}</text>)}
+      <text key={h} x={colX[i] + colW[i] / 2} y="40" textAnchor="middle" className="v-grow-head" style={{ fill: tones[i] }}>{h}</text>)}
     {edges.filter(([, , s]) => s <= step).map(([a, b, s]) => {
       const from = at(a), to = at(b);
       const x1 = colX[from.col] + colW[from.col], y1 = rowY(from.row) + nodeH / 2, x2 = colX[to.col], y2 = rowY(to.row) + nodeH / 2;
@@ -74,7 +74,7 @@ function Grow({ step, active }: { step: number; active: boolean }) {
       const label = n.relabel && step >= n.relabel[0] ? n.relabel[1] : n.label;
       const fresh = n.step === step && step > 2;
       return <g key={n.id} className={fresh ? "new" : undefined}>
-        <rect x={colX[n.col]} y={rowY(n.row)} width={colW[n.col]} height={nodeH} rx="10" fill={tones[n.col]} />
+        <rect x={colX[n.col]} y={rowY(n.row)} width={colW[n.col]} height={nodeH} rx="10" style={{ fill: tones[n.col] }} />
         <text x={colX[n.col] + colW[n.col] / 2} y={rowY(n.row) + nodeH / 2 + 12} textAnchor="middle" className="v-grow-label">{label}</text>
       </g>;
     })}
@@ -88,9 +88,9 @@ const gnodes: GNode[] = [
   { id: "otel", x: 0, y: 420, w: 300, label: "OpenTelemetry", tone: tones[0] },
   { id: "pin", x: 380, y: 110, w: 300, label: "Policy input", tone: tones[1] },
   { id: "dh", x: 380, y: 420, w: 300, label: "Deployment health", tone: tones[1] },
-  { id: "pol", x: 780, y: 110, w: 260, label: "Policy (Rego)", tone: "#8DE971", fresh: true },
+  { id: "pol", x: 780, y: 110, w: 260, label: "Policy (Rego)", tone: modelTone, fresh: true },
   { id: "ws", x: 780, y: 530, w: 260, label: "Workload status", tone: tones[1], fresh: true },
-  { id: "plan", x: 1120, y: 300, w: 220, label: "Plan", tone: "#8DE971", fresh: true },
+  { id: "plan", x: 1120, y: 300, w: 220, label: "Plan", tone: modelTone, fresh: true },
   { id: "chan", x: 1440, y: 110, w: 296, label: "Incident channel", tone: tones[2] },
   { id: "api", x: 1440, y: 300, w: 296, label: "Gateway API", tone: tones[2] },
   { id: "graf", x: 1440, y: 530, w: 296, label: "Grafana", tone: tones[2] },
@@ -101,13 +101,13 @@ function QueryGraph({ active }: { active: boolean }) {
   const at = (id: string) => gnodes.find(n => n.id === id)!;
   return <svg className={`v-grow${active ? " play" : ""}`} viewBox="0 0 1736 650" width="1736" height="650" role="img" aria-label="Continuous queries feeding other queries and models">
     {[["Sources", 150, tones[0]], ["Continuous queries and models", 860, tones[1]], ["Reactions", 1588, tones[2]]].map(([h, x, fill]) =>
-      <text key={h as string} x={x as number} y="40" textAnchor="middle" className="v-grow-head" fill={fill as string}>{h}</text>)}
+      <text key={h as string} x={x as number} y="40" textAnchor="middle" className="v-grow-head" style={{ fill: fill as string }}>{h}</text>)}
     <defs><marker id="graph-head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#D9D9D6" /></marker></defs>
     {gedges.map(([a, b, fresh]) => { const f = at(a), t = at(b);
       const x1 = f.x + f.w, y1 = f.y + nodeH / 2, x2 = t.x, y2 = t.y + nodeH / 2, bend = Math.min(90, (x2 - x1) / 2);
       return <path key={a + b} className={fresh ? "new" : undefined} d={`M${x1},${y1} C${x1 + bend},${y1} ${x2 - bend},${y2} ${x2 - 10},${y2}`} markerEnd="url(#graph-head)" />; })}
     {gnodes.map(n => <g key={n.id} className={n.fresh ? "new" : undefined}>
-      <rect x={n.x} y={n.y} width={n.w} height={nodeH} rx="10" fill={n.tone} />
+      <rect x={n.x} y={n.y} width={n.w} height={nodeH} rx="10" style={{ fill: n.tone }} />
       <text x={n.x + n.w / 2} y={n.y + nodeH / 2 + 12} textAnchor="middle" className="v-grow-label">{n.label}</text></g>)}
   </svg>;
 }
@@ -174,9 +174,9 @@ export function Visual({ id, active, qr }: { id: VisualId; active: boolean; qr: 
     case "change-driven": return <Slide id={id} title="Change-driven computation with Drasi" withLogo>
       <p className="lead">Describe the result you want; Drasi keeps it current</p>
       <ol className="v-chain">
-        <li><Icon name="pg" size={64} /><b>Changes flow in</b><span>from the databases, telemetry and systems you already have</span></li>
-        <li className="drasi"><DrasiMark /><b>Drasi keeps the result current</b><span>as data changes, and as time passes, across sources</span></li>
-        <li><Icon name="bolt" size={64} /><b>The reaction acts on the change</b><span>only what changed: added, updated or removed</span></li>
+        <li className="role-source"><Icon name="pg" size={64} /><b>Changes flow in</b><span>from the databases, telemetry and systems you already have</span></li>
+        <li className="drasi role-query"><DrasiMark /><b>Drasi keeps the result current</b><span>as data changes, and as time passes, across sources</span></li>
+        <li className="role-reaction"><Icon name="bolt" size={64} /><b>The reaction acts on the change</b><span>only what changed: added, updated or removed</span></li>
       </ol>
       <p className="v-foot">No polling loop, and no state store to build and run yourself</p>
     </Slide>;
@@ -193,28 +193,28 @@ export function Visual({ id, active, qr }: { id: VisualId; active: boolean; qr: 
     }
     case "plugins": return <Slide id={id} title="Everything is a plugin">
       <div className="v-hub">
-        <div className="v-plug blue">{pluginSources.map(([group, items]) => <div className="v-group" key={group}><h3>{group}</h3><ul>{items.map(t => <li key={t}>{t}</li>)}</ul></div>)}</div>
+        <div className="v-plug role-source">{pluginSources.map(([group, items]) => <div className="v-group" key={group}><h3>{group}</h3><ul>{items.map(t => <li key={t}>{t}</li>)}</ul></div>)}</div>
         <Arrow />
         <div className="v-core"><b><DrasiMark />Drasi</b>
-          <span className="purple">Continuous queries<em className="v-langs-q"><i>openCypher</i><i>GQL</i></em></span>
-          <span className="green">Continuous models<em className="v-models">{["Policy", "Optimization", "View", "Arithmetic", "Geometry"].map(m => <i key={m}>{m}</i>)}</em></span></div>
+          <span className="role-query">Continuous queries<em className="v-langs-q"><i>openCypher</i><i>GQL</i></em></span>
+          <span className="role-model">Continuous models<em className="v-models">{["Policy", "Optimization", "View", "Arithmetic", "Geometry"].map(m => <i key={m}>{m}</i>)}</em></span></div>
         <Arrow />
-        <div className="v-plug lime">{pluginReactions.map(([group, items]) => <div className="v-group" key={group}><h3>{group}</h3><ul>{items.map(t => <li key={t}>{t}</li>)}</ul></div>)}</div>
+        <div className="v-plug role-reaction">{pluginReactions.map(([group, items]) => <div className="v-group" key={group}><h3>{group}</h3><ul>{items.map(t => <li key={t}>{t}</li>)}</ul></div>)}</div>
       </div>
       <p className="v-foot">Plus bootstrappers that load each source's starting data, indexes (RocksDB, Garnet), and state and secret stores; and SDKs to build your own. This demo adds a Prometheus reaction, written as a Drasi plugin.</p>
     </Slide>;
     case "forms": return <Slide id={id} title="Use it the way that fits">
       <div className="v-forms">
-        <div className="v-col blue"><h2>In your app</h2>
+        <div className="v-col gray"><h2>In your app</h2>
           <div className="v-sketch"><div className="v-box app"><small>Your app</small><div className="v-box lib"><DrasiMark />Drasi library</div></div></div>
           <ul className="v-langs">{["Rust", "Node.js", "Python", ".NET"].map(l => <li key={l}>{l}</li>)}</ul>
           <p>Embed it; react in your own code</p></div>
-        <div className="v-col purple"><h2>As a service</h2>
+        <div className="v-col gray"><h2>As a service</h2>
           <div className="v-sketch row"><div className="v-box src">Data</div><Arrow /><div className="v-box lib"><DrasiMark />Drasi Server</div><Arrow /><div className="v-box src">Tools</div></div>
           <ul className="v-langs"><li>One container</li></ul>
           <p>Configure it in YAML; this demo runs on it</p></div>
-        <div className="v-col green"><h2>On Kubernetes</h2>
-          <div className="v-sketch"><div className="v-box cluster"><small><DrasiMark /> Drasi on a cluster</small><div className="v-pods"><span>Sources</span><span>Queries</span><span>Reactions</span></div></div></div>
+        <div className="v-col gray"><h2>On Kubernetes</h2>
+          <div className="v-sketch"><div className="v-box cluster"><small><DrasiMark /> Drasi on a cluster</small><div className="v-pods"><span className="role-source">Sources</span><span>Queries</span><span className="role-reaction">Reactions</span></div></div></div>
           <ul className="v-langs"><li>drasi CLI</li><li>Resources</li></ul>
           <p>Each part scales on its own</p></div>
       </div>
@@ -261,12 +261,12 @@ export function Visual({ id, active, qr }: { id: VisualId; active: boolean; qr: 
     </Slide>;
     case "closing": return <Slide id={id} title="What you saw" withLogo>
       <ol className="v-scenes">
-        <li className="blue"><small>1</small><b>Status from telemetry + configuration</b><span>OpenTelemetry and the app's own data, joined</span></li>
-        <li className="purple"><small>2</small><b>What didn't happen</b><span>Requests with no answer, at their deadline</span></li>
-        <li className="green"><small>3</small><b>Compliance meets resilience</b><span>One policy change; readiness re-checked</span></li>
-        <li className="lime"><small>4</small><b>A fix people approve</b><span>Proposed, approved in chat, verified</span></li>
+        <li><small>1</small><b>Status from telemetry + configuration</b><span>OpenTelemetry and the app's own data, joined</span></li>
+        <li><small>2</small><b>What didn't happen</b><span>Requests with no answer, at their deadline</span></li>
+        <li><small>3</small><b>Compliance meets resilience</b><span>One policy change; readiness re-checked</span></li>
+        <li><small>4</small><b>A fix people approve</b><span>Proposed, approved in chat, verified</span></li>
       </ol>
-      <ol className="v-ribbon"><li className="blue">Connect sources</li><li className="purple">Configure continuous models</li><li className="lime">Connect reactions</li></ol>
+      <ol className="v-ribbon"><li className="role-source">Connect sources</li><li className="role-query">Configure continuous models</li><li className="role-reaction">Connect reactions</li></ol>
       <p className="v-foot">Richer context, in the tools you already use. Apart from one Prometheus reaction plugin, this demo is configuration.</p>
     </Slide>;
     case "links": return <Slide id={id} title="Learn more" withLogo>
