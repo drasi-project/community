@@ -251,3 +251,27 @@
 .slide-deck .stage-frame .v-tools-group h3 { font-size: 24px; }
 .slide-deck .stage-frame .v-tools-group li { font-size: 27px; padding: 5px 12px; }
 .slide-deck .stage-frame .v-tools-group ul { gap: 8px; }
+
+/* The scenario over a world map */
+.slide-deck .stage-frame .v-map { position: relative; width: 1736px; height: 460px; margin-top: -20px; }
+.slide-deck .stage-frame .v-map > * { position: absolute; }
+.slide-deck .stage-frame .v-map-dots { left: 0; top: 0; width: 1736px; height: 460px; }
+.slide-deck .stage-frame .v-map-lines { left: 0; top: 0; overflow: visible; }
+.slide-deck .stage-frame .v-map-lines path.card { stroke: #B9DCD2; stroke-width: 3; }
+.slide-deck .stage-frame .v-map-lines path.route { stroke: #E1D3C7; stroke-width: 4; stroke-dasharray: 12 10; }
+.slide-deck .stage-frame .v-map-lines circle { fill: #B9DCD2; stroke: #091F2C; stroke-width: 4; }
+.slide-deck .stage-frame .v-map-region { font: 600 26px var(--display); letter-spacing: .08em; text-transform: uppercase; color: #B9DCD2; }
+.slide-deck .stage-frame .v-map .v-work { width: 420px; padding: 10px 18px; }
+.slide-deck .stage-frame .v-map .v-work b { font-size: 32px; white-space: nowrap; }
+.slide-deck .stage-frame .v-map .v-work span { font-size: 24px; white-space: nowrap; }
+.slide-deck .stage-frame .v-map .v-deploy { width: 290px; padding: 8px 16px; }
+.slide-deck .stage-frame .v-map .v-deploy b { font-size: 36px; }
+.slide-deck .stage-frame .v-map .v-deploy span, .slide-deck .stage-frame .v-map .v-deploy small { margin: 0; font-size: 24px; }
+.slide-deck .stage-frame .v-map .v-deploy.pending-capacity { width: 340px; background: rgba(9, 31, 44, .9); }
+.slide-deck .stage-frame .vs-scenario-map .v-rules { margin-top: 14px; }
+.slide-deck .stage-frame .vs-scenario-map .v-stack { display: block; margin-top: auto; }
+.slide-deck .stage-frame .vs-scenario-map .v-stack .v-tools { display: flex; flex-wrap: wrap; gap: 10px; }
+.slide-deck .stage-frame .vs-scenario-map .v-stack .v-tools li { flex: none; padding: 10px 14px; font-size: 26px; }
+.slide-deck .stage-frame .vs-scenario-map .v-stack .v-tools li.ghost { border: 3px dashed rgba(217, 217, 214, .6); background: none; color: #B8B8B4; font-weight: 400; }
+.slide-deck .stage-frame .vs-scenario-map .v-stack .v-tools.ghosts { margin-top: 10px; }
+.slide-deck .stage-frame .vs-scenario-map .v-stack .v-tools li.label { border: 0; background: none; padding-left: 0; color: var(--light-gray); font-weight: 400; }

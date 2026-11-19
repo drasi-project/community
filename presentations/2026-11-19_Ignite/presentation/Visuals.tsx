@@ -5,6 +5,8 @@ import logo from "./assets/drasi-logo-colored-white-tight.svg";
 import mark from "./assets/drasi-logomark-tight.svg";
 // The CNCF logo, unmodified, from github.com/cncf/artwork (other/cncf/horizontal/white/cncf-white.svg).
 import cncf from "./assets/cncf-white.svg";
+// A dot map generated from Natural Earth's 1:110m land polygons (public domain, naturalearthdata.com).
+import worldDots from "./assets/world-dots.svg";
 
 // The Drasi project's own artwork (community/images), cropped to the artwork. The rule (visuals.css):
 // the full logo only where Drasi is introduced or summed up; the logomark, at one size, where Drasi
@@ -152,6 +154,11 @@ function Tangle() {
   </div>;
 }
 
+// Where the deployments sit on the map (Frankfurt, Dublin, Virginia), and the lines to them.
+const pins = { euA: [1376, 190], euB: [1227, 160], usC: [516, 306] } as const;
+const mapLinks: [number, number, number, number, string][] = [
+  [1420, 250, pins.euA[0], pins.euA[1], "card"], [1180, 112, pins.euB[0], pins.euB[1], "card"], [560, 330, pins.usC[0], pins.usC[1], "card"],
+  [980, 40, pins.euA[0], pins.euA[1], "route"], [980, 132, pins.euB[0], pins.euB[1], "route"]];
 const DeployBox = ({ name, region, detail, pending = false }: { name: string; region: string; detail: string; pending?: boolean }) =>
   <div className={`v-deploy${pending ? " pending-capacity" : ""}`}><b>{nb(name)}</b><span>{region} · 100k tokens/min</span><small>{detail}</small></div>;
 
@@ -246,14 +253,19 @@ export function Visual({ id, active, qr }: { id: VisualId; active: boolean; qr: 
       </ul>
     </Slide>;
     case "scenario-map": return <Slide id={id} title="The scenario: an AI service">
-      <div className="v-scenario">
-        <div className="v-work"><b>Customer support</b><span>Restricted data · answer in 15 s · 60k</span></div>
-        <div className="v-work"><b>Document summaries</b><span>Public data · 80k</span></div>
-        <div className="v-work empty" />
-        <span className="v-down" /><span className="v-down" /><span />
-        <div className="v-region eu"><small>Europe</small>
-          <DeployBox name="EU-A" region="Europe" detail="serves support" /><DeployBox name="EU-B" region="Europe" detail="serves summaries" /></div>
-        <div className="v-region us"><small>United States</small><DeployBox name="US-C" region="US" detail="extra capacity, just provisioned" pending /></div>
+      <div className="v-map">
+        <img className="v-map-dots" src={worldDots} alt="" />
+        <svg className="v-map-lines" viewBox="0 0 1736 460" width="1736" height="460" aria-hidden="true">
+          {mapLinks.map(([x1, y1, x2, y2, kind], i) => <path key={i} className={kind} d={`M${x1},${y1} L${x2},${y2}`} />)}
+          {Object.values(pins).map(([x, y], i) => <circle key={i} cx={x} cy={y} r="11" />)}
+        </svg>
+        <span className="v-map-region" style={{ left: 1200, top: 300 }}>Europe</span>
+        <span className="v-map-region" style={{ left: 200, top: 230 }}>United States</span>
+        <div className="v-work" style={{ left: 560, top: 0 }}><b>Customer support</b><span>Restricted data · answer in 15 s · 60k</span></div>
+        <div className="v-work" style={{ left: 560, top: 92 }}><b>Document summaries</b><span>Public data · 80k</span></div>
+        <div className="v-deploy" style={{ left: 1420, top: 220 }}><b>{nb("EU-A")}</b><span>100k tokens/min</span><small>serves support</small></div>
+        <div className="v-deploy" style={{ left: 1040, top: 0 }}><b>{nb("EU-B")}</b><span>100k tokens/min</span><small>serves summaries</small></div>
+        <div className="v-deploy pending-capacity" style={{ left: 560, top: 290 }}><b>{nb("US-C")}</b><span>100k tokens/min</span><small>extra capacity, just provisioned</small></div>
       </div>
       <div className="v-rules">
         <span className="rule"><Icon name="model" size={32} />Restricted data stays in Europe</span>
@@ -261,10 +273,8 @@ export function Visual({ id, active, qr }: { id: VisualId; active: boolean; qr: 
         <span className="rule"><Icon name="user" size={32} />Workload deployment changes need human approval</span>
       </div>
       <div className="v-stack">
-        <p>In this demo</p>
-        <ul className="v-tools">{[["otel", "OpenTelemetry"], ["prometheus", "Prometheus"], ["prometheus", "Grafana"], ["query", "Langfuse"], ["mattermost", "Mattermost"], ["pg", "PostgreSQL"]].map(([i, t]) => <li key={t}><Icon name={i} size={40} />{t}</li>)}</ul>
-        <p className="other">Also common, not used here</p>
-        <ul className="v-others">{["Datadog", "Dynatrace", "Splunk", "New Relic", "Elastic", "Azure Monitor", "ServiceNow", "PagerDuty", "Slack", "Teams", "Jira"].map(t => <li key={t}>{t}</li>)}</ul>
+        <ul className="v-tools">{[["otel", "OpenTelemetry"], ["prometheus", "Prometheus"], ["prometheus", "Grafana"], ["query", "Langfuse"], ["mattermost", "Mattermost"], ["pg", "PostgreSQL"]].map(([i, t]) => <li key={t}><Icon name={i} size={34} />{t}</li>)}</ul>
+        <ul className="v-tools ghosts"><li className="label">Also there, not in the demo</li>{["Ticketing / ITSM", "On-call paging", "Service catalog / CMDB", "CI/CD and deployments"].map(t => <li key={t} className="ghost">{t}</li>)}</ul>
       </div>
     </Slide>;
     case "closing": return <Slide id={id} title="What you saw" withLogo>

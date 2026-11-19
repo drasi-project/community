@@ -259,7 +259,7 @@ Say it in your own words.
    There's policy: restricted data stays in Europe, and for now summaries stay in Europe too.\
    Workload deployment changes need human approval.\
    And the team already has its tools: OpenTelemetry, Prometheus and Grafana, Langfuse for traces, Mattermost for incidents, and PostgreSQL for the service's own data.\
-   Your stack might be Datadog, Splunk or ServiceNow instead; the idea is the same.\
+   In a real environment there'd also be ticketing, on-call paging, a service catalog and CI/CD; Drasi connects to those the same way.\
    I won't walk through it as if I'm running the process; for each step I'll say what needs doing, show it, then show how it works.
 
 **If it breaks:** Carry on; the slides don't depend on the demo.
