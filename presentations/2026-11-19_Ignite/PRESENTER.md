@@ -166,11 +166,11 @@ proposal: approve the new one.
 | 0:00 | Intro | Walk-in, Who I am, Drasi, the project, The problem | Walk-in; who I am; the project; the problem Drasi solves |
 | 2:00 | What Drasi is | Drasi · one source, Drasi · several sources, Drasi · many queries and reactions, Plugin ecosystem, Form factors | Sources, Continuous Queries, Reactions; the plugin ecosystem; form factors |
 | 5:30 | Observability and the scenario | Observability issues, What they want, The scenario | Observability: the issues, what organizations want, and the scenario |
-| 8:00 | Scene 1 · Status from telemetry and configuration | Grafana · Operations, How it works · scene 1 | Telemetry + configuration → query → Prometheus reaction → Grafana |
-| 10:30 | Scene 2 · The absence of change | Grafana · Operations, How it works · scene 2 | The absence of change: requests with no answer by their deadline (trueLater) |
-| 13:00 | Scene 3 · Compliance meets resilience | Grafana · Operations, How it works · scene 3 | Summaries Europe-only puts failover at risk; compliance allows the US and it's safe |
-| 16:00 | Scene 4 · Failure, proposal, approval | Grafana · Operations, Mattermost · #incident-ai-support, How it works · scene 4 | EU-A fails; Drasi's proposal is a card in Mattermost; approve; verified; restore |
-| 20:30 | Summary and close | Summary, Learn more, Session survey | What we showed; links; the session survey, then questions |
+| 8:00 | Scene 1 · Status from telemetry and configuration | Grafana · Operations | Telemetry + configuration → queries → Prometheus reaction → Grafana |
+| 10:30 | Scene 2 · The absence of change | Grafana · Operations | The absence of change: requests with no answer by their deadline (trueLater) |
+| 13:00 | Scene 3 · Compliance meets resilience | Grafana · Operations | Summaries Europe-only puts failover at risk; compliance allows the US and it's safe |
+| 16:00 | Scene 4 · Failure, proposal, approval | Grafana · Operations, Mattermost · #incident-ai-support | EU-A fails; Drasi's proposal is a card in Mattermost; approve; verified; restore |
+| 20:30 | Summary and close | What you saw, Learn more, Session survey | What we showed; links; the session survey, then questions |
 | 22:00 | Questions | Session survey | Take questions |
 
 ## The script
@@ -212,47 +212,49 @@ Say it in your own words.
 
 1. **Grafana · Operations.** Let's start simple. The team wants one view of each deployment's health and each workload's status, and that means joining telemetry with configuration data. This is their Grafana dashboard: the top row is ordinary monitoring, the bottom row is Drasi's answers.
    - **Watch for:** Charts moving. If the desk says Traffic: stopped, press Start demo traffic in All demo controls.
-2. **Grafana · Operations.** Deployment status: every second the AI service probes each deployment and exports the result as an ordinary OpenTelemetry metric. The Collector forwards it to Drasi's OpenTelemetry source, and this query keeps the latest probe per deployment.
+2. **Grafana · Operations.** How do these two tiles work? Two sources: the health checks, which arrive as ordinary OpenTelemetry metrics every second, and the AI service's own database, where it keeps its deployments, workloads, routes and policy. Two continuous queries join them, and a Prometheus reaction publishes each answer as a metric, so Grafana draws it. No polling job, and no glue code.
+   - **Watch for:** The how-it-works card above Deployment status and Workload status, with an arrow to each.
+3. **Grafana · Operations.** Here's the first query: the latest health check per deployment, from the OpenTelemetry source. 2 means failed.
    - **Watch for:** Deployment status: EU-A, EU-B, US-C Healthy; the deployment-health query above it.
-3. **Grafana · Operations.** Workload status joins that telemetry with configuration in the application's database: where each workload runs, and what the policy says about that deployment. So it tells you whether each workload is being served somewhere healthy that it's allowed to run.
+4. **Grafana · Operations.** And the second joins that health with configuration: where each workload runs, and whether policy allows it there. So it says whether each workload is served somewhere healthy that it's allowed to run.
    - **Watch for:** Workload status: Support · EU-A and Summaries · EU-B Healthy; the tile-workloads query above it.
-4. **How it works · scene 1.** How it works: two sources, the OpenTelemetry health checks and the PostgreSQL change feed; continuous queries that join them; and a Prometheus reaction that publishes each answer as a metric, so Grafana draws it and you can alert on it like anything else. No polling job, and no glue code.
 
-**If it breaks:** If the tiles are empty, traffic or Drasi isn't running: show the how-it-works slide and describe it.
+**If it breaks:** If the tiles are empty, traffic or Drasi isn't running: describe the how-it-works card and move on.
 
 ### 5. Scene 2 · The absence of change (2½ minutes)
 
-1. **Grafana · Operations.** Some of the most important situations are things that didn't happen. A customer request that gets no answer within 15 seconds produces no event: no new row, no new metric. This query lists every request not yet answered or cancelled, and drasi.trueLater becomes true at the request's deadline, so Drasi re-checks just that request at that moment, and it joins the list with no new event. The result is the exact list of late requests, kept current request by request. TODO: a live trigger here (for example a control that slows support answers), or say we'll see it climb in scene 4.
+1. **Grafana · Operations.** Some of the most important situations are things that didn't happen. A customer request that gets no answer within 15 seconds produces no event: no new row, no new metric. Here the source is the requests in the database; the query lists every request not yet answered, and a time condition makes Drasi re-check each one at its deadline. The answer goes to Grafana, and to the incident channel when support falls behind.
+   - **Watch for:** The how-it-works card above Support overdue.
+2. **Grafana · Operations.** This is the query. drasi.trueLater becomes true at the request's deadline, so the request joins the list at that moment with no new event, and leaves it when it's answered. The exact list of late requests, kept current request by request. TODO: a live trigger here (for example a control that slows support answers), or say we'll see it climb in scene 4.
    - **Watch for:** Support overdue 0; the overdue-tasks query above it, the trueLater line highlighted.
-2. **Grafana · Operations (optional).** The same idea keeps Deployment status honest: each health reading is good for 8 seconds, so if the probes stop arriving, the deployment turns Unknown as time passes, not stays green. TODO: keep this beat?
-3. **How it works · scene 2.** How it works: the requests come from the database's change feed, a continuous query with a time-based condition, and two reactions, Prometheus for the dashboard and the incident channel for a card. TODO: NEW_FLOW mentions logs or spans as a source here; decide whether to show one.
+3. **Grafana · Operations (optional).** The same idea keeps Deployment status honest: each health reading is good for 8 seconds, so if the checks stop arriving, the deployment turns Unknown as time passes rather than staying green. TODO: keep this beat?
 
-**If it breaks:** Describe it from the how-it-works slide; scene 4 shows it live.
+**If it breaks:** Describe it from the card; scene 4 shows it live.
 
 ### 6. Scene 3 · Compliance meets resilience (3 minutes)
 
-1. **Grafana · Operations.** We've provisioned extra capacity in US-C, but compliance won't let document summaries be processed in the US. Failover readiness is a what-if: would every workload still have somewhere allowed to run if any one deployment failed? Right now, no: if EU-A failed, support and summaries would both need EU-B, which only has 100k.
-   - **Watch for:** Failover readiness: At risk: losing EU-A leaves no valid plan (yellow); the scenario above it.
-2. **Grafana · Operations.** That answer combines two of Drasi's continuous models. The policy, as Rego rules: a workload may only use the deployments it's allowed, and restricted data stays in its region. The allowed destinations are data, rows in the database.
-   - **Watch for:** Recommended action: Add capacity: losing EU-A leaves no valid plan (yellow); the Rego rules above it.
-3. **Grafana · Operations (optional).** And the optimization model: one yes-or-no choice per workload and allowed deployment, every workload placed once, each healthy deployment within capacity, fewest moves first. Drasi re-solves whenever health, capacity or policy changes.
-   - **Watch for:** The optimization model above Recommended action.
-4. **Grafana · Operations.** Now compliance agrees summaries can run in the US: they use public data. That's one row in the policy data. Drasi re-runs the policy and the what-if at once: summaries could fail over to US-C, so we'd survive losing any one deployment, and the capacity warning goes away.
+1. **Grafana · Operations.** We've provisioned extra capacity in US-C, but compliance won't let document summaries be processed in the US. Failover readiness asks: if any one deployment failed, would every workload still have somewhere allowed to run? Right now, no, and Recommended action says add capacity. Behind it: the policy and the deployments from the database, health from OpenTelemetry, and two of Drasi's continuous models, a Rego policy and an optimization model, re-run whenever any of them changes.
+   - **Watch for:** Failover readiness: At risk: losing EU-A leaves no valid plan; Recommended action: Add capacity (both yellow); the how-it-works card above.
+2. **Grafana · Operations.** The policy, as Rego: a workload may only use the deployments it's allowed, and restricted data stays in its region. The allowed destinations are data, rows in the database.
+   - **Watch for:** The Rego rules above Recommended action.
+3. **Grafana · Operations.** And the what-if: the same optimization solved again without each healthy deployment in turn. Lose EU-A, and support and summaries would both need EU-B, which only has 100k.
+   - **Watch for:** The loss scenario above Failover readiness.
+4. **Grafana · Operations (optional).** The optimization model itself: one yes-or-no choice per workload and allowed deployment, every workload placed once, each healthy deployment within capacity, fewest moves first.
+5. **Grafana · Operations.** Now compliance agrees summaries can run in the US: they use public data. That's one row in the policy data. Drasi re-runs the policy and the what-if at once: summaries could fail over to US-C, so we'd survive losing any one deployment, and the capacity warning goes away.
    - **Press:** Summaries: Europe + US
    - **Watch for:** Failover readiness: Survives losing any one deployment (green); Recommended action: None. (Drasi also posts Failover restored in the channel.)
-5. **How it works · scene 3.** How it works: the policy and the configuration come from the database, health from OpenTelemetry; the policy and optimization models re-run when any of them changes; and the Prometheus reaction puts the answer in Grafana, while the channel reaction posts when readiness changes.
 
 **If it breaks:** If Failover readiness doesn't turn green within about 10 seconds, say what it would show and move on.
 
 ### 7. Scene 4 · Failure, proposal, approval (4½ minutes)
 
-1. **Grafana · Operations.** Now EU-A, the deployment serving customer support, goes down. Nobody tells Drasi: its health probes fail, and within seconds Deployment status says Failed and Recommended action names a fix: move summaries to US-C and support to EU-B, within policy. Support overdue starts climbing too: that's scene 2's query, live.
+1. **Grafana · Operations.** Now EU-A, the deployment serving customer support, goes down. Nobody tells Drasi: its health checks fail, and within seconds Deployment status says Failed and Recommended action names a fix: move summaries to US-C and support to EU-B, within policy. Support overdue starts climbing too: that's scene 2's query, live.
    - **Press:** Fail EU-A
    - **Watch for:** Within about 8 seconds: EU-A Failed; Recommended action: Move summaries to US-C and support to EU-B (orange); Support overdue above 0.
-2. **Mattermost · #incident-ai-support.** The team doesn't live on a dashboard. In their incident channel, Drasi posted as soon as EU-A failed, with the proposed change and the facts it was based on, before Grafana's alert arrived. Two moves, both within policy.
+2. **Mattermost · #incident-ai-support.** The team doesn't live on a dashboard. In their incident channel, Drasi posted as soon as EU-A failed, with the proposed change and the facts it was based on, before Grafana's alert arrived. How: the same policy and optimization models, with a reaction that posts the card; and when someone approves it, another reaction applies the routes through the gateway's configuration API, and a query checks it worked.
    - **Click on the projector:** Scroll up to the orange Proposed change card so the whole card shows. 
-   - **Watch for:** Red Deployment failed: EU-A, then the orange Proposed change card with Approve and Reject; Grafana's alert after them.
-3. **Mattermost · #incident-ai-support.** I approve it here, as the on-call engineer would. Drasi checks the approval still matches its current plan, and its reaction applies the new routes through the gateway's configuration API.
+   - **Watch for:** Red Deployment failed: EU-A, then the orange Proposed change card with Approve and Reject; the how-it-works card top right.
+3. **Mattermost · #incident-ai-support.** I approve it here, as the on-call engineer would. Drasi checks the approval still matches its current plan, and applies the new routes.
    - **Click on the projector:** Approve on the newest orange Proposed change card.  Backup on the desk: Approve the proposed change (it presses the same button)
    - **Watch for:** Approved by @oncall; in the thread, blue Applied: Move summaries to US-C and support to EU-B.
 4. **Grafana · Operations.** Applied isn't fixed: another query waits until the backlog has cleared and support requests are answered on the new route, then says Verified. Support overdue is back to 0.
@@ -260,13 +262,12 @@ Say it in your own words.
 5. **Grafana · Operations (optional).** Later EU-A is back at full capacity: every deployment Healthy, and we'd survive losing any one again. Nothing moves back; Drasi only proposes a move when the facts call for one.
    - **Press:** Restore EU-A
    - **Watch for:** All Healthy; Failover readiness: Survives losing any one deployment; no new channel card.
-6. **How it works · scene 4.** How it works: health, policy, capacity and approvals as sources; the policy and optimization models; and reactions into the incident channel, the gateway's configuration API, Grafana annotations and Langfuse.
 
 **If it breaks:** If nothing changes within 30 seconds, press Use recordings from here on. If Approve doesn't respond, press Approve the proposed change on the desk; never approve twice.
 
 ### 8. Summary and close (1½ minutes)
 
-1. **Summary.** So what did we see? Richer context, from data that already existed in different places: the application's database, OpenTelemetry health checks, policy and approvals. And without an integration project: connect sources, configure continuous models, connect reactions. TODO: tie back to the four scenes.
+1. **What you saw.** So what did we see? Status worked out from telemetry and configuration together. Requests that got no answer, noticed at their deadline. A compliance change that made the service more resilient. And a fix, proposed within policy, approved in chat and verified. Each one is richer context from data that already existed in different places, and none of it needed an integration project: connect sources, configure continuous models, connect reactions.
 2. **Learn more.** To learn more, start at drasi.io; the code, and this demo, are on GitHub.
 3. **Session survey.** Thank you. Please scan the code and tell us how we did in the session survey. Questions?
    - **Watch for:** The survey slide with its QR code stays up during questions.

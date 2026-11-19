@@ -6,6 +6,8 @@ import rego from "../demo/drasi/policy/placement.rego?raw";
 import optimization from "../demo/drasi/optimization/optimization.json";
 import { buildConfig, type ConfigId } from "./codeSlides";
 import type { Rect } from "./panels";
+import { how, isHow, type How, type Part } from "./howItWorks";
+import { Icon } from "./Icon";
 
 export const configPanels = buildConfig({ overdueQuery, healthQuery, workloadsQuery, rego, optimization });
 
@@ -13,7 +15,22 @@ export const configPanels = buildConfig({ overdueQuery, healthQuery, workloadsQu
 // its centre as the margins allow), with a short arrow down to it. Its inputs, grouped by where
 // they come from, feed the query or model's real code.
 const margin = 92, gap = 56, top = 20;
-export function ConfigOverlay({ ids, target }: { ids: readonly ConfigId[]; target: Rect | null }) {
+const columns = [["sources", "Sources", "blue"], ["drasi", "Drasi", "purple"], ["reactions", "Reactions", "lime"]] as const;
+function HowCard({ card }: { card: How }) {
+  const part = (p: Part) => <li key={p.label} className={`part ${p.kind}`}><Icon name={p.kind} /><b>{p.label}</b>{p.detail && <small>{p.detail}</small>}</li>;
+  return <div className="how-card">
+    <p className="how-title">How it works</p>
+    <ol className="how-flow">
+      {columns.map(([key, label, tone]) => <li key={key} className={`how-col ${tone}`}><h3>{label}</h3><ul>{card[key].map(part)}</ul></li>)}
+      <li className="how-col lands"><h3>Shows up as</h3><p>{card.lands}</p></li>
+    </ol>
+  </div>;
+}
+
+// With targets, the card sits above them with an arrow to each; with none (over the channel) it's pinned top right.
+export function ConfigOverlay({ ids, targets, pinned = false }: { ids: readonly string[]; targets: readonly Rect[]; pinned?: boolean }) {
+  const target = targets.length ? { x: Math.min(...targets.map(t => t.x)), y: Math.min(...targets.map(t => t.y)),
+    width: Math.max(...targets.map(t => t.x + t.width)) - Math.min(...targets.map(t => t.x)), height: 0, key: "" } : null;
   const card = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState<{ width: number; height: number } | null>(null);
   const key = ids.join(",");
@@ -21,16 +38,21 @@ export function ConfigOverlay({ ids, target }: { ids: readonly ConfigId[]; targe
     const element = card.current;
     setSize(element ? { width: element.offsetWidth, height: element.offsetHeight } : null);
   }, [key]);
-  const panels = ids.map(id => configPanels[id]).filter(Boolean);
-  if (!panels.length || !target) return null;
+  const panels = ids.filter(id => !isHow(id)).map(id => configPanels[id as ConfigId]).filter(Boolean);
+  const cards = ids.filter(isHow).map(id => how[id]);
+  if (!panels.length && !cards.length) return null;
+  if (pinned || !target) return <div ref={card} className="config-overlay pinned">{cards.map((c, i) => <HowCard key={i} card={c} />)}</div>;
   const centre = target.x + target.width / 2;
   const left = size ? Math.max(margin, Math.min(1920 - margin - size.width, centre - size.width / 2)) : margin;
   const cardTop = size ? Math.max(top, target.y - gap - size.height) : top;
   const bottom = size ? cardTop + size.height : 0;
-  const tipX = Math.max(target.x + 40, Math.min(target.x + target.width - 40, size ? Math.max(left + 60, Math.min(left + size.width - 60, centre)) : centre));
-  const tipY = target.y - 12;
+  // A panel stacked under another highlighted one gets no arrow of its own (it would cross the upper one).
+  const pointed = targets.filter(t => !targets.some(u => u.y < t.y && u.x < t.x + t.width && t.x < u.x + u.width));
+  const tips = pointed.map(t => { const c = t.x + t.width / 2;
+    return Math.max(t.x + 40, Math.min(t.x + t.width - 40, size ? Math.max(left + 60, Math.min(left + size.width - 60, c)) : c)); });
+  const tipX = tips[0], tipY = target.y - 12;
   return <>
-    <div ref={card} className="config-overlay" style={{ left, top: cardTop, visibility: size ? "visible" : "hidden" }}>{panels.map(panel =>
+    <div ref={card} className="config-overlay" style={{ left, top: cardTop, visibility: size ? "visible" : "hidden" }}>{cards.map((c, i) => <HowCard key={i} card={c} />)}{panels.map(panel =>
       <div key={panel.tab} className="code-panel">
         <ul className="flow-inputs" aria-label="Inputs">{panel.flow.inputs.map(input =>
           <li key={input.from} className={input.from === "OpenTelemetry" ? "otel" : input.from.startsWith("Drasi") ? "model" : "pg"}>
@@ -44,7 +66,7 @@ export function ConfigOverlay({ ids, target }: { ids: readonly ConfigId[]; targe
       data-start={`${tipX},${bottom}`} data-tip={`${tipX},${tipY}`}>
       <defs><marker id="config-arrowhead" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto">
         <path d="M0,0 L10,5 L0,10 z" /></marker></defs>
-      <path d={`M${tipX},${bottom} L${tipX},${tipY}`} markerEnd="url(#config-arrowhead)" />
+      {pointed.map((t, i) => <path key={t.key} d={`M${tips[i]},${bottom} L${tips[i]},${t.y - 12}`} markerEnd="url(#config-arrowhead)" />)}
     </svg>}
   </>;
 }

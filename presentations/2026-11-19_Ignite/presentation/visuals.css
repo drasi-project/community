@@ -1,0 +1,138 @@
+/* The new flow's slides (Visuals.tsx). Template colours only; text 26 px and up. */
+.slide-deck .stage-frame .v-slide { --ink: #091F2C; }
+.slide-deck .stage-frame .v-slide .lead { margin-bottom: 36px; }
+.slide-deck .stage-frame .v-slide .todo { color: var(--light-yellow); }
+.slide-deck .stage-frame .v-foot { margin-top: auto; font-size: 30px; color: var(--light-gray); }
+.slide-deck .stage-frame .v-arrow { width: 0; height: 0; align-self: center; border: 22px solid transparent; border-left: 34px solid var(--light-gray); border-right: 0; }
+
+/* Project */
+.slide-deck .stage-frame .v-project { display: grid; grid-template-columns: 560px 1fr; gap: 64px; align-items: stretch; }
+.slide-deck .stage-frame .v-badge { display: flex; flex-direction: column; justify-content: center; padding: 40px; background: var(--light-blue); color: var(--ink); }
+.slide-deck .stage-frame .v-badge small { margin: 0; font: 600 44px/1 var(--display); letter-spacing: .12em; color: var(--ink); }
+.slide-deck .stage-frame .v-badge b { margin-top: 12px; font: 600 76px/1.05 var(--display); }
+.slide-deck .stage-frame .v-badge span { margin-top: 28px; font: 600 48px/1 var(--display); }
+.slide-deck .stage-frame .v-badge span.todo { color: #8A2232; }
+.slide-deck .stage-frame .v-tiles { list-style: none; margin: 0; padding: 0; display: grid; gap: 24px; }
+.slide-deck .stage-frame .v-tiles li { display: grid; grid-template-columns: 80px 1fr; column-gap: 24px; align-items: center; padding: 24px 30px; background: var(--panel); border-left: 10px solid var(--tone); }
+.slide-deck .stage-frame .v-tiles li .icon { grid-row: span 2; color: var(--tone); }
+.slide-deck .stage-frame .v-tiles b { font: 600 44px/1.15 var(--display); color: var(--white); }
+.slide-deck .stage-frame .v-tiles span { font-size: 30px; color: var(--off-white); }
+
+/* The problem: the polling loop versus change-driven */
+.slide-deck .stage-frame .v-versus { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; flex: 1; }
+.slide-deck .stage-frame .v-versus section { padding: 24px 32px; background: var(--panel); border-top: 10px solid var(--tone); display: flex; flex-direction: column; }
+.slide-deck .stage-frame .v-versus .bad { --tone: var(--light-red); }
+.slide-deck .stage-frame .v-versus .good { --tone: var(--green); }
+.slide-deck .stage-frame .v-versus h2 { display: flex; gap: 16px; align-items: center; margin: 0 0 8px; font: 600 44px/1.2 var(--display); color: var(--tone); }
+.slide-deck .stage-frame .v-versus section > p { margin-top: auto; font: 600 32px/1.3 var(--display); color: var(--light-red); }
+.slide-deck .stage-frame .v-loop { width: 100%; height: 470px; }
+.slide-deck .stage-frame .v-loop circle { fill: none; stroke: var(--light-red); stroke-width: 5; stroke-dasharray: 18 14; }
+.slide-deck .stage-frame .v-loop rect { fill: #091F2C; stroke: var(--light-red); stroke-width: 3; }
+.slide-deck .stage-frame .v-loop text { fill: var(--white); font: 600 32px var(--text); }
+.slide-deck .stage-frame .v-loop .v-loop-centre { fill: var(--light-gray); font: 400 34px var(--text); }
+.slide-deck .stage-frame .v-straight { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 40px; }
+.slide-deck .stage-frame .v-straight li { position: relative; padding: 18px 26px; background: var(--green); color: var(--ink); }
+.slide-deck .stage-frame .v-straight li:not(:last-child)::after { content: ""; position: absolute; left: 60px; bottom: -36px; border: 16px solid transparent; border-top: 20px solid var(--green); }
+.slide-deck .stage-frame .v-straight b { display: block; font: 600 40px/1.2 var(--display); }
+.slide-deck .stage-frame .v-straight span { font-size: 28px; }
+
+/* Sources → Continuous Queries → Reactions, growing */
+.slide-deck .stage-frame .v-grow { display: block; }
+.slide-deck .stage-frame .v-grow-head { font: 600 40px var(--display); }
+.slide-deck .stage-frame .v-grow-label { fill: #091F2C; font: 600 32px var(--text); }
+.slide-deck .stage-frame .v-grow path { fill: none; stroke: var(--light-gray); stroke-width: 4; }
+.slide-deck .stage-frame .v-grow.play .new { animation: v-grow-in .7s ease-out both; animation-delay: .25s; }
+@keyframes v-grow-in { from { opacity: 0; transform: translateX(-24px); } to { opacity: 1; transform: none; } }
+
+/* Plugins: sources and reactions round Drasi */
+.slide-deck .stage-frame .v-hub { flex: 1; display: grid; grid-template-columns: 1fr 70px 460px 70px 1fr; align-items: center; gap: 20px; }
+.slide-deck .stage-frame .v-plug { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.slide-deck .stage-frame .v-plug li { padding: 22px 12px; background: var(--tone); color: var(--ink); text-align: center; font: 600 30px/1.15 var(--text); }
+.slide-deck .stage-frame .v-plug li.more { grid-column: span 2; background: none; border: 3px dashed var(--tone); color: var(--tone); }
+.slide-deck .stage-frame .v-core { padding: 36px 30px; border-radius: 24px; background: var(--panel); border: 4px solid var(--light-purple); display: grid; gap: 16px; text-align: center; }
+.slide-deck .stage-frame .v-core b { font: 600 64px/1 var(--display); }
+.slide-deck .stage-frame .v-core span { padding: 16px; background: var(--tone); color: var(--ink); font: 600 30px/1.1 var(--display); }
+
+/* Form factors: three app architecture sketches */
+.slide-deck .stage-frame .v-forms { display: grid; grid-template-columns: repeat(3, 1fr); gap: 48px; }
+.slide-deck .stage-frame .v-forms section { padding: 24px 28px 28px; background: var(--panel); border-top: 10px solid var(--tone); display: flex; flex-direction: column; }
+.slide-deck .stage-frame .v-forms h2 { margin: 0 0 24px; font: 600 48px/1.2 var(--display); color: var(--tone); }
+.slide-deck .stage-frame .v-forms p { margin-top: 24px; font-size: 32px; line-height: 1.3; color: var(--off-white); }
+.slide-deck .stage-frame .v-sketch { height: 340px; display: flex; align-items: center; justify-content: center; gap: 12px; }
+.slide-deck .stage-frame .v-box { padding: 18px 20px; border: 3px solid var(--light-gray); font: 600 32px/1.15 var(--text); text-align: center; color: var(--white); }
+.slide-deck .stage-frame .v-box small { display: block; margin: 0 0 14px; font-size: 28px; color: var(--light-gray); text-align: left; }
+.slide-deck .stage-frame .v-box.app, .slide-deck .stage-frame .v-box.cluster { width: 100%; height: 100%; display: flex; flex-direction: column; }
+.slide-deck .stage-frame .v-box.cluster { border-style: dashed; border-radius: 18px; }
+.slide-deck .stage-frame .v-box.lib { border: 0; background: var(--tone); color: var(--ink); padding: 28px 18px; }
+.slide-deck .stage-frame .v-box.app .lib { margin: auto 30px; }
+.slide-deck .stage-frame .v-sketch.row .v-arrow { border-width: 14px; border-left-width: 22px; }
+.slide-deck .stage-frame .v-pods { flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; align-items: center; }
+.slide-deck .stage-frame .v-pods span { padding: 30px 4px; background: var(--tone); color: var(--ink); font-size: 26px; font-weight: 600; border-radius: 50%; aspect-ratio: 1; display: grid; place-items: center; }
+.slide-deck .stage-frame .v-langs { list-style: none; margin: 20px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.slide-deck .stage-frame .v-langs li { padding: 8px 14px; border: 2px solid var(--tone); color: var(--tone); font: 600 28px/1.2 var(--text); }
+
+/* Observability today: the tangle */
+.slide-deck .stage-frame .v-split { display: grid; grid-template-columns: 980px 1fr; gap: 56px; align-items: center; height: 100%; }
+.slide-deck .stage-frame .v-tangle { width: 980px; height: 720px; }
+.slide-deck .stage-frame .v-tangle line { stroke: var(--light-red); stroke-width: 3; opacity: .7; }
+.slide-deck .stage-frame .v-tangle line.thin { stroke: var(--light-gray); stroke-width: 2; opacity: .35; }
+.slide-deck .stage-frame .v-tangle rect { fill: #091F2C; stroke: var(--light-gray); stroke-width: 2; }
+.slide-deck .stage-frame .v-tangle text { fill: var(--white); font: 600 26px var(--text); }
+.slide-deck .stage-frame .v-tangle .who { fill: var(--light-red); }
+.slide-deck .stage-frame .v-tangle .who-q { fill: #091F2C; font: 700 64px var(--display); }
+.slide-deck .stage-frame .v-issues { list-style: none; margin: 0; padding: 0; display: grid; gap: 22px; }
+.slide-deck .stage-frame .v-issues li { padding-left: 24px; border-left: 8px solid var(--light-red); }
+.slide-deck .stage-frame .v-issues b { display: block; font: 600 42px/1.15 var(--display); }
+.slide-deck .stage-frame .v-issues span { font-size: 28px; color: var(--off-white); }
+
+/* What teams want: the clear picture */
+.slide-deck .stage-frame .v-clear { display: grid; grid-template-columns: 380px 70px 1fr 70px 480px; gap: 20px; align-items: center; }
+.slide-deck .stage-frame .v-inputs { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
+.slide-deck .stage-frame .v-inputs li { padding: 18px 22px; background: #091F2C; border: 2px solid var(--light-gray); font: 600 30px/1.2 var(--text); }
+.slide-deck .stage-frame .v-context { padding: 48px 28px; background: var(--light-blue); color: var(--ink); text-align: center; }
+.slide-deck .stage-frame .v-context b { display: block; font: 600 52px/1.1 var(--display); }
+.slide-deck .stage-frame .v-context span { display: block; margin-top: 14px; font-size: 30px; }
+.slide-deck .stage-frame .v-answers { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
+.slide-deck .stage-frame .v-answers li { display: flex; gap: 16px; align-items: center; padding: 16px 22px; background: var(--green); color: var(--ink); font: 600 34px/1.2 var(--display); }
+.slide-deck .stage-frame .v-wants { list-style: none; margin: auto 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
+.slide-deck .stage-frame .v-wants li { padding: 18px 22px; border-top: 6px solid var(--green); background: var(--panel); font: 600 30px/1.25 var(--display); }
+
+/* The scenario */
+.slide-deck .stage-frame .v-scenario { display: grid; grid-template-columns: 1fr 1fr 1fr; column-gap: 40px; row-gap: 10px; }
+.slide-deck .stage-frame .v-work { padding: 20px 26px; background: var(--light-purple); color: var(--ink); }
+.slide-deck .stage-frame .v-work.empty { background: none; }
+.slide-deck .stage-frame .v-work b { display: block; font: 600 38px/1.15 var(--display); }
+.slide-deck .stage-frame .v-work span { font-size: 28px; }
+.slide-deck .stage-frame .v-down { justify-self: center; width: 0; height: 0; border: 18px solid transparent; border-top: 26px solid var(--light-purple); border-bottom: 0; }
+.slide-deck .stage-frame .v-region { position: relative; padding: 48px 20px 20px; border: 3px solid var(--light-blue); border-radius: 16px; display: grid; gap: 40px; }
+.slide-deck .stage-frame .v-region.eu { grid-column: span 2; grid-template-columns: 1fr 1fr; }
+.slide-deck .stage-frame .v-region > small { position: absolute; left: 20px; top: 8px; font: 600 26px var(--display); color: var(--light-blue); letter-spacing: .06em; text-transform: uppercase; }
+.slide-deck .stage-frame .v-deploy { padding: 22px 26px; background: var(--light-blue); color: var(--ink); }
+.slide-deck .stage-frame .v-deploy.pending-capacity { background: none; border: 4px dashed var(--light-blue); color: var(--white); }
+.slide-deck .stage-frame .v-deploy b { display: block; font: 600 56px/1.1 var(--display); }
+.slide-deck .stage-frame .v-deploy span, .slide-deck .stage-frame .v-deploy small { display: block; margin: 4px 0 0; font-size: 28px; color: inherit; }
+.slide-deck .stage-frame .v-rules { margin-top: 28px; display: flex; gap: 24px; }
+.slide-deck .stage-frame .v-rules .rule { display: flex; gap: 12px; align-items: center; padding: 12px 22px; background: var(--panel); border-left: 8px solid var(--green); font: 600 28px/1.2 var(--text); }
+.slide-deck .stage-frame .v-rules .icon { color: var(--green); }
+.slide-deck .stage-frame .v-tools { list-style: none; margin: auto 0 0; padding: 0; display: flex; gap: 20px; }
+.slide-deck .stage-frame .v-tools li { flex: 1; display: flex; gap: 12px; align-items: center; justify-content: center; padding: 14px 10px; border: 2px solid var(--light-gray); font: 600 28px/1.2 var(--text); }
+
+/* What you saw */
+.slide-deck .stage-frame .v-scenes { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px; }
+.slide-deck .stage-frame .v-scenes li { padding: 22px 26px 28px; background: var(--panel); border-top: 10px solid var(--tone); }
+.slide-deck .stage-frame .v-scenes small { display: block; font: 600 72px/1 var(--display); color: var(--tone); }
+.slide-deck .stage-frame .v-scenes b { display: block; margin-top: 12px; font: 600 38px/1.15 var(--display); }
+.slide-deck .stage-frame .v-scenes span { display: block; margin-top: 12px; font-size: 28px; line-height: 1.3; color: var(--off-white); }
+.slide-deck .stage-frame .v-ribbon { list-style: none; margin: 56px 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); }
+.slide-deck .stage-frame .v-ribbon li { position: relative; padding: 26px 30px 26px 56px; background: var(--tone); color: var(--ink); font: 600 40px/1.1 var(--display);
+  clip-path: polygon(0 0, calc(100% - 36px) 0, 100% 50%, calc(100% - 36px) 100%, 0 100%, 36px 50%); }
+.slide-deck .stage-frame .v-ribbon li:first-child { clip-path: polygon(0 0, calc(100% - 36px) 0, 100% 50%, calc(100% - 36px) 100%, 0 100%); padding-left: 30px; }
+
+/* Learn more */
+.slide-deck .stage-frame .v-links { display: grid; grid-template-columns: 520px 1fr; gap: 72px; align-items: start; }
+.slide-deck .stage-frame .v-qr { padding: 28px; background: var(--white); color: var(--ink); text-align: center; }
+.slide-deck .stage-frame .v-qr .qr { width: 464px; height: 464px; }
+.slide-deck .stage-frame .v-qr b { display: block; margin-top: 16px; font: 600 52px/1 var(--display); }
+.slide-deck .stage-frame .v-tiles.links span { font-size: 32px; }
+.slide-deck .stage-frame .v-plug { align-self: center; }
+.slide-deck .stage-frame .v-clear { flex: 1; }

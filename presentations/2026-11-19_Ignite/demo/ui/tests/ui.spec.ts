@@ -7,6 +7,7 @@ import { notes } from "../../../presentation/notes";
 import { presenterScript } from "../../../presentation/script";
 import { replayClips } from "../../../presentation/replay";
 import { buildConfig, configIds } from "../../../presentation/codeSlides";
+import { howIds, isHow } from "../../../presentation/howItWorks";
 import { unknownKeys, type Dashboard } from "../../../presentation/panels";
 import fs from "node:fs";
 
@@ -45,12 +46,12 @@ test("the talk is 22 minutes and every beat says something and shows something",
     }
     expect(cue.ifBroken.trim()).not.toBe("");
   }
-  expect(slides.map(s => s.id)).toEqual(["walkin", "title", "project", "problem", "drasi-1", "drasi-2", "drasi-3", "plugins", "forms", "issues", "wants", "scenario-map", "how-1", "how-2", "how-3", "how-4", "closing", "links", "survey"]);
-  // The walk-in opens the talk, Drasi grows from one source to many, each scene ends on how it works, and the survey is last.
+  expect(slides.map(s => s.id)).toEqual(["walkin", "title", "project", "problem", "drasi-1", "drasi-2", "drasi-3", "plugins", "forms", "issues", "wants", "scenario-map", "closing", "links", "survey"]);
+  // The walk-in opens the talk, Drasi grows from one source to many, each scene opens its overlay on how it works, and the survey is last.
   const shown = scenes.flatMap(scene => notes[scene.id].beats.map(beat => beat.show));
   expect(shown[0]).toBe("walkin");
   expect(notes.drasi.beats.map(beat => beat.show)).toEqual(["drasi-1", "drasi-2", "drasi-3", "plugins", "forms"]);
-  for (const [n, id] of (["scene1", "scene2", "scene3", "scene4"] as const).entries()) expect(notes[id].beats.at(-1)!.show).toBe(`how-${n + 1}`);
+  for (const id of ["scene1", "scene2", "scene3", "scene4"] as const) expect(notes[id].beats.find(beat => beat.config)!.config![0], id).toMatch(/^how-/);
   expect(shown.at(-1)).toBe("survey");
 });
 
@@ -79,13 +80,13 @@ test("every highlight in the script names a panel on the dashboards", () => {
 test("each Decision Support beat shows its configuration above the highlighted panel, clear of it and of the captions", async ({ page }) => {
   await stubGrafana(page);
   await page.setViewportSize({ width: 1920, height: 1080 });
-  for (const beat of Object.values(notes).flatMap(cue => cue.beats).filter(beat => beat.config)) {
+  for (const beat of Object.values(notes).flatMap(cue => cue.beats).filter(beat => beat.config && beat.show === "ops")) {
     await page.goto(`/present?view=ops&preview=1&highlight=${beat.highlight!.join(",")}&config=${beat.config!.join(",")}`);
-    await expect(page.locator(".config-overlay .code-panel")).toHaveCount(beat.config!.length);
+    await expect(page.locator(".config-overlay > *")).toHaveCount(beat.config!.length);
     const [overlay] = await onSlide(page, ".config-overlay");
     const outlines = await onSlide(page, ".panel-highlight .outline");
-    expect(outlines.length).toBe(1);
-    expect(overlay.bottom, beat.config!.join()).toBeLessThan(outlines[0].top);
+    expect(outlines.length).toBe(beat.highlight!.length);
+    for (const outline of outlines) expect(overlay.bottom, beat.config!.join()).toBeLessThan(outline.top);
     expect(overlay.left).toBeGreaterThanOrEqual(92 - 1);
     expect(overlay.right).toBeLessThanOrEqual(frame.width - 92 + 1);
     // The arrow leaves the card and its tip lands just above the highlighted panel, within its width.
@@ -125,13 +126,13 @@ test("a beat's highlight outlines its dashboard panels on the projector, above t
   await expect(projector.locator("iframe.stage-dashboard").first()).toBeVisible();
   await expect(projector.locator(".panel-highlight")).toHaveCount(0);
   await page.getByRole("button", { name: "Next ▶" }).click();
-  await expect(page.locator(".say")).toContainText("Deployment status");
+  await expect(page.locator(".say")).toContainText("How do these two tiles");
   const outline = projector.locator(".panel-highlight .outline");
   await expect(outline).toHaveCount(notes.scene1.beats[1].highlight!.length);
   const box = await onSlide(projector, ".panel-highlight .outline");
   expect(box[0].bottom).toBeLessThanOrEqual(frame.captionTop);
   await page.getByRole("button", { name: "Next ▶" }).click();
-  await expect(page.locator(".say")).toContainText("Workload status joins");
+  await expect(page.locator(".say")).toContainText("Here's the first query");
   await expect(outline).toHaveCount(notes.scene1.beats[2].highlight!.length);
   for (let i = 0; i < 2; i++) await page.getByRole("button", { name: "◀ Back" }).click();
   await expect(projector.locator(".panel-highlight")).toHaveCount(0);
@@ -148,9 +149,10 @@ test("the configuration shown beside each panel is the real files', text, and ev
   expect(config["what-if"].lines.join("\n")).toContain('"name": "loss"');
   for (const id of configIds) expect(config[id].hot.every(text => config[id].lines.some(line => line.includes(text))), id).toBe(true);
   const used = Object.values(notes).flatMap(cue => cue.beats.flatMap(beat => beat.config ?? []));
-  expect(new Set(used)).toEqual(new Set(configIds));
+  expect(new Set(used.filter(id => !isHow(id)))).toEqual(new Set(configIds));
+  expect(new Set(used.filter(isHow))).toEqual(new Set(howIds));
   // Each panel's configuration is shown while that panel is highlighted.
-  for (const beat of Object.values(notes).flatMap(cue => cue.beats).filter(beat => beat.config)) expect(beat.highlight?.length).toBe(1);
+  for (const beat of Object.values(notes).flatMap(cue => cue.beats).filter(beat => beat.config?.some(id => !isHow(id)))) expect(beat.highlight?.length).toBe(1);
 });
 
 test("Next on the desk moves through beats and changes what the projector shows", async ({ page, request }) => {
@@ -194,10 +196,10 @@ test("keys pressed on the projector (a clicker) drive the desk", async ({ page }
 });
 
 test("short on time skips optional beats", async ({ page }) => {
-  await desk(page, "scene2", 0);
+  await desk(page, "scene2", 1);
   await page.getByLabel("Short on time").check();
   await page.getByRole("button", { name: "Next ▶" }).click();
-  await expect(page.locator(".say")).toContainText("How it works");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Scene 3");
 });
 
 test("the compliance change is scene 3, on the dashboard, before the failure", () => {

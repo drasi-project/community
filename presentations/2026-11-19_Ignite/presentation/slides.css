@@ -248,3 +248,21 @@
 .slide-deck .stage-frame .rough-flow > li:not(:last-child)::after { content: "→"; position: absolute; right: -46px; top: 50%; font-size: 40px; color: var(--light-gray); }
 .slide-deck .stage-frame .rough-flow b { font: 600 32px/1.2 var(--display); color: var(--tone); }
 .slide-deck .stage-frame .rough-flow span { padding: 10px 14px; background: rgba(255, 255, 255, .08); font-size: 26px; line-height: 1.25; color: var(--off-white); }
+
+/* "How it works" over the dashboard: the components a scene connects, then the code behind them */
+.slide-deck .stage-frame .how-card { background: var(--white); color: #091F2C; padding: 14px 22px 20px; }
+.slide-deck .stage-frame .how-title { font: 600 24px/1.2 var(--display); color: #2A446F; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 10px; }
+.slide-deck .stage-frame .how-flow { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 340px 340px 340px 250px; gap: 44px; align-items: stretch; }
+.slide-deck .stage-frame .how-col { position: relative; }
+.slide-deck .stage-frame .how-col:not(:last-child)::after { content: ""; position: absolute; right: -36px; top: 50%; border: 14px solid transparent; border-left: 20px solid #2A446F; transform: translateY(-50%); }
+.slide-deck .stage-frame .how-col h3 { margin: 0 0 8px; padding: 4px 12px; font: 600 20px/1.2 var(--display); text-transform: uppercase; letter-spacing: .05em; background: var(--tone); color: #091F2C; }
+.slide-deck .stage-frame .how-col.blue { --tone: #8DC8E8; } .slide-deck .stage-frame .how-col.purple { --tone: #C5B4E3; } .slide-deck .stage-frame .how-col.lime { --tone: #D4EC8E; }
+.slide-deck .stage-frame .how-col ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.slide-deck .stage-frame .how-col .part { display: grid; grid-template-columns: 34px 1fr; column-gap: 10px; align-items: center; padding: 8px 12px; background: #F4F3F5; border-left: 6px solid var(--tone); }
+.slide-deck .stage-frame .how-col .part .icon { grid-row: span 2; color: #2A446F; }
+.slide-deck .stage-frame .how-col .part b { font: 600 22px/1.2 var(--text); }
+.slide-deck .stage-frame .how-col .part small { font-size: 18px; line-height: 1.25; color: #333; }
+.slide-deck .stage-frame .how-col.lands { display: flex; flex-direction: column; justify-content: center; }
+.slide-deck .stage-frame .how-col.lands h3 { --tone: #FFE399; }
+.slide-deck .stage-frame .how-col.lands p { padding: 14px; background: #FFE399; font: 600 24px/1.25 var(--display); }
+.slide-deck .stage-frame .config-overlay.pinned { right: 92px; top: 96px; }

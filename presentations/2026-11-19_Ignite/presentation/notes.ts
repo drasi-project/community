@@ -1,5 +1,6 @@
 import type { SceneId, StageView } from "./scenes";
 import type { ConfigId } from "./codeSlides";
+import type { HowId } from "./howItWorks";
 
 // The single source for what the presenter says and does. The presenter desk shows it beat by
 // beat, and PRESENTER.md's run of show and script are generated from it
@@ -22,7 +23,7 @@ export type Beat = {
   // "key" in the dashboard JSON, or its title in lower case with dashes (a row covers its panels).
   highlight?: string[];
   // The Drasi configuration behind the highlighted panel, shown above it (presentation/codeSlides.ts).
-  config?: ConfigId[];
+  config?: (ConfigId | HowId)[];
 };
 export type Cue = { summary: string; beats: Beat[]; ifBroken: string; recording?: string };
 
@@ -71,53 +72,54 @@ export const notes: Record<SceneId, Cue> = {
     ifBroken: "Carry on; the slides don't depend on the demo.",
   },
   scene1: {
-    summary: "Telemetry + configuration → query → Prometheus reaction → Grafana",
+    summary: "Telemetry + configuration → queries → Prometheus reaction → Grafana",
     beats: [
       { show: "ops",
         say: "Let's start simple. The team wants one view of each deployment's health and each workload's status, and that means joining telemetry with configuration data. This is their Grafana dashboard: the top row is ordinary monitoring, the bottom row is Drasi's answers.",
         watch: "Charts moving. If the desk says Traffic: stopped, press Start demo traffic in All demo controls." },
+      { show: "ops", highlight: ["ai-operations.deployment-status", "ai-operations.workload-status"], config: ["how-status"],
+        say: "How do these two tiles work? Two sources: the health checks, which arrive as ordinary OpenTelemetry metrics every second, and the AI service's own database, where it keeps its deployments, workloads, routes and policy. Two continuous queries join them, and a Prometheus reaction publishes each answer as a metric, so Grafana draws it. No polling job, and no glue code.",
+        watch: "The how-it-works card above Deployment status and Workload status, with an arrow to each." },
       { show: "ops", highlight: ["ai-operations.deployment-status"], config: ["deployment-health"],
-        say: "Deployment status: every second the AI service probes each deployment and exports the result as an ordinary OpenTelemetry metric. The Collector forwards it to Drasi's OpenTelemetry source, and this query keeps the latest probe per deployment.",
+        say: "Here's the first query: the latest health check per deployment, from the OpenTelemetry source. 2 means failed.",
         watch: "Deployment status: EU-A, EU-B, US-C Healthy; the deployment-health query above it." },
       { show: "ops", highlight: ["ai-operations.workload-status"], config: ["tile-workloads"],
-        say: "Workload status joins that telemetry with configuration in the application's database: where each workload runs, and what the policy says about that deployment. So it tells you whether each workload is being served somewhere healthy that it's allowed to run.",
+        say: "And the second joins that health with configuration: where each workload runs, and whether policy allows it there. So it says whether each workload is served somewhere healthy that it's allowed to run.",
         watch: "Workload status: Support · EU-A and Summaries · EU-B Healthy; the tile-workloads query above it." },
-      { show: "how-1",
-        say: "How it works: two sources, the OpenTelemetry health checks and the PostgreSQL change feed; continuous queries that join them; and a Prometheus reaction that publishes each answer as a metric, so Grafana draws it and you can alert on it like anything else. No polling job, and no glue code." },
     ],
-    ifBroken: "If the tiles are empty, traffic or Drasi isn't running: show the how-it-works slide and describe it.",
+    ifBroken: "If the tiles are empty, traffic or Drasi isn't running: describe the how-it-works card and move on.",
   },
   scene2: {
     summary: "The absence of change: requests with no answer by their deadline (trueLater)",
     beats: [
+      { show: "ops", highlight: ["ai-operations.support-overdue"], config: ["how-overdue"],
+        say: "Some of the most important situations are things that didn't happen. A customer request that gets no answer within 15 seconds produces no event: no new row, no new metric. Here the source is the requests in the database; the query lists every request not yet answered, and a time condition makes Drasi re-check each one at its deadline. The answer goes to Grafana, and to the incident channel when support falls behind.",
+        watch: "The how-it-works card above Support overdue." },
       { show: "ops", highlight: ["ai-operations.support-overdue"], config: ["overdue-tasks"],
-        say: "Some of the most important situations are things that didn't happen. A customer request that gets no answer within 15 seconds produces no event: no new row, no new metric. This query lists every request not yet answered or cancelled, and drasi.trueLater becomes true at the request's deadline, so Drasi re-checks just that request at that moment, and it joins the list with no new event. The result is the exact list of late requests, kept current request by request. TODO: a live trigger here (for example a control that slows support answers), or say we'll see it climb in scene 4.",
+        say: "This is the query. drasi.trueLater becomes true at the request's deadline, so the request joins the list at that moment with no new event, and leaves it when it's answered. The exact list of late requests, kept current request by request. TODO: a live trigger here (for example a control that slows support answers), or say we'll see it climb in scene 4.",
         watch: "Support overdue 0; the overdue-tasks query above it, the trueLater line highlighted." },
-      { show: "ops", highlight: ["ai-operations.deployment-status"], config: ["deployment-health"],
-        say: "The same idea keeps Deployment status honest: each health reading is good for 8 seconds, so if the probes stop arriving, the deployment turns Unknown as time passes, not stays green. TODO: keep this beat?",
-        optional: true },
-      { show: "how-2",
-        say: "How it works: the requests come from the database's change feed, a continuous query with a time-based condition, and two reactions, Prometheus for the dashboard and the incident channel for a card. TODO: NEW_FLOW mentions logs or spans as a source here; decide whether to show one." },
+      { show: "ops", highlight: ["ai-operations.deployment-status"], config: ["deployment-health"], optional: true,
+        say: "The same idea keeps Deployment status honest: each health reading is good for 8 seconds, so if the checks stop arriving, the deployment turns Unknown as time passes rather than staying green. TODO: keep this beat?" },
     ],
-    ifBroken: "Describe it from the how-it-works slide; scene 4 shows it live.",
+    ifBroken: "Describe it from the card; scene 4 shows it live.",
   },
   scene3: {
     summary: "Summaries Europe-only puts failover at risk; compliance allows the US and it's safe",
     beats: [
-      { show: "ops", highlight: ["ai-operations.failover-readiness"], config: ["what-if"],
-        say: "We've provisioned extra capacity in US-C, but compliance won't let document summaries be processed in the US. Failover readiness is a what-if: would every workload still have somewhere allowed to run if any one deployment failed? Right now, no: if EU-A failed, support and summaries would both need EU-B, which only has 100k.",
-        watch: "Failover readiness: At risk: losing EU-A leaves no valid plan (yellow); the scenario above it." },
+      { show: "ops", highlight: ["ai-operations.recommended-action", "ai-operations.failover-readiness"], config: ["how-readiness"],
+        say: "We've provisioned extra capacity in US-C, but compliance won't let document summaries be processed in the US. Failover readiness asks: if any one deployment failed, would every workload still have somewhere allowed to run? Right now, no, and Recommended action says add capacity. Behind it: the policy and the deployments from the database, health from OpenTelemetry, and two of Drasi's continuous models, a Rego policy and an optimization model, re-run whenever any of them changes.",
+        watch: "Failover readiness: At risk: losing EU-A leaves no valid plan; Recommended action: Add capacity (both yellow); the how-it-works card above." },
       { show: "ops", highlight: ["ai-operations.recommended-action"], config: ["policy"],
-        say: "That answer combines two of Drasi's continuous models. The policy, as Rego rules: a workload may only use the deployments it's allowed, and restricted data stays in its region. The allowed destinations are data, rows in the database.",
-        watch: "Recommended action: Add capacity: losing EU-A leaves no valid plan (yellow); the Rego rules above it." },
+        say: "The policy, as Rego: a workload may only use the deployments it's allowed, and restricted data stays in its region. The allowed destinations are data, rows in the database.",
+        watch: "The Rego rules above Recommended action." },
+      { show: "ops", highlight: ["ai-operations.failover-readiness"], config: ["what-if"],
+        say: "And the what-if: the same optimization solved again without each healthy deployment in turn. Lose EU-A, and support and summaries would both need EU-B, which only has 100k.",
+        watch: "The loss scenario above Failover readiness." },
       { show: "ops", highlight: ["ai-operations.recommended-action"], config: ["optimization"], optional: true,
-        say: "And the optimization model: one yes-or-no choice per workload and allowed deployment, every workload placed once, each healthy deployment within capacity, fewest moves first. Drasi re-solves whenever health, capacity or policy changes.",
-        watch: "The optimization model above Recommended action." },
+        say: "The optimization model itself: one yes-or-no choice per workload and allowed deployment, every workload placed once, each healthy deployment within capacity, fewest moves first." },
       { show: "ops", do: ["summaries-anywhere"], highlight: ["ai-operations.failover-readiness", "ai-operations.recommended-action"],
         say: "Now compliance agrees summaries can run in the US: they use public data. That's one row in the policy data. Drasi re-runs the policy and the what-if at once: summaries could fail over to US-C, so we'd survive losing any one deployment, and the capacity warning goes away.",
         watch: "Failover readiness: Survives losing any one deployment (green); Recommended action: None. (Drasi also posts Failover restored in the channel.)" },
-      { show: "how-3",
-        say: "How it works: the policy and the configuration come from the database, health from OpenTelemetry; the policy and optimization models re-run when any of them changes; and the Prometheus reaction puts the answer in Grafana, while the channel reaction posts when readiness changes." },
     ],
     ifBroken: "If Failover readiness doesn't turn green within about 10 seconds, say what it would show and move on.",
   },
@@ -126,15 +128,15 @@ export const notes: Record<SceneId, Cue> = {
     recording: "failure",
     beats: [
       { show: "ops", do: ["fail-eu-a"], highlight: ["ai-operations.deployment-status", "ai-operations.recommended-action"],
-        say: "Now EU-A, the deployment serving customer support, goes down. Nobody tells Drasi: its health probes fail, and within seconds Deployment status says Failed and Recommended action names a fix: move summaries to US-C and support to EU-B, within policy. Support overdue starts climbing too: that's scene 2's query, live.",
+        say: "Now EU-A, the deployment serving customer support, goes down. Nobody tells Drasi: its health checks fail, and within seconds Deployment status says Failed and Recommended action names a fix: move summaries to US-C and support to EU-B, within policy. Support overdue starts climbing too: that's scene 2's query, live.",
         watch: "Within about 8 seconds: EU-A Failed; Recommended action: Move summaries to US-C and support to EU-B (orange); Support overdue above 0." },
-      { show: "incident",
+      { show: "incident", config: ["how-proposal"],
         click: "Scroll up to the orange Proposed change card so the whole card shows",
-        say: "The team doesn't live on a dashboard. In their incident channel, Drasi posted as soon as EU-A failed, with the proposed change and the facts it was based on, before Grafana's alert arrived. Two moves, both within policy.",
-        watch: "Red Deployment failed: EU-A, then the orange Proposed change card with Approve and Reject; Grafana's alert after them." },
+        say: "The team doesn't live on a dashboard. In their incident channel, Drasi posted as soon as EU-A failed, with the proposed change and the facts it was based on, before Grafana's alert arrived. How: the same policy and optimization models, with a reaction that posts the card; and when someone approves it, another reaction applies the routes through the gateway's configuration API, and a query checks it worked.",
+        watch: "Red Deployment failed: EU-A, then the orange Proposed change card with Approve and Reject; the how-it-works card top right." },
       { show: "incident", do: ["approve-change"], recording: "recovery",
         click: "Approve on the newest orange Proposed change card",
-        say: "I approve it here, as the on-call engineer would. Drasi checks the approval still matches its current plan, and its reaction applies the new routes through the gateway's configuration API.",
+        say: "I approve it here, as the on-call engineer would. Drasi checks the approval still matches its current plan, and applies the new routes.",
         watch: "Approved by @oncall; in the thread, blue Applied: Move summaries to US-C and support to EU-B." },
       { show: "ops", highlight: ["ai-operations.recommended-action", "ai-operations.support-overdue"], recording: "recovery",
         say: "Applied isn't fixed: another query waits until the backlog has cleared and support requests are answered on the new route, then says Verified. Support overdue is back to 0.",
@@ -142,15 +144,13 @@ export const notes: Record<SceneId, Cue> = {
       { show: "ops", do: ["restore-eu-a"], highlight: ["ai-operations.decision-support"], recording: "resilience", optional: true,
         say: "Later EU-A is back at full capacity: every deployment Healthy, and we'd survive losing any one again. Nothing moves back; Drasi only proposes a move when the facts call for one.",
         watch: "All Healthy; Failover readiness: Survives losing any one deployment; no new channel card." },
-      { show: "how-4",
-        say: "How it works: health, policy, capacity and approvals as sources; the policy and optimization models; and reactions into the incident channel, the gateway's configuration API, Grafana annotations and Langfuse." },
     ],
     ifBroken: "If nothing changes within 30 seconds, press Use recordings from here on. If Approve doesn't respond, press Approve the proposed change on the desk; never approve twice.",
   },
   closing: {
     summary: "What we showed; links; the session survey, then questions",
     beats: [
-      { show: "closing", say: "So what did we see? Richer context, from data that already existed in different places: the application's database, OpenTelemetry health checks, policy and approvals. And without an integration project: connect sources, configure continuous models, connect reactions. TODO: tie back to the four scenes." },
+      { show: "closing", say: "So what did we see? Status worked out from telemetry and configuration together. Requests that got no answer, noticed at their deadline. A compliance change that made the service more resilient. And a fix, proposed within policy, approved in chat and verified. Each one is richer context from data that already existed in different places, and none of it needed an integration project: connect sources, configure continuous models, connect reactions." },
       { show: "links", say: "To learn more, start at drasi.io; the code, and this demo, are on GitHub." },
       { show: "survey", say: "Thank you. Please scan the code and tell us how we did in the session survey. Questions?",
         watch: "The survey slide with its QR code stays up during questions." },

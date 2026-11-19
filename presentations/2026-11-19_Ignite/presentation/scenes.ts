@@ -38,11 +38,7 @@ export const slides = [
   { id: "issues", title: "Observability issues" },
   { id: "wants", title: "What they want" },
   { id: "scenario-map", title: "The scenario" },
-  { id: "how-1", title: "How it works · scene 1" },
-  { id: "how-2", title: "How it works · scene 2" },
-  { id: "how-3", title: "How it works · scene 3" },
-  { id: "how-4", title: "How it works · scene 4" },
-  { id: "closing", title: "Summary" },
+  { id: "closing", title: "What you saw" },
   { id: "links", title: "Learn more" },
   { id: "survey", title: "Session survey" },
 ] as const;

@@ -1,0 +1,206 @@
+import type { ReactNode } from "react";
+import { Icon } from "./Icon";
+import "./visuals.css";
+
+// The new flow's slides (NEW_FLOW.md): diagrams rather than lists. Rough-to-medium polish.
+export const visualIds = ["project", "problem", "drasi-1", "drasi-2", "drasi-3", "plugins", "forms", "issues", "wants", "scenario-map", "closing", "links"] as const;
+export type VisualId = typeof visualIds[number];
+export const isVisual = (id: string): id is VisualId => (visualIds as readonly string[]).includes(id);
+
+const nb = (text: string) => text.replace(/\b(EU|US)-([A-C])\b/g, "$1\u2011$2");
+const Slide = ({ id, title, children }: { id: string; title: string; children: ReactNode }) =>
+  <div className={`content-slide v-slide vs-${id}`}><h1>{title}</h1><div className="body">{children}</div></div>;
+const Arrow = () => <span className="v-arrow" aria-hidden="true" />;
+
+// Sources → Continuous Queries → Reactions, growing over three slides.
+type Node = { id: string; col: 0 | 1 | 2; row: number; label: string; step: number; relabel?: [number, string] };
+const nodes: Node[] = [
+  { id: "pg", col: 0, row: 1, label: "PostgreSQL", step: 1 },
+  { id: "otel", col: 0, row: 0, label: "OpenTelemetry", step: 2 },
+  { id: "k8s", col: 0, row: 2, label: "Kubernetes", step: 2 },
+  { id: "hub", col: 0, row: 3, label: "Event Hubs", step: 3 },
+  { id: "q1", col: 1, row: 1, label: "Late orders", step: 1, relabel: [2, "Late orders, unhealthy infra"] },
+  { id: "q2", col: 1, row: 0, label: "Unhealthy deployments", step: 3 },
+  { id: "q3", col: 1, row: 2, label: "Policy violations", step: 3 },
+  { id: "q4", col: 1, row: 3, label: "Stock running low", step: 3 },
+  { id: "r1", col: 2, row: 1, label: "Notify the team", step: 1 },
+  { id: "r2", col: 2, row: 0, label: "Dashboard", step: 3 },
+  { id: "r3", col: 2, row: 2, label: "Start a workflow", step: 3 },
+  { id: "r4", col: 2, row: 3, label: "Update a cache", step: 3 },
+];
+const edges: [string, string, number][] = [["pg", "q1", 1], ["q1", "r1", 1], ["otel", "q1", 2], ["k8s", "q1", 2],
+  ["otel", "q2", 3], ["k8s", "q2", 3], ["pg", "q3", 3], ["hub", "q4", 3], ["pg", "q4", 3], ["q2", "r2", 3], ["q1", "r2", 3], ["q3", "r3", 3], ["q4", "r4", 3], ["q3", "r1", 3]];
+const colX = [0, 640, 1336], colW = [400, 456, 400], rowY = (row: number) => 96 + row * 150, nodeH = 104;
+const tones = ["#8DC8E8", "#C5B4E3", "#D4EC8E"];
+function Grow({ step, active }: { step: number; active: boolean }) {
+  const at = (id: string) => nodes.find(n => n.id === id)!;
+  const shown = nodes.filter(n => n.step <= step);
+  return <svg className={`v-grow${active ? " play" : ""}`} viewBox="0 0 1736 650" width="1736" height="650" role="img" aria-label="Sources, continuous queries and reactions">
+    {["Sources", "Continuous Queries", "Reactions"].map((h, i) =>
+      <text key={h} x={colX[i] + colW[i] / 2} y="40" textAnchor="middle" className="v-grow-head" fill={tones[i]}>{h}</text>)}
+    {edges.filter(([, , s]) => s <= step).map(([a, b, s]) => {
+      const from = at(a), to = at(b);
+      const x1 = colX[from.col] + colW[from.col], y1 = rowY(from.row) + nodeH / 2, x2 = colX[to.col], y2 = rowY(to.row) + nodeH / 2;
+      return <path key={a + b} className={s === step && step > 1 ? "new" : undefined} d={`M${x1},${y1} C${x1 + 120},${y1} ${x2 - 120},${y2} ${x2 - 10},${y2}`} markerEnd="url(#grow-head)" />;
+    })}
+    <defs><marker id="grow-head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#D9D9D6" /></marker></defs>
+    {shown.map(n => {
+      const label = n.relabel && step >= n.relabel[0] ? n.relabel[1] : n.label;
+      const fresh = (n.step === step && step > 1) || (n.relabel?.[0] === step);
+      return <g key={n.id} className={fresh ? "new" : undefined}>
+        <rect x={colX[n.col]} y={rowY(n.row)} width={colW[n.col]} height={nodeH} rx="10" fill={tones[n.col]} />
+        <text x={colX[n.col] + colW[n.col] / 2} y={rowY(n.row) + nodeH / 2 + 12} textAnchor="middle" className="v-grow-label">{label}</text>
+      </g>;
+    })}
+  </svg>;
+}
+
+// The usual polling loop: four boxes round a circle.
+function Loop() {
+  const steps: [number, number, string][] = [[380, 50, "Poll every few seconds"], [575, 230, "Query everything"], [380, 410, "Diff with last time"], [185, 230, "Code to react"]];
+  return <svg className="v-loop" viewBox="0 0 760 460" width="760" height="460" aria-hidden="true">
+    <circle cx="380" cy="230" r="180" />
+    {steps.map(([x, y, t]) => <g key={t}><rect x={x - 180} y={y - 40} width="360" height="80" rx="8" /><text x={x} y={y + 12} textAnchor="middle">{t}</text></g>)}
+  </svg>;
+}
+
+// The tangle: an on-call engineer between many tools.
+const tools: [number, number, string][] = [[90, 70, "Metrics"], [400, 40, "Logs"], [720, 80, "Traces"], [840, 250, "Alerts"], [740, 500, "Dashboards"],
+  [680, 640, "Tickets"], [360, 660, "Chat"], [90, 600, "CMDB"], [30, 400, "Deploy logs"], [40, 230, "Policy docs"], [600, 390, "Spreadsheets"], [300, 470, "Scripts"]];
+function Tangle() {
+  const person: [number, number] = [470, 300];
+  const cross: [number, number][] = [[0, 6], [1, 7], [2, 8], [3, 9], [4, 0], [5, 1], [10, 2], [11, 3], [6, 10], [8, 4]];
+  return <svg className="v-tangle" viewBox="0 0 980 720" width="980" height="720" aria-hidden="true">
+    {cross.map(([a, b]) => <line key={`${a}-${b}`} className="thin" x1={tools[a][0] + 60} y1={tools[a][1] + 22} x2={tools[b][0] + 60} y2={tools[b][1] + 22} />)}
+    {tools.map(([x, y]) => <line key={`${x}-${y}`} x1={person[0]} y1={person[1]} x2={x + 60} y2={y + 22} />)}
+    {tools.map(([x, y, t]) => <g key={t}><rect x={x} y={y} width={t.length * 15 + 34} height="46" rx="6" /><text x={x + 17} y={y + 32}>{t}</text></g>)}
+    <circle className="who" cx={person[0]} cy={person[1]} r="58" />
+    <text className="who-q" x={person[0]} y={person[1] + 22} textAnchor="middle">?</text>
+  </svg>;
+}
+
+const DeployBox = ({ name, region, detail, pending = false }: { name: string; region: string; detail: string; pending?: boolean }) =>
+  <div className={`v-deploy${pending ? " pending-capacity" : ""}`}><b>{nb(name)}</b><span>{region} · 100k tokens/min</span><small>{detail}</small></div>;
+
+export function Visual({ id, active, qr }: { id: VisualId; active: boolean; qr: ReactNode }) {
+  switch (id) {
+    case "project": return <Slide id={id} title="Drasi">
+      <p className="lead">An open-source data processing platform for change-driven systems</p>
+      <div className="v-project">
+        <div className="v-badge"><small>CNCF</small><b>Sandbox project</b><span className="todo">since XXX</span></div>
+        <ul className="v-tiles">
+          <li className="blue"><Icon name="code" size={56} /><b>Open source</b><span>Apache 2.0, on GitHub</span></li>
+          <li className="purple"><Icon name="bolt" size={56} /><b>Active development</b><span>New sources, reactions and form factors</span></li>
+          <li className="green"><Icon name="user" size={56} /><b>Growing community</b><span>Users and contributors</span></li>
+        </ul>
+      </div>
+      <p className="v-foot">drasi.io · github.com/drasi-project</p>
+    </Slide>;
+    case "problem": return <Slide id={id} title="The problem">
+      <p className="lead">Detecting meaningful change as it happens, and reacting to it, is harder than it should be</p>
+      <div className="v-versus">
+        <section className="bad"><h2><Icon name="poll" size={40} />Usually</h2><Loop /><p>Late, wasteful, and rebuilt for every system</p></section>
+        <section className="good"><h2><Icon name="bolt" size={40} />Change-driven</h2>
+          <ol className="v-straight">
+            <li><b>Something changes</b><span>a row, a metric, an event</span></li>
+            <li><b>The answer updates</b><span>only what's affected</span></li>
+            <li><b>React, right away</b><span>even when something that should happen doesn't</span></li>
+          </ol></section>
+      </div>
+    </Slide>;
+    case "drasi-1": case "drasi-2": case "drasi-3": {
+      const step = Number(id.slice(-1));
+      return <Slide id={id} title="Sources, Continuous Queries, Reactions">
+        <p className="lead">{["Start simple: one source, one query, one reaction", "One query can join changes from several sources", "Many sources, queries and reactions; every answer kept current"][step - 1]}</p>
+        <Grow step={step} active={active} />
+      </Slide>;
+    }
+    case "plugins": return <Slide id={id} title="Everything is a plugin">
+      <div className="v-hub">
+        <ul className="v-plug blue">{["PostgreSQL", "MySQL", "SQL Server", "Cosmos DB", "Event Hubs", "Kubernetes", "OpenTelemetry", "Dataverse"].map(t => <li key={t}>{t}</li>)}<li className="more">+ build your own</li></ul>
+        <Arrow />
+        <div className="v-core"><b>Drasi</b><span className="purple">Continuous queries</span><span className="green">Policy</span><span className="green">Optimization</span></div>
+        <Arrow />
+        <ul className="v-plug lime">{["HTTP", "SSE", "SignalR", "Event Grid", "Dapr pub/sub", "Storage queues", "Prometheus", "Gremlin"].map(t => <li key={t}>{t}</li>)}<li className="more">+ build your own</li></ul>
+      </div>
+      <p className="v-foot todo">TODO: check the plugin lists against drasi.io</p>
+    </Slide>;
+    case "forms": return <Slide id={id} title="Use it the way that fits">
+      <div className="v-forms">
+        <section className="blue"><h2>In your app</h2>
+          <div className="v-sketch"><div className="v-box app"><small>Your app</small><div className="v-box lib">Drasi library</div></div></div>
+          <ul className="v-langs">{["Rust", "Node.js", "Python", ".NET"].map(l => <li key={l}>{l}</li>)}</ul>
+          <p>Embed it; react in your own code</p></section>
+        <section className="purple"><h2>As a service</h2>
+          <div className="v-sketch row"><div className="v-box src">Data</div><Arrow /><div className="v-box lib">Drasi Server</div><Arrow /><div className="v-box src">Tools</div></div>
+          <ul className="v-langs"><li>One container</li></ul>
+          <p>Configure it in YAML; this demo runs on it</p></section>
+        <section className="green"><h2>On Kubernetes</h2>
+          <div className="v-sketch"><div className="v-box cluster"><small>Cluster</small><div className="v-pods"><span>Sources</span><span>Queries</span><span>Reactions</span></div></div></div>
+          <ul className="v-langs"><li>drasi CLI</li><li>Resources</li></ul>
+          <p>Each part scales on its own</p></section>
+      </div>
+      <p className="v-foot todo">TODO: confirm which form factors are available at Ignite</p>
+    </Slide>;
+    case "issues": return <Slide id={id} title="Observability today">
+      <div className="v-split"><Tangle />
+        <ul className="v-issues">
+          <li><b>Too much data</b><span>and the cost of keeping it</span></li>
+          <li><b>Too many tools</b><span>one request, many screens</span></li>
+          <li><b>Too much noise</b><span>alerts that don't matter</span></li>
+          <li><b>Symptoms, not answers</b><span>who's affected? what to do?</span></li>
+          <li><b>Context lives elsewhere</b><span>policy, owners, business data</span></li>
+        </ul></div>
+    </Slide>;
+    case "wants": return <Slide id={id} title="What teams want">
+      <div className="v-clear">
+        <ul className="v-inputs">{["Telemetry", "Application data", "Policy", "Changes and approvals"].map(t => <li key={t}>{t}</li>)}</ul>
+        <Arrow />
+        <div className="v-context"><b>Connected context</b><span>kept current as things change</span></div>
+        <Arrow />
+        <ul className="v-answers">{["Who's affected?", "What changed?", "What should we do?", "Did it work?"].map(t => <li key={t}><Icon name="check" size={36} />{t}</li>)}</ul>
+      </div>
+      <ul className="v-wants">
+        <li>Situations, not signals</li><li>Outcomes, including what didn't happen</li><li>Action backed by evidence, with approval</li><li>In the tools they already use</li>
+      </ul>
+    </Slide>;
+    case "scenario-map": return <Slide id={id} title="The scenario: an AI service">
+      <div className="v-scenario">
+        <div className="v-work purple"><b>Customer support</b><span>Restricted data · answer in 15 s · 60k</span></div>
+        <div className="v-work purple"><b>Document summaries</b><span>Public data · 80k</span></div>
+        <div className="v-work empty" />
+        <span className="v-down" /><span className="v-down" /><span />
+        <div className="v-region eu"><small>Europe</small>
+          <DeployBox name="EU-A" region="Europe" detail="serves support" /><DeployBox name="EU-B" region="Europe" detail="serves summaries" /></div>
+        <div className="v-region us"><small>United States</small><DeployBox name="US-C" region="US" detail="extra capacity, just provisioned" pending /></div>
+      </div>
+      <div className="v-rules">
+        <span className="rule"><Icon name="model" size={32} />Restricted data stays in Europe</span>
+        <span className="rule"><Icon name="model" size={32} />Summaries: Europe, for now</span>
+        <span className="rule"><Icon name="user" size={32} />Changes need approval</span>
+      </div>
+      <ul className="v-tools">{[["otel", "OpenTelemetry"], ["prometheus", "Prometheus"], ["prometheus", "Grafana"], ["query", "Langfuse"], ["mattermost", "Mattermost"]].map(([i, t]) => <li key={t}><Icon name={i} size={32} />{t}</li>)}</ul>
+    </Slide>;
+    case "closing": return <Slide id={id} title="What you saw">
+      <ol className="v-scenes">
+        <li className="blue"><small>1</small><b>Status from telemetry + configuration</b><span>OpenTelemetry and the app's own data, joined</span></li>
+        <li className="purple"><small>2</small><b>What didn't happen</b><span>Requests with no answer, at their deadline</span></li>
+        <li className="green"><small>3</small><b>Compliance meets resilience</b><span>One policy change; readiness re-checked</span></li>
+        <li className="lime"><small>4</small><b>A fix people approve</b><span>Proposed, approved in chat, verified</span></li>
+      </ol>
+      <ol className="v-ribbon"><li className="blue">Connect sources</li><li className="purple">Configure continuous models</li><li className="lime">Connect reactions</li></ol>
+      <p className="v-foot">Richer context, in the tools you already use. Apart from one Prometheus reaction plugin, this demo is configuration.</p>
+    </Slide>;
+    case "links": return <Slide id={id} title="Learn more">
+      <div className="v-links">
+        <div className="v-qr">{qr}<b>drasi.io</b></div>
+        <ul className="v-tiles links">
+          <li className="blue"><Icon name="query" size={48} /><b>Docs and getting started</b><span>drasi.io</span></li>
+          <li className="purple"><Icon name="code" size={48} /><b>Code</b><span>github.com/drasi-project</span></li>
+          <li className="green"><Icon name="app" size={48} /><b>This demo</b><span className="todo">TODO: link</span></li>
+          <li className="lime"><Icon name="user" size={48} /><b>Community</b><span className="todo">TODO: Discord, community calls</span></li>
+        </ul>
+      </div>
+    </Slide>;
+  }
+}
