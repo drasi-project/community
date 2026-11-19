@@ -50,10 +50,10 @@ export function ConfigOverlay({ ids, targets, pinned = false }: { ids: readonly 
   if (pinned || !target) return <div ref={card} className="config-overlay pinned">{cards.map((c, i) => <HowCard key={i} card={c} />)}</div>;
   const centre = target.x + target.width / 2;
   const left = size ? Math.max(margin, Math.min(1920 - margin - size.width, centre - size.width / 2)) : margin;
-  // Above the panels if it fits, otherwise just below them (a whole top row).
+  // Above the panels if it fits, otherwise just below them if it fits there (a whole top row), else at the top.
   const lowest = Math.max(...targets.map(t => t.y + t.height));
-  const below = !!size && target.y - gap - size.height < top;
-  const cardTop = !size ? top : below ? lowest + gap : target.y - gap - size.height;
+  const below = !!size && target.y - gap - size.height < top && lowest + gap + size.height <= 1002 - 16;
+  const cardTop = !size ? top : below ? lowest + gap : Math.max(top, target.y - gap - size.height);
   const bottom = size ? cardTop + size.height : 0;
   const start = below ? cardTop : bottom;
   // A panel stacked under another highlighted one gets no arrow of its own (it would cross the upper one).
