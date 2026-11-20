@@ -52,7 +52,7 @@ with these folder names. The demo finds Drasi Core and Server as
 `drasi-core` and `drasi-server` beside the community repository:
 
 ```sh
-mkdir ignite-native && cd ignite-native
+mkdir ignite && cd ignite
 git clone -b agentofreality-ignite-new-flow https://github.com/drasi-project/community.git
 git clone -b agentofreality-ignite-native-next https://github.com/drasi-project/drasi-core.git drasi-core
 git clone -b agentofreality-ignite-native-next https://github.com/drasi-project/drasi-server.git drasi-server
@@ -311,19 +311,6 @@ set -a; . ./.env; set +a
 The `up` recreates only the Collector, with or without its Drasi pipeline.
 Start terminals 1 and 2 again, then reset the scenario
 (`python3 ops/workload.py reset`) so health starts fresh.
-
-### Running beside the original demo
-
-This copy can run on the same Mac as the original demo (the `ignite` folder,
-branch `agentofreality-ignite`) at the same time. `ports.env` gives it every
-port +1000, its own container project (`ignite-native`, so its own containers
-and volumes), its own replication publication and slot (`ignite_rework`) and its
-own browser storage key. The original's values are in `ports.default.env`;
-never use that file here while the original is running, because it would share
-the original's ports, containers and data.
-
-The two copies need separate `.env` files, probe images and builds, which the
-steps above already give them.
 
 ## Troubleshooting
 
